@@ -1,0 +1,56 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_ENV: production
+    image: karigar:latest
+    ports:
+      - "8080:7979"
+    environment:
+      CONTAINER_MODE: http
+      OCTANE_SERVER: frankenphp
+      RUNNING_MIGRATIONS_AND_SEEDERS: "true"
+      WITH_SCHEDULER: "true"
+      # App
+      APP_NAME: Karigar
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL}
+      # Postgres (point at your managed DB)
+      DB_CONNECTION: pgsql
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      # Typesense search
+      SCOUT_DRIVER: typesense
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY}
+      TYPESENSE_HOST: ${TYPESENSE_HOST:-typesense}
+      TYPESENSE_PORT: ${TYPESENSE_PORT:-8108}
+      TYPESENSE_PROTOCOL: ${TYPESENSE_PROTOCOL:-http}
+      # Queue / cache / session use the database by default
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      # Razorpay (employer subscriptions)
+      RAZORPAY_KEY: ${RAZORPAY_KEY}
+      RAZORPAY_SECRET: ${RAZORPAY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
+    depends_on:
+      - typesense
+    restart: unless-stopped
+
+  typesense:
+    image: typesense/typesense:27.1
+    command: '--data-dir /data --api-key=${TYPESENSE_API_KEY} --enable-cors'
+    volumes:
+      - typesense-data:/data
+    restart: unless-stopped
+
+volumes:
+  typesense-data:
