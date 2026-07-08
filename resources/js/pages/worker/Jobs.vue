@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { ArrowUpRight, Briefcase, IndianRupee, MapPin, Search, X } from '@lucide/vue';
+import { ArrowUpRight, Briefcase, CalendarDays, IndianRupee, MapPin, Search, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { citiesFor, indianStates } from '@/data/indianLocations';
@@ -15,6 +15,8 @@ interface Job {
     wage_min: string | null;
     wage_max: string | null;
     wage_type: string | null;
+    created_at: string;
+    expires_at: string | null;
     employer: { id: number; name: string };
 }
 
@@ -82,6 +84,9 @@ const wage = (j: Job) => {
     const range = [j.wage_min, j.wage_max].filter(Boolean).join('–');
     return `${range}${j.wage_type ? ' / ' + j.wage_type : ''}`;
 };
+
+const fmtDate = (iso: string | null): string =>
+    iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 </script>
 
 <template>
@@ -145,6 +150,10 @@ const wage = (j: Job) => {
                 <h3 class="mt-3 text-lg font-bold leading-snug">{{ job.title }}</h3>
                 <p class="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                     <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || 'Location N/A' }}
+                </p>
+                <p class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span class="inline-flex items-center gap-1"><CalendarDays class="size-3.5" /> Posted {{ fmtDate(job.created_at) }}</span>
+                    <span v-if="job.expires_at" class="inline-flex items-center gap-1 font-medium text-rose-500 dark:text-rose-400">Apply by {{ fmtDate(job.expires_at) }}</span>
                 </p>
                 <div class="mt-4 flex items-center justify-between border-t pt-3 text-sm">
                     <span class="inline-flex items-center gap-0.5 font-bold text-rose-500 dark:text-rose-400"><IndianRupee class="size-3.5" />{{ wage(job) }}</span>

@@ -83,6 +83,22 @@ HTML,
                 'is_active' => true,
             ],
             [
+                'key' => 'application_shortlisted',
+                'name' => 'Application shortlisted (to worker)',
+                'description' => 'Sent to the worker when an employer shortlists their application.',
+                'subject' => 'You’ve been shortlisted for “{{ job_title }}”!',
+                'body_html' => <<<'HTML'
+<p>Hi {{ worker_name }},</p>
+<p>Great news — <strong>{{ employer_name }}</strong> has <strong>shortlisted</strong> you for <strong>“{{ job_title }}”</strong> in {{ job_location }}.</p>
+<p>The employer may reach out soon. Keep an eye on your applications for updates.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#f24711;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View my applications</a>
+</p>
+HTML,
+                'placeholders' => $applicationPlaceholders,
+                'is_active' => true,
+            ],
+            [
                 'key' => 'application_rejected',
                 'name' => 'Application rejected (to worker)',
                 'description' => 'Sent to the worker when an employer rejects their application.',

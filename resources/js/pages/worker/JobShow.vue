@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, ArrowRight, Bookmark, Briefcase, Check, Clock, IndianRupee, MapPin, Users } from '@lucide/vue';
+import { ArrowLeft, ArrowRight, Bookmark, Briefcase, Check, Clock, IndianRupee, MapPin, Phone, Users } from '@lucide/vue';
 import { ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -16,6 +16,10 @@ interface Job {
     city: string | null;
     state: string | null;
     vacancies: number;
+    created_at: string;
+    expires_at: string | null;
+    contact_mode: 'apply' | 'call' | 'both';
+    contact_phone: string | null;
     employer: { id: number; name: string };
 }
 
@@ -46,6 +50,9 @@ const wage = (() => {
     return `₹${range}${props.job.wage_type ? ' / ' + props.job.wage_type : ''}`;
 })();
 
+const canCall = props.job.contact_mode !== 'apply' && !!props.job.contact_phone;
+const canApply = props.job.contact_mode !== 'call';
+
 const showForm = ref(false);
 const form = useForm({ cover_note: '', expected_wage: '' });
 
@@ -60,6 +67,9 @@ const submitApply = () => {
 };
 
 const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserveScroll: true });
+
+const fmtDate = (iso: string | null): string =>
+    iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 </script>
 
 <template>
@@ -89,6 +99,8 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     <div class="flex flex-wrap items-center gap-2">
                         <span v-if="job.category" class="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-300">{{ job.category }}</span>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><MapPin class="size-4" /> {{ [job.city, job.state].filter(Boolean).join(', ') || 'Location N/A' }}</span>
+                        <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><Clock class="size-4" /> Posted {{ fmtDate(job.created_at) }}</span>
+                        <span v-if="job.expires_at" class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 dark:text-rose-300">Apply by {{ fmtDate(job.expires_at) }}</span>
                     </div>
 
                     <div class="mt-5 grid gap-3 sm:grid-cols-2">
@@ -128,20 +140,30 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                         </Link>
                     </div>
 
-                    <!-- Apply -->
+                    <!-- Apply / call -->
                     <div v-else>
                         <h2 class="text-base font-bold">Interested?</h2>
-                        <p class="mt-1 text-sm text-muted-foreground">Apply now and track your status right here.</p>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            {{ canCall && !canApply ? 'Call the employer directly to get this job.' : canCall ? 'Call the employer directly, or apply and track your status here.' : 'Apply now and track your status right here.' }}
+                        </p>
+
+                        <a
+                            v-if="canCall"
+                            :href="`tel:${job.contact_phone}`"
+                            class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 active:scale-95"
+                        >
+                            <Phone class="size-4" /> Call now · {{ job.contact_phone }}
+                        </a>
 
                         <button
-                            v-if="!showForm"
+                            v-if="canApply && !showForm"
                             class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
                             @click="showForm = true"
                         >
                             Apply now <ArrowRight class="size-4" />
                         </button>
 
-                        <form v-else class="mt-4 space-y-3" @submit.prevent="submitApply">
+                        <form v-else-if="canApply" class="mt-4 space-y-3" @submit.prevent="submitApply">
                             <div>
                                 <label class="mb-1.5 block text-xs font-medium text-muted-foreground">Cover note (optional)</label>
                                 <textarea v-model="form.cover_note" rows="4" placeholder="Why are you a good fit?" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"></textarea>

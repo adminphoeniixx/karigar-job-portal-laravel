@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { AlertTriangle, Check, CreditCard, Sparkles, Tag, X } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
 interface Plan {
@@ -34,6 +34,18 @@ const props = defineProps<{
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Subscription', href: '/subscription' }] } });
 
+// ── Plan details popup ──────────────────────────────────────────────
+const selected = ref<Plan | null>(null);
+
+const openPlan = (plan: Plan) => {
+    selected.value = plan;
+};
+
+const closePlan = () => {
+    selected.value = null;
+};
+
+// ── Coupon (applied inside the popup, revalidated by the server) ────
 const code = ref(props.couponResult?.code ?? '');
 const applying = ref(false);
 
@@ -73,10 +85,19 @@ const finalPrice = (plan: Plan): number => parseFloat(plan.price) - discountFor(
 
 const money = (n: number) => '₹' + n.toLocaleString('en-IN');
 
-const subscribe = (plan: Plan) => {
+const selectedDiscount = computed(() => (selected.value ? discountFor(selected.value) : 0));
+
+const subscribing = ref(false);
+
+const subscribe = () => {
+    const plan = selected.value;
+    if (!plan) return;
     // Only send the coupon when it actually discounts this plan (server re-validates).
     const payload = discountFor(plan) > 0 && props.couponResult?.valid ? { coupon: props.couponResult.code } : {};
-    router.post(`/subscription/${plan.id}/subscribe`, payload);
+    subscribing.value = true;
+    router.post(`/subscription/${plan.id}/subscribe`, payload, {
+        onFinish: () => (subscribing.value = false),
+    });
 };
 </script>
 
@@ -97,41 +118,6 @@ const subscribe = (plan: Plan) => {
         <div v-if="!razorpayConfigured" class="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
             <AlertTriangle class="mt-0.5 size-5 shrink-0" />
             <span>Razorpay test keys are not configured yet. Plans are shown, but checkout will work once the keys are added to <code class="rounded bg-amber-500/20 px-1">.env</code>.</span>
-        </div>
-
-        <!-- Coupon -->
-        <div class="rounded-2xl border bg-card p-4 shadow-sm">
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="flex size-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-300"><Tag class="size-4" /></span>
-                <input
-                    v-model="code"
-                    placeholder="Have a coupon code?"
-                    class="h-[42px] flex-1 rounded-xl border bg-background px-4 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-                    @keyup.enter="applyCoupon"
-                />
-                <button
-                    type="button"
-                    :disabled="applying || !code.trim()"
-                    class="inline-flex h-[42px] items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
-                    @click="applyCoupon"
-                >
-                    Apply
-                </button>
-                <button
-                    v-if="couponResult"
-                    type="button"
-                    class="inline-flex h-[42px] items-center gap-1 rounded-xl border px-3 text-sm text-muted-foreground transition hover:bg-muted"
-                    @click="clearCoupon"
-                >
-                    <X class="size-4" /> Clear
-                </button>
-            </div>
-            <p v-if="couponResult && couponResult.valid" class="mt-2 flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400">
-                <Check class="size-4" /> Coupon <strong class="mx-1">{{ couponResult.code }}</strong> applied. Eligible plans show the discounted price below.
-            </p>
-            <p v-else-if="couponResult && !couponResult.valid" class="mt-2 flex items-center gap-1.5 text-sm font-medium text-rose-500">
-                <AlertTriangle class="size-4" /> {{ couponResult.message }}
-            </p>
         </div>
 
         <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -181,11 +167,101 @@ const subscribe = (plan: Plan) => {
                         ? 'cursor-default border text-muted-foreground'
                         : 'bg-gradient-to-r from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-600/25 hover:opacity-90'"
                     :disabled="current?.plan.id === plan.id"
-                    @click="subscribe(plan)"
+                    @click="openPlan(plan)"
                 >
-                    {{ current?.plan.id === plan.id ? 'Current plan' : 'Subscribe' }}
+                    {{ current?.plan.id === plan.id ? 'Current plan' : 'View details & subscribe' }}
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Plan details popup -->
+    <div v-if="selected" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="closePlan">
+        <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border bg-card p-6 shadow-xl">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h3 class="flex items-center gap-2 text-lg font-bold">
+                        {{ selected.name }}
+                        <span v-if="selected.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-rose-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                            <Sparkles class="size-2.5" /> Popular
+                        </span>
+                    </h3>
+                    <p class="mt-0.5 text-sm capitalize text-muted-foreground">Billed {{ selected.interval }}</p>
+                </div>
+                <button class="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" @click="closePlan">
+                    <X class="size-5" />
+                </button>
+            </div>
+
+            <!-- Plan details -->
+            <ul class="mt-5 space-y-2.5 rounded-xl bg-muted/40 p-4 text-sm">
+                <li class="flex items-center gap-2">
+                    <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
+                    <strong>{{ selected.features?.job_post_limit ?? 0 }}</strong>&nbsp;job posts
+                </li>
+                <li class="flex items-center gap-2">
+                    <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
+                    <strong>{{ selected.features?.contact_unlock_limit ?? 0 }}</strong>&nbsp;contact unlocks
+                </li>
+                <li v-if="selected.features?.featured" class="flex items-center gap-2">
+                    <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
+                    Featured listings
+                </li>
+            </ul>
+
+            <!-- Coupon -->
+            <div class="mt-5">
+                <label class="mb-1.5 flex items-center gap-1.5 text-sm font-semibold"><Tag class="size-4 text-orange-500" /> Coupon code</label>
+                <div class="flex gap-2">
+                    <input
+                        v-model="code"
+                        placeholder="e.g. WELCOME50"
+                        class="h-10 flex-1 rounded-xl border bg-background px-3 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                        @keyup.enter="applyCoupon"
+                    />
+                    <button
+                        type="button"
+                        :disabled="applying || !code.trim()"
+                        class="h-10 rounded-xl border px-4 text-sm font-semibold transition hover:bg-muted disabled:opacity-50"
+                        @click="applyCoupon"
+                    >
+                        {{ applying ? 'Checking…' : 'Apply' }}
+                    </button>
+                </div>
+                <p v-if="couponResult && couponResult.valid && selectedDiscount > 0" class="mt-1.5 flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <Check class="size-3.5" /> Coupon {{ couponResult.code }} applied — you save {{ money(selectedDiscount) }}.
+                </p>
+                <p v-else-if="couponResult && couponResult.valid && selectedDiscount === 0" class="mt-1.5 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    <AlertTriangle class="size-3.5" /> Coupon {{ couponResult.code }} doesn't apply to this plan.
+                    <button class="underline" @click="clearCoupon">Remove</button>
+                </p>
+                <p v-else-if="couponResult && !couponResult.valid" class="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-500">
+                    <AlertTriangle class="size-3.5" /> {{ couponResult.message }}
+                </p>
+            </div>
+
+            <!-- Price summary -->
+            <div class="mt-5 space-y-1.5 rounded-xl border p-4 text-sm">
+                <div class="flex justify-between text-muted-foreground">
+                    <span>Plan price</span><span>₹{{ selected.price }}</span>
+                </div>
+                <div v-if="selectedDiscount > 0" class="flex justify-between font-medium text-emerald-600 dark:text-emerald-400">
+                    <span>Coupon discount</span><span>− {{ money(selectedDiscount) }}</span>
+                </div>
+                <div class="flex justify-between border-t pt-2 text-base font-bold">
+                    <span>Total</span>
+                    <span>{{ money(finalPrice(selected)) }} <span class="text-xs font-normal text-muted-foreground">/{{ selected.interval }}</span></span>
+                </div>
+            </div>
+
+            <button
+                :disabled="subscribing"
+                class="mt-5 w-full rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
+                @click="subscribe"
+            >
+                {{ subscribing ? 'Starting checkout…' : `Subscribe — ${money(finalPrice(selected))}` }}
+            </button>
+            <p class="mt-2 text-center text-[11px] text-muted-foreground">Secure payment via Razorpay. You can cancel anytime.</p>
         </div>
     </div>
 </template>

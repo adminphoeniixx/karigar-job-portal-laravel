@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, BriefcaseBusiness, IndianRupee, MapPin, Settings2 } from '@lucide/vue';
+import { ArrowLeft, BriefcaseBusiness, IndianRupee, MapPin, Phone, Settings2 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -25,9 +25,11 @@ interface Job {
     vacancies: number;
     status: string;
     expires_at: string | null;
+    contact_mode: 'apply' | 'call' | 'both';
+    contact_phone: string | null;
 }
 
-const props = defineProps<{ job: Job | null }>();
+const props = defineProps<{ job: Job | null; defaultPhone: string | null }>();
 
 const isEdit = props.job !== null;
 
@@ -55,7 +57,15 @@ const form = useForm({
     vacancies: props.job?.vacancies ?? 1,
     status: props.job?.status ?? 'active',
     expires_at: props.job?.expires_at?.slice(0, 10) ?? '',
+    contact_mode: props.job?.contact_mode ?? 'apply',
+    contact_phone: props.job?.contact_phone ?? props.defaultPhone ?? '',
 });
+
+const contactModes = [
+    { value: 'apply', label: 'Apply through app', desc: 'Workers apply here; you review applicants.' },
+    { value: 'call', label: 'Direct call', desc: 'Your number is shown on the job — workers call you.' },
+    { value: 'both', label: 'Both', desc: 'Workers can apply in the app or call you directly.' },
+] as const;
 
 const cities = computed(() => citiesFor(form.state));
 watch(() => form.state, () => {
@@ -194,6 +204,35 @@ const submit = () => {
                         <Input id="longitude" type="number" step="any" v-model="form.longitude" />
                         <InputError :message="form.errors.longitude" />
                     </div>
+                </div>
+            </section>
+
+            <!-- How workers respond -->
+            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                    <Phone class="size-4 text-orange-500" /> How should workers contact you?
+                </h2>
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <label
+                        v-for="m in contactModes"
+                        :key="m.value"
+                        class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
+                        :class="form.contact_mode === m.value ? 'border-orange-500 bg-orange-500/5 ring-2 ring-orange-500/20' : 'hover:border-orange-300'"
+                    >
+                        <span class="flex items-center gap-2">
+                            <input v-model="form.contact_mode" type="radio" name="contact_mode" :value="m.value" class="accent-orange-600" />
+                            <span class="text-sm font-semibold">{{ m.label }}</span>
+                        </span>
+                        <span class="text-xs text-muted-foreground">{{ m.desc }}</span>
+                    </label>
+                </div>
+                <InputError class="mt-2" :message="form.errors.contact_mode" />
+
+                <div v-if="form.contact_mode !== 'apply'" class="mt-4 grid max-w-sm gap-2">
+                    <Label for="contact_phone">Phone number workers will call</Label>
+                    <Input id="contact_phone" v-model="form.contact_phone" type="tel" placeholder="+91 98765 43210" />
+                    <p class="text-xs text-muted-foreground">This number will be visible on the job post to everyone.</p>
+                    <InputError :message="form.errors.contact_phone" />
                 </div>
             </section>
 

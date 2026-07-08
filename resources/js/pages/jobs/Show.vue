@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, ArrowRight, Bookmark, Briefcase, Check, Clock, IndianRupee, MapPin, UserPlus, Users } from '@lucide/vue';
+import { ArrowLeft, ArrowRight, Bookmark, Briefcase, Check, Clock, IndianRupee, MapPin, Phone, UserPlus, Users } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 
@@ -16,6 +16,8 @@ interface Job {
     city: string | null;
     state: string | null;
     vacancies: number;
+    contact_mode: 'apply' | 'call' | 'both';
+    contact_phone: string | null;
     employer: { id: number; name: string };
 }
 
@@ -44,6 +46,9 @@ const wage = computed(() => {
     const range = [props.job.wage_min, props.job.wage_max].filter(Boolean).join('–');
     return `₹${range}${props.job.wage_type ? ' / ' + props.job.wage_type : ''}`;
 });
+
+const canCall = props.job.contact_mode !== 'apply' && !!props.job.contact_phone;
+const applyAllowed = props.job.contact_mode !== 'call';
 
 const showForm = ref(false);
 const form = useForm({ cover_note: '', expected_wage: '' });
@@ -144,8 +149,22 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
 
                 <!-- Apply zone -->
                 <div class="mt-8 border-t border-white/5 pt-6">
+                    <!-- Direct call (number is public on this job) -->
+                    <div v-if="canCall" class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-5">
+                        <div>
+                            <h3 class="text-base font-bold text-white">Call the employer directly</h3>
+                            <p class="mt-0.5 text-sm text-slate-400">{{ applyAllowed ? 'Prefer to talk? Call now — or apply below.' : 'This employer hires over the phone for this job.' }}</p>
+                        </div>
+                        <a
+                            :href="`tel:${job.contact_phone}`"
+                            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 active:scale-95"
+                        >
+                            <Phone class="size-4" /> Call now · {{ job.contact_phone }}
+                        </a>
+                    </div>
+
                     <!-- GUEST: sign up / login to apply -->
-                    <div v-if="!isAuthed" class="rounded-2xl border border-orange-400/20 bg-orange-500/[0.06] p-5">
+                    <div v-if="!isAuthed && applyAllowed" class="rounded-2xl border border-orange-400/20 bg-orange-500/[0.06] p-5">
                         <h3 class="text-base font-bold text-white">Interested in this job?</h3>
                         <p class="mt-1 text-sm text-slate-400">Create a free worker account to apply and track your application status.</p>
                         <div class="mt-4 flex flex-wrap gap-3">
@@ -173,10 +192,10 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     </div>
 
                     <!-- NON-WORKER authed (employer/admin) -->
-                    <p v-else-if="!canApply" class="text-sm text-slate-400">You're signed in as a non-worker account, so you can't apply. Log in with a worker account to apply.</p>
+                    <p v-else-if="isAuthed && !canApply" class="text-sm text-slate-400">You're signed in as a non-worker account, so you can't apply. Log in with a worker account to apply.</p>
 
                     <!-- WORKER, not applied: apply form -->
-                    <div v-else>
+                    <div v-else-if="isAuthed && applyAllowed">
                         <button
                             v-if="!showForm"
                             class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"

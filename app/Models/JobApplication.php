@@ -16,13 +16,14 @@ use Illuminate\Support\Carbon;
  * @property string|null $expected_wage
  * @property ApplicationStatus $status
  * @property bool $contact_unlocked
+ * @property Carbon|null $shortlisted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 class JobApplication extends Model
 {
     protected $fillable = [
-        'job_listing_id', 'worker_id', 'cover_note', 'expected_wage', 'status', 'contact_unlocked',
+        'job_listing_id', 'worker_id', 'cover_note', 'expected_wage', 'status', 'contact_unlocked', 'shortlisted_at',
     ];
 
     protected function casts(): array
@@ -30,6 +31,7 @@ class JobApplication extends Model
         return [
             'status' => ApplicationStatus::class,
             'contact_unlocked' => 'boolean',
+            'shortlisted_at' => 'datetime',
             'expected_wage' => 'decimal:2',
         ];
     }

@@ -17,20 +17,40 @@ class JobListingController extends Controller
 {
     public function index(Request $request): Response
     {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'status' => ['nullable', 'string', 'in:draft,active,closed,expired'],
+        ]);
+
         $jobs = $request->user()->jobListings()
+            ->withCount('applications')
+            ->when($filters['q'] ?? null, fn ($q, $term) => $q->where('title', 'ilike', "%{$term}%"))
+            ->when($filters['status'] ?? null, function ($q, $status) {
+                if ($status === 'expired') {
+                    return $q->whereNotNull('expires_at')->where('expires_at', '<=', now());
+                }
+
+                return $q->where('status', $status)
+                    ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+            })
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('jobs/Index', [
             'jobs' => $jobs,
+            'filters' => $filters,
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         $this->authorize('create', JobListing::class);
 
-        return Inertia::render('jobs/Form', ['job' => null]);
+        return Inertia::render('jobs/Form', [
+            'job' => null,
+            'defaultPhone' => $request->user()->employerProfile?->phone,
+        ]);
     }
 
     public function store(JobListingRequest $request): RedirectResponse
@@ -90,11 +110,14 @@ class JobListingController extends Controller
         }
     }
 
-    public function edit(JobListing $job): Response
+    public function edit(Request $request, JobListing $job): Response
     {
         $this->authorize('update', $job);
 
-        return Inertia::render('jobs/Form', ['job' => $job]);
+        return Inertia::render('jobs/Form', [
+            'job' => $job,
+            'defaultPhone' => $request->user()->employerProfile?->phone,
+        ]);
     }
 
     public function update(JobListingRequest $request, JobListing $job): RedirectResponse

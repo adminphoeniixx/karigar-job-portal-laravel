@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Notifications\ApplicationStatusNotification;
+use App\Notifications\ShortlistedNotification;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class ApplicantController extends Controller
                 'cover_note' => $a->cover_note,
                 'expected_wage' => $a->expected_wage,
                 'contact_unlocked' => $a->contact_unlocked,
+                'shortlisted' => $a->shortlisted_at !== null,
                 'created_at' => $a->created_at?->diffForHumans(),
                 'escrow' => $a->escrow ? [
                     'id' => $a->escrow->id,
@@ -100,6 +102,85 @@ class ApplicantController extends Controller
         return back()->with('toast', [
             'type' => 'success',
             'message' => __('Applicant :status.', ['status' => $application->status->label()]),
+        ]);
+    }
+
+    /**
+     * All shortlisted applicants across the employer's jobs.
+     */
+    public function shortlisted(Request $request): Response
+    {
+        $applications = JobApplication::whereNotNull('shortlisted_at')
+            ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->id))
+            ->with('worker:id,name,email', 'worker.workerProfile', 'job:id,title,city,state')
+            ->orderByDesc('shortlisted_at')
+            ->get()
+            ->map(fn (JobApplication $a) => [
+                'id' => $a->id,
+                'status' => $a->status->value,
+                'expected_wage' => $a->expected_wage,
+                'contact_unlocked' => $a->contact_unlocked,
+                'shortlisted_at' => $a->shortlisted_at?->diffForHumans(),
+                'applied_at' => $a->created_at?->diffForHumans(),
+                'job' => [
+                    'id' => $a->job->id,
+                    'title' => $a->job->title,
+                    'location' => trim(implode(', ', array_filter([$a->job->city, $a->job->state]))),
+                ],
+                'worker' => [
+                    'id' => $a->worker->id,
+                    'name' => $a->worker->name,
+                    'rating' => $a->worker->averageRating(),
+                    'skills' => $a->worker->workerProfile?->skills ?? [],
+                    'city' => $a->worker->workerProfile?->city,
+                    'state' => $a->worker->workerProfile?->state,
+                    'experience_years' => $a->worker->workerProfile?->experience_years,
+                    'email' => $a->contact_unlocked ? $a->worker->email : null,
+                    'phone' => $a->contact_unlocked ? $a->worker->workerProfile?->phone : null,
+                ],
+            ]);
+
+        return Inertia::render('employer/Shortlisted', [
+            'applications' => $applications,
+        ]);
+    }
+
+    /**
+     * Shortlist (or un-shortlist) an applicant. Shortlisting notifies the
+     * worker in-app and by email.
+     */
+    public function toggleShortlist(JobApplication $application): RedirectResponse
+    {
+        $this->authorize('update', $application->job);
+
+        if ($application->shortlisted_at !== null) {
+            $application->update(['shortlisted_at' => null]);
+
+            return back()->with('toast', [
+                'type' => 'success',
+                'message' => __('Removed from shortlist.'),
+            ]);
+        }
+
+        $application->update(['shortlisted_at' => now()]);
+        $application->loadMissing('job.employer', 'worker');
+
+        $application->worker->notify(new ShortlistedNotification($application));
+
+        $job = $application->job;
+        TemplatedMailer::send('application_shortlisted', $application->worker->email, [
+            'worker_name' => $application->worker->name,
+            'employer_name' => $job->employer->name,
+            'job_title' => $job->title,
+            'job_location' => trim(implode(', ', array_filter([$job->city, $job->state]))),
+            'expected_wage' => $application->expected_wage !== null ? '₹'.number_format((float) $application->expected_wage) : '—',
+            'cover_note' => $application->cover_note ?: '—',
+            'action_url' => url('/worker/applications'),
+        ]);
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => __('Applicant shortlisted — the worker has been notified.'),
         ]);
     }
 

@@ -21,7 +21,7 @@ class JobApplicationController extends Controller
     public function index(Request $request): Response
     {
         $applications = $request->user()->applications()
-            ->with('job:id,title,city,state,employer_id', 'job.employer:id,name')
+            ->with('job:id,title,city,state,employer_id,created_at,expires_at', 'job.employer:id,name')
             ->latest()
             ->paginate(15);
 

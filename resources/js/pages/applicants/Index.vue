@@ -10,6 +10,7 @@ interface Applicant {
     cover_note: string | null;
     expected_wage: string | null;
     contact_unlocked: boolean;
+    shortlisted: boolean;
     created_at: string;
     escrow: { id: number; status: string; status_label: string; amount: string; payout_amount: string } | null;
     worker: {
@@ -46,6 +47,10 @@ const setStatus = (id: number, status: 'accepted' | 'rejected') => {
 
 const unlock = (id: number) => {
     router.post(`/employer/applications/${id}/unlock`, {}, { preserveScroll: true });
+};
+
+const toggleShortlist = (id: number) => {
+    router.post(`/employer/applications/${id}/shortlist`, {}, { preserveScroll: true });
 };
 
 const fund = (a: Applicant) => {
@@ -119,7 +124,15 @@ const submitReview = () => {
                             <span>Applied {{ a.created_at }}</span>
                         </div>
                     </div>
-                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[a.status]">{{ a.status }}</span>
+                    <div class="flex items-center gap-2">
+                        <span
+                            v-if="a.shortlisted"
+                            class="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-semibold text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300"
+                        >
+                            <Star class="size-3" fill="currentColor" /> Shortlisted
+                        </span>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[a.status]">{{ a.status }}</span>
+                    </div>
                 </div>
 
                 <div v-if="a.worker.skills.length" class="mt-3 flex flex-wrap gap-1.5">
@@ -146,6 +159,17 @@ const submitReview = () => {
 
                 <!-- Actions -->
                 <div class="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
+                    <button
+                        v-if="a.status !== 'withdrawn'"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                        :class="a.shortlisted
+                            ? 'bg-orange-500/10 text-orange-600 ring-1 ring-inset ring-orange-500/30 hover:bg-orange-500/20 dark:text-orange-300'
+                            : 'border text-muted-foreground hover:bg-muted hover:text-foreground'"
+                        @click="toggleShortlist(a.id)"
+                    >
+                        <Star class="size-3.5" :fill="a.shortlisted ? 'currentColor' : 'none'" />
+                        {{ a.shortlisted ? 'Shortlisted' : 'Shortlist' }}
+                    </button>
                     <template v-if="a.status === 'pending'">
                         <button class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700" @click="setStatus(a.id, 'accepted')">
                             <Check class="size-3.5" /> Accept

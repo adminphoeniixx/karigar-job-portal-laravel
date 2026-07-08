@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Lock, Mail, MapPin, Phone, Search, Star, UserRound } from '@lucide/vue';
-import { reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
+import { citiesFor, indianStates } from '@/data/indianLocations';
+import { commonSkills } from '@/data/skills';
 
 interface Worker {
     id: number;
@@ -37,9 +39,20 @@ const form = reactive({
     skill: props.filters.skill ?? '',
 });
 
+const cities = computed(() => citiesFor(form.state));
+
 const submit = () => {
-    router.get('/employer/workers', { ...form }, { preserveState: true, replace: true });
+    const params = Object.fromEntries(Object.entries(form).filter(([, v]) => v !== ''));
+    router.get('/employer/workers', params, { preserveState: true, preserveScroll: true, replace: true });
 };
+
+// Reset city when the state changes to something that doesn't contain it,
+// and refresh results as soon as a dropdown changes.
+watch(() => form.state, () => {
+    if (form.city && !cities.value.includes(form.city)) form.city = '';
+    submit();
+});
+watch(() => form.city, submit);
 
 const go = (url: string | null) => {
     if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
@@ -72,10 +85,19 @@ const num = (n: number) => n.toLocaleString('en-IN');
                 <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input v-model="form.q" placeholder="Skill, name…" class="w-full rounded-xl border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
             </div>
-            <input v-model="form.skill" placeholder="Skill" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
-            <input v-model="form.city" placeholder="City" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+            <input v-model="form.skill" list="worker-skill-options" placeholder="Skill" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+            <datalist id="worker-skill-options">
+                <option v-for="sk in commonSkills" :key="sk" :value="sk" />
+            </datalist>
+            <select v-model="form.state" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40">
+                <option value="">All states</option>
+                <option v-for="st in indianStates" :key="st" :value="st">{{ st }}</option>
+            </select>
             <div class="flex gap-2">
-                <input v-model="form.state" placeholder="State" class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+                <select v-model="form.city" :disabled="!form.state" class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40 disabled:opacity-50">
+                    <option value="">{{ form.state ? 'All cities' : 'Select state first' }}</option>
+                    <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
+                </select>
                 <button type="submit" class="shrink-0 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2.5 text-sm font-semibold text-white">Go</button>
             </div>
         </form>

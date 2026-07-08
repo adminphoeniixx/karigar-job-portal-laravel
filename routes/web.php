@@ -1,20 +1,19 @@
 <?php
 
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
-use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\JobModerationController as AdminJobModerationController;
-use App\Http\Controllers\Admin\KycController as AdminKycController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailTemplateController as AdminEmailTemplateController;
 use App\Http\Controllers\Admin\EscrowController as AdminEscrowController;
+use App\Http\Controllers\Admin\JobModerationController as AdminJobModerationController;
+use App\Http\Controllers\Admin\KycController as AdminKycController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
-use App\Http\Controllers\Employer\EscrowController;
 use App\Http\Controllers\Auth\RoleAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Employer\ApplicantController;
+use App\Http\Controllers\Employer\EscrowController;
 use App\Http\Controllers\Employer\WorkerDirectoryController;
-use App\Http\Controllers\Worker\JobController as WorkerJobController;
 use App\Http\Controllers\EmployerProfileController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JobApplicationController;
@@ -27,6 +26,7 @@ use App\Http\Controllers\RazorpayWebhookController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SavedJobController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\Worker\JobController as WorkerJobController;
 use App\Http\Controllers\WorkerProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -108,6 +108,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('employer/jobs/{job}/applicants', [ApplicantController::class, 'index'])->name('applicants.index');
         Route::patch('employer/applications/{application}', [ApplicantController::class, 'updateStatus'])->name('applicants.status');
         Route::post('employer/applications/{application}/unlock', [ApplicantController::class, 'unlockContact'])->name('applicants.unlock');
+
+        // Shortlist
+        Route::get('employer/shortlisted', [ApplicantController::class, 'shortlisted'])->name('applicants.shortlisted');
+        Route::post('employer/applications/{application}/shortlist', [ApplicantController::class, 'toggleShortlist'])->name('applicants.shortlist');
 
         // Escrow payments (employer funds → holds → releases to worker)
         Route::post('employer/applications/{application}/escrow', [EscrowController::class, 'fund'])->name('escrow.fund');
