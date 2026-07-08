@@ -66,9 +66,9 @@ const form = useForm<{
 });
 
 const selectClass =
-    'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20';
+    'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 const textareaClass =
-    'flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20';
+    'flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 
 const initial = computed(() => (props.profile.phone ?? 'W').charAt(0).toUpperCase());
 
@@ -99,11 +99,11 @@ const submit = () => {
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                     <div class="relative">
-                        <div class="flex size-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-3xl font-bold text-white shadow-lg shadow-teal-500/25">
+                        <div class="flex size-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-3xl font-bold text-white shadow-lg shadow-orange-500/25">
                             <img v-if="preview" :src="preview" alt="Avatar" class="size-full object-cover" />
                             <span v-else>{{ initial }}</span>
                         </div>
-                        <label class="absolute -bottom-2 -right-2 flex size-9 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-teal-500 text-white shadow-md transition hover:bg-teal-600">
+                        <label class="absolute -bottom-2 -right-2 flex size-9 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-orange-500 text-white shadow-md transition hover:bg-orange-600">
                             <Camera class="size-4" />
                             <input type="file" accept="image/*" class="hidden" @change="onAvatar" />
                         </label>
@@ -127,7 +127,7 @@ const submit = () => {
             <!-- Work details -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <IndianRupee class="size-4 text-teal-500" /> Work & rate
+                    <IndianRupee class="size-4 text-orange-500" /> Work & rate
                 </h2>
                 <div class="grid gap-4 sm:grid-cols-3">
                     <div class="grid gap-2">
@@ -177,7 +177,7 @@ const submit = () => {
             <!-- Location -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <MapPin class="size-4 text-teal-500" /> Location
+                    <MapPin class="size-4 text-orange-500" /> Location
                 </h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
@@ -207,7 +207,7 @@ const submit = () => {
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
                     Save changes
                 </button>

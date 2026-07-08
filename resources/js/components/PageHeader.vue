@@ -13,7 +13,7 @@ defineProps<{
         <div class="flex items-start gap-3.5">
             <div
                 v-if="icon"
-                class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/25"
+                class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/25"
             >
                 <component :is="icon" class="size-5" />
             </div>

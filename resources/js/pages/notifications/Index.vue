@@ -45,10 +45,10 @@ const markAll = () => router.post('/notifications/read-all', {}, { preserveScrol
                 v-for="n in notifications.data"
                 :key="n.id"
                 class="flex w-full items-start gap-3 border-b px-5 py-4 text-left transition last:border-0 hover:bg-muted/40"
-                :class="!n.read_at && 'bg-teal-500/[0.04]'"
+                :class="!n.read_at && 'bg-orange-500/[0.04]'"
                 @click="open(n)"
             >
-                <span class="mt-1.5 size-2 shrink-0 rounded-full" :class="n.read_at ? 'bg-transparent' : 'bg-teal-500'"></span>
+                <span class="mt-1.5 size-2 shrink-0 rounded-full" :class="n.read_at ? 'bg-transparent' : 'bg-orange-500'"></span>
                 <div class="min-w-0 flex-1">
                     <p class="text-sm" :class="!n.read_at && 'font-medium'">{{ n.data.message ?? 'Notification' }}</p>
                     <p class="mt-0.5 text-xs text-muted-foreground">{{ n.created_at }}</p>

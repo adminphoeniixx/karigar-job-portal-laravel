@@ -71,25 +71,25 @@ const save = (p: Plan) => {
             <div class="mt-4 grid gap-4 sm:grid-cols-3">
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Job posts</label>
-                    <input v-model.number="drafts[p.id].job_post_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model.number="drafts[p.id].job_post_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Contact unlocks (applications)</label>
-                    <input v-model.number="drafts[p.id].contact_unlock_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model.number="drafts[p.id].contact_unlock_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-teal-600 dark:text-teal-400">Worker-database contacts</label>
-                    <input v-model.number="drafts[p.id].contact_database_limit" type="number" min="0" class="w-full rounded-xl border border-teal-500/30 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <label class="mb-1 block text-xs font-medium text-orange-600 dark:text-orange-400">Worker-database contacts</label>
+                    <input v-model.number="drafts[p.id].contact_database_limit" type="number" min="0" class="w-full rounded-xl border border-orange-500/30 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
             </div>
 
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                 <div class="flex items-center gap-4 text-sm">
-                    <label class="flex items-center gap-2"><input v-model="drafts[p.id].featured" type="checkbox" class="size-4 rounded border-input text-teal-600 focus:ring-teal-500/40" /> Featured</label>
-                    <label class="flex items-center gap-2"><input v-model="drafts[p.id].is_active" type="checkbox" class="size-4 rounded border-input text-teal-600 focus:ring-teal-500/40" /> Active</label>
+                    <label class="flex items-center gap-2"><input v-model="drafts[p.id].featured" type="checkbox" class="size-4 rounded border-input text-orange-600 focus:ring-orange-500/40" /> Featured</label>
+                    <label class="flex items-center gap-2"><input v-model="drafts[p.id].is_active" type="checkbox" class="size-4 rounded border-input text-orange-600 focus:ring-orange-500/40" /> Active</label>
                 </div>
                 <button
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
                     @click="save(p)"
                 >
                     <Check class="size-4" /> Save

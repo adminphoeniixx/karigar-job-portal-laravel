@@ -9,12 +9,11 @@
 
 @theme inline {
     --font-sans:
-        Instrument Sans, ui-sans-serif, system-ui, sans-serif,
+        Poppins, ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
-    --font-display:
-        Outfit, Instrument Sans, ui-sans-serif, system-ui, sans-serif;
+    --font-display: Poppins, ui-sans-serif, system-ui, sans-serif;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -64,6 +63,22 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Brand-tuned orange scale (Jobick red-orange) so `orange-*` utilities
+   match the primary hue instead of Tailwind's stock amber-orange. */
+@theme {
+    --color-orange-50: #fff3ee;
+    --color-orange-100: #ffe3d8;
+    --color-orange-200: #ffc5b0;
+    --color-orange-300: #ffa183;
+    --color-orange-400: #ff7448;
+    --color-orange-500: #fb5a21;
+    --color-orange-600: #f24711;
+    --color-orange-700: #c93a06;
+    --color-orange-800: #a0300b;
+    --color-orange-900: #812b0e;
+    --color-orange-950: #451204;
+}
+
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
@@ -86,88 +101,88 @@
     body,
     html {
         --font-sans:
-            'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+            'Poppins', ui-sans-serif, system-ui, sans-serif,
             'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
             'Noto Color Emoji';
     }
 }
 
-/* ─── Karigar theme · Deep Teal + Coral ─────────────────────────────
-   primary   teal   #0D9488
-   accent    coral  #FB7185
-   dark bg    slate-teal #0A1418
+/* ─── Karigar theme · Jobick Orange ─────────────────────────────────
+   primary   red-orange  #F4470F
+   heading   deep navy   #1F2A4E
+   accent    soft pink   #FFEFEA
    ------------------------------------------------------------------- */
 :root {
-    --background: hsl(0 0% 100%);
-    --foreground: hsl(200 24% 12%);
+    --background: hsl(220 20% 97%);
+    --foreground: hsl(228 40% 20%);
     --card: hsl(0 0% 100%);
-    --card-foreground: hsl(200 24% 12%);
+    --card-foreground: hsl(228 40% 20%);
     --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(200 24% 12%);
-    --primary: hsl(174 84% 32%);
+    --popover-foreground: hsl(228 40% 20%);
+    --primary: hsl(15 92% 51%);
     --primary-foreground: hsl(0 0% 100%);
-    --secondary: hsl(180 14% 94%);
-    --secondary-foreground: hsl(200 24% 14%);
-    --muted: hsl(180 16% 96%);
-    --muted-foreground: hsl(200 10% 42%);
-    --accent: hsl(351 95% 96%);
-    --accent-foreground: hsl(351 60% 38%);
-    --destructive: hsl(0 75% 52%);
+    --secondary: hsl(220 20% 95%);
+    --secondary-foreground: hsl(228 40% 20%);
+    --muted: hsl(220 20% 96%);
+    --muted-foreground: hsl(228 12% 45%);
+    --accent: hsl(12 100% 96%);
+    --accent-foreground: hsl(15 85% 44%);
+    --destructive: hsl(0 78% 55%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(185 18% 90%);
-    --input: hsl(185 18% 88%);
-    --ring: hsl(174 84% 32%);
-    --chart-1: hsl(174 84% 32%);
-    --chart-2: hsl(351 95% 71%);
-    --chart-3: hsl(189 80% 42%);
-    --chart-4: hsl(43 90% 55%);
-    --chart-5: hsl(160 70% 40%);
+    --border: hsl(220 16% 91%);
+    --input: hsl(220 16% 89%);
+    --ring: hsl(15 92% 51%);
+    --chart-1: hsl(15 92% 51%);
+    --chart-2: hsl(137 60% 47%);
+    --chart-3: hsl(226 86% 60%);
+    --chart-4: hsl(291 60% 55%);
+    --chart-5: hsl(43 92% 55%);
     --radius: 0.85rem;
-    --sidebar-background: hsl(200 39% 9%);
-    --sidebar-foreground: hsl(195 18% 74%);
-    --sidebar-primary: hsl(173 70% 44%);
-    --sidebar-primary-foreground: hsl(200 50% 7%);
-    --sidebar-accent: hsl(199 34% 14%);
-    --sidebar-accent-foreground: hsl(0 0% 100%);
-    --sidebar-border: hsl(199 30% 16%);
-    --sidebar-ring: hsl(173 70% 44%);
-    --sidebar: hsl(200 39% 9%);
+    --sidebar-background: hsl(0 0% 100%);
+    --sidebar-foreground: hsl(228 14% 40%);
+    --sidebar-primary: hsl(15 92% 51%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(12 100% 96%);
+    --sidebar-accent-foreground: hsl(15 88% 46%);
+    --sidebar-border: hsl(220 16% 92%);
+    --sidebar-ring: hsl(15 92% 51%);
+    --sidebar: hsl(0 0% 100%);
 }
 
 .dark {
-    --background: hsl(200 41% 6%);
-    --foreground: hsl(180 12% 95%);
-    --card: hsl(200 33% 9%);
-    --card-foreground: hsl(180 12% 95%);
-    --popover: hsl(200 36% 8%);
-    --popover-foreground: hsl(180 12% 95%);
-    --primary: hsl(172 66% 50%);
-    --primary-foreground: hsl(200 60% 7%);
-    --secondary: hsl(200 26% 14%);
-    --secondary-foreground: hsl(180 12% 95%);
-    --muted: hsl(200 24% 15%);
-    --muted-foreground: hsl(195 14% 64%);
-    --accent: hsl(351 50% 18%);
-    --accent-foreground: hsl(351 95% 86%);
+    --background: hsl(231 33% 8%);
+    --foreground: hsl(220 25% 95%);
+    --card: hsl(230 28% 11%);
+    --card-foreground: hsl(220 25% 95%);
+    --popover: hsl(230 30% 10%);
+    --popover-foreground: hsl(220 25% 95%);
+    --primary: hsl(15 95% 58%);
+    --primary-foreground: hsl(0 0% 100%);
+    --secondary: hsl(229 24% 16%);
+    --secondary-foreground: hsl(220 25% 95%);
+    --muted: hsl(229 22% 16%);
+    --muted-foreground: hsl(226 14% 66%);
+    --accent: hsl(15 55% 17%);
+    --accent-foreground: hsl(15 95% 80%);
     --destructive: hsl(0 72% 56%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(200 24% 16%);
-    --input: hsl(200 24% 17%);
-    --ring: hsl(172 66% 50%);
-    --chart-1: hsl(172 66% 50%);
-    --chart-2: hsl(351 95% 71%);
-    --chart-3: hsl(189 85% 55%);
-    --chart-4: hsl(43 90% 60%);
-    --chart-5: hsl(160 65% 50%);
-    --sidebar-background: hsl(200 44% 5%);
-    --sidebar-foreground: hsl(195 18% 72%);
-    --sidebar-primary: hsl(172 66% 50%);
-    --sidebar-primary-foreground: hsl(200 60% 7%);
-    --sidebar-accent: hsl(200 32% 12%);
+    --border: hsl(229 22% 17%);
+    --input: hsl(229 22% 18%);
+    --ring: hsl(15 95% 58%);
+    --chart-1: hsl(15 95% 58%);
+    --chart-2: hsl(137 60% 52%);
+    --chart-3: hsl(226 90% 66%);
+    --chart-4: hsl(291 64% 62%);
+    --chart-5: hsl(43 92% 60%);
+    --sidebar-background: hsl(232 36% 6%);
+    --sidebar-foreground: hsl(226 16% 70%);
+    --sidebar-primary: hsl(15 95% 58%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(230 26% 13%);
     --sidebar-accent-foreground: hsl(0 0% 100%);
-    --sidebar-border: hsl(200 28% 14%);
-    --sidebar-ring: hsl(172 66% 50%);
-    --sidebar: hsl(200 44% 5%);
+    --sidebar-border: hsl(230 24% 14%);
+    --sidebar-ring: hsl(15 95% 58%);
+    --sidebar: hsl(232 36% 6%);
 }
 
 @layer base {
@@ -191,7 +206,7 @@
         letter-spacing: -0.02em;
     }
     ::selection {
-        background: hsl(174 84% 32% / 0.22);
+        background: hsl(15 92% 51% / 0.22);
     }
 }
 
@@ -209,18 +224,18 @@
     /* Layered, soft premium shadow */
     .shadow-premium {
         box-shadow:
-            0 1px 2px hsl(200 41% 10% / 0.05),
-            0 8px 24px -8px hsl(174 84% 18% / 0.14),
-            0 24px 48px -24px hsl(174 84% 18% / 0.22);
+            0 1px 2px hsl(231 33% 10% / 0.05),
+            0 8px 24px -8px hsl(15 92% 30% / 0.14),
+            0 24px 48px -24px hsl(15 92% 30% / 0.22);
     }
 
-    /* Teal → coral text gradient */
+    /* Orange → red → pink text gradient */
     .text-gradient-brand {
         background-image: linear-gradient(
             135deg,
-            hsl(172 66% 50%),
-            hsl(189 85% 55%) 45%,
-            hsl(351 95% 71%)
+            hsl(15 95% 58%),
+            hsl(0 86% 60%) 45%,
+            hsl(330 85% 66%)
         );
         -webkit-background-clip: text;
         background-clip: text;
@@ -239,8 +254,8 @@
         padding: 1px;
         background: linear-gradient(
             135deg,
-            hsl(174 84% 40% / 0.55),
-            hsl(351 95% 71% / 0.35),
+            hsl(15 92% 51% / 0.55),
+            hsl(330 85% 66% / 0.35),
             transparent
         );
         -webkit-mask:

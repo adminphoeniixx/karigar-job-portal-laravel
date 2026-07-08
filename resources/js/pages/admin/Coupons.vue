@@ -120,48 +120,48 @@ const discountLabel = (c: Coupon) =>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Code</label>
-                    <input v-model="form.code" placeholder="WELCOME20" class="w-full rounded-xl border bg-background px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model="form.code" placeholder="WELCOME20" class="w-full rounded-xl border bg-background px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                     <p v-if="form.errors.code" class="mt-1 text-xs text-rose-500">{{ form.errors.code }}</p>
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Description (optional)</label>
-                    <input v-model="form.description" placeholder="First month launch offer" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model="form.description" placeholder="First month launch offer" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Discount type</label>
-                    <select v-model="form.discount_type" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40">
+                    <select v-model="form.discount_type" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40">
                         <option value="percent">Percentage (%)</option>
                         <option value="flat">Flat amount (₹)</option>
                     </select>
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">{{ form.discount_type === 'percent' ? 'Percent off' : 'Amount off (₹)' }}</label>
-                    <input v-model.number="form.discount_value" type="number" min="0" step="0.01" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model.number="form.discount_value" type="number" min="0" step="0.01" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                     <p v-if="form.errors.discount_value" class="mt-1 text-xs text-rose-500">{{ form.errors.discount_value }}</p>
                 </div>
                 <div v-if="form.discount_type === 'percent'">
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Max discount cap ₹ (optional)</label>
-                    <input v-model.number="form.max_discount_amount" type="number" min="0" step="0.01" placeholder="e.g. 500" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model.number="form.max_discount_amount" type="number" min="0" step="0.01" placeholder="e.g. 500" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Minimum plan price ₹ (optional)</label>
-                    <input v-model.number="form.min_amount" type="number" min="0" step="0.01" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model.number="form.min_amount" type="number" min="0" step="0.01" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Total redemption limit (blank = unlimited)</label>
-                    <input v-model.number="form.max_redemptions" type="number" min="1" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model.number="form.max_redemptions" type="number" min="1" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Per-user limit (0 = unlimited)</label>
-                    <input v-model.number="form.per_user_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model.number="form.per_user_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Starts at (optional)</label>
-                    <input v-model="form.starts_at" type="datetime-local" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model="form.starts_at" type="datetime-local" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Expires at (optional)</label>
-                    <input v-model="form.expires_at" type="datetime-local" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                    <input v-model="form.expires_at" type="datetime-local" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                     <p v-if="form.errors.expires_at" class="mt-1 text-xs text-rose-500">{{ form.errors.expires_at }}</p>
                 </div>
             </div>
@@ -169,7 +169,7 @@ const discountLabel = (c: Coupon) =>
             <!-- Razorpay offer -->
             <div>
                 <label class="mb-1 block text-xs font-medium text-muted-foreground">Razorpay Offer ID (optional but recommended)</label>
-                <input v-model="form.razorpay_offer_id" placeholder="offer_XXXXXXXXXXXX" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                <input v-model="form.razorpay_offer_id" placeholder="offer_XXXXXXXXXXXX" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 <p class="mt-1 text-xs text-muted-foreground">
                     Create a matching offer in the Razorpay Dashboard and paste its ID here so Razorpay actually charges the discounted amount. Leave blank to show the discount to users without adjusting the Razorpay charge.
                 </p>
@@ -184,7 +184,7 @@ const discountLabel = (c: Coupon) =>
                         :key="p.id"
                         type="button"
                         class="rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition"
-                        :class="form.plan_ids.includes(p.id) ? 'bg-teal-500/10 text-teal-600 ring-teal-500/30 dark:text-teal-300' : 'bg-muted text-muted-foreground ring-border hover:bg-muted/70'"
+                        :class="form.plan_ids.includes(p.id) ? 'bg-orange-500/10 text-orange-600 ring-orange-500/30 dark:text-orange-300' : 'bg-muted text-muted-foreground ring-border hover:bg-muted/70'"
                         @click="togglePlan(p.id)"
                     >
                         {{ p.name }} · ₹{{ p.price }}
@@ -193,7 +193,7 @@ const discountLabel = (c: Coupon) =>
             </div>
 
             <label class="flex items-center gap-2 text-sm">
-                <input v-model="form.is_active" type="checkbox" class="size-4 rounded border-input text-teal-600 focus:ring-teal-500/40" />
+                <input v-model="form.is_active" type="checkbox" class="size-4 rounded border-input text-orange-600 focus:ring-orange-500/40" />
                 Active
             </label>
 
@@ -201,7 +201,7 @@ const discountLabel = (c: Coupon) =>
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
                 >
                     <component :is="editingId ? Check : Plus" class="size-4" /> {{ editingId ? 'Save changes' : 'Create coupon' }}
                 </button>
@@ -215,7 +215,7 @@ const discountLabel = (c: Coupon) =>
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="rounded-lg bg-muted px-2 py-0.5 font-mono text-sm font-semibold">{{ c.code }}</span>
-                        <span class="inline-flex items-center rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-semibold text-teal-600 ring-1 ring-inset ring-teal-500/20 dark:text-teal-300">{{ discountLabel(c) }}</span>
+                        <span class="inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300">{{ discountLabel(c) }}</span>
                         <span
                             class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset"
                             :class="c.is_active ? 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-300' : 'bg-muted text-muted-foreground ring-border'"

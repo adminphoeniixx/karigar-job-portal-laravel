@@ -32,7 +32,7 @@ const form = useForm<{
 });
 
 const statusPill: Record<string, string> = {
-    verified: 'bg-teal-500/10 text-teal-600 ring-teal-500/20 dark:text-teal-300',
+    verified: 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300',
     rejected: 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300',
     pending: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-300',
 };
@@ -67,8 +67,8 @@ const submit = () => form.post('/kyc', { preserveScroll: true, forceFormData: tr
         </div>
 
         <!-- Verified / pending banners -->
-        <div v-if="kyc && kyc.status === 'verified'" class="flex items-center gap-3 rounded-2xl border border-teal-500/30 bg-teal-500/5 p-5">
-            <span class="flex size-10 items-center justify-center rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-300"><BadgeCheck class="size-6" /></span>
+        <div v-if="kyc && kyc.status === 'verified'" class="flex items-center gap-3 rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5">
+            <span class="flex size-10 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><BadgeCheck class="size-6" /></span>
             <div>
                 <p class="font-semibold">You're verified</p>
                 <p class="text-sm text-muted-foreground">Your KYC has been approved. ✅</p>
@@ -102,8 +102,8 @@ const submit = () => form.post('/kyc', { preserveScroll: true, forceFormData: tr
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
                         <Label for="pan_doc">PAN Document</Label>
-                        <label class="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed bg-muted/30 px-4 py-6 text-center transition hover:border-teal-500/50 hover:bg-muted/50">
-                            <Upload class="size-5 text-teal-500" />
+                        <label class="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed bg-muted/30 px-4 py-6 text-center transition hover:border-orange-500/50 hover:bg-muted/50">
+                            <Upload class="size-5 text-orange-500" />
                             <span class="text-xs font-medium">{{ form.pan_doc?.name ?? 'Upload image / PDF' }}</span>
                             <input id="pan_doc" type="file" accept=".jpg,.jpeg,.png,.pdf" class="hidden" @change="onFile('pan_doc', $event)" />
                         </label>
@@ -111,8 +111,8 @@ const submit = () => form.post('/kyc', { preserveScroll: true, forceFormData: tr
                     </div>
                     <div class="grid gap-2">
                         <Label for="aadhaar_doc">Aadhaar Document</Label>
-                        <label class="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed bg-muted/30 px-4 py-6 text-center transition hover:border-teal-500/50 hover:bg-muted/50">
-                            <Upload class="size-5 text-teal-500" />
+                        <label class="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed bg-muted/30 px-4 py-6 text-center transition hover:border-orange-500/50 hover:bg-muted/50">
+                            <Upload class="size-5 text-orange-500" />
                             <span class="text-xs font-medium">{{ form.aadhaar_doc?.name ?? 'Upload image / PDF' }}</span>
                             <input id="aadhaar_doc" type="file" accept=".jpg,.jpeg,.png,.pdf" class="hidden" @change="onFile('aadhaar_doc', $event)" />
                         </label>
@@ -123,7 +123,7 @@ const submit = () => form.post('/kyc', { preserveScroll: true, forceFormData: tr
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
                     Submit for verification
                 </button>

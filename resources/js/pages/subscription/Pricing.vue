@@ -86,11 +86,11 @@ const subscribe = (plan: Plan) => {
     <div class="flex flex-col gap-6 p-4 md:p-6">
         <PageHeader :icon="CreditCard" title="Plans" description="Choose a plan to start posting jobs" />
 
-        <div v-if="current" class="flex items-center gap-2 rounded-2xl border bg-teal-500/5 px-5 py-4">
-            <span class="flex size-9 items-center justify-center rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-300"><Check class="size-5" /></span>
+        <div v-if="current" class="flex items-center gap-2 rounded-2xl border bg-orange-500/5 px-5 py-4">
+            <span class="flex size-9 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-5" /></span>
             <div class="text-sm">
                 Active plan: <strong>{{ current.plan.name }}</strong>
-                <span class="ml-2 inline-flex items-center rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-semibold capitalize text-teal-600 ring-1 ring-inset ring-teal-500/20 dark:text-teal-300">{{ current.status }}</span>
+                <span class="ml-2 inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold capitalize text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300">{{ current.status }}</span>
             </div>
         </div>
 
@@ -102,17 +102,17 @@ const subscribe = (plan: Plan) => {
         <!-- Coupon -->
         <div class="rounded-2xl border bg-card p-4 shadow-sm">
             <div class="flex flex-wrap items-center gap-2">
-                <span class="flex size-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-300"><Tag class="size-4" /></span>
+                <span class="flex size-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-300"><Tag class="size-4" /></span>
                 <input
                     v-model="code"
                     placeholder="Have a coupon code?"
-                    class="h-[42px] flex-1 rounded-xl border bg-background px-4 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    class="h-[42px] flex-1 rounded-xl border bg-background px-4 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                     @keyup.enter="applyCoupon"
                 />
                 <button
                     type="button"
                     :disabled="applying || !code.trim()"
-                    class="inline-flex h-[42px] items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
+                    class="inline-flex h-[42px] items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
                     @click="applyCoupon"
                 >
                     Apply
@@ -126,7 +126,7 @@ const subscribe = (plan: Plan) => {
                     <X class="size-4" /> Clear
                 </button>
             </div>
-            <p v-if="couponResult && couponResult.valid" class="mt-2 flex items-center gap-1.5 text-sm font-medium text-teal-600 dark:text-teal-400">
+            <p v-if="couponResult && couponResult.valid" class="mt-2 flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400">
                 <Check class="size-4" /> Coupon <strong class="mx-1">{{ couponResult.code }}</strong> applied. Eligible plans show the discounted price below.
             </p>
             <p v-else-if="couponResult && !couponResult.valid" class="mt-2 flex items-center gap-1.5 text-sm font-medium text-rose-500">
@@ -139,19 +139,19 @@ const subscribe = (plan: Plan) => {
                 v-for="plan in plans"
                 :key="plan.id"
                 class="relative flex flex-col overflow-hidden rounded-3xl border bg-card p-6 shadow-sm transition hover:shadow-md"
-                :class="plan.features?.featured ? 'border-teal-500/40 ring-2 ring-teal-500/20' : ''"
+                :class="plan.features?.featured ? 'border-orange-500/40 ring-2 ring-orange-500/20' : ''"
             >
-                <div v-if="plan.features?.featured" class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-teal-500/15 blur-2xl"></div>
+                <div v-if="plan.features?.featured" class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/15 blur-2xl"></div>
                 <div class="relative flex items-center justify-between">
                     <h3 class="text-lg font-bold">{{ plan.name }}</h3>
-                    <span v-if="plan.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-teal-500 to-cyan-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                    <span v-if="plan.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-rose-600 px-2.5 py-0.5 text-xs font-semibold text-white">
                         <Sparkles class="size-3" /> Popular
                     </span>
                 </div>
                 <div class="relative mt-3 flex items-end gap-1">
                     <span
                         class="text-4xl font-extrabold tracking-tight"
-                        :class="discountFor(plan) > 0 ? 'text-teal-600 dark:text-teal-400' : ''"
+                        :class="discountFor(plan) > 0 ? 'text-orange-600 dark:text-orange-400' : ''"
                     >{{ discountFor(plan) > 0 ? money(finalPrice(plan)) : '₹' + plan.price }}</span>
                     <span class="pb-1 text-sm text-muted-foreground">/{{ plan.interval }}</span>
                 </div>
@@ -163,15 +163,15 @@ const subscribe = (plan: Plan) => {
                 </div>
                 <ul class="relative mt-6 flex-1 space-y-3 text-sm">
                     <li class="flex items-center gap-2">
-                        <span class="flex size-5 items-center justify-center rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-300"><Check class="size-3.5" /></span>
+                        <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
                         {{ plan.features?.job_post_limit ?? 0 }} job posts
                     </li>
                     <li class="flex items-center gap-2">
-                        <span class="flex size-5 items-center justify-center rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-300"><Check class="size-3.5" /></span>
+                        <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
                         {{ plan.features?.contact_unlock_limit ?? 0 }} contact unlocks
                     </li>
                     <li v-if="plan.features?.featured" class="flex items-center gap-2">
-                        <span class="flex size-5 items-center justify-center rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-300"><Check class="size-3.5" /></span>
+                        <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
                         Featured listings
                     </li>
                 </ul>
@@ -179,7 +179,7 @@ const subscribe = (plan: Plan) => {
                     class="relative mt-6 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95 disabled:opacity-50"
                     :class="current?.plan.id === plan.id
                         ? 'cursor-default border text-muted-foreground'
-                        : 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-600/25 hover:opacity-90'"
+                        : 'bg-gradient-to-r from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-600/25 hover:opacity-90'"
                     :disabled="current?.plan.id === plan.id"
                     @click="subscribe(plan)"
                 >

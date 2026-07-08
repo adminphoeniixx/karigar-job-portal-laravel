@@ -60,13 +60,13 @@ onMounted(() => {
     <Head title="Checkout" />
 
     <div class="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-12 text-center">
-        <span class="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/25">
+        <span class="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/25">
             <Loader2 class="size-8 animate-spin" />
         </span>
         <h1 class="text-xl font-semibold">Completing your {{ plan.name }} subscription…</h1>
         <p class="max-w-sm text-sm text-muted-foreground">If the Razorpay window does not open automatically, click the button below.</p>
         <button
-            class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition hover:opacity-90 active:scale-95"
+            class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
             @click="openCheckout"
         >
             Open payment

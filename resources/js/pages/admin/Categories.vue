@@ -46,14 +46,14 @@ const remove = (c: Category) => {
                 <input
                     v-model="form.name"
                     placeholder="New category name (e.g. Roofing)"
-                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                 />
                 <p v-if="form.errors.name" class="mt-1 text-xs text-rose-500">{{ form.errors.name }}</p>
             </div>
             <button
                 type="submit"
                 :disabled="form.processing"
-                class="inline-flex h-[42px] shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
+                class="inline-flex h-[42px] shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
             >
                 <Plus class="size-4" /> Add
             </button>
@@ -66,7 +66,7 @@ const remove = (c: Category) => {
                     <span class="font-medium">{{ c.name }}</span>
                     <span
                         class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset"
-                        :class="c.is_active ? 'bg-teal-500/10 text-teal-600 ring-teal-500/20 dark:text-teal-300' : 'bg-muted text-muted-foreground ring-border'"
+                        :class="c.is_active ? 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300' : 'bg-muted text-muted-foreground ring-border'"
                     >
                         {{ c.is_active ? 'Active' : 'Hidden' }}
                     </span>

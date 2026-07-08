@@ -51,9 +51,9 @@ const refund = (e: Row) => {
 
 const statusBadge: Record<string, string> = {
     pending: 'bg-muted text-muted-foreground',
-    funded: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-300',
+    funded: 'bg-rose-500/10 text-rose-600 dark:text-rose-300',
     release_requested: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
-    released: 'bg-teal-500/10 text-teal-600 dark:text-teal-300',
+    released: 'bg-orange-500/10 text-orange-600 dark:text-orange-300',
     refunded: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
     disputed: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
 };
@@ -77,7 +77,7 @@ const canRelease = (s: string) => s === 'funded' || s === 'release_requested' ||
 
         <!-- Filter -->
         <div class="rounded-2xl border bg-card p-4 shadow-sm">
-            <select v-model="status" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40">
+            <select v-model="status" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40">
                 <option value="">All statuses</option>
                 <option value="pending">Awaiting payment</option>
                 <option value="funded">Funds held</option>
@@ -107,7 +107,7 @@ const canRelease = (s: string) => s === 'funded' || s === 'release_requested' ||
                     </div>
                     <div v-if="canRelease(e.status)" class="flex items-center gap-1">
                         <button
-                            class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-teal-600 transition hover:bg-teal-500/10 dark:text-teal-400"
+                            class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-500/10 dark:text-orange-400"
                             @click="release(e)"
                         >
                             <Send class="size-3.5" /> Release
@@ -132,7 +132,7 @@ const canRelease = (s: string) => s === 'funded' || s === 'release_requested' ||
                 :href="l.url ?? ''"
                 preserve-scroll
                 class="rounded-lg px-3 py-1.5 text-sm transition"
-                :class="[l.active ? 'bg-teal-500 text-white' : l.url ? 'border hover:bg-muted' : 'cursor-default text-muted-foreground opacity-50']"
+                :class="[l.active ? 'bg-orange-500 text-white' : l.url ? 'border hover:bg-muted' : 'cursor-default text-muted-foreground opacity-50']"
                 v-html="l.label"
             />
         </div>

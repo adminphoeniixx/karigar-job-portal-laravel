@@ -111,7 +111,7 @@ const planLabel = computed(
             <!-- Plan badge (Velocity-style) -->
             <Link
                 :href="role === 'employer' ? '/subscription' : dashboard()"
-                class="mx-2 mb-1 flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 px-3 py-2.5 text-white shadow-md transition hover:opacity-95 group-data-[collapsible=icon]:hidden"
+                class="mx-2 mb-1 flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 to-rose-500 px-3 py-2.5 text-white shadow-md transition hover:opacity-95 group-data-[collapsible=icon]:hidden"
             >
                 <Crown class="size-5 shrink-0" />
                 <div class="leading-tight">

@@ -66,7 +66,7 @@ const insertPlaceholder = (t: Template, ph: string) => {
                         <span class="font-semibold">{{ t.name }}</span>
                         <span
                             class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset"
-                            :class="drafts[t.id].is_active ? 'bg-teal-500/10 text-teal-600 ring-teal-500/20 dark:text-teal-300' : 'bg-muted text-muted-foreground ring-border'"
+                            :class="drafts[t.id].is_active ? 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300' : 'bg-muted text-muted-foreground ring-border'"
                         >
                             {{ drafts[t.id].is_active ? 'Active' : 'Paused' }}
                         </span>
@@ -76,7 +76,7 @@ const insertPlaceholder = (t: Template, ph: string) => {
                 </div>
                 <button
                     class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition"
-                    :class="drafts[t.id].is_active ? 'text-muted-foreground hover:bg-muted' : 'text-teal-600 hover:bg-teal-500/10'"
+                    :class="drafts[t.id].is_active ? 'text-muted-foreground hover:bg-muted' : 'text-orange-600 hover:bg-orange-500/10'"
                     @click="drafts[t.id].is_active = !drafts[t.id].is_active"
                 >
                     <component :is="drafts[t.id].is_active ? X : Check" class="size-3.5" />
@@ -90,7 +90,7 @@ const insertPlaceholder = (t: Template, ph: string) => {
                     <label class="mb-1 block text-sm font-medium">Subject</label>
                     <input
                         v-model="drafts[t.id].subject"
-                        class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                        class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                     />
                 </div>
 
@@ -100,7 +100,7 @@ const insertPlaceholder = (t: Template, ph: string) => {
                     <textarea
                         v-model="drafts[t.id].body_html"
                         rows="10"
-                        class="w-full rounded-xl border bg-background px-4 py-2.5 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                        class="w-full rounded-xl border bg-background px-4 py-2.5 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                     ></textarea>
                 </div>
 
@@ -112,7 +112,7 @@ const insertPlaceholder = (t: Template, ph: string) => {
                             v-for="ph in t.placeholders"
                             :key="ph"
                             type="button"
-                            class="rounded-full bg-muted px-2.5 py-1 font-mono text-[11px] text-foreground transition hover:bg-teal-500/10 hover:text-teal-600"
+                            class="rounded-full bg-muted px-2.5 py-1 font-mono text-[11px] text-foreground transition hover:bg-orange-500/10 hover:text-orange-600"
                             @click="insertPlaceholder(t, ph)"
                         >
                             {{ token(ph) }}
@@ -127,7 +127,7 @@ const insertPlaceholder = (t: Template, ph: string) => {
                             v-model="testEmail[t.id]"
                             type="email"
                             placeholder="you@example.com"
-                            class="w-48 rounded-lg border bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+                            class="w-48 rounded-lg border bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                         />
                         <button
                             type="button"
@@ -140,7 +140,7 @@ const insertPlaceholder = (t: Template, ph: string) => {
                     <button
                         type="button"
                         :disabled="saving === t.id"
-                        class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
                         @click="save(t)"
                     >
                         <Check class="size-4" /> Save changes

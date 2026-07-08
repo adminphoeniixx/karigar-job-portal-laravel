@@ -44,7 +44,7 @@ const toggle = (j: Row) => {
 };
 
 const statusBadge: Record<string, string> = {
-    active: 'bg-teal-500/10 text-teal-600 dark:text-teal-300',
+    active: 'bg-orange-500/10 text-orange-600 dark:text-orange-300',
     closed: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
     draft: 'bg-muted text-muted-foreground',
 };
@@ -60,9 +60,9 @@ const statusBadge: Record<string, string> = {
         <div class="flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-sm sm:flex-row">
             <div class="relative flex-1">
                 <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input v-model="q" placeholder="Search job title…" class="w-full rounded-xl border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                <input v-model="q" placeholder="Search job title…" class="w-full rounded-xl border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
             </div>
-            <select v-model="status" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40">
+            <select v-model="status" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40">
                 <option value="">All statuses</option>
                 <option value="active">Active</option>
                 <option value="closed">Closed</option>
@@ -92,7 +92,7 @@ const statusBadge: Record<string, string> = {
                     </button>
                     <button
                         v-else
-                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-teal-600 transition hover:bg-teal-500/10 dark:text-teal-400"
+                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-500/10 dark:text-orange-400"
                         @click="toggle(j)"
                     >
                         <Eye class="size-3.5" /> Restore
@@ -110,7 +110,7 @@ const statusBadge: Record<string, string> = {
                 :href="l.url ?? ''"
                 preserve-scroll
                 class="rounded-lg px-3 py-1.5 text-sm transition"
-                :class="[l.active ? 'bg-teal-500 text-white' : l.url ? 'border hover:bg-muted' : 'cursor-default text-muted-foreground opacity-50']"
+                :class="[l.active ? 'bg-orange-500 text-white' : l.url ? 'border hover:bg-muted' : 'cursor-default text-muted-foreground opacity-50']"
                 v-html="l.label"
             />
         </div>

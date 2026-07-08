@@ -19,7 +19,7 @@ defineProps<{
 defineOptions({ layout: { breadcrumbs: [{ title: 'My Jobs', href: '/employer/jobs' }] } });
 
 const statusPill: Record<string, string> = {
-    active: 'bg-teal-500/10 text-teal-600 ring-teal-500/20 dark:text-teal-300',
+    active: 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300',
     closed: 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300',
     draft: 'bg-muted text-muted-foreground ring-border',
 };
@@ -39,7 +39,7 @@ const destroy = (id: number) => {
             <template #action>
                 <Link
                     href="/employer/jobs/create"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition hover:opacity-90 active:scale-95"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
                 >
                     <Plus class="size-4" /> Post a job
                 </Link>
@@ -81,7 +81,7 @@ const destroy = (id: number) => {
                                 <div class="flex items-center justify-end gap-1">
                                     <Link
                                         :href="`/employer/jobs/${job.id}/applicants`"
-                                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-teal-600 transition hover:bg-teal-500/10 dark:text-teal-300"
+                                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-500/10 dark:text-orange-300"
                                     >
                                         <UsersRound class="size-3.5" /> Applicants
                                     </Link>

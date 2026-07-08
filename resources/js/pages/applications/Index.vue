@@ -24,7 +24,7 @@ defineProps<{
 defineOptions({ layout: { breadcrumbs: [{ title: 'My Applications', href: '/worker/applications' }] } });
 
 const statusPill: Record<string, string> = {
-    accepted: 'bg-teal-500/10 text-teal-600 ring-teal-500/20 dark:text-teal-300',
+    accepted: 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300',
     rejected: 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300',
     withdrawn: 'bg-muted text-muted-foreground ring-border',
     pending: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-300',
@@ -58,7 +58,7 @@ const withdraw = (id: number) => {
                     <tbody>
                         <tr v-for="a in applications.data" :key="a.id" class="border-t transition hover:bg-muted/30">
                             <td class="px-5 py-3.5">
-                                <Link :href="`/jobs/${a.job.id}`" class="font-medium hover:text-teal-600 dark:hover:text-teal-300">{{ a.job.title }}</Link>
+                                <Link :href="`/jobs/${a.job.id}`" class="font-medium hover:text-orange-600 dark:hover:text-orange-300">{{ a.job.title }}</Link>
                                 <div class="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
                                     <MapPin class="size-3" /> {{ [a.job.city, a.job.state].filter(Boolean).join(', ') || '—' }}
                                 </div>
@@ -88,7 +88,7 @@ const withdraw = (id: number) => {
                                 </div>
                                 <p class="mt-4 font-medium">No applications yet</p>
                                 <p class="mt-1 text-sm text-muted-foreground">Browse jobs and apply to get started.</p>
-                                <Link href="/jobs" class="mt-4 inline-flex rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-white">Browse jobs</Link>
+                                <Link href="/jobs" class="mt-4 inline-flex rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2 text-sm font-semibold text-white">Browse jobs</Link>
                             </td>
                         </tr>
                     </tbody>

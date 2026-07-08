@@ -34,7 +34,7 @@ const props = defineProps<{
 defineOptions({ layout: { breadcrumbs: [{ title: 'My Jobs', href: '/employer/jobs' }, { title: 'Applicants', href: '#' }] } });
 
 const statusPill: Record<string, string> = {
-    accepted: 'bg-teal-500/10 text-teal-600 ring-teal-500/20 dark:text-teal-300',
+    accepted: 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300',
     rejected: 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300',
     withdrawn: 'bg-muted text-muted-foreground ring-border',
     pending: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-300',
@@ -64,9 +64,9 @@ const releasePayment = (escrowId: number, name: string) => {
 
 const escrowBadge: Record<string, string> = {
     pending: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
-    funded: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-300',
+    funded: 'bg-rose-500/10 text-rose-600 dark:text-rose-300',
     release_requested: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
-    released: 'bg-teal-500/10 text-teal-600 dark:text-teal-300',
+    released: 'bg-orange-500/10 text-orange-600 dark:text-orange-300',
     refunded: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
     disputed: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
 };
@@ -131,9 +131,9 @@ const submitReview = () => {
 
                 <!-- Contact -->
                 <div class="mt-3">
-                    <div v-if="a.contact_unlocked" class="flex flex-wrap gap-4 rounded-xl border border-teal-500/20 bg-teal-500/5 p-3 text-sm">
-                        <span class="inline-flex items-center gap-1.5"><Mail class="size-4 text-teal-600" /> {{ a.worker.email }}</span>
-                        <span v-if="a.worker.phone" class="inline-flex items-center gap-1.5"><Phone class="size-4 text-teal-600" /> {{ a.worker.phone }}</span>
+                    <div v-if="a.contact_unlocked" class="flex flex-wrap gap-4 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 text-sm">
+                        <span class="inline-flex items-center gap-1.5"><Mail class="size-4 text-orange-600" /> {{ a.worker.email }}</span>
+                        <span v-if="a.worker.phone" class="inline-flex items-center gap-1.5"><Phone class="size-4 text-orange-600" /> {{ a.worker.phone }}</span>
                     </div>
                     <button
                         v-else
@@ -147,7 +147,7 @@ const submitReview = () => {
                 <!-- Actions -->
                 <div class="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
                     <template v-if="a.status === 'pending'">
-                        <button class="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700" @click="setStatus(a.id, 'accepted')">
+                        <button class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700" @click="setStatus(a.id, 'accepted')">
                             <Check class="size-3.5" /> Accept
                         </button>
                         <button class="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10" @click="setStatus(a.id, 'rejected')">
@@ -166,14 +166,14 @@ const submitReview = () => {
                     <template v-if="a.status === 'accepted'">
                         <button
                             v-if="!a.escrow || a.escrow.status === 'pending'"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                             @click="fund(a)"
                         >
                             <IndianRupee class="size-3.5" /> {{ a.escrow?.status === 'pending' ? 'Complete payment' : 'Fund payment' }}
                         </button>
                         <button
                             v-else-if="a.escrow.status === 'funded'"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700"
                             @click="releasePayment(a.escrow.id, a.worker.name)"
                         >
                             <Send class="size-3.5" /> Release ₹{{ a.escrow.payout_amount }}
@@ -187,7 +187,7 @@ const submitReview = () => {
                         </span>
                     </template>
 
-                    <Unlock v-if="a.contact_unlocked" class="ml-auto size-4 text-teal-500" />
+                    <Unlock v-if="a.contact_unlocked" class="ml-auto size-4 text-orange-500" />
                 </div>
             </div>
         </div>
@@ -208,11 +208,11 @@ const submitReview = () => {
                     <Star class="size-7 transition" :class="n <= reviewForm.rating ? 'text-amber-400' : 'text-muted-foreground/30'" :fill="n <= reviewForm.rating ? 'currentColor' : 'none'" />
                 </button>
             </div>
-            <textarea v-model="reviewForm.comment" rows="4" placeholder="Share your experience…" class="mt-4 w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40"></textarea>
+            <textarea v-model="reviewForm.comment" rows="4" placeholder="Share your experience…" class="mt-4 w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"></textarea>
             <p v-if="reviewForm.errors.rating" class="mt-1 text-xs text-rose-500">{{ reviewForm.errors.rating }}</p>
             <div class="mt-4 flex justify-end gap-2">
                 <button class="rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted" @click="reviewFor = null">Cancel</button>
-                <button :disabled="reviewForm.processing" class="rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" @click="submitReview">Submit</button>
+                <button :disabled="reviewForm.processing" class="rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" @click="submitReview">Submit</button>
             </div>
         </div>
     </div>

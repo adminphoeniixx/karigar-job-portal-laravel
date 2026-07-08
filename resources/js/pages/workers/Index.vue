@@ -57,26 +57,26 @@ const num = (n: number) => n.toLocaleString('en-IN');
         <!-- Access banner -->
         <div v-if="!access.has_plan" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
             <span class="inline-flex items-center gap-2"><Lock class="size-4 shrink-0" /> Subscribe to a plan to unlock worker contact numbers.</span>
-            <Link href="/subscription" class="shrink-0 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2 text-xs font-semibold text-white">View plans</Link>
+            <Link href="/subscription" class="shrink-0 rounded-lg bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2 text-xs font-semibold text-white">View plans</Link>
         </div>
-        <div v-else class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-teal-500/5 px-5 py-4 text-sm">
+        <div v-else class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-orange-500/5 px-5 py-4 text-sm">
             <span>
                 Your plan gives access to <strong>{{ num(access.quota) }}</strong> worker contacts.
                 <span class="text-muted-foreground">Showing contacts for the first {{ num(access.quota) }} matches.</span>
             </span>
-            <Link href="/subscription" class="shrink-0 text-xs font-semibold text-teal-600 hover:underline dark:text-teal-400">Need more? Upgrade →</Link>
+            <Link href="/subscription" class="shrink-0 text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">Need more? Upgrade →</Link>
         </div>
 
         <form class="grid gap-3 rounded-2xl border bg-card p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-5" @submit.prevent="submit">
             <div class="relative lg:col-span-2">
                 <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input v-model="form.q" placeholder="Skill, name…" class="w-full rounded-xl border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+                <input v-model="form.q" placeholder="Skill, name…" class="w-full rounded-xl border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
             </div>
-            <input v-model="form.skill" placeholder="Skill" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
-            <input v-model="form.city" placeholder="City" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
+            <input v-model="form.skill" placeholder="Skill" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+            <input v-model="form.city" placeholder="City" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
             <div class="flex gap-2">
-                <input v-model="form.state" placeholder="State" class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40" />
-                <button type="submit" class="shrink-0 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white">Go</button>
+                <input v-model="form.state" placeholder="State" class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+                <button type="submit" class="shrink-0 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2.5 text-sm font-semibold text-white">Go</button>
             </div>
         </form>
 
@@ -88,7 +88,7 @@ const num = (n: number) => n.toLocaleString('en-IN');
             >
                 <div class="flex items-center gap-3">
                     <img v-if="w.avatar_url" :src="w.avatar_url" alt="" class="size-12 rounded-full object-cover" />
-                    <div v-else class="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 text-white"><UserRound class="size-6" /></div>
+                    <div v-else class="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-rose-600 text-white"><UserRound class="size-6" /></div>
                     <div class="min-w-0">
                         <div class="font-semibold">{{ w.name }}</div>
                         <div class="inline-flex items-center gap-1 text-xs text-muted-foreground"><MapPin class="size-3" /> {{ [w.city, w.state].filter(Boolean).join(', ') || '—' }}</div>
@@ -109,7 +109,7 @@ const num = (n: number) => n.toLocaleString('en-IN');
                     <template v-if="!w.locked && w.phone">
                         <a
                             :href="`tel:${w.phone}`"
-                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
                         >
                             <Phone class="size-4" /> {{ w.phone }}
                         </a>
@@ -143,7 +143,7 @@ const num = (n: number) => n.toLocaleString('en-IN');
                 :key="link.label"
                 :disabled="!link.url"
                 class="min-w-9 rounded-lg border px-3 py-1.5 text-sm transition disabled:opacity-40"
-                :class="link.active ? 'border-teal-500 bg-teal-500/10 font-semibold text-teal-600 dark:text-teal-300' : 'hover:bg-muted'"
+                :class="link.active ? 'border-orange-500 bg-orange-500/10 font-semibold text-orange-600 dark:text-orange-300' : 'hover:bg-muted'"
                 @click="go(link.url)"
                 v-html="link.label"
             />

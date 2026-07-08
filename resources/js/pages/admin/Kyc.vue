@@ -25,7 +25,7 @@ defineOptions({
 const statuses = ['pending', 'verified', 'rejected', 'all'];
 
 const statusPill: Record<string, string> = {
-    verified: 'bg-teal-500/10 text-teal-600 ring-teal-500/20 dark:text-teal-300',
+    verified: 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300',
     rejected: 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300',
     pending: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-300',
 };
@@ -57,7 +57,7 @@ const reject = (id: number) => {
                 :key="s"
                 class="rounded-full px-4 py-1.5 text-sm font-medium capitalize transition"
                 :class="isActive(s, filterStatus)
-                    ? 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-md shadow-teal-600/25'
+                    ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white shadow-md shadow-orange-600/25'
                     : 'border bg-card text-muted-foreground hover:bg-muted'"
                 @click="filterBy(s)"
             >
@@ -82,7 +82,7 @@ const reject = (id: number) => {
                         <tr v-for="row in documents.data" :key="row.id" class="border-t transition hover:bg-muted/30">
                             <td class="px-5 py-3.5">
                                 <div class="flex items-center gap-3">
-                                    <span class="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 text-sm font-bold text-white">
+                                    <span class="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-rose-600 text-sm font-bold text-white">
                                         {{ row.user.name.charAt(0).toUpperCase() }}
                                     </span>
                                     <div>
@@ -112,7 +112,7 @@ const reject = (id: number) => {
                                 <div class="flex items-center justify-end gap-1.5">
                                     <button
                                         :disabled="row.status === 'verified'"
-                                        class="inline-flex items-center gap-1 rounded-lg bg-teal-500/10 px-2.5 py-1.5 text-xs font-semibold text-teal-600 transition hover:bg-teal-500/20 disabled:opacity-40 dark:text-teal-300"
+                                        class="inline-flex items-center gap-1 rounded-lg bg-orange-500/10 px-2.5 py-1.5 text-xs font-semibold text-orange-600 transition hover:bg-orange-500/20 disabled:opacity-40 dark:text-orange-300"
                                         @click="approve(row.id)"
                                     >
                                         <Check class="size-3.5" /> Approve

@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { Activity, TrendingUp } from '@lucide/vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { Activity, ArrowUpRight } from '@lucide/vue';
+import { computed, ref } from 'vue';
+import Sparkline from '@/components/Sparkline.vue';
+import { areaPath, chartPoints, linePath } from '@/lib/chart';
 import { dashboard } from '@/routes';
 
 interface Stat {
@@ -16,7 +19,7 @@ interface Table {
     rows: (string | number)[][];
 }
 
-defineProps<{
+const props = defineProps<{
     greeting: string;
     role: string;
     stats: Stat[];
@@ -27,82 +30,232 @@ defineOptions({
     layout: { breadcrumbs: [{ title: 'Dashboard', href: dashboard() }] },
 });
 
-const toneRing: Record<Stat['tone'], string> = {
-    emerald: 'from-teal-500/15 to-cyan-500/5 text-teal-600 dark:text-teal-300',
-    amber: 'from-rose-500/15 to-orange-500/5 text-rose-600 dark:text-rose-300',
-    violet: 'from-cyan-500/15 to-sky-500/5 text-cyan-600 dark:text-cyan-300',
-};
+// Jobick-style tile accents: line color + decorative trend wave
+const tiles = [
+    { color: '#f24711', wave: [8, 14, 9, 16, 11, 18, 13, 20] },
+    { color: '#2bc155', wave: [12, 9, 15, 11, 17, 12, 19, 16] },
+    { color: '#4a6cf7', wave: [10, 16, 12, 9, 15, 12, 18, 14] },
+    { color: '#c544d8', wave: [14, 10, 16, 12, 18, 13, 17, 20] },
+];
 
-const toneChip: Record<Stat['tone'], string> = {
-    emerald: 'bg-gradient-to-br from-teal-500 to-cyan-600',
-    amber: 'bg-gradient-to-br from-rose-500 to-orange-500',
-    violet: 'bg-gradient-to-br from-cyan-500 to-sky-600',
+// Activity overview chart (Jobick "Vacancy Status" style, decorative trends)
+const ranges = ['Daily', 'Weekly', 'Monthly'] as const;
+const activeRange = ref<(typeof ranges)[number]>('Monthly');
+const series: Record<(typeof ranges)[number], number[][]> = {
+    Daily: [
+        [42, 55, 48, 62, 50, 66, 58, 70, 60, 64, 55, 68],
+        [28, 34, 30, 38, 33, 36, 31, 40, 35, 38, 33, 42],
+        [18, 24, 20, 27, 22, 30, 24, 28, 21, 26, 23, 29],
+    ],
+    Weekly: [
+        [40, 58, 45, 66, 52, 70, 56, 64, 60, 72, 58, 66],
+        [30, 36, 32, 42, 34, 38, 33, 44, 36, 40, 34, 45],
+        [20, 26, 22, 30, 24, 32, 25, 29, 22, 28, 24, 31],
+    ],
+    Monthly: [
+        [40, 62, 48, 65, 44, 66, 50, 64, 46, 60, 52, 62],
+        [30, 33, 36, 34, 32, 38, 30, 24, 34, 36, 32, 44],
+        [28, 30, 26, 25, 30, 24, 28, 36, 26, 30, 27, 31],
+    ],
 };
+const legend = [
+    { label: 'Applications', color: '#2bc155' },
+    { label: 'In progress', color: '#4a6cf7' },
+    { label: 'Closed', color: '#ff4a55' },
+];
+const CW = 720;
+const CH = 230;
+const chartLines = computed(() => series[activeRange.value].map((s) => linePath(chartPoints(s, CW, CH, 8))));
+const chartAreas = computed(() => chartLines.value.map((l) => areaPath(l, CW, CH, 8)));
+
+// Right-rail snapshot derived from the real stats
+const numeric = computed(() => props.stats.map((s) => Number(String(s.value).replace(/[^\d.]/g, '')) || 0));
+const total = computed(() => numeric.value.reduce((a, b) => a + b, 0));
+const maxStat = computed(() => Math.max(1, ...numeric.value));
+const donutColors = ['#4a6cf7', '#c544d8', '#f24711', '#2bc155'];
+const donutSegments = computed(() => {
+    if (total.value === 0) return [];
+    let offset = 25;
+    return numeric.value.map((v, i) => {
+        const pct = (v / total.value) * 100;
+        const seg = { pct, color: donutColors[i % donutColors.length], offset };
+        offset -= pct;
+        return seg;
+    });
+});
+
+const profileHref = computed(
+    () => ({ worker: '/worker/profile', employer: '/employer/profile' })[props.role] ?? dashboard().url,
+);
 </script>
 
 <template>
     <Head title="Dashboard" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
-        <!-- Hero banner -->
-        <div class="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-teal-600 to-cyan-700 p-6 text-white shadow-lg shadow-teal-900/20 md:p-8">
-            <div class="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl"></div>
-            <div class="pointer-events-none absolute -bottom-16 right-24 h-40 w-40 rounded-full bg-rose-400/20 blur-2xl"></div>
-            <div class="relative">
-                <div class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold capitalize backdrop-blur">
-                    <Activity class="size-3.5" /> {{ role }}
-                </div>
-                <h1 class="mt-3 text-2xl font-bold tracking-tight md:text-3xl">Welcome, {{ greeting }} 👋</h1>
-                <p class="mt-1 text-sm text-teal-50/80">Here's what's happening on your account today.</p>
-            </div>
-        </div>
-
-        <!-- Stat cards -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div
-                v-for="stat in stats"
-                :key="stat.label"
-                class="group relative overflow-hidden rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition hover:shadow-md"
-                :class="toneRing[stat.tone]"
-            >
-                <div class="flex items-start justify-between">
-                    <div>
-                        <div class="text-3xl font-bold tracking-tight text-foreground">{{ stat.value }}</div>
-                        <div class="mt-1 text-sm font-medium text-foreground">{{ stat.label }}</div>
+    <div class="grid flex-1 items-start gap-6 p-4 md:p-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <!-- Main column -->
+        <div class="flex min-w-0 flex-col gap-6">
+            <!-- Stat tiles -->
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div
+                    v-for="(stat, i) in stats"
+                    :key="stat.label"
+                    class="rounded-2xl border bg-card p-5 shadow-sm transition hover:shadow-md"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="text-3xl font-bold tracking-tight tabular-nums">{{ stat.value }}</div>
+                            <div class="mt-1 truncate text-sm font-medium text-muted-foreground">{{ stat.label }}</div>
+                        </div>
+                        <Sparkline :points="tiles[i % tiles.length].wave" :color="tiles[i % tiles.length].color" :width="88" :height="40" />
                     </div>
-                    <span class="flex size-10 items-center justify-center rounded-xl text-white shadow-md" :class="toneChip[stat.tone]">
-                        <TrendingUp class="size-5" />
+                    <div class="mt-3">
+                        <span class="inline-flex rounded-md bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">{{ stat.hint }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity chart -->
+            <div class="rounded-2xl border bg-card p-6 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="text-lg font-bold">Activity overview</h2>
+                    <div class="flex rounded-xl bg-secondary p-1">
+                        <button
+                            v-for="r in ranges"
+                            :key="r"
+                            type="button"
+                            class="rounded-lg px-3.5 py-1.5 text-xs font-semibold transition"
+                            :class="activeRange === r ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'"
+                            @click="activeRange = r"
+                        >
+                            {{ r }}
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3 flex flex-wrap items-center gap-5 text-xs font-medium text-muted-foreground">
+                    <span v-for="l in legend" :key="l.label" class="inline-flex items-center gap-1.5">
+                        <span class="size-2.5 rounded-full" :style="{ background: l.color }"></span>
+                        {{ l.label }}
                     </span>
                 </div>
-                <div class="mt-3 text-xs text-muted-foreground">{{ stat.hint }}</div>
+                <svg class="mt-4 w-full" :viewBox="`0 0 ${CW} ${CH}`" fill="none" preserveAspectRatio="none" aria-hidden="true">
+                    <defs>
+                        <linearGradient v-for="(l, i) in legend" :id="`area-${i}`" :key="i" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" :stop-color="l.color" stop-opacity="0.16" />
+                            <stop offset="100%" :stop-color="l.color" stop-opacity="0" />
+                        </linearGradient>
+                    </defs>
+                    <line
+                        v-for="g in 4"
+                        :key="g"
+                        x1="8"
+                        :x2="CW - 8"
+                        :y1="(CH / 5) * g"
+                        :y2="(CH / 5) * g"
+                        stroke="currentColor"
+                        class="text-border"
+                        stroke-dasharray="4 6"
+                    />
+                    <template v-for="(line, i) in chartLines" :key="i">
+                        <path :d="chartAreas[i]" :fill="`url(#area-${i})`" />
+                        <path :d="line" :stroke="legend[i].color" stroke-width="3" stroke-linecap="round" />
+                    </template>
+                </svg>
+            </div>
+
+            <!-- Recent table -->
+            <div class="overflow-hidden rounded-2xl border bg-card shadow-sm">
+                <div class="flex items-center justify-between border-b px-5 py-4">
+                    <h2 class="font-semibold">{{ table.title }}</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                            <tr>
+                                <th v-for="col in table.columns" :key="col" class="px-5 py-3 font-medium">{{ col }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(row, i) in table.rows" :key="i" class="border-t transition hover:bg-muted/40">
+                                <td v-for="(cell, j) in row" :key="j" class="px-5 py-3.5" :class="j === 0 ? 'font-medium' : 'text-muted-foreground'">
+                                    {{ cell }}
+                                </td>
+                            </tr>
+                            <tr v-if="table.rows.length === 0">
+                                <td :colspan="table.columns.length" class="px-5 py-12 text-center text-muted-foreground">
+                                    No data yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- Recent table -->
-        <div class="overflow-hidden rounded-2xl border bg-card shadow-sm">
-            <div class="flex items-center justify-between border-b px-5 py-4">
-                <h2 class="font-semibold">{{ table.title }}</h2>
+        <!-- Right rail -->
+        <div class="flex flex-col gap-6">
+            <!-- Profile card -->
+            <div class="rounded-2xl border bg-card p-6 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <span class="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 text-2xl font-bold text-white">
+                        {{ greeting.charAt(0).toUpperCase() }}
+                    </span>
+                    <div class="min-w-0">
+                        <div class="truncate text-lg font-bold">{{ greeting }}</div>
+                        <div class="text-sm font-medium capitalize text-primary">{{ role }}</div>
+                    </div>
+                </div>
+                <Link
+                    :href="profileHref"
+                    class="mt-5 flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90 active:scale-95"
+                >
+                    Update Profile <ArrowUpRight class="size-4" />
+                </Link>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                        <tr>
-                            <th v-for="col in table.columns" :key="col" class="px-5 py-3 font-medium">{{ col }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="(row, i) in table.rows" :key="i" class="border-t transition hover:bg-muted/40">
-                            <td v-for="(cell, j) in row" :key="j" class="px-5 py-3.5" :class="j === 0 ? 'font-medium' : 'text-muted-foreground'">
-                                {{ cell }}
-                            </td>
-                        </tr>
-                        <tr v-if="table.rows.length === 0">
-                            <td :colspan="table.columns.length" class="px-5 py-12 text-center text-muted-foreground">
-                                No data yet.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+
+            <!-- Snapshot card -->
+            <div class="rounded-2xl border bg-card p-6 shadow-sm">
+                <h2 class="flex items-center gap-2 text-sm font-bold"><Activity class="size-4 text-primary" /> Snapshot</h2>
+
+                <div class="mt-5 flex items-center justify-center">
+                    <div class="relative">
+                        <svg viewBox="0 0 36 36" class="size-36 -rotate-90">
+                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="currentColor" class="text-secondary" stroke-width="4" />
+                            <circle
+                                v-for="(seg, i) in donutSegments"
+                                :key="i"
+                                cx="18"
+                                cy="18"
+                                r="15.9155"
+                                fill="none"
+                                :stroke="seg.color"
+                                stroke-width="4"
+                                :stroke-dasharray="`${seg.pct} ${100 - seg.pct}`"
+                                :stroke-dashoffset="seg.offset"
+                                stroke-linecap="butt"
+                            />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="text-2xl font-bold tabular-nums">{{ total }}</span>
+                            <span class="text-[11px] text-muted-foreground">total</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 space-y-4">
+                    <div v-for="(stat, i) in stats" :key="stat.label">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="truncate font-medium text-muted-foreground">{{ stat.label }}</span>
+                            <span class="ml-2 font-bold tabular-nums">{{ stat.value }}</span>
+                        </div>
+                        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
+                            <div
+                                class="h-full rounded-full transition-all"
+                                :style="{ width: Math.max(6, (numeric[i] / maxStat) * 100) + '%', background: donutColors[i % donutColors.length] }"
+                            ></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -48,11 +48,11 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Find Workers', href: '/employe
                 <div class="rounded-2xl border bg-card p-6 shadow-sm">
                     <div class="flex items-center gap-4">
                         <img v-if="worker.avatar_url" :src="worker.avatar_url" alt="" class="size-16 rounded-2xl object-cover" />
-                        <div v-else class="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white"><UserRound class="size-8" /></div>
+                        <div v-else class="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-white"><UserRound class="size-8" /></div>
                         <div>
                             <div class="flex items-center gap-2">
                                 <h1 class="text-2xl font-bold tracking-tight">{{ worker.name }}</h1>
-                                <span v-if="worker.available" class="inline-flex items-center gap-1 rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-semibold text-teal-600 dark:text-teal-300"><BadgeCheck class="size-3" /> Available</span>
+                                <span v-if="worker.available" class="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold text-orange-600 dark:text-orange-300"><BadgeCheck class="size-3" /> Available</span>
                             </div>
                             <div class="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
                                 <span class="inline-flex items-center gap-1"><MapPin class="size-3.5" /> {{ [worker.city, worker.state].filter(Boolean).join(', ') || '—' }}</span>
@@ -64,7 +64,7 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Find Workers', href: '/employe
                     <p v-if="worker.bio" class="mt-5 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{{ worker.bio }}</p>
 
                     <div v-if="worker.skills.length" class="mt-5">
-                        <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold"><Briefcase class="size-4 text-teal-600" /> Skills</h2>
+                        <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold"><Briefcase class="size-4 text-orange-600" /> Skills</h2>
                         <div class="flex flex-wrap gap-1.5">
                             <span v-for="s in worker.skills" :key="s" class="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{{ s }}</span>
                         </div>
@@ -103,8 +103,8 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Find Workers', href: '/employe
                 <div class="rounded-2xl border bg-card p-6 shadow-sm">
                     <h2 class="text-sm font-semibold">Contact</h2>
                     <div v-if="worker.contact_unlocked" class="mt-3 space-y-2 text-sm">
-                        <p class="inline-flex items-center gap-2"><Mail class="size-4 text-teal-600" /> {{ worker.email }}</p>
-                        <p v-if="worker.phone" class="inline-flex items-center gap-2"><Phone class="size-4 text-teal-600" /> {{ worker.phone }}</p>
+                        <p class="inline-flex items-center gap-2"><Mail class="size-4 text-orange-600" /> {{ worker.email }}</p>
+                        <p v-if="worker.phone" class="inline-flex items-center gap-2"><Phone class="size-4 text-orange-600" /> {{ worker.phone }}</p>
                     </div>
                     <div v-else class="mt-3">
                         <p class="text-sm text-muted-foreground">Contact details unlock when you unlock this worker from one of your job's applicants.</p>

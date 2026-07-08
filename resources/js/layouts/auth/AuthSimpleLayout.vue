@@ -25,11 +25,11 @@ const stats = [
 <template>
     <div class="grid min-h-svh lg:grid-cols-2">
         <!-- Brand panel -->
-        <div class="relative hidden overflow-hidden bg-[#04100d] p-10 text-white lg:flex lg:flex-col xl:p-12">
+        <div class="relative hidden overflow-hidden bg-[#0a0e21] p-10 text-white lg:flex lg:flex-col xl:p-12">
             <!-- ambient glows -->
             <div class="pointer-events-none absolute inset-0">
-                <div class="absolute left-1/2 top-[-12%] h-[520px] w-[620px] -translate-x-1/2 rounded-full bg-teal-600/25 blur-[140px]"></div>
-                <div class="absolute bottom-[-12%] right-[-12%] h-[360px] w-[360px] rounded-full bg-cyan-600/20 blur-[120px]"></div>
+                <div class="absolute left-1/2 top-[-12%] h-[520px] w-[620px] -translate-x-1/2 rounded-full bg-orange-600/25 blur-[140px]"></div>
+                <div class="absolute bottom-[-12%] right-[-12%] h-[360px] w-[360px] rounded-full bg-rose-600/20 blur-[120px]"></div>
             </div>
             <!-- subtle grid texture -->
             <div
@@ -38,19 +38,19 @@ const stats = [
 
             <!-- Logo (top) -->
             <Link :href="home()" class="relative z-10 flex items-center gap-2.5 text-lg font-bold">
-                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg shadow-teal-500/40">K</span>
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 shadow-lg shadow-orange-500/40">K</span>
                 Karigar
             </Link>
 
             <!-- Hero (vertically centered — fills the gap) -->
             <div class="relative z-10 flex flex-1 flex-col justify-center py-12">
-                <span class="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-teal-200 backdrop-blur">
-                    <span class="size-1.5 rounded-full bg-teal-400"></span>
+                <span class="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-orange-200 backdrop-blur">
+                    <span class="size-1.5 rounded-full bg-orange-400"></span>
                     India's trusted skilled-work marketplace
                 </span>
                 <h2 class="max-w-md text-4xl font-extrabold leading-[1.1] tracking-tight xl:text-5xl">
                     Skilled work,
-                    <span class="bg-gradient-to-r from-teal-400 to-cyan-300 bg-clip-text text-transparent">simplified.</span>
+                    <span class="bg-gradient-to-r from-orange-400 to-rose-300 bg-clip-text text-transparent">simplified.</span>
                 </h2>
                 <p class="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
                     Connecting India's skilled workers with employers — verified, hyperlocal, and instant.
@@ -59,9 +59,9 @@ const stats = [
                     <li
                         v-for="h in highlights"
                         :key="h.text"
-                        class="flex items-center gap-3.5 rounded-xl border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-slate-200 transition hover:border-teal-400/30 hover:bg-white/[0.06]"
+                        class="flex items-center gap-3.5 rounded-xl border border-white/5 bg-white/[0.03] px-4 py-3 text-sm text-slate-200 transition hover:border-orange-400/30 hover:bg-white/[0.06]"
                     >
-                        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 text-teal-300">
+                        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-500/15 text-orange-300">
                             <component :is="h.icon" class="size-4" />
                         </span>
                         {{ h.text }}
@@ -82,7 +82,7 @@ const stats = [
         <div class="flex flex-col items-center justify-center bg-background p-6 md:p-10">
             <div class="w-full max-w-sm">
                 <Link :href="home()" class="mb-8 flex items-center justify-center gap-2 text-lg font-bold lg:hidden">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/40">K</span>
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/40">K</span>
                     Karigar
                 </Link>
                 <div class="flex flex-col gap-8">

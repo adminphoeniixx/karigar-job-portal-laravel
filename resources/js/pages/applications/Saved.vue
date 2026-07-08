@@ -43,10 +43,10 @@ const wage = (j: Saved['job']) => {
         <div v-if="saved.data.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div v-for="s in saved.data" :key="s.id" class="flex flex-col rounded-2xl border bg-card p-5 shadow-sm transition hover:shadow-md">
                 <div class="flex items-start justify-between gap-2">
-                    <span v-if="s.job.category" class="rounded-full bg-teal-500/10 px-2.5 py-0.5 text-xs font-semibold text-teal-600 dark:text-teal-300">{{ s.job.category }}</span>
+                    <span v-if="s.job.category" class="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-semibold text-orange-600 dark:text-orange-300">{{ s.job.category }}</span>
                     <button class="text-rose-500 transition hover:text-rose-600" title="Remove" @click="remove(s.job.id)"><Trash2 class="size-4" /></button>
                 </div>
-                <Link :href="`/jobs/${s.job.id}`" class="mt-3 text-lg font-semibold hover:text-teal-600 dark:hover:text-teal-300">{{ s.job.title }}</Link>
+                <Link :href="`/jobs/${s.job.id}`" class="mt-3 text-lg font-semibold hover:text-orange-600 dark:hover:text-orange-300">{{ s.job.title }}</Link>
                 <div class="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                     <MapPin class="size-3" /> {{ [s.job.city, s.job.state].filter(Boolean).join(', ') || '—' }}
                 </div>
@@ -59,7 +59,7 @@ const wage = (j: Saved['job']) => {
             <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Bookmark class="size-7" /></div>
             <p class="mt-4 font-medium">No saved jobs</p>
             <p class="mt-1 text-sm text-muted-foreground">Tap the bookmark on any job to save it here.</p>
-            <Link href="/jobs" class="mt-4 inline-flex rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-white">Browse jobs</Link>
+            <Link href="/jobs" class="mt-4 inline-flex rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2 text-sm font-semibold text-white">Browse jobs</Link>
         </div>
     </div>
 </template>

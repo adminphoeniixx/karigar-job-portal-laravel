@@ -63,9 +63,9 @@ watch(() => form.state, () => {
 });
 
 const selectClass =
-    'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20';
+    'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 const textareaClass =
-    'flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20';
+    'flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 
 const submit = () => {
     form.transform((data) => ({
@@ -97,7 +97,7 @@ const submit = () => {
             <!-- Basics -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <BriefcaseBusiness class="size-4 text-teal-500" /> Job details
+                    <BriefcaseBusiness class="size-4 text-orange-500" /> Job details
                 </h2>
                 <div class="space-y-4">
                     <div class="grid gap-2">
@@ -136,7 +136,7 @@ const submit = () => {
             <!-- Wage -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <IndianRupee class="size-4 text-teal-500" /> Compensation
+                    <IndianRupee class="size-4 text-orange-500" /> Compensation
                 </h2>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div class="grid gap-2">
@@ -165,7 +165,7 @@ const submit = () => {
             <!-- Location -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <MapPin class="size-4 text-teal-500" /> Location
+                    <MapPin class="size-4 text-orange-500" /> Location
                 </h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
@@ -200,7 +200,7 @@ const submit = () => {
             <!-- Settings -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Settings2 class="size-4 text-teal-500" /> Posting settings
+                    <Settings2 class="size-4 text-orange-500" /> Posting settings
                 </h2>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div class="grid gap-2">
@@ -230,7 +230,7 @@ const submit = () => {
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
                     {{ isEdit ? 'Update job' : 'Post job' }}
                 </button>
