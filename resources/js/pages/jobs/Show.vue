@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, ArrowRight, Bookmark, Briefcase, Check, Clock, IndianRupee, MapPin, Phone, UserPlus, Users } from '@lucide/vue';
+import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, IndianRupee, MapPin, Phone, Sun, UserPlus, Users, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 
@@ -18,6 +18,10 @@ interface Job {
     vacancies: number;
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
+    shift: 'day' | 'night' | 'rotational' | null;
+    perks: string[] | null;
+    requires_worker_fee: boolean;
+    worker_fee_amount: string | null;
     employer: { id: number; name: string };
 }
 
@@ -49,6 +53,8 @@ const wage = computed(() => {
 
 const canCall = props.job.contact_mode !== 'apply' && !!props.job.contact_phone;
 const applyAllowed = props.job.contact_mode !== 'call';
+
+const shiftLabel: Record<string, string> = { day: 'Day shift', night: 'Night shift', rotational: 'Rotational shift' };
 
 const showForm = ref(false);
 const form = useForm({ cover_note: '', expected_wage: '' });
@@ -142,8 +148,15 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     <span v-for="s in job.skills" :key="s" class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">{{ s }}</span>
                 </div>
 
+                <div class="mt-6 flex flex-wrap items-center gap-2 border-t border-white/5 pt-6">
+                    <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300"><Wallet class="size-3.5" /> Joining fee: ₹{{ job.worker_fee_amount }}</span>
+                    <span v-else class="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"><BadgeCheck class="size-3.5" /> No fee to join</span>
+                    <span v-if="job.shift" class="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300"><Sun class="size-3.5" /> {{ shiftLabel[job.shift] }}</span>
+                    <span v-for="perk in job.perks ?? []" :key="perk" class="inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"><Gift class="size-3" /> {{ perk }}</span>
+                </div>
+
                 <div class="mt-6 border-t border-white/5 pt-6">
-                    <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-orange-300"><Briefcase class="size-4" /> Description</h2>
+                    <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-orange-300"><Briefcase class="size-4" /> Job Description</h2>
                     <p class="whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ job.description }}</p>
                 </div>
 

@@ -39,7 +39,7 @@ class DashboardController extends Controller
         return [
             'stats' => [
                 ['label' => 'KYC Status', 'value' => $kyc?->status->label() ?? 'Not submitted', 'hint' => 'Verification', 'tone' => 'amber'],
-                ['label' => 'Available Jobs', 'value' => (string) JobListing::active()->count(), 'hint' => 'Aas-paas', 'tone' => 'emerald'],
+                ['label' => 'Available Jobs', 'value' => (string) JobListing::active()->count(), 'hint' => 'Near you', 'tone' => 'emerald'],
                 ['label' => 'Profile', 'value' => $user->workerProfile?->skills ? 'Active' : 'Incomplete', 'hint' => 'Skills', 'tone' => 'violet'],
             ],
             'table' => [

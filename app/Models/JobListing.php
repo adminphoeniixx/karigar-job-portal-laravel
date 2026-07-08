@@ -25,6 +25,10 @@ use Laravel\Scout\Searchable;
  * @property string|null $latitude
  * @property string|null $longitude
  * @property int $vacancies
+ * @property string|null $shift
+ * @property array<int, string>|null $perks
+ * @property bool $requires_worker_fee
+ * @property string|null $worker_fee_amount
  * @property string $contact_mode
  * @property string|null $contact_phone
  * @property JobStatus $status
@@ -39,13 +43,17 @@ class JobListing extends Model
         'wage_min', 'wage_max', 'wage_type',
         'city', 'state', 'latitude', 'longitude',
         'vacancies', 'status', 'expires_at',
-        'contact_mode', 'contact_phone',
+        'contact_mode', 'contact_phone', 'shift', 'perks',
+        'requires_worker_fee', 'worker_fee_amount',
     ];
 
     protected function casts(): array
     {
         return [
             'skills' => 'array',
+            'perks' => 'array',
+            'requires_worker_fee' => 'boolean',
+            'worker_fee_amount' => 'decimal:2',
             'status' => JobStatus::class,
             'expires_at' => 'datetime',
             'wage_min' => 'decimal:2',

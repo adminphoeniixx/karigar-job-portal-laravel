@@ -4,9 +4,11 @@ import { Camera, IndianRupee, MapPin, UserRound } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import SkillTagInput from '@/components/SkillTagInput.vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { commonSkills } from '@/data/skills';
 
 interface WorkerProfile {
     phone: string | null;
@@ -32,7 +34,6 @@ defineOptions({
     },
 });
 
-const skillsText = ref((props.profile.skills ?? []).join(', '));
 const preview = ref<string | null>(props.profile.avatar_url);
 
 const form = useForm<{
@@ -79,12 +80,7 @@ const onAvatar = (e: Event) => {
 };
 
 const submit = () => {
-    form
-        .transform((data) => ({
-            ...data,
-            skills: skillsText.value.split(',').map((s) => s.trim()).filter((s) => s.length > 0),
-        }))
-        .patch('/worker/profile', { preserveScroll: true });
+    form.patch('/worker/profile', { preserveScroll: true });
 };
 </script>
 
@@ -115,8 +111,8 @@ const submit = () => {
                             <InputError :message="form.errors.phone" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="skills">Skills (comma separated)</Label>
-                            <Input id="skills" v-model="skillsText" placeholder="Plumbing, Electrician, Painting" />
+                            <Label for="skills">Skills</Label>
+                            <SkillTagInput id="skills" v-model="form.skills" :suggestions="commonSkills" placeholder="e.g. Plumbing — type or pick, it becomes a tag" />
                             <InputError :message="form.errors.skills" />
                         </div>
                         <InputError :message="form.errors.avatar" />

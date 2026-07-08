@@ -70,3 +70,49 @@ it('shows the phone number on the public job page', function () {
             ->where('job.contact_mode', 'both')
             ->where('job.contact_phone', '+91 91234 56789'));
 });
+
+it('saves shift and perks on a job post', function () {
+    $this->actingAs($this->employer)
+        ->post('/employer/jobs', $this->payload + [
+            'contact_mode' => 'apply',
+            'shift' => 'day',
+            'perks' => ['Food', 'Weekly off'],
+        ])
+        ->assertRedirect('/employer/jobs');
+
+    $job = $this->employer->jobListings()->first();
+    expect($job->shift)->toBe('day')
+        ->and($job->perks)->toBe(['Food', 'Weekly off']);
+});
+
+it('rejects unknown perks and shifts', function () {
+    $this->actingAs($this->employer)
+        ->post('/employer/jobs', $this->payload + ['contact_mode' => 'apply', 'shift' => 'evening', 'perks' => ['Free car']])
+        ->assertSessionHasErrors(['shift', 'perks.0']);
+});
+
+it('saves a worker joining fee when required', function () {
+    $this->actingAs($this->employer)
+        ->post('/employer/jobs', $this->payload + ['contact_mode' => 'apply', 'requires_worker_fee' => true, 'worker_fee_amount' => 500])
+        ->assertRedirect('/employer/jobs');
+
+    $job = $this->employer->jobListings()->first();
+    expect($job->requires_worker_fee)->toBeTrue()
+        ->and((float) $job->worker_fee_amount)->toBe(500.0);
+});
+
+it('requires the fee amount when the worker must pay', function () {
+    $this->actingAs($this->employer)
+        ->post('/employer/jobs', $this->payload + ['contact_mode' => 'apply', 'requires_worker_fee' => true])
+        ->assertSessionHasErrors('worker_fee_amount');
+});
+
+it('defaults to no worker fee and clears stale amounts', function () {
+    $this->actingAs($this->employer)
+        ->post('/employer/jobs', $this->payload + ['contact_mode' => 'apply', 'worker_fee_amount' => 999])
+        ->assertRedirect('/employer/jobs');
+
+    $job = $this->employer->jobListings()->first();
+    expect($job->requires_worker_fee)->toBeFalse()
+        ->and($job->worker_fee_amount)->toBeNull();
+});

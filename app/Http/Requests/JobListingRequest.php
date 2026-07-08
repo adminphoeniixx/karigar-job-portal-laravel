@@ -17,6 +17,15 @@ class JobListingRequest extends FormRequest
         if (! $this->filled('contact_mode')) {
             $this->merge(['contact_mode' => 'apply']);
         }
+
+        if (! $this->has('requires_worker_fee')) {
+            $this->merge(['requires_worker_fee' => false]);
+        }
+
+        // Ignore any stale amount when no fee is charged.
+        if (! $this->boolean('requires_worker_fee')) {
+            $this->merge(['worker_fee_amount' => null]);
+        }
     }
 
     /**
@@ -38,6 +47,11 @@ class JobListingRequest extends FormRequest
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'vacancies' => ['required', 'integer', 'min:1', 'max:10000'],
+            'shift' => ['nullable', 'string', 'in:day,night,rotational'],
+            'perks' => ['nullable', 'array', 'max:10'],
+            'perks.*' => ['string', 'in:Food,Accommodation,Travel allowance,Bonus,Overtime pay,Weekly off'],
+            'requires_worker_fee' => ['required', 'boolean'],
+            'worker_fee_amount' => ['nullable', 'numeric', 'min:1', 'max:1000000', 'required_if:requires_worker_fee,true'],
             'contact_mode' => ['required', 'string', 'in:apply,call,both'],
             'contact_phone' => ['nullable', 'string', 'max:20', 'required_if:contact_mode,call', 'required_if:contact_mode,both'],
             'status' => ['required', 'string', 'in:draft,active,closed'],

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, BriefcaseBusiness, IndianRupee, MapPin, Phone, Settings2 } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { ArrowLeft, BadgeCheck, BriefcaseBusiness, Gift, IndianRupee, MapPin, Phone, Settings2, Sun, Wallet } from '@lucide/vue';
+import { computed, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import SkillTagInput from '@/components/SkillTagInput.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { citiesFor, indianStates } from '@/data/indianLocations';
@@ -27,6 +28,10 @@ interface Job {
     expires_at: string | null;
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
+    shift: 'day' | 'night' | 'rotational' | null;
+    perks: string[] | null;
+    requires_worker_fee: boolean;
+    worker_fee_amount: string | null;
 }
 
 const props = defineProps<{ job: Job | null; defaultPhone: string | null }>();
@@ -39,8 +44,6 @@ defineOptions({
 
 const page = usePage();
 const categories = computed(() => (page.props.categories as string[] | undefined) ?? []);
-
-const skillsText = ref((props.job?.skills ?? []).join(', '));
 
 const form = useForm({
     title: props.job?.title ?? '',
@@ -59,7 +62,17 @@ const form = useForm({
     expires_at: props.job?.expires_at?.slice(0, 10) ?? '',
     contact_mode: props.job?.contact_mode ?? 'apply',
     contact_phone: props.job?.contact_phone ?? props.defaultPhone ?? '',
+    shift: props.job?.shift ?? '',
+    perks: props.job?.perks ?? [],
+    requires_worker_fee: props.job?.requires_worker_fee ?? false,
+    worker_fee_amount: props.job?.worker_fee_amount ?? '',
 });
+
+const perkOptions = ['Food', 'Accommodation', 'Travel allowance', 'Bonus', 'Overtime pay', 'Weekly off'];
+
+const togglePerk = (perk: string) => {
+    form.perks = form.perks.includes(perk) ? form.perks.filter((x) => x !== perk) : [...form.perks, perk];
+};
 
 const contactModes = [
     { value: 'apply', label: 'Apply through app', desc: 'Workers apply here; you review applicants.' },
@@ -78,11 +91,6 @@ const textareaClass =
     'flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 
 const submit = () => {
-    form.transform((data) => ({
-        ...data,
-        skills: skillsText.value.split(',').map((s) => s.trim()).filter(Boolean),
-    }));
-
     if (isEdit) {
         form.patch(`/employer/jobs/${props.job!.id}`);
     } else {
@@ -117,7 +125,7 @@ const submit = () => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="description">Description</Label>
+                        <Label for="description">Job Description</Label>
                         <textarea id="description" v-model="form.description" rows="5" required :class="textareaClass" placeholder="Describe the work, requirements and timing…" />
                         <InputError :message="form.errors.description" />
                     </div>
@@ -132,11 +140,8 @@ const submit = () => {
                             <InputError :message="form.errors.category" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="skills">Skills (comma separated)</Label>
-                            <Input id="skills" v-model="skillsText" list="job-skill-options" placeholder="Welding, Fitting" />
-                            <datalist id="job-skill-options">
-                                <option v-for="s in commonSkills" :key="s" :value="s" />
-                            </datalist>
+                            <Label for="skills">Skills</Label>
+                            <SkillTagInput id="skills" v-model="form.skills" :suggestions="commonSkills" placeholder="e.g. Welding — type or pick, it becomes a tag" />
                             <InputError :message="form.errors.skills" />
                         </div>
                     </div>
@@ -204,6 +209,79 @@ const submit = () => {
                         <Input id="longitude" type="number" step="any" v-model="form.longitude" />
                         <InputError :message="form.errors.longitude" />
                     </div>
+                </div>
+            </section>
+
+            <!-- Shift & perks -->
+            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                    <Sun class="size-4 text-orange-500" /> Shift &amp; perks
+                </h2>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="grid gap-2">
+                        <Label for="shift">Shift</Label>
+                        <select id="shift" v-model="form.shift" :class="selectClass">
+                            <option value="">—</option>
+                            <option value="day">Day shift</option>
+                            <option value="night">Night shift</option>
+                            <option value="rotational">Rotational shift</option>
+                        </select>
+                        <InputError :message="form.errors.shift" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label class="flex items-center gap-1.5"><Gift class="size-3.5 text-orange-500" /> Perks</Label>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="perk in perkOptions"
+                                :key="perk"
+                                type="button"
+                                class="rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                                :class="form.perks.includes(perk)
+                                    ? 'border-orange-500 bg-orange-500/10 text-orange-600 dark:text-orange-300'
+                                    : 'text-muted-foreground hover:border-orange-300 hover:text-foreground'"
+                                @click="togglePerk(perk)"
+                            >
+                                {{ form.perks.includes(perk) ? '✓ ' : '' }}{{ perk }}
+                            </button>
+                        </div>
+                        <InputError :message="form.errors.perks" />
+                    </div>
+                </div>
+            </section>
+
+            <!-- Worker fee -->
+            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                    <Wallet class="size-4 text-orange-500" /> Does the worker pay anything to take this job?
+                </h2>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label
+                        class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
+                        :class="!form.requires_worker_fee ? 'border-emerald-500 bg-emerald-500/5 ring-2 ring-emerald-500/20' : 'hover:border-emerald-300'"
+                    >
+                        <span class="flex items-center gap-2">
+                            <input v-model="form.requires_worker_fee" type="radio" name="requires_worker_fee" :value="false" class="accent-emerald-600" />
+                            <span class="flex items-center gap-1.5 text-sm font-semibold"><BadgeCheck class="size-4 text-emerald-600" /> No — free to join</span>
+                        </span>
+                        <span class="text-xs text-muted-foreground">Worker pays nothing. The job shows a "No fee" badge — workers trust these more.</span>
+                    </label>
+                    <label
+                        class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
+                        :class="form.requires_worker_fee ? 'border-amber-500 bg-amber-500/5 ring-2 ring-amber-500/20' : 'hover:border-amber-300'"
+                    >
+                        <span class="flex items-center gap-2">
+                            <input v-model="form.requires_worker_fee" type="radio" name="requires_worker_fee" :value="true" class="accent-amber-600" />
+                            <span class="text-sm font-semibold">Yes — worker pays a fee</span>
+                        </span>
+                        <span class="text-xs text-muted-foreground">e.g. security deposit, tools or uniform charge. The amount is shown on the job post.</span>
+                    </label>
+                </div>
+                <InputError class="mt-2" :message="form.errors.requires_worker_fee" />
+
+                <div v-if="form.requires_worker_fee" class="mt-4 grid max-w-xs gap-2">
+                    <Label for="worker_fee_amount">Fee amount (₹)</Label>
+                    <Input id="worker_fee_amount" v-model="form.worker_fee_amount" type="number" min="1" step="0.01" placeholder="e.g. 500" />
+                    <InputError :message="form.errors.worker_fee_amount" />
                 </div>
             </section>
 

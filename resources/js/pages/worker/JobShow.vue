@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, ArrowRight, Bookmark, Briefcase, Check, Clock, IndianRupee, MapPin, Phone, Users } from '@lucide/vue';
+import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, IndianRupee, MapPin, Phone, Sun, Users, Wallet } from '@lucide/vue';
 import { ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -20,6 +20,10 @@ interface Job {
     expires_at: string | null;
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
+    shift: 'day' | 'night' | 'rotational' | null;
+    perks: string[] | null;
+    requires_worker_fee: boolean;
+    worker_fee_amount: string | null;
     employer: { id: number; name: string };
 }
 
@@ -68,6 +72,8 @@ const submitApply = () => {
 
 const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserveScroll: true });
 
+const shiftLabel: Record<string, string> = { day: 'Day shift', night: 'Night shift', rotational: 'Rotational shift' };
+
 const fmtDate = (iso: string | null): string =>
     iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 </script>
@@ -100,6 +106,9 @@ const fmtDate = (iso: string | null): string =>
                         <span v-if="job.category" class="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-300">{{ job.category }}</span>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><MapPin class="size-4" /> {{ [job.city, job.state].filter(Boolean).join(', ') || 'Location N/A' }}</span>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><Clock class="size-4" /> Posted {{ fmtDate(job.created_at) }}</span>
+                        <span v-if="job.shift" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Sun class="size-3.5" /> {{ shiftLabel[job.shift] }}</span>
+                        <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Wallet class="size-3.5" /> Joining fee: ₹{{ job.worker_fee_amount }}</span>
+                        <span v-else class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300"><BadgeCheck class="size-3.5" /> No fee to join</span>
                         <span v-if="job.expires_at" class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 dark:text-rose-300">Apply by {{ fmtDate(job.expires_at) }}</span>
                     </div>
 
@@ -118,8 +127,15 @@ const fmtDate = (iso: string | null): string =>
                         <span v-for="s in job.skills" :key="s" class="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{{ s }}</span>
                     </div>
 
+                    <div v-if="job.perks?.length" class="mt-5 border-t pt-5">
+                        <h2 class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-orange-600 dark:text-orange-300"><Gift class="size-4" /> Perks</h2>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span v-for="perk in job.perks" :key="perk" class="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300">✓ {{ perk }}</span>
+                        </div>
+                    </div>
+
                     <div class="mt-5 border-t pt-5">
-                        <h2 class="mb-2 text-sm font-semibold text-orange-600 dark:text-orange-300">Description</h2>
+                        <h2 class="mb-2 text-sm font-semibold text-orange-600 dark:text-orange-300">Job Description</h2>
                         <p class="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{{ job.description }}</p>
                     </div>
                 </div>
