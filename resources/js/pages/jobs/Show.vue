@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, IndianRupee, MapPin, Phone, Sun, UserPlus, Users, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import JobMap from '@/components/JobMap.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 
 interface Job {
@@ -15,6 +16,8 @@ interface Job {
     wage_type: string | null;
     city: string | null;
     state: string | null;
+    latitude: string | null;
+    longitude: string | null;
     vacancies: number;
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
@@ -153,6 +156,11 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     <span v-else class="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"><BadgeCheck class="size-3.5" /> No fee to join</span>
                     <span v-if="job.shift" class="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300"><Sun class="size-3.5" /> {{ shiftLabel[job.shift] }}</span>
                     <span v-for="perk in job.perks ?? []" :key="perk" class="inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"><Gift class="size-3" /> {{ perk }}</span>
+                </div>
+
+                <div v-if="job.latitude && job.longitude" class="mt-6 border-t border-white/5 pt-6">
+                    <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-orange-300"><MapPin class="size-4" /> Job location</h2>
+                    <JobMap :lat="Number(job.latitude)" :lng="Number(job.longitude)" height="280px" />
                 </div>
 
                 <div class="mt-6 border-t border-white/5 pt-6">

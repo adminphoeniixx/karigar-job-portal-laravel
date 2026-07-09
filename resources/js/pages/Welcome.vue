@@ -74,10 +74,10 @@ const categories = [
 ];
 
 const features = [
-    { icon: MapPin, title: 'Hyperlocal matching', desc: 'Find jobs and workers within your radius using precise geo-search.', span: 'lg:col-span-2', img: '/images/landing/painter.jpg', imgAlt: 'Painter rolling paint on a wall' },
+    { icon: MapPin, title: 'Hyperlocal matching', desc: 'Find jobs and workers within your radius using precise geo-search.', span: 'lg:col-span-2', img: '/images/landing/painter.jpg', imgAlt: 'Indian painters at work on a building in Kochi' },
     { icon: ShieldCheck, title: 'KYC verified', desc: 'PAN + Aadhaar verification builds trust on both sides.', span: '' },
     { icon: Zap, title: 'Instant search', desc: 'Typesense-powered results in milliseconds.', span: '' },
-    { icon: Languages, title: 'Your language', desc: 'Hindi, English & Hinglish — switch anytime.', span: 'lg:col-span-2', img: '/images/landing/plumber.jpg', imgAlt: 'Plumbing pipes on a brick wall' },
+    { icon: Languages, title: 'Your language', desc: 'Hindi, English & Hinglish — switch anytime.', span: 'lg:col-span-2', img: '/images/landing/plumber.jpg', imgAlt: 'Indian masons plastering a wall' },
 ];
 
 const steps = [
@@ -101,6 +101,14 @@ const wage = (j: Job) => {
 
 <template>
     <Head title="Karigar — Skilled work, simplified" />
+
+    <!--
+      Landing photos (public/images/landing/) — Wikimedia Commons:
+      electrician.jpg  "Male labour working at Building construction site" (CC BY-SA 4.0)
+      welder.jpg       "Skilled Carpenter Working on Wood in a Workshop" (CC BY-SA 4.0)
+      painter.jpg      "Fort Kochi - Wall Painters on ropes" (CC BY-SA 4.0)
+      plumber.jpg      "Masons plastering the brick walk" (CC BY-SA 4.0)
+    -->
 
     <div class="relative min-h-screen overflow-hidden bg-background text-foreground antialiased">
         <!-- Ambient tints -->
@@ -177,7 +185,7 @@ const wage = (j: Job) => {
                 <div class="absolute -inset-6 rounded-[2.5rem] bg-gradient-to-br from-orange-500/25 via-rose-400/15 to-transparent blur-2xl"></div>
                 <img
                     src="/images/landing/electrician.jpg"
-                    alt="Skilled electrician at work"
+                    alt="Skilled Indian worker on a construction site"
                     class="relative aspect-[4/3] w-full rounded-[2rem] border-4 border-card object-cover shadow-premium"
                 />
                 <!-- Floating chips -->
@@ -213,7 +221,7 @@ const wage = (j: Job) => {
             <div class="grid gap-6 md:grid-cols-2">
                 <div class="group relative overflow-hidden rounded-3xl border bg-card shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-premium">
                     <div class="relative h-44 overflow-hidden">
-                        <img src="/images/landing/welder.jpg" alt="Welder at work" loading="lazy" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                        <img src="/images/landing/welder.jpg" alt="Indian carpenter working in a workshop" loading="lazy" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                         <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                         <div class="absolute bottom-4 left-6 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/30">
                             <HardHat class="size-6" />

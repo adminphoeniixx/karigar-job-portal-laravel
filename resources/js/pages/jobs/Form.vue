@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, BadgeCheck, BriefcaseBusiness, Gift, IndianRupee, MapPin, Phone, Settings2, Sun, Wallet } from '@lucide/vue';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import JobMap from '@/components/JobMap.vue';
 import SkillTagInput from '@/components/SkillTagInput.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,6 +84,41 @@ const contactModes = [
 const cities = computed(() => citiesFor(form.state));
 watch(() => form.state, () => {
     if (form.city && !cities.value.includes(form.city)) form.city = '';
+});
+
+// ── Map picker ──────────────────────────────────────────────────────
+const mapLat = ref<number | null>(form.latitude ? Number(form.latitude) : null);
+const mapLng = ref<number | null>(form.longitude ? Number(form.longitude) : null);
+const locating = ref(false);
+
+const setPoint = (lat: number, lng: number) => {
+    mapLat.value = lat;
+    mapLng.value = lng;
+    form.latitude = String(lat);
+    form.longitude = String(lng);
+};
+
+// When the employer picks a city, centre the pin there via OpenStreetMap's
+// free geocoder so they only need to fine-tune it.
+let geoTimer: ReturnType<typeof setTimeout> | undefined;
+watch([() => form.city, () => form.state], ([city, state]) => {
+    if (!city || !state) return;
+    clearTimeout(geoTimer);
+    geoTimer = setTimeout(async () => {
+        locating.value = true;
+        try {
+            const q = new URLSearchParams({ format: 'json', limit: '1', country: 'India', state, city });
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?${q}`, {
+                headers: { Accept: 'application/json' },
+            });
+            const hits = await res.json();
+            if (hits[0]) setPoint(Number(hits[0].lat), Number(hits[0].lon));
+        } catch {
+            // Geocoding is best-effort — the employer can always drop the pin manually.
+        } finally {
+            locating.value = false;
+        }
+    }, 600);
 });
 
 const selectClass =
@@ -199,16 +235,15 @@ const submit = () => {
                         </select>
                         <InputError :message="form.errors.city" />
                     </div>
-                    <div class="grid gap-2">
-                        <Label for="latitude">Latitude</Label>
-                        <Input id="latitude" type="number" step="any" v-model="form.latitude" />
-                        <InputError :message="form.errors.latitude" />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="longitude">Longitude</Label>
-                        <Input id="longitude" type="number" step="any" v-model="form.longitude" />
-                        <InputError :message="form.errors.longitude" />
-                    </div>
+                </div>
+
+                <div class="mt-4 grid gap-2">
+                    <Label>Job location on map</Label>
+                    <p class="text-xs text-muted-foreground">
+                        {{ locating ? 'Locating your city on the map…' : 'Select a state & city to place the pin, then drag it (or tap the map) to the exact spot workers should reach.' }}
+                    </p>
+                    <JobMap :lat="mapLat" :lng="mapLng" editable height="300px" @move="setPoint" />
+                    <InputError :message="form.errors.latitude || form.errors.longitude" />
                 </div>
             </section>
 

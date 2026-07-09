@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, IndianRupee, MapPin, Phone, Sun, Users, Wallet } from '@lucide/vue';
 import { ref } from 'vue';
+import JobMap from '@/components/JobMap.vue';
 import PageHeader from '@/components/PageHeader.vue';
 
 interface Job {
@@ -15,6 +16,8 @@ interface Job {
     wage_type: string | null;
     city: string | null;
     state: string | null;
+    latitude: string | null;
+    longitude: string | null;
     vacancies: number;
     created_at: string;
     expires_at: string | null;
@@ -137,6 +140,17 @@ const fmtDate = (iso: string | null): string =>
                     <div class="mt-5 border-t pt-5">
                         <h2 class="mb-2 text-sm font-semibold text-orange-600 dark:text-orange-300">Job Description</h2>
                         <p class="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{{ job.description }}</p>
+                    </div>
+
+                    <div v-if="job.latitude && job.longitude" class="mt-5 border-t pt-5">
+                        <h2 class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-orange-600 dark:text-orange-300"><MapPin class="size-4" /> Job location</h2>
+                        <JobMap :lat="Number(job.latitude)" :lng="Number(job.longitude)" height="280px" />
+                        <a
+                            :href="`https://www.google.com/maps?q=${job.latitude},${job.longitude}`"
+                            target="_blank"
+                            rel="noopener"
+                            class="mt-2 inline-block text-xs font-semibold text-primary hover:underline"
+                        >Open in Google Maps →</a>
                     </div>
                 </div>
             </div>
