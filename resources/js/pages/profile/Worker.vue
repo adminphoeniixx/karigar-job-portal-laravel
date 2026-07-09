@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import { Camera, IndianRupee, MapPin, UserRound } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
+import JobMap from '@/components/JobMap.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import SkillTagInput from '@/components/SkillTagInput.vue';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
 
 interface WorkerProfile {
@@ -79,8 +81,49 @@ const onAvatar = (e: Event) => {
     if (file) preview.value = URL.createObjectURL(file);
 };
 
+const cities = computed(() => citiesFor(form.state));
+watch(() => form.state, () => {
+    if (form.city && !cities.value.includes(form.city)) form.city = '';
+});
+
+// ── Map (replaces manual lat/long inputs) ───────────────────────────
+const mapLat = ref<number | null>(form.latitude ? Number(form.latitude) : null);
+const mapLng = ref<number | null>(form.longitude ? Number(form.longitude) : null);
+const locating = ref(false);
+
+const setPoint = (lat: number, lng: number) => {
+    mapLat.value = lat;
+    mapLng.value = lng;
+    form.latitude = String(lat);
+    form.longitude = String(lng);
+};
+
+let geoTimer: ReturnType<typeof setTimeout> | undefined;
+watch([() => form.city, () => form.state], ([city, state]) => {
+    if (!city && !state) return;
+    clearTimeout(geoTimer);
+    geoTimer = setTimeout(async () => {
+        locating.value = true;
+        try {
+            const q = new URLSearchParams({
+                format: 'json',
+                limit: '1',
+                q: [city, state, 'India'].filter(Boolean).join(', '),
+            });
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?${q}`, { headers: { Accept: 'application/json' } });
+            const hits = await res.json();
+            if (hits[0]) setPoint(Number(hits[0].lat), Number(hits[0].lon));
+        } catch {
+            // best-effort only
+        } finally {
+            locating.value = false;
+        }
+    }, 800);
+});
+
+// File uploads don't survive a real PATCH, so spoof it over POST.
 const submit = () => {
-    form.patch('/worker/profile', { preserveScroll: true });
+    form.transform((data) => ({ ...data, _method: 'patch' })).post('/worker/profile', { preserveScroll: true });
 };
 </script>
 
@@ -177,25 +220,30 @@ const submit = () => {
                 </h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
-                        <Label for="city">City</Label>
-                        <Input id="city" v-model="form.city" />
-                        <InputError :message="form.errors.city" />
-                    </div>
-                    <div class="grid gap-2">
                         <Label for="state">State</Label>
-                        <Input id="state" v-model="form.state" />
+                        <select id="state" v-model="form.state" :class="selectClass">
+                            <option value="">Select state</option>
+                            <option v-for="st in indianStates" :key="st" :value="st">{{ st }}</option>
+                        </select>
                         <InputError :message="form.errors.state" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="latitude">Latitude</Label>
-                        <Input id="latitude" type="number" step="any" v-model="form.latitude" />
-                        <InputError :message="form.errors.latitude" />
+                        <Label for="city">City</Label>
+                        <select id="city" v-model="form.city" :disabled="!form.state" :class="selectClass" class="disabled:opacity-50">
+                            <option value="">{{ form.state ? 'Select city' : 'Select state first' }}</option>
+                            <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
+                        </select>
+                        <InputError :message="form.errors.city" />
                     </div>
-                    <div class="grid gap-2">
-                        <Label for="longitude">Longitude</Label>
-                        <Input id="longitude" type="number" step="any" v-model="form.longitude" />
-                        <InputError :message="form.errors.longitude" />
-                    </div>
+                </div>
+
+                <div class="mt-4 grid gap-2">
+                    <Label>Location on map</Label>
+                    <p class="text-xs text-muted-foreground">
+                        {{ locating ? 'Locating your city on the map…' : 'Pick your state & city and the pin moves there — drag it (or tap the map) to your exact area.' }}
+                    </p>
+                    <JobMap :lat="mapLat" :lng="mapLng" editable height="280px" @move="setPoint" />
+                    <InputError :message="form.errors.latitude || form.errors.longitude" />
                 </div>
             </section>
 

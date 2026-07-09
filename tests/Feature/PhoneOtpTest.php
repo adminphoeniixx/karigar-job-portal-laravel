@@ -3,7 +3,9 @@
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -64,4 +66,19 @@ it('rejects a wrong or reused OTP', function () {
 it('rejects invalid phone numbers', function () {
     $this->post('/otp/send', ['phone' => '12345'])->assertSessionHasErrors('phone');
     $this->post('/otp/send', ['phone' => '1234567890'])->assertSessionHasErrors('phone'); // must start 6-9
+});
+
+it('uploads a company logo via the method-spoofed profile update', function () {
+    Storage::fake('public');
+    $employer = User::factory()->create(['role' => UserRole::Employer->value]);
+
+    $this->actingAs($employer)->post('/employer/profile', [
+        '_method' => 'PATCH',
+        'company_name' => 'Sharma Constructions',
+        'logo' => UploadedFile::fake()->image('logo.png', 300, 300),
+    ])->assertRedirect();
+
+    $profile = $employer->employerProfile()->first();
+    expect($profile->logo_path)->not->toBeNull();
+    Storage::disk('public')->assertExists($profile->logo_path);
 });
