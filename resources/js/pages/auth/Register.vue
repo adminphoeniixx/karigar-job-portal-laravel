@@ -153,6 +153,14 @@ defineOptions({
                 Create account
             </Button>
         </div>
+        <TextLink
+            v-if="role"
+            :href="`/${role}/otp-login`"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold no-underline transition hover:bg-muted"
+        >
+            📱 Register with mobile OTP
+        </TextLink>
+
 
         <div class="text-center text-sm text-muted-foreground">
             Already have an account?

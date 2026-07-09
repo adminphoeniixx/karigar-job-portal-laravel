@@ -121,6 +121,19 @@ const registerHref = computed(() =>
             </Button>
         </div>
 
+        <div v-if="role && role !== 'admin'" class="relative">
+            <div class="absolute inset-0 flex items-center"><span class="w-full border-t"></span></div>
+            <div class="relative flex justify-center text-xs uppercase"><span class="bg-background px-2 text-muted-foreground">or</span></div>
+        </div>
+
+        <TextLink
+            v-if="role && role !== 'admin'"
+            :href="`/${role}/otp-login`"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold no-underline transition hover:bg-muted"
+        >
+            📱 Login with mobile OTP
+        </TextLink>
+
         <div class="text-center text-sm text-muted-foreground">
             Don't have an account?
             <TextLink :href="registerHref" :tabindex="5">Sign up</TextLink>

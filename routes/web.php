@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\JobModerationController as AdminJobModerationCont
 use App\Http\Controllers\Admin\KycController as AdminKycController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Auth\PhoneOtpController;
 use App\Http\Controllers\Auth\RoleAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Employer\ApplicantController;
@@ -47,6 +48,15 @@ Route::middleware('guest')->group(function () {
     Route::get('{role}/register', [RoleAuthController::class, 'register'])
         ->whereIn('role', ['worker', 'employer'])
         ->name('role.register');
+
+    // Mobile-number + OTP login/registration (MSG91)
+    Route::get('{role}/otp-login', [PhoneOtpController::class, 'show'])
+        ->whereIn('role', ['worker', 'employer'])
+        ->name('otp.show');
+    Route::post('otp/send', [PhoneOtpController::class, 'send'])->name('otp.send');
+    Route::post('{role}/otp/verify', [PhoneOtpController::class, 'verify'])
+        ->whereIn('role', ['worker', 'employer'])
+        ->name('otp.verify');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

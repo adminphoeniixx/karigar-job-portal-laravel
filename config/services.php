@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    'msg91' => [
+        'authkey' => env('MSG91_AUTHKEY'),
+        'template_id' => env('MSG91_TEMPLATE_ID'),
+    ],
+
     'razorpay' => [
         'key' => env('RAZORPAY_KEY'),
         'secret' => env('RAZORPAY_SECRET'),
