@@ -5,7 +5,6 @@ use App\Enums\KycStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use App\Models\JobListing;
-use App\Models\KycDocument;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
@@ -50,9 +49,9 @@ it('renders the landing page', function () {
     $this->get('/')->assertOk();
 });
 
-it('renders role login pages', function () {
-    $this->get('/worker/login')->assertOk();
-    $this->get('/employer/login')->assertOk();
+it('routes role login pages to OTP login (email kept for admin)', function () {
+    $this->get('/worker/login')->assertRedirect('/worker/otp-login');
+    $this->get('/employer/login')->assertRedirect('/employer/otp-login');
     $this->get('/admin/login')->assertOk();
 });
 

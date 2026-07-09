@@ -3,17 +3,22 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Fortify\Features;
 
 class RoleAuthController extends Controller
 {
-    public function login(Request $request, string $role): Response
+    public function login(Request $request, string $role): Response|RedirectResponse
     {
         $this->rememberIntended($request);
+
+        // Workers & employers sign in with mobile OTP only.
+        if ($role !== 'admin') {
+            return redirect()->route('otp.show', $role);
+        }
 
         return Inertia::render('auth/Login', [
             'role' => $role,
@@ -22,14 +27,12 @@ class RoleAuthController extends Controller
         ]);
     }
 
-    public function register(Request $request, string $role): Response
+    public function register(Request $request, string $role): RedirectResponse
     {
         $this->rememberIntended($request);
 
-        return Inertia::render('auth/Register', [
-            'role' => $role,
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-        ]);
+        // Registration happens through the mobile OTP flow.
+        return redirect()->route('otp.show', $role);
     }
 
     /**

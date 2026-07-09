@@ -5,12 +5,12 @@ use App\Enums\JobStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use App\Models\JobApplication;
-use App\Models\JobListing;
 use App\Models\Plan;
 use App\Models\Review;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 
 uses(RefreshDatabase::class);
 
@@ -189,18 +189,24 @@ it('lists notifications and marks them read', function () {
 
 // ───────────────────────── APPLY AUTH-GATE ─────────────────────────
 
-it('sends a guest to login and returns them to the job after auth', function () {
-    // Guest opening the login page with a redirect target stashes it as intended.
-    $this->get("/worker/login?redirect=/jobs/{$this->job->id}")->assertOk();
+it('sends a guest to OTP login and returns them to the job after auth', function () {
+    // Guest opening the login page with a redirect target stashes it as
+    // intended, then gets routed on to the OTP flow.
+    $this->get("/worker/login?redirect=/jobs/{$this->job->id}")->assertRedirect('/worker/otp-login');
     expect(session('url.intended'))->toBe("/jobs/{$this->job->id}");
 
-    // After the worker authenticates, Fortify's redirect()->intended() returns them there.
-    $this->post('/login', ['email' => $this->worker->email, 'password' => 'password'])
-        ->assertRedirect("/jobs/{$this->job->id}");
+    // After the worker verifies their OTP, they are returned there.
+    $this->worker->update(['phone' => '9876512345']);
+    $this->post('/otp/send', ['phone' => '9876512345']);
+
+    $this->post('/worker/otp/verify', [
+        'phone' => '9876512345',
+        'otp' => Cache::get('phone_otp.9876512345'),
+    ])->assertRedirect("/jobs/{$this->job->id}");
 });
 
 it('ignores an unsafe (off-site) redirect target', function () {
-    $this->get('/worker/login?redirect=https://evil.com')->assertOk();
+    $this->get('/worker/login?redirect=https://evil.com')->assertRedirect('/worker/otp-login');
     expect(session('url.intended'))->toBeNull();
 });
 

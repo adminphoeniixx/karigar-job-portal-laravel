@@ -10,8 +10,8 @@ test('login screen can be rendered', function () {
     $response->assertOk();
 });
 
-test('users can authenticate using the login screen', function () {
-    $user = User::factory()->create();
+test('admins can authenticate using the login screen', function () {
+    $user = User::factory()->create(['role' => 'admin']);
 
     $response = $this->post(route('login.store'), [
         'email' => $user->email,
@@ -19,9 +19,20 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    // Role-based login redirect: a worker lands on their profile.
-    $response->assertRedirect(route('worker.profile.edit', absolute: false));
+    // Role-based login redirect: an admin lands on the KYC review queue.
+    $response->assertRedirect(route('admin.kyc.index', absolute: false));
 });
+
+test('workers and employers cannot use email login (mobile OTP only)', function (string $role) {
+    $user = User::factory()->create(['role' => $role]);
+
+    $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ])->assertSessionHasErrors('email');
+
+    $this->assertGuest();
+})->with(['worker', 'employer']);
 
 test('users with two factor enabled are redirected to two factor challenge', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
@@ -31,7 +42,7 @@ test('users with two factor enabled are redirected to two factor challenge', fun
         'confirmPassword' => true,
     ]);
 
-    $user = User::factory()->withTwoFactor()->create();
+    $user = User::factory()->withTwoFactor()->create(['role' => 'admin']);
 
     $response = $this->post(route('login'), [
         'email' => $user->email,

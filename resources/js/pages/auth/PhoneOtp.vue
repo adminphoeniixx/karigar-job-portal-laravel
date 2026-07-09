@@ -3,7 +3,6 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, MessageSquareText, Smartphone } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
-import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -142,9 +141,5 @@ const editNumber = () => {
             </button>
         </form>
 
-        <div class="text-center text-sm text-muted-foreground">
-            Prefer email & password?
-            <TextLink :href="`/${role}/login`" class="font-semibold">Log in with email</TextLink>
-        </div>
     </div>
 </template>

@@ -12,16 +12,14 @@ test('registration screen can be rendered', function () {
     $response->assertOk();
 });
 
-test('new users can register', function () {
-    $response = $this->post(route('register.store'), [
+test('email registration is disabled in favour of mobile OTP', function () {
+    $this->post(route('register.store'), [
         'name' => 'Test User',
         'email' => 'test@example.com',
         'role' => 'worker',
         'password' => 'password',
         'password_confirmation' => 'password',
-    ]);
+    ])->assertSessionHasErrors('email');
 
-    $this->assertAuthenticated();
-    // Role-based register redirect: a worker lands on their profile.
-    $response->assertRedirect(route('worker.profile.edit', absolute: false));
+    $this->assertGuest();
 });

@@ -2,47 +2,22 @@
 
 namespace App\Actions\Fortify;
 
-use App\Concerns\PasswordValidationRules;
-use App\Concerns\ProfileValidationRules;
-use App\Enums\UserRole;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
 class CreateNewUser implements CreatesNewUsers
 {
-    use PasswordValidationRules, ProfileValidationRules;
-
     /**
-     * Validate and create a newly registered user.
+     * Email/password registration is retired — every worker and employer
+     * account is created through the mobile-number + OTP flow instead.
      *
      * @param  array<string, string>  $input
      */
     public function create(array $input): User
     {
-        Validator::make($input, [
-            ...$this->profileRules(),
-            'role' => ['required', 'string', Rule::in(UserRole::registerable())],
-            'password' => $this->passwordRules(),
-        ])->validate();
-
-        return DB::transaction(function () use ($input) {
-            $user = User::create([
-                'name' => $input['name'],
-                'email' => $input['email'],
-                'password' => $input['password'],
-                'role' => $input['role'],
-            ]);
-
-            match ($user->role) {
-                UserRole::Worker => $user->workerProfile()->create([]),
-                UserRole::Employer => $user->employerProfile()->create([]),
-                default => null,
-            };
-
-            return $user;
-        });
+        throw ValidationException::withMessages([
+            'email' => __('Registration now happens with your mobile number. Please sign up with OTP.'),
+        ]);
     }
 }

@@ -134,7 +134,7 @@ const registerHref = computed(() =>
             📱 Login with mobile OTP
         </TextLink>
 
-        <div class="text-center text-sm text-muted-foreground">
+        <div v-if="role !== 'admin'" class="text-center text-sm text-muted-foreground">
             Don't have an account?
             <TextLink :href="registerHref" :tabindex="5">Sign up</TextLink>
         </div>
