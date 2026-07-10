@@ -118,7 +118,7 @@ const submit = () =>
     <Head title="Company Profile" />
 
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="Building2" title="Company Profile" description="Update your company details and location" />
+        <PageHeader :icon="Building2" :title="$t('profile.companyTitle')" :description="$t('profile.companySubtitle')" />
 
         <form class="space-y-5" @submit.prevent="submit">
             <!-- Logo + name -->
@@ -136,18 +136,18 @@ const submit = () =>
                     </div>
                     <div class="flex-1 space-y-4">
                         <div class="grid gap-2">
-                            <Label for="company_name">Company name</Label>
+                            <Label for="company_name">{{ $t('profile.companyName') }}</Label>
                             <Input id="company_name" v-model="form.company_name" />
                             <InputError :message="form.errors.company_name" />
                         </div>
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="phone">Phone</Label>
+                                <Label for="phone">{{ $t('common.phone') }}</Label>
                                 <Input id="phone" v-model="form.phone" placeholder="+91…" />
                                 <InputError :message="form.errors.phone" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="gstin">GSTIN <span class="font-normal text-muted-foreground">(for tax invoices)</span></Label>
+                                <Label for="gstin">{{ $t('profile.gstin') }} <span class="font-normal text-muted-foreground">({{ $t('profile.gstinHint') }})</span></Label>
                                 <Input id="gstin" v-model="form.gstin" maxlength="15" placeholder="22AAAAA0000A1Z5" class="uppercase" />
                                 <InputError :message="form.errors.gstin" />
                             </div>
@@ -160,12 +160,12 @@ const submit = () =>
             <!-- About + address -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <div class="grid gap-2">
-                    <Label for="about">About</Label>
-                    <textarea id="about" v-model="form.about" rows="4" :class="textareaClass" placeholder="Tell workers about your company…" />
+                    <Label for="about">{{ $t('profile.about') }}</Label>
+                    <textarea id="about" v-model="form.about" rows="4" :class="textareaClass" :placeholder="$t('profile.aboutPlaceholder')" />
                     <InputError :message="form.errors.about" />
                 </div>
                 <div class="mt-4 grid gap-2">
-                    <Label for="address">Address</Label>
+                    <Label for="address">{{ $t('profile.address') }}</Label>
                     <textarea id="address" v-model="form.address" rows="2" :class="textareaClass" />
                     <InputError :message="form.errors.address" />
                 </div>
@@ -174,30 +174,30 @@ const submit = () =>
             <!-- Location -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <MapPin class="size-4 text-orange-500" /> Location
+                    <MapPin class="size-4 text-orange-500" /> {{ $t('common.location') }}
                 </h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
-                        <Label for="state">State</Label>
+                        <Label for="state">{{ $t('jobs.filters.state') }}</Label>
                         <select
                             id="state"
                             v-model="form.state"
                             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                         >
-                            <option value="">Select state</option>
+                            <option value="">{{ $t('jobForm.selectState') }}</option>
                             <option v-for="st in indianStates" :key="st" :value="st">{{ st }}</option>
                         </select>
                         <InputError :message="form.errors.state" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="city">City</Label>
+                        <Label for="city">{{ $t('jobs.filters.city') }}</Label>
                         <select
                             id="city"
                             v-model="form.city"
                             :disabled="!form.state"
                             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:opacity-50"
                         >
-                            <option value="">{{ form.state ? 'Select city' : 'Select state first' }}</option>
+                            <option value="">{{ form.state ? $t('jobForm.selectCity') : $t('jobForm.selectStateFirst') }}</option>
                             <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
                         </select>
                         <InputError :message="form.errors.city" />
@@ -205,9 +205,9 @@ const submit = () =>
                 </div>
 
                 <div class="mt-4 grid gap-2">
-                    <Label>Location on map</Label>
+                    <Label>{{ $t('profile.locationOnMap') }}</Label>
                     <p class="text-xs text-muted-foreground">
-                        {{ locating ? 'Locating your address on the map…' : 'Fill your address above and the pin moves there — drag it (or tap the map) to fine-tune.' }}
+                        {{ locating ? $t('jobForm.locating') : $t('profile.addressMapHint') }}
                     </p>
                     <JobMap :lat="mapLat" :lng="mapLng" editable height="280px" @move="setPoint" />
                     <InputError :message="form.errors.latitude || form.errors.longitude" />
@@ -220,7 +220,7 @@ const submit = () =>
                     :disabled="form.processing"
                     class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
-                    Save changes
+                    {{ $t('common.saveChanges') }}
                 </button>
             </div>
         </form>

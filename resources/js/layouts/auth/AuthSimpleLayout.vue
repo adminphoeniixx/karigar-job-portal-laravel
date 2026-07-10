@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { BadgeCheck, MapPin, Zap } from '@lucide/vue';
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { home } from '@/routes';
 
-defineProps<{
+const props = defineProps<{
     title?: string;
     description?: string;
 }>();
+
+const { t, te } = useI18n();
+
+// Pages may pass either literal text or an i18n key.
+const heading = computed(() => (props.title && te(props.title) ? t(props.title) : props.title));
+const subheading = computed(() => (props.description && te(props.description) ? t(props.description) : props.description));
 
 const highlights = [
     { icon: BadgeCheck, text: 'KYC verified' },
@@ -34,8 +42,8 @@ const highlights = [
             <!-- Centered card -->
             <div class="rounded-3xl border bg-card p-6 shadow-premium md:p-8">
                 <div class="mb-8 space-y-2 text-center">
-                    <h1 class="text-2xl font-bold tracking-tight">{{ title }}</h1>
-                    <p class="text-sm text-muted-foreground">{{ description }}</p>
+                    <h1 class="text-2xl font-bold tracking-tight">{{ heading }}</h1>
+                    <p class="text-sm text-muted-foreground">{{ subheading }}</p>
                 </div>
                 <slot />
             </div>

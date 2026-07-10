@@ -119,12 +119,12 @@ const subscribe = () => {
     <Head title="Subscription" />
 
     <div class="flex flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="CreditCard" title="Plans" description="Choose a plan to start posting jobs" />
+        <PageHeader :icon="CreditCard" :title="$t('subscription.title')" :description="$t('subscription.subtitle')" />
 
         <div v-if="current" class="flex items-center gap-2 rounded-2xl border bg-orange-500/5 px-5 py-4">
             <span class="flex size-9 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-5" /></span>
             <div class="text-sm">
-                Active plan: <strong>{{ current.plan.name }}</strong>
+                {{ $t('subscription.activePlan') }}: <strong>{{ current.plan.name }}</strong>
                 <span class="ml-2 inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold capitalize text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300">{{ current.status }}</span>
             </div>
         </div>
@@ -145,7 +145,7 @@ const subscribe = () => {
                 <div class="relative flex items-center justify-between">
                     <h3 class="text-lg font-bold">{{ plan.name }}</h3>
                     <span v-if="plan.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-rose-600 px-2.5 py-0.5 text-xs font-semibold text-white">
-                        <Sparkles class="size-3" /> Popular
+                        <Sparkles class="size-3" /> {{ $t('subscription.popular') }}
                     </span>
                 </div>
                 <div class="relative mt-3 flex items-end gap-1">
@@ -159,21 +159,21 @@ const subscribe = () => {
                 <div v-if="discountFor(plan) > 0" class="relative mt-1 flex items-center gap-2 text-sm">
                     <span class="text-muted-foreground line-through">₹{{ plan.price }}</span>
                     <span class="inline-flex items-center rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-500 ring-1 ring-inset ring-rose-500/20">
-                        Save {{ money(discountFor(plan)) }}
+                        {{ $t('subscription.saveAmount') }} {{ money(discountFor(plan)) }}
                     </span>
                 </div>
                 <ul class="relative mt-6 flex-1 space-y-3 text-sm">
                     <li class="flex items-center gap-2">
                         <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                        {{ plan.features?.job_post_limit ?? 0 }} job posts
+                        {{ plan.features?.job_post_limit ?? 0 }} {{ $t('subscription.jobPosts') }}
                     </li>
                     <li class="flex items-center gap-2">
                         <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                        {{ plan.features?.contact_unlock_limit ?? 0 }} contact unlocks
+                        {{ plan.features?.contact_unlock_limit ?? 0 }} {{ $t('subscription.contactUnlocks') }}
                     </li>
                     <li v-if="plan.features?.featured" class="flex items-center gap-2">
                         <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                        Featured listings
+                        {{ $t('subscription.featured') }}
                     </li>
                 </ul>
                 <button
@@ -184,14 +184,14 @@ const subscribe = () => {
                     :disabled="current?.plan.id === plan.id"
                     @click="openPlan(plan)"
                 >
-                    {{ current?.plan.id === plan.id ? 'Current plan' : 'View details & subscribe' }}
+                    {{ current?.plan.id === plan.id ? $t('subscription.currentPlan') : $t('subscription.viewDetails') }}
                 </button>
             </div>
         </div>
         <!-- Tax invoices -->
         <div v-if="invoices.length" class="rounded-2xl border bg-card shadow-sm">
             <div class="border-b px-6 py-4">
-                <h2 class="flex items-center gap-2 text-sm font-semibold"><FileText class="size-4 text-orange-500" /> Tax invoices</h2>
+                <h2 class="flex items-center gap-2 text-sm font-semibold"><FileText class="size-4 text-orange-500" /> {{ $t('subscription.taxInvoices') }}</h2>
             </div>
             <div class="divide-y">
                 <div v-for="inv in invoices" :key="inv.id" class="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 text-sm">
@@ -201,7 +201,7 @@ const subscribe = () => {
                     </div>
                     <div class="flex items-center gap-4">
                         <span class="font-bold tabular-nums">₹{{ inv.total }}</span>
-                        <Link :href="`/subscription/${inv.id}/invoice`" class="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">View invoice →</Link>
+                        <Link :href="`/subscription/${inv.id}/invoice`" class="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">{{ $t('subscription.viewInvoice') }}</Link>
                     </div>
                 </div>
             </div>
@@ -216,10 +216,10 @@ const subscribe = () => {
                     <h3 class="flex items-center gap-2 text-lg font-bold">
                         {{ selected.name }}
                         <span v-if="selected.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-rose-600 px-2 py-0.5 text-[10px] font-semibold text-white">
-                            <Sparkles class="size-2.5" /> Popular
+                            <Sparkles class="size-2.5" /> {{ $t('subscription.popular') }}
                         </span>
                     </h3>
-                    <p class="mt-0.5 text-sm capitalize text-muted-foreground">Billed {{ selected.interval }}</p>
+                    <p class="mt-0.5 text-sm capitalize text-muted-foreground">{{ $t('subscription.billed') }} {{ selected.interval }}</p>
                 </div>
                 <button class="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" @click="closePlan">
                     <X class="size-5" />
@@ -230,21 +230,21 @@ const subscribe = () => {
             <ul class="mt-5 space-y-2.5 rounded-xl bg-muted/40 p-4 text-sm">
                 <li class="flex items-center gap-2">
                     <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                    <strong>{{ selected.features?.job_post_limit ?? 0 }}</strong>&nbsp;job posts
+                    <strong>{{ selected.features?.job_post_limit ?? 0 }}</strong>&nbsp;{{ $t('subscription.jobPosts') }}
                 </li>
                 <li class="flex items-center gap-2">
                     <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                    <strong>{{ selected.features?.contact_unlock_limit ?? 0 }}</strong>&nbsp;contact unlocks
+                    <strong>{{ selected.features?.contact_unlock_limit ?? 0 }}</strong>&nbsp;{{ $t('subscription.contactUnlocks') }}
                 </li>
                 <li v-if="selected.features?.featured" class="flex items-center gap-2">
                     <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                    Featured listings
+                    {{ $t('subscription.featured') }}
                 </li>
             </ul>
 
             <!-- Coupon -->
             <div class="mt-5">
-                <label class="mb-1.5 flex items-center gap-1.5 text-sm font-semibold"><Tag class="size-4 text-orange-500" /> Coupon code</label>
+                <label class="mb-1.5 flex items-center gap-1.5 text-sm font-semibold"><Tag class="size-4 text-orange-500" /> {{ $t('subscription.couponCode') }}</label>
                 <div class="flex gap-2">
                     <input
                         v-model="code"
@@ -258,7 +258,7 @@ const subscribe = () => {
                         class="h-10 rounded-xl border px-4 text-sm font-semibold transition hover:bg-muted disabled:opacity-50"
                         @click="applyCoupon"
                     >
-                        {{ applying ? 'Checking…' : 'Apply' }}
+                        {{ applying ? $t('subscription.checking') : $t('subscription.applyCoupon') }}
                     </button>
                 </div>
                 <p v-if="couponResult && couponResult.valid && selectedDiscount > 0" class="mt-1.5 flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
@@ -276,16 +276,16 @@ const subscribe = () => {
             <!-- Price summary (with GST breakup) -->
             <div class="mt-5 space-y-1.5 rounded-xl border p-4 text-sm">
                 <div class="flex justify-between text-muted-foreground">
-                    <span>Plan price</span><span>₹{{ selected.price }}</span>
+                    <span>{{ $t('subscription.planPrice') }}</span><span>₹{{ selected.price }}</span>
                 </div>
                 <div v-if="selectedDiscount > 0" class="flex justify-between font-medium text-emerald-600 dark:text-emerald-400">
-                    <span>Coupon discount</span><span>− {{ money(selectedDiscount) }}</span>
+                    <span>{{ $t('subscription.couponDiscount') }}</span><span>− {{ money(selectedDiscount) }}</span>
                 </div>
                 <div class="flex justify-between text-muted-foreground">
-                    <span>GST ({{ gstPercent }}%)</span><span>+ {{ money(gstFor(selected)) }}</span>
+                    <span>{{ $t('subscription.gst') }} ({{ gstPercent }}%)</span><span>+ {{ money(gstFor(selected)) }}</span>
                 </div>
                 <div class="flex justify-between border-t pt-2 text-base font-bold">
-                    <span>Total payable</span>
+                    <span>{{ $t('subscription.totalPayable') }}</span>
                     <span>{{ money(totalFor(selected)) }} <span class="text-xs font-normal text-muted-foreground">/{{ selected.interval }}</span></span>
                 </div>
             </div>
@@ -295,9 +295,9 @@ const subscribe = () => {
                 class="mt-5 w-full rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
                 @click="subscribe"
             >
-                {{ subscribing ? 'Starting checkout…' : `Subscribe — ${money(totalFor(selected))} incl. GST` }}
+                {{ subscribing ? $t('subscription.startingCheckout') : `${$t('subscription.subscribe')} — ${money(totalFor(selected))} ${$t('subscription.inclGst')}` }}
             </button>
-            <p class="mt-2 text-center text-[11px] text-muted-foreground">Secure payment via Razorpay. You can cancel anytime.</p>
+            <p class="mt-2 text-center text-[11px] text-muted-foreground">{{ $t('subscription.securePayment') }}</p>
         </div>
     </div>
 </template>

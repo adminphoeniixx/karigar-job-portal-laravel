@@ -44,7 +44,7 @@ const remove = (id: number) => {
     <Head title="Shortlisted" />
 
     <div class="flex flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="Star" title="Shortlisted" description="Candidates you shortlisted across all your jobs" />
+        <PageHeader :icon="Star" :title="$t('shortlist.title')" :description="$t('shortlist.subtitle')" />
 
         <div v-if="applications.length" class="grid gap-4">
             <div v-for="a in applications" :key="a.id" class="rounded-2xl border bg-card p-5 shadow-sm">
@@ -60,19 +60,19 @@ const remove = (id: number) => {
                                     <span v-if="a.worker.rating > 0" class="inline-flex items-center gap-0.5 text-sm text-amber-500">
                                         <Star class="size-3.5" fill="currentColor" /> {{ a.worker.rating }}
                                     </span>
-                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[a.status]">{{ a.status }}</span>
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[a.status]">{{ $t(`status.${a.status}`) }}</span>
                                 </div>
                                 <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                     <span class="inline-flex items-center gap-1"><MapPin class="size-3" /> {{ [a.worker.city, a.worker.state].filter(Boolean).join(', ') || '—' }}</span>
-                                    <span v-if="a.worker.experience_years != null">{{ a.worker.experience_years }} yrs exp</span>
+                                    <span v-if="a.worker.experience_years != null">{{ a.worker.experience_years }} {{ $t('applicants.yrsExp') }}</span>
                                     <span v-if="a.expected_wage">Expects ₹{{ a.expected_wage }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="text-right text-xs text-muted-foreground">
-                        <div class="inline-flex items-center gap-1 font-medium text-orange-600 dark:text-orange-400"><Star class="size-3.5" fill="currentColor" /> Shortlisted {{ a.shortlisted_at }}</div>
-                        <div class="mt-0.5">Applied {{ a.applied_at }}</div>
+                        <div class="inline-flex items-center gap-1 font-medium text-orange-600 dark:text-orange-400"><Star class="size-3.5" fill="currentColor" /> {{ $t('applicants.shortlisted') }} {{ a.shortlisted_at }}</div>
+                        <div class="mt-0.5">{{ $t('applications.applied') }} {{ a.applied_at }}</div>
                     </div>
                 </div>
 
@@ -93,13 +93,13 @@ const remove = (id: number) => {
                         :href="`/employer/jobs/${a.job.id}/applicants`"
                         class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700"
                     >
-                        <UsersRound class="size-3.5" /> View applicants
+                        <UsersRound class="size-3.5" /> {{ $t('shortlist.viewApplicants') }}
                     </Link>
                     <button
                         class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                         @click="remove(a.id)"
                     >
-                        <X class="size-3.5" /> Remove from shortlist
+                        <X class="size-3.5" /> {{ $t('shortlist.removeFromShortlist') }}
                     </button>
                 </div>
             </div>
@@ -107,8 +107,8 @@ const remove = (id: number) => {
 
         <div v-else class="rounded-2xl border bg-card px-5 py-16 text-center shadow-sm">
             <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Star class="size-7" /></div>
-            <p class="mt-4 font-medium">No shortlisted candidates yet</p>
-            <p class="mt-1 text-sm text-muted-foreground">Open a job's applicants and hit "Shortlist" on promising candidates.</p>
+            <p class="mt-4 font-medium">{{ $t('shortlist.empty') }}</p>
+            <p class="mt-1 text-sm text-muted-foreground">{{ $t('shortlist.emptyHint') }}</p>
         </div>
     </div>
 </template>

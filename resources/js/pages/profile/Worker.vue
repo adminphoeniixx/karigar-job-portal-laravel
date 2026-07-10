@@ -131,7 +131,7 @@ const submit = () => {
     <Head title="My Profile" />
 
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="UserRound" title="Worker Profile" description="Update your skills, experience and location" />
+        <PageHeader :icon="UserRound" :title="$t('profile.workerTitle')" :description="$t('profile.workerSubtitle')" />
 
         <form class="space-y-5" @submit.prevent="submit">
             <!-- Avatar + basics -->
@@ -149,12 +149,12 @@ const submit = () => {
                     </div>
                     <div class="flex-1 space-y-4">
                         <div class="grid gap-2">
-                            <Label for="phone">Phone</Label>
+                            <Label for="phone">{{ $t('common.phone') }}</Label>
                             <Input id="phone" v-model="form.phone" placeholder="+91…" />
                             <InputError :message="form.errors.phone" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="skills">Skills</Label>
+                            <Label for="skills">{{ $t('profile.skills') }}</Label>
                             <SkillTagInput id="skills" v-model="form.skills" :suggestions="commonSkills" placeholder="e.g. Plumbing — type or pick, it becomes a tag" />
                             <InputError :message="form.errors.skills" />
                         </div>
@@ -170,12 +170,12 @@ const submit = () => {
                 </h2>
                 <div class="grid gap-4 sm:grid-cols-3">
                     <div class="grid gap-2">
-                        <Label for="experience_years">Experience (years)</Label>
+                        <Label for="experience_years">{{ $t('profile.experienceYears') }}</Label>
                         <Input id="experience_years" type="number" min="0" v-model="form.experience_years" />
                         <InputError :message="form.errors.experience_years" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="expected_wage">Expected wage (₹)</Label>
+                        <Label for="expected_wage">{{ $t('profile.expectedWageLabel') }}</Label>
                         <Input id="expected_wage" type="number" min="0" step="0.01" v-model="form.expected_wage" />
                         <InputError :message="form.errors.expected_wage" />
                     </div>
@@ -192,23 +192,23 @@ const submit = () => {
                 </div>
 
                 <div class="mt-4 grid gap-2">
-                    <Label for="bio">Bio</Label>
-                    <textarea id="bio" v-model="form.bio" rows="4" :class="textareaClass" placeholder="Tell employers about yourself…" />
+                    <Label for="bio">{{ $t('profile.bio') }}</Label>
+                    <textarea id="bio" v-model="form.bio" rows="4" :class="textareaClass" :placeholder="$t('profile.bioPlaceholder')" />
                     <InputError :message="form.errors.bio" />
                 </div>
 
                 <label class="mt-4 flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
                     <Checkbox id="available" v-model="form.available" />
                     <span>
-                        <span class="text-sm font-medium">Available for work</span>
-                        <span class="block text-xs text-muted-foreground">Show your profile to employers looking to hire.</span>
+                        <span class="text-sm font-medium">{{ $t('profile.availableForWork') }}</span>
+                        <span class="block text-xs text-muted-foreground">{{ $t('profile.availableHint') }}</span>
                     </span>
                 </label>
 
                 <div class="mt-4">
-                    <Label for="payout_upi">Payout UPI ID</Label>
+                    <Label for="payout_upi">{{ $t('profile.payoutUpi') }}</Label>
                     <Input id="payout_upi" v-model="form.payout_upi" placeholder="name@bank" />
-                    <p class="mt-1 text-xs text-muted-foreground">Where your job payments are sent when an employer releases escrow.</p>
+                    <p class="mt-1 text-xs text-muted-foreground">{{ $t('profile.payoutHint') }}</p>
                     <InputError :message="form.errors.payout_upi" />
                 </div>
             </section>
@@ -216,21 +216,21 @@ const submit = () => {
             <!-- Location -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <MapPin class="size-4 text-orange-500" /> Location
+                    <MapPin class="size-4 text-orange-500" /> {{ $t('common.location') }}
                 </h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
-                        <Label for="state">State</Label>
+                        <Label for="state">{{ $t('jobs.filters.state') }}</Label>
                         <select id="state" v-model="form.state" :class="selectClass">
-                            <option value="">Select state</option>
+                            <option value="">{{ $t('jobForm.selectState') }}</option>
                             <option v-for="st in indianStates" :key="st" :value="st">{{ st }}</option>
                         </select>
                         <InputError :message="form.errors.state" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="city">City</Label>
+                        <Label for="city">{{ $t('jobs.filters.city') }}</Label>
                         <select id="city" v-model="form.city" :disabled="!form.state" :class="selectClass" class="disabled:opacity-50">
-                            <option value="">{{ form.state ? 'Select city' : 'Select state first' }}</option>
+                            <option value="">{{ form.state ? $t('jobForm.selectCity') : $t('jobForm.selectStateFirst') }}</option>
                             <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
                         </select>
                         <InputError :message="form.errors.city" />
@@ -238,9 +238,9 @@ const submit = () => {
                 </div>
 
                 <div class="mt-4 grid gap-2">
-                    <Label>Location on map</Label>
+                    <Label>{{ $t('profile.locationOnMap') }}</Label>
                     <p class="text-xs text-muted-foreground">
-                        {{ locating ? 'Locating your city on the map…' : 'Pick your state & city and the pin moves there — drag it (or tap the map) to your exact area.' }}
+                        {{ locating ? $t('jobForm.locating') : $t('profile.mapHint') }}
                     </p>
                     <JobMap :lat="mapLat" :lng="mapLng" editable height="280px" @move="setPoint" />
                     <InputError :message="form.errors.latitude || form.errors.longitude" />
@@ -253,7 +253,7 @@ const submit = () => {
                     :disabled="form.processing"
                     class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
-                    Save changes
+                    {{ $t('common.saveChanges') }}
                 </button>
             </div>
         </form>

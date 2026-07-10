@@ -99,10 +99,10 @@ const submitReview = () => {
     <Head :title="`Applicants · ${job.title}`" />
 
     <div class="flex flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="Users" :title="`Applicants`" :description="job.title">
+        <PageHeader :icon="Users" :title="$t('applicants.title')" :description="job.title">
             <template #action>
                 <div class="rounded-xl border bg-card px-4 py-2 text-sm">
-                    <span class="text-muted-foreground">Contact unlocks:</span>
+                    <span class="text-muted-foreground">{{ $t('applicants.contactUnlocks') }}:</span>
                     <span class="font-semibold">{{ contactUnlocks.used }}<span v-if="contactUnlocks.limit"> / {{ contactUnlocks.limit }}</span></span>
                 </div>
             </template>
@@ -120,8 +120,8 @@ const submitReview = () => {
                         </div>
                         <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span class="inline-flex items-center gap-1"><MapPin class="size-3" /> {{ [a.worker.city, a.worker.state].filter(Boolean).join(', ') || '—' }}</span>
-                            <span v-if="a.worker.experience_years != null">{{ a.worker.experience_years }} yrs exp</span>
-                            <span>Applied {{ a.created_at }}</span>
+                            <span v-if="a.worker.experience_years != null">{{ a.worker.experience_years }} {{ $t('applicants.yrsExp') }}</span>
+                            <span>{{ $t('applications.applied') }} {{ a.created_at }}</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
@@ -129,9 +129,9 @@ const submitReview = () => {
                             v-if="a.shortlisted"
                             class="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-semibold text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300"
                         >
-                            <Star class="size-3" fill="currentColor" /> Shortlisted
+                            <Star class="size-3" fill="currentColor" /> {{ $t('applicants.shortlisted') }}
                         </span>
-                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[a.status]">{{ a.status }}</span>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[a.status]">{{ $t(`status.${a.status}`) }}</span>
                     </div>
                 </div>
 
@@ -140,7 +140,7 @@ const submitReview = () => {
                 </div>
 
                 <p v-if="a.cover_note" class="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">{{ a.cover_note }}</p>
-                <p v-if="a.expected_wage" class="mt-2 text-sm"><span class="text-muted-foreground">Expected wage:</span> <span class="font-medium">₹{{ a.expected_wage }}</span></p>
+                <p v-if="a.expected_wage" class="mt-2 text-sm"><span class="text-muted-foreground">{{ $t('applicants.expectedWage') }}:</span> <span class="font-medium">₹{{ a.expected_wage }}</span></p>
 
                 <!-- Contact -->
                 <div class="mt-3">
@@ -153,7 +153,7 @@ const submitReview = () => {
                         class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:bg-muted"
                         @click="unlock(a.id)"
                     >
-                        <Lock class="size-3.5" /> Unlock contact
+                        <Lock class="size-3.5" /> {{ $t('applicants.unlockContact') }}
                     </button>
                 </div>
 
@@ -168,14 +168,14 @@ const submitReview = () => {
                         @click="toggleShortlist(a.id)"
                     >
                         <Star class="size-3.5" :fill="a.shortlisted ? 'currentColor' : 'none'" />
-                        {{ a.shortlisted ? 'Shortlisted' : 'Shortlist' }}
+                        {{ a.shortlisted ? $t('applicants.shortlisted') : $t('applicants.shortlist') }}
                     </button>
                     <template v-if="a.status === 'pending'">
                         <button class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700" @click="setStatus(a.id, 'accepted')">
-                            <Check class="size-3.5" /> Accept
+                            <Check class="size-3.5" /> {{ $t('applicants.accept') }}
                         </button>
                         <button class="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10" @click="setStatus(a.id, 'rejected')">
-                            <X class="size-3.5" /> Reject
+                            <X class="size-3.5" /> {{ $t('applicants.reject') }}
                         </button>
                     </template>
                     <button
@@ -183,7 +183,7 @@ const submitReview = () => {
                         class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition hover:bg-muted"
                         @click="openReview(a.id)"
                     >
-                        <Star class="size-3.5" /> Leave review
+                        <Star class="size-3.5" /> {{ $t('applicants.leaveReview') }}
                     </button>
 
                     <!-- Escrow payment -->
@@ -218,8 +218,8 @@ const submitReview = () => {
 
         <div v-else class="rounded-2xl border bg-card px-5 py-16 text-center shadow-sm">
             <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Users class="size-7" /></div>
-            <p class="mt-4 font-medium">No applicants yet</p>
-            <p class="mt-1 text-sm text-muted-foreground">Applications will appear here as workers apply.</p>
+            <p class="mt-4 font-medium">{{ $t('applicants.empty') }}</p>
+            <p class="mt-1 text-sm text-muted-foreground">{{ $t('applicants.emptyHint') }}</p>
         </div>
     </div>
 

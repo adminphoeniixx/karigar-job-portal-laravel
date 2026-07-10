@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { BriefcaseBusiness, CalendarDays, MapPin, Pencil, Phone, Plus, Search, Trash2, Users, UsersRound, X } from '@lucide/vue';
 import { reactive, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import PageHeader from '@/components/PageHeader.vue';
 
 interface Job {
@@ -21,6 +22,8 @@ const props = defineProps<{
     jobs: { data: Job[]; links: { url: string | null; label: string; active: boolean }[] };
     filters: { q?: string; status?: string };
 }>();
+
+const { t } = useI18n();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'My Jobs', href: '/employer/jobs' }] } });
 
@@ -61,7 +64,7 @@ const fmtDate = (iso: string | null): string =>
 const isExpired = (job: Job): boolean => !!job.expires_at && new Date(job.expires_at).getTime() <= Date.now();
 
 const destroy = (id: number) => {
-    if (window.confirm('Delete this job?')) {
+    if (window.confirm(t('myJobs.deleteConfirm'))) {
         router.delete(`/employer/jobs/${id}`, { preserveScroll: true });
     }
 };
@@ -71,13 +74,13 @@ const destroy = (id: number) => {
     <Head title="My Jobs" />
 
     <div class="flex flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="BriefcaseBusiness" title="My Jobs" description="Manage your job postings">
+        <PageHeader :icon="BriefcaseBusiness" :title="$t('myJobs.title')" :description="$t('myJobs.subtitle')">
             <template #action>
                 <Link
                     href="/employer/jobs/create"
                     class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
                 >
-                    <Plus class="size-4" /> Post a job
+                    <Plus class="size-4" /> {{ $t('jobs.postJob') }}
                 </Link>
             </template>
         </PageHeader>
@@ -89,7 +92,7 @@ const destroy = (id: number) => {
                 <input
                     v-model="form.q"
                     type="text"
-                    placeholder="Search your jobs by title…"
+                    :placeholder="$t('myJobs.searchPlaceholder')"
                     class="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
                 />
             </div>
@@ -97,11 +100,11 @@ const destroy = (id: number) => {
                 v-model="form.status"
                 class="h-9 rounded-xl border bg-background px-3 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
             >
-                <option value="">All statuses</option>
-                <option value="active">Active</option>
-                <option value="draft">Draft</option>
-                <option value="closed">Closed</option>
-                <option value="expired">Expired</option>
+                <option value="">{{ $t('myJobs.allStatuses') }}</option>
+                <option value="active">{{ $t('status.active') }}</option>
+                <option value="draft">{{ $t('status.draft') }}</option>
+                <option value="closed">{{ $t('status.closed') }}</option>
+                <option value="expired">{{ $t('status.expired') }}</option>
             </select>
             <button
                 v-if="form.q || form.status"
@@ -109,7 +112,7 @@ const destroy = (id: number) => {
                 class="inline-flex h-9 items-center gap-1 rounded-xl border px-3 text-sm text-muted-foreground transition hover:bg-muted"
                 @click="clearFilters"
             >
-                <X class="size-4" /> Clear
+                <X class="size-4" /> {{ $t('common.clear') }}
             </button>
         </div>
 
@@ -118,13 +121,13 @@ const destroy = (id: number) => {
                 <table class="w-full text-sm">
                     <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
-                            <th class="px-5 py-3 font-medium">Title</th>
-                            <th class="px-5 py-3 font-medium">Location</th>
-                            <th class="px-5 py-3 font-medium">Applicants</th>
-                            <th class="px-5 py-3 font-medium">Posted</th>
-                            <th class="px-5 py-3 font-medium">Expires</th>
-                            <th class="px-5 py-3 font-medium">Status</th>
-                            <th class="px-5 py-3 text-right font-medium">Actions</th>
+                            <th class="px-5 py-3 font-medium">{{ $t('myJobs.titleCol') }}</th>
+                            <th class="px-5 py-3 font-medium">{{ $t('common.location') }}</th>
+                            <th class="px-5 py-3 font-medium">{{ $t('jobs.applicants') }}</th>
+                            <th class="px-5 py-3 font-medium">{{ $t('jobs.posted') }}</th>
+                            <th class="px-5 py-3 font-medium">{{ $t('jobs.expires') }}</th>
+                            <th class="px-5 py-3 font-medium">{{ $t('kyc.status') }}</th>
+                            <th class="px-5 py-3 text-right font-medium">{{ $t('common.actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -137,10 +140,10 @@ const destroy = (id: number) => {
                                         class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-300"
                                         :title="job.contact_mode === 'call' ? 'Workers call you directly' : 'Workers can call or apply'"
                                     >
-                                        <Phone class="size-2.5" /> {{ job.contact_mode === 'call' ? 'Direct call' : 'Call + Apply' }}
+                                        <Phone class="size-2.5" /> {{ job.contact_mode === 'call' ? $t('myJobs.directCall') : $t('myJobs.callApply') }}
                                     </span>
                                 </div>
-                                <div class="text-xs text-muted-foreground"><Users class="mr-0.5 inline size-3" /> {{ job.vacancies }} vacancies</div>
+                                <div class="text-xs text-muted-foreground"><Users class="mr-0.5 inline size-3" /> {{ job.vacancies }} {{ $t('jobs.vacancies').toLowerCase() }}</div>
                             </td>
                             <td class="px-5 py-3.5 text-muted-foreground">
                                 <span class="inline-flex items-center gap-1">
@@ -164,10 +167,10 @@ const destroy = (id: number) => {
                                     v-if="isExpired(job)"
                                     class="inline-flex items-center rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-semibold text-rose-600 ring-1 ring-inset ring-rose-500/20 dark:text-rose-300"
                                 >
-                                    Expired
+                                    {{ $t('status.expired') }}
                                 </span>
                                 <span v-else class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[job.status]">
-                                    {{ job.status }}
+                                    {{ $t(`status.${job.status}`) }}
                                 </span>
                             </td>
                             <td class="px-5 py-3.5">
@@ -176,19 +179,19 @@ const destroy = (id: number) => {
                                         :href="`/employer/jobs/${job.id}/applicants`"
                                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-500/10 dark:text-orange-300"
                                     >
-                                        <UsersRound class="size-3.5" /> Applicants
+                                        <UsersRound class="size-3.5" /> {{ $t('jobs.applicants') }}
                                     </Link>
                                     <Link
                                         :href="`/employer/jobs/${job.id}/edit`"
                                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                                     >
-                                        <Pencil class="size-3.5" /> Edit
+                                        <Pencil class="size-3.5" /> {{ $t('common.edit') }}
                                     </Link>
                                     <button
                                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400"
                                         @click="destroy(job.id)"
                                     >
-                                        <Trash2 class="size-3.5" /> Delete
+                                        <Trash2 class="size-3.5" /> {{ $t('common.delete') }}
                                     </button>
                                 </div>
                             </td>
@@ -198,8 +201,8 @@ const destroy = (id: number) => {
                                 <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
                                     <BriefcaseBusiness class="size-7" />
                                 </div>
-                                <p class="mt-4 font-medium">{{ form.q || form.status ? 'No jobs match your filters' : 'No jobs posted yet' }}</p>
-                                <p class="mt-1 text-sm text-muted-foreground">{{ form.q || form.status ? 'Try changing or clearing the filters.' : 'Click "Post a job" to get started.' }}</p>
+                                <p class="mt-4 font-medium">{{ form.q || form.status ? $t('myJobs.noMatch') : $t('myJobs.noJobs') }}</p>
+                                <p class="mt-1 text-sm text-muted-foreground">{{ form.q || form.status ? $t('myJobs.noMatchHint') : $t('myJobs.noJobsHint') }}</p>
                             </td>
                         </tr>
                     </tbody>

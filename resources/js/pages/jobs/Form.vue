@@ -76,9 +76,9 @@ const togglePerk = (perk: string) => {
 };
 
 const contactModes = [
-    { value: 'apply', label: 'Apply through app', desc: 'Workers apply here; you review applicants.' },
-    { value: 'call', label: 'Direct call', desc: 'Your number is shown on the job — workers call you.' },
-    { value: 'both', label: 'Both', desc: 'Workers can apply in the app or call you directly.' },
+    { value: 'apply', label: 'jobForm.applyThroughApp', desc: 'jobForm.applyThroughAppDesc' },
+    { value: 'call', label: 'jobForm.directCall', desc: 'jobForm.directCallDesc' },
+    { value: 'both', label: 'jobForm.both', desc: 'jobForm.bothDesc' },
 ] as const;
 
 const cities = computed(() => citiesFor(form.state));
@@ -139,10 +139,10 @@ const submit = () => {
     <Head :title="isEdit ? 'Edit Job' : 'Post a Job'" />
 
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="BriefcaseBusiness" :title="isEdit ? 'Edit Job' : 'Post a Job'" description="Fill in the details to reach the right workers">
+        <PageHeader :icon="BriefcaseBusiness" :title="isEdit ? $t('jobForm.editTitle') : $t('jobForm.postTitle')" :description="$t('jobForm.subtitle')">
             <template #action>
                 <Link href="/employer/jobs" class="inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted">
-                    <ArrowLeft class="size-4" /> Back
+                    <ArrowLeft class="size-4" /> {{ $t('common.back') }}
                 </Link>
             </template>
         </PageHeader>
@@ -151,32 +151,32 @@ const submit = () => {
             <!-- Basics -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <BriefcaseBusiness class="size-4 text-orange-500" /> Job details
+                    <BriefcaseBusiness class="size-4 text-orange-500" /> {{ $t('jobForm.details') }}
                 </h2>
                 <div class="space-y-4">
                     <div class="grid gap-2">
-                        <Label for="title">Title</Label>
+                        <Label for="title">{{ $t('jobForm.titleLabel') }}</Label>
                         <Input id="title" v-model="form.title" required placeholder="e.g. Experienced plumber needed" />
                         <InputError :message="form.errors.title" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="description">Job Description</Label>
+                        <Label for="description">{{ $t('jobs.description') }}</Label>
                         <textarea id="description" v-model="form.description" rows="5" required :class="textareaClass" placeholder="Describe the work, requirements and timing…" />
                         <InputError :message="form.errors.description" />
                     </div>
 
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="grid gap-2">
-                            <Label for="category">Category</Label>
+                            <Label for="category">{{ $t('jobs.filters.category') }}</Label>
                             <select id="category" v-model="form.category" :class="selectClass">
-                                <option value="">Select a category</option>
+                                <option value="">{{ $t('jobForm.selectCategory') }}</option>
                                 <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
                             </select>
                             <InputError :message="form.errors.category" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="skills">Skills</Label>
+                            <Label for="skills">{{ $t('jobForm.skills') }}</Label>
                             <SkillTagInput id="skills" v-model="form.skills" :suggestions="commonSkills" placeholder="e.g. Welding — type or pick, it becomes a tag" />
                             <InputError :message="form.errors.skills" />
                         </div>
@@ -187,26 +187,26 @@ const submit = () => {
             <!-- Wage -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <IndianRupee class="size-4 text-orange-500" /> Compensation
+                    <IndianRupee class="size-4 text-orange-500" /> {{ $t('jobForm.compensation') }}
                 </h2>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div class="grid gap-2">
-                        <Label for="wage_min">Wage min (₹)</Label>
+                        <Label for="wage_min">{{ $t('jobForm.wageMin') }}</Label>
                         <Input id="wage_min" type="number" min="0" step="0.01" v-model="form.wage_min" />
                         <InputError :message="form.errors.wage_min" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="wage_max">Wage max (₹)</Label>
+                        <Label for="wage_max">{{ $t('jobForm.wageMax') }}</Label>
                         <Input id="wage_max" type="number" min="0" step="0.01" v-model="form.wage_max" />
                         <InputError :message="form.errors.wage_max" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="wage_type">Wage type</Label>
+                        <Label for="wage_type">{{ $t('jobForm.wageType') }}</Label>
                         <select id="wage_type" v-model="form.wage_type" :class="selectClass">
                             <option value="">—</option>
-                            <option value="hourly">Hourly</option>
-                            <option value="daily">Daily</option>
-                            <option value="monthly">Monthly</option>
+                            <option value="hourly">{{ $t('jobForm.hourly') }}</option>
+                            <option value="daily">{{ $t('jobForm.daily') }}</option>
+                            <option value="monthly">{{ $t('jobForm.monthly') }}</option>
                         </select>
                         <InputError :message="form.errors.wage_type" />
                     </div>
@@ -216,21 +216,21 @@ const submit = () => {
             <!-- Location -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <MapPin class="size-4 text-orange-500" /> Location
+                    <MapPin class="size-4 text-orange-500" /> {{ $t('common.location') }}
                 </h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
-                        <Label for="state">State</Label>
+                        <Label for="state">{{ $t('jobs.filters.state') }}</Label>
                         <select id="state" v-model="form.state" :class="selectClass">
-                            <option value="">Select state</option>
+                            <option value="">{{ $t('jobForm.selectState') }}</option>
                             <option v-for="s in indianStates" :key="s" :value="s">{{ s }}</option>
                         </select>
                         <InputError :message="form.errors.state" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="city">City</Label>
+                        <Label for="city">{{ $t('jobs.filters.city') }}</Label>
                         <select id="city" v-model="form.city" :disabled="!form.state" :class="selectClass" class="disabled:opacity-50">
-                            <option value="">{{ form.state ? 'Select city' : 'Select state first' }}</option>
+                            <option value="">{{ form.state ? $t('jobForm.selectCity') : $t('jobForm.selectStateFirst') }}</option>
                             <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
                         </select>
                         <InputError :message="form.errors.city" />
@@ -238,9 +238,9 @@ const submit = () => {
                 </div>
 
                 <div class="mt-4 grid gap-2">
-                    <Label>Job location on map</Label>
+                    <Label>{{ $t('jobForm.locationOnMap') }}</Label>
                     <p class="text-xs text-muted-foreground">
-                        {{ locating ? 'Locating your city on the map…' : 'Select a state & city to place the pin, then drag it (or tap the map) to the exact spot workers should reach.' }}
+                        {{ locating ? $t('jobForm.locating') : $t('jobForm.mapHint') }}
                     </p>
                     <JobMap :lat="mapLat" :lng="mapLng" editable height="300px" @move="setPoint" />
                     <InputError :message="form.errors.latitude || form.errors.longitude" />
@@ -250,21 +250,21 @@ const submit = () => {
             <!-- Shift & perks -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Sun class="size-4 text-orange-500" /> Shift &amp; perks
+                    <Sun class="size-4 text-orange-500" /> {{ $t('jobForm.shiftPerks') }}
                 </h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
-                        <Label for="shift">Shift</Label>
+                        <Label for="shift">{{ $t('jobForm.shift') }}</Label>
                         <select id="shift" v-model="form.shift" :class="selectClass">
                             <option value="">—</option>
-                            <option value="day">Day shift</option>
-                            <option value="night">Night shift</option>
-                            <option value="rotational">Rotational shift</option>
+                            <option value="day">{{ $t('jobs.dayShift') }}</option>
+                            <option value="night">{{ $t('jobs.nightShift') }}</option>
+                            <option value="rotational">{{ $t('jobs.rotationalShift') }}</option>
                         </select>
                         <InputError :message="form.errors.shift" />
                     </div>
                     <div class="grid gap-2">
-                        <Label class="flex items-center gap-1.5"><Gift class="size-3.5 text-orange-500" /> Perks</Label>
+                        <Label class="flex items-center gap-1.5"><Gift class="size-3.5 text-orange-500" /> {{ $t('jobs.perks') }}</Label>
                         <div class="flex flex-wrap gap-2">
                             <button
                                 v-for="perk in perkOptions"
@@ -287,7 +287,7 @@ const submit = () => {
             <!-- Worker fee -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Wallet class="size-4 text-orange-500" /> Does the worker pay anything to take this job?
+                    <Wallet class="size-4 text-orange-500" /> {{ $t('jobForm.workerPayQuestion') }}
                 </h2>
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label
@@ -296,9 +296,9 @@ const submit = () => {
                     >
                         <span class="flex items-center gap-2">
                             <input v-model="form.requires_worker_fee" type="radio" name="requires_worker_fee" :value="false" class="accent-emerald-600" />
-                            <span class="flex items-center gap-1.5 text-sm font-semibold"><BadgeCheck class="size-4 text-emerald-600" /> No — free to join</span>
+                            <span class="flex items-center gap-1.5 text-sm font-semibold"><BadgeCheck class="size-4 text-emerald-600" /> {{ $t('jobForm.noFeeOption') }}</span>
                         </span>
-                        <span class="text-xs text-muted-foreground">Worker pays nothing. The job shows a "No fee" badge — workers trust these more.</span>
+                        <span class="text-xs text-muted-foreground">{{ $t('jobForm.noFeeHint') }}</span>
                     </label>
                     <label
                         class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
@@ -306,15 +306,15 @@ const submit = () => {
                     >
                         <span class="flex items-center gap-2">
                             <input v-model="form.requires_worker_fee" type="radio" name="requires_worker_fee" :value="true" class="accent-amber-600" />
-                            <span class="text-sm font-semibold">Yes — worker pays a fee</span>
+                            <span class="text-sm font-semibold">{{ $t('jobForm.feeOption') }}</span>
                         </span>
-                        <span class="text-xs text-muted-foreground">e.g. security deposit, tools or uniform charge. The amount is shown on the job post.</span>
+                        <span class="text-xs text-muted-foreground">{{ $t('jobForm.feeHint') }}</span>
                     </label>
                 </div>
                 <InputError class="mt-2" :message="form.errors.requires_worker_fee" />
 
                 <div v-if="form.requires_worker_fee" class="mt-4 grid max-w-xs gap-2">
-                    <Label for="worker_fee_amount">Fee amount (₹)</Label>
+                    <Label for="worker_fee_amount">{{ $t('jobForm.feeAmount') }}</Label>
                     <Input id="worker_fee_amount" v-model="form.worker_fee_amount" type="number" min="1" step="0.01" placeholder="e.g. 500" />
                     <InputError :message="form.errors.worker_fee_amount" />
                 </div>
@@ -323,7 +323,7 @@ const submit = () => {
             <!-- How workers respond -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Phone class="size-4 text-orange-500" /> How should workers contact you?
+                    <Phone class="size-4 text-orange-500" /> {{ $t('jobForm.contactQuestion') }}
                 </h2>
                 <div class="grid gap-3 sm:grid-cols-3">
                     <label
@@ -334,17 +334,17 @@ const submit = () => {
                     >
                         <span class="flex items-center gap-2">
                             <input v-model="form.contact_mode" type="radio" name="contact_mode" :value="m.value" class="accent-orange-600" />
-                            <span class="text-sm font-semibold">{{ m.label }}</span>
+                            <span class="text-sm font-semibold">{{ $t(m.label) }}</span>
                         </span>
-                        <span class="text-xs text-muted-foreground">{{ m.desc }}</span>
+                        <span class="text-xs text-muted-foreground">{{ $t(m.desc) }}</span>
                     </label>
                 </div>
                 <InputError class="mt-2" :message="form.errors.contact_mode" />
 
                 <div v-if="form.contact_mode !== 'apply'" class="mt-4 grid max-w-sm gap-2">
-                    <Label for="contact_phone">Phone number workers will call</Label>
+                    <Label for="contact_phone">{{ $t('jobForm.phoneWorkersCall') }}</Label>
                     <Input id="contact_phone" v-model="form.contact_phone" type="tel" placeholder="+91 98765 43210" />
-                    <p class="text-xs text-muted-foreground">This number will be visible on the job post to everyone.</p>
+                    <p class="text-xs text-muted-foreground">{{ $t('jobForm.phonePublicHint') }}</p>
                     <InputError :message="form.errors.contact_phone" />
                 </div>
             </section>
@@ -352,25 +352,25 @@ const submit = () => {
             <!-- Settings -->
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Settings2 class="size-4 text-orange-500" /> Posting settings
+                    <Settings2 class="size-4 text-orange-500" /> {{ $t('jobForm.settings') }}
                 </h2>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div class="grid gap-2">
-                        <Label for="vacancies">Vacancies</Label>
+                        <Label for="vacancies">{{ $t('jobs.vacancies') }}</Label>
                         <Input id="vacancies" type="number" min="1" v-model="form.vacancies" />
                         <InputError :message="form.errors.vacancies" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="status">Status</Label>
+                        <Label for="status">{{ $t('kyc.status') }}</Label>
                         <select id="status" v-model="form.status" :class="selectClass">
-                            <option value="draft">Draft</option>
-                            <option value="active">Active</option>
-                            <option value="closed">Closed</option>
+                            <option value="draft">{{ $t('status.draft') }}</option>
+                            <option value="active">{{ $t('status.active') }}</option>
+                            <option value="closed">{{ $t('status.closed') }}</option>
                         </select>
                         <InputError :message="form.errors.status" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="expires_at">Expires on</Label>
+                        <Label for="expires_at">{{ $t('jobForm.expiresOn') }}</Label>
                         <Input id="expires_at" type="date" v-model="form.expires_at" />
                         <InputError :message="form.errors.expires_at" />
                     </div>
@@ -378,13 +378,13 @@ const submit = () => {
             </section>
 
             <div class="flex items-center justify-end gap-3">
-                <Link href="/employer/jobs" class="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">Cancel</Link>
+                <Link href="/employer/jobs" class="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">{{ $t('common.cancel') }}</Link>
                 <button
                     type="submit"
                     :disabled="form.processing"
                     class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
-                    {{ isEdit ? 'Update job' : 'Post job' }}
+                    {{ isEdit ? $t('jobForm.updateBtn') : $t('jobForm.postBtn') }}
                 </button>
             </div>
         </form>

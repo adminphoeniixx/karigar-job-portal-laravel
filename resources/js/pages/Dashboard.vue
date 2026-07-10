@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { Activity, ArrowUpRight } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Sparkline from '@/components/Sparkline.vue';
 import { areaPath, chartPoints, linePath } from '@/lib/chart';
 import { dashboard } from '@/routes';
@@ -26,6 +27,41 @@ const props = defineProps<{
     table: Table;
 }>();
 
+const { t } = useI18n();
+
+// Backend sends English labels; translate the known ones client-side.
+const backendKeys: Record<string, string> = {
+    'KYC Status': 'dashboard.kycStatus',
+    'Not submitted': 'dashboard.notSubmitted',
+    'Verification': 'dashboard.verification',
+    'Available Jobs': 'dashboard.availableJobs',
+    'Near you': 'dashboard.nearYou',
+    'Profile': 'dashboard.profileLabel',
+    'Active': 'status.active',
+    'Incomplete': 'dashboard.incomplete',
+    'Skills': 'dashboard.skillsHint',
+    'Latest jobs': 'dashboard.latestJobs',
+    'My Jobs': 'nav.myJobs',
+    'Total posted': 'dashboard.totalPosted',
+    'Active Jobs': 'dashboard.activeJobs',
+    'Live now': 'dashboard.liveNow',
+    'Subscription': 'nav.subscription',
+    'None': 'dashboard.none',
+    'Subscribe': 'dashboard.subscribeHint',
+    'Your recent jobs': 'dashboard.yourRecentJobs',
+    'Verified': 'status.verified',
+    'Pending': 'status.pending',
+    'Rejected': 'status.rejected',
+    'Title': 'myJobs.titleCol',
+    'Location': 'common.location',
+    'Wage': 'jobs.wage',
+    'Category': 'jobs.filters.category',
+    'Status': 'kyc.status',
+    'Vacancies': 'jobs.vacancies',
+};
+
+const tr = (s: string): string => (backendKeys[s] ? t(backendKeys[s]) : s);
+
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Dashboard', href: dashboard() }] },
 });
@@ -40,6 +76,7 @@ const tiles = [
 
 // Activity overview chart (Jobick "Vacancy Status" style, decorative trends)
 const ranges = ['Daily', 'Weekly', 'Monthly'] as const;
+const rangeLabel: Record<string, string> = { Daily: 'dashboard.daily', Weekly: 'dashboard.weekly', Monthly: 'dashboard.monthly' };
 const activeRange = ref<(typeof ranges)[number]>('Monthly');
 const series: Record<(typeof ranges)[number], number[][]> = {
     Daily: [
@@ -59,9 +96,9 @@ const series: Record<(typeof ranges)[number], number[][]> = {
     ],
 };
 const legend = [
-    { label: 'Applications', color: '#2bc155' },
-    { label: 'In progress', color: '#4a6cf7' },
-    { label: 'Closed', color: '#ff4a55' },
+    { label: 'dashboard.applications', color: '#2bc155' },
+    { label: 'dashboard.inProgress', color: '#4a6cf7' },
+    { label: 'dashboard.closedSeries', color: '#ff4a55' },
 ];
 const CW = 720;
 const CH = 230;
@@ -104,13 +141,13 @@ const profileHref = computed(
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <div class="text-3xl font-bold tracking-tight tabular-nums">{{ stat.value }}</div>
-                            <div class="mt-1 truncate text-sm font-medium text-muted-foreground">{{ stat.label }}</div>
+                            <div class="text-3xl font-bold tracking-tight tabular-nums">{{ tr(stat.value) }}</div>
+                            <div class="mt-1 truncate text-sm font-medium text-muted-foreground">{{ tr(stat.label) }}</div>
                         </div>
                         <Sparkline :points="tiles[i % tiles.length].wave" :color="tiles[i % tiles.length].color" :width="88" :height="40" />
                     </div>
                     <div class="mt-3">
-                        <span class="inline-flex rounded-md bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">{{ stat.hint }}</span>
+                        <span class="inline-flex rounded-md bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">{{ tr(stat.hint) }}</span>
                     </div>
                 </div>
             </div>
@@ -118,7 +155,7 @@ const profileHref = computed(
             <!-- Activity chart -->
             <div class="rounded-2xl border bg-card p-6 shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <h2 class="text-lg font-bold">Activity overview</h2>
+                    <h2 class="text-lg font-bold">{{ $t('dashboard.activityOverview') }}</h2>
                     <div class="flex rounded-xl bg-secondary p-1">
                         <button
                             v-for="r in ranges"
@@ -128,14 +165,14 @@ const profileHref = computed(
                             :class="activeRange === r ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'"
                             @click="activeRange = r"
                         >
-                            {{ r }}
+                            {{ $t(rangeLabel[r]) }}
                         </button>
                     </div>
                 </div>
                 <div class="mt-3 flex flex-wrap items-center gap-5 text-xs font-medium text-muted-foreground">
                     <span v-for="l in legend" :key="l.label" class="inline-flex items-center gap-1.5">
                         <span class="size-2.5 rounded-full" :style="{ background: l.color }"></span>
-                        {{ l.label }}
+                        {{ $t(l.label) }}
                     </span>
                 </div>
                 <svg class="mt-4 w-full" :viewBox="`0 0 ${CW} ${CH}`" fill="none" preserveAspectRatio="none" aria-hidden="true">
@@ -166,13 +203,13 @@ const profileHref = computed(
             <!-- Recent table -->
             <div class="overflow-hidden rounded-2xl border bg-card shadow-sm">
                 <div class="flex items-center justify-between border-b px-5 py-4">
-                    <h2 class="font-semibold">{{ table.title }}</h2>
+                    <h2 class="font-semibold">{{ tr(table.title) }}</h2>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                             <tr>
-                                <th v-for="col in table.columns" :key="col" class="px-5 py-3 font-medium">{{ col }}</th>
+                                <th v-for="col in table.columns" :key="col" class="px-5 py-3 font-medium">{{ tr(col) }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -183,7 +220,7 @@ const profileHref = computed(
                             </tr>
                             <tr v-if="table.rows.length === 0">
                                 <td :colspan="table.columns.length" class="px-5 py-12 text-center text-muted-foreground">
-                                    No data yet.
+                                    {{ $t('dashboard.noData') }}
                                 </td>
                             </tr>
                         </tbody>
@@ -202,20 +239,20 @@ const profileHref = computed(
                     </span>
                     <div class="min-w-0">
                         <div class="truncate text-lg font-bold">{{ greeting }}</div>
-                        <div class="text-sm font-medium capitalize text-primary">{{ role }}</div>
+                        <div class="text-sm font-medium capitalize text-primary">{{ $t(`auth.${role}`) }}</div>
                     </div>
                 </div>
                 <Link
                     :href="profileHref"
                     class="mt-5 flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90 active:scale-95"
                 >
-                    Update Profile <ArrowUpRight class="size-4" />
+                    {{ $t('dashboard.updateProfile') }} <ArrowUpRight class="size-4" />
                 </Link>
             </div>
 
             <!-- Snapshot card -->
             <div class="rounded-2xl border bg-card p-6 shadow-sm">
-                <h2 class="flex items-center gap-2 text-sm font-bold"><Activity class="size-4 text-primary" /> Snapshot</h2>
+                <h2 class="flex items-center gap-2 text-sm font-bold"><Activity class="size-4 text-primary" /> {{ $t('dashboard.snapshot') }}</h2>
 
                 <div class="mt-5 flex items-center justify-center">
                     <div class="relative">
@@ -237,7 +274,7 @@ const profileHref = computed(
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
                             <span class="text-2xl font-bold tabular-nums">{{ total }}</span>
-                            <span class="text-[11px] text-muted-foreground">total</span>
+                            <span class="text-[11px] text-muted-foreground">{{ $t('dashboard.totalLabel') }}</span>
                         </div>
                     </div>
                 </div>
@@ -245,8 +282,8 @@ const profileHref = computed(
                 <div class="mt-5 space-y-4">
                     <div v-for="(stat, i) in stats" :key="stat.label">
                         <div class="flex items-center justify-between text-sm">
-                            <span class="truncate font-medium text-muted-foreground">{{ stat.label }}</span>
-                            <span class="ml-2 font-bold tabular-nums">{{ stat.value }}</span>
+                            <span class="truncate font-medium text-muted-foreground">{{ tr(stat.label) }}</span>
+                            <span class="ml-2 font-bold tabular-nums">{{ tr(stat.value) }}</span>
                         </div>
                         <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
                             <div

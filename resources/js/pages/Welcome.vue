@@ -138,10 +138,10 @@ const wage = (j: Job) => {
                         href="/dashboard"
                         class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90"
                     >
-                        Dashboard
+                        {{ $t('nav.dashboard') }}
                     </Link>
                     <Link v-else href="/employer/login" class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90">
-                        Login
+                        {{ $t('common.login') }}
                     </Link>
                 </div>
             </div>
@@ -152,14 +152,14 @@ const wage = (j: Job) => {
             <div class="animate-in fade-in slide-in-from-bottom-4 text-center duration-700 lg:text-left">
                 <span class="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm">
                     <Sparkles class="size-3.5 text-primary" />
-                    India's skilled-work marketplace
+                    {{ $t('landing.badge') }}
                 </span>
                 <h1 class="mt-7 text-5xl font-extrabold leading-[1.04] tracking-tight sm:text-6xl">
-                    Hire skilled workers,
-                    <span class="bg-gradient-to-r from-orange-600 via-rose-500 to-rose-400 bg-clip-text text-transparent">in minutes.</span>
+                    {{ $t('landing.heroTitle') }}
+                    <span class="bg-gradient-to-r from-orange-600 via-rose-500 to-rose-400 bg-clip-text text-transparent">{{ $t('landing.heroAccent') }}</span>
                 </h1>
                 <p class="mx-auto mt-6 max-w-xl text-lg text-muted-foreground lg:mx-0">
-                    Plumbers, electricians, carpenters & more — trusted, KYC-verified, and right near you.
+                    {{ $t('landing.heroSubtitle') }}
                 </p>
 
                 <form class="mx-auto mt-9 flex max-w-lg items-center gap-2 rounded-2xl border bg-card p-2 shadow-premium lg:mx-0" @submit.prevent="search">
@@ -168,19 +168,19 @@ const wage = (j: Job) => {
                         <input
                             v-model="query"
                             type="text"
-                            placeholder="Search — e.g. plumber, painter…"
+                            :placeholder="$t('landing.searchPlaceholder')"
                             class="flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground"
                         />
                     </div>
                     <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95">
-                        Search
+                        {{ $t('common.search') }}
                     </button>
                 </form>
 
                 <div class="mt-7 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-sm text-muted-foreground lg:justify-start">
-                    <span class="inline-flex items-center gap-1.5"><Star class="size-4 fill-amber-400 text-amber-400" /> <b class="text-foreground">4.8</b> rating</span>
-                    <span class="inline-flex items-center gap-1.5"><BadgeCheck class="size-4 text-primary" /> KYC verified</span>
-                    <span class="inline-flex items-center gap-1.5"><MapPin class="size-4 text-rose-500" /> {{ stats.cities }}+ cities</span>
+                    <span class="inline-flex items-center gap-1.5"><Star class="size-4 fill-amber-400 text-amber-400" /> <b class="text-foreground">4.8</b> {{ $t('landing.rating') }}</span>
+                    <span class="inline-flex items-center gap-1.5"><BadgeCheck class="size-4 text-primary" /> {{ $t('landing.kycVerified') }}</span>
+                    <span class="inline-flex items-center gap-1.5"><MapPin class="size-4 text-rose-500" /> {{ stats.cities }}+ {{ $t('landing.citiesPlus') }}</span>
                 </div>
             </div>
 
@@ -196,15 +196,15 @@ const wage = (j: Job) => {
                 <div class="absolute -left-4 top-6 flex items-center gap-2 rounded-2xl border bg-card px-4 py-2.5 shadow-premium">
                     <span class="flex size-9 items-center justify-center rounded-xl bg-accent text-primary"><BadgeCheck class="size-5" /></span>
                     <div>
-                        <div class="text-sm font-bold">KYC Verified</div>
-                        <div class="text-[11px] text-muted-foreground">Trusted workers</div>
+                        <div class="text-sm font-bold">{{ $t('landing.trustKycTitle') }}</div>
+                        <div class="text-[11px] text-muted-foreground">{{ $t('landing.trustKycSub') }}</div>
                     </div>
                 </div>
                 <div class="absolute -bottom-5 right-6 flex items-center gap-2 rounded-2xl border bg-card px-4 py-2.5 shadow-premium">
                     <span class="flex size-9 items-center justify-center rounded-xl bg-amber-400/15 text-amber-500"><Star class="size-5 fill-amber-400 text-amber-400" /></span>
                     <div>
-                        <div class="text-sm font-bold">4.8 rating</div>
-                        <div class="text-[11px] text-muted-foreground">{{ stats.workers }}+ workers</div>
+                        <div class="text-sm font-bold">4.8 {{ $t('landing.rating') }}</div>
+                        <div class="text-[11px] text-muted-foreground">{{ stats.workers }}+ {{ $t('landing.trustWorkers') }}</div>
                     </div>
                 </div>
             </div>
@@ -213,7 +213,7 @@ const wage = (j: Job) => {
         <!-- Stats -->
         <section class="border-y bg-card">
             <div class="mx-auto grid max-w-6xl grid-cols-2 gap-px sm:grid-cols-4">
-                <div v-for="(s, key) in { 'Active jobs': counters.jobs, Workers: counters.workers, Employers: counters.employers, Cities: counters.cities }" :key="key" class="px-4 py-10 text-center">
+                <div v-for="(s, key) in { [$t('landing.activeJobs')]: counters.jobs, [$t('landing.workers')]: counters.workers, [$t('landing.employers')]: counters.employers, [$t('landing.cities')]: counters.cities }" :key="key" class="px-4 py-10 text-center">
                     <div class="text-4xl font-extrabold tracking-tight">{{ s }}<span class="text-primary">+</span></div>
                     <div class="mt-1 text-sm font-medium text-muted-foreground">{{ key }}</div>
                 </div>
@@ -232,10 +232,10 @@ const wage = (j: Job) => {
                         </div>
                     </div>
                     <div class="p-8 pt-5">
-                    <h3 class="relative text-2xl font-bold">For Workers</h3>
-                    <p class="relative mt-2 text-sm text-muted-foreground">Find jobs near you, build a verified profile, and get hired faster.</p>
+                    <h3 class="relative text-2xl font-bold">{{ $t('landing.forWorkers') }}</h3>
+                    <p class="relative mt-2 text-sm text-muted-foreground">{{ $t('landing.forWorkersDesc') }}</p>
                     <div class="relative mt-7 flex gap-3">
-                        <Link href="/worker/register" class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 active:scale-95">Join free <ArrowRight class="size-4" /></Link>
+                        <Link href="/worker/register" class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 active:scale-95">{{ $t('landing.joinFree') }} <ArrowRight class="size-4" /></Link>
                         <Link href="/worker/login" class="flex-1 rounded-xl border bg-card px-4 py-2.5 text-center text-sm font-semibold transition hover:bg-secondary">Login</Link>
                     </div>
                     </div>
@@ -249,10 +249,10 @@ const wage = (j: Job) => {
                         </div>
                     </div>
                     <div class="p-8 pt-5">
-                    <h3 class="relative text-2xl font-bold">For Employers</h3>
-                    <p class="relative mt-2 text-sm text-muted-foreground">Post jobs, filter by location & skill, and hire trusted workers.</p>
+                    <h3 class="relative text-2xl font-bold">{{ $t('landing.forEmployers') }}</h3>
+                    <p class="relative mt-2 text-sm text-muted-foreground">{{ $t('landing.forEmployersDesc') }}</p>
                     <div class="relative mt-7 flex gap-3">
-                        <Link href="/employer/register" class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 active:scale-95">Get started <ArrowRight class="size-4" /></Link>
+                        <Link href="/employer/register" class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:opacity-90 active:scale-95">{{ $t('landing.getStarted') }} <ArrowRight class="size-4" /></Link>
                         <Link href="/employer/login" class="flex-1 rounded-xl border bg-card px-4 py-2.5 text-center text-sm font-semibold transition hover:bg-secondary">Login</Link>
                     </div>
                     </div>
@@ -262,8 +262,8 @@ const wage = (j: Job) => {
 
         <!-- Bento features -->
         <section id="features" class="mx-auto max-w-6xl px-5 py-12">
-            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Why Karigar</p>
-            <h2 class="mt-3 text-3xl font-bold sm:text-4xl">Built for trust & speed</h2>
+            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-primary">{{ $t('landing.whyKarigar') }}</p>
+            <h2 class="mt-3 text-3xl font-bold sm:text-4xl">{{ $t('landing.builtForTrust') }}</h2>
             <div class="mt-10 grid gap-4 lg:grid-cols-3">
                 <div
                     v-for="f in features"
@@ -291,7 +291,7 @@ const wage = (j: Job) => {
 
         <!-- Categories -->
         <section class="mx-auto max-w-6xl px-5 py-12">
-            <h2 class="text-2xl font-bold">Popular categories</h2>
+            <h2 class="text-2xl font-bold">{{ $t('landing.popularCategories') }}</h2>
             <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <Link
                     v-for="c in categories"
@@ -310,8 +310,8 @@ const wage = (j: Job) => {
         <!-- Latest jobs -->
         <section id="jobs" class="mx-auto max-w-6xl px-5 py-12">
             <div class="flex items-end justify-between">
-                <h2 class="text-2xl font-bold sm:text-3xl">Latest jobs</h2>
-                <Link href="/jobs" class="inline-flex items-center gap-1 text-sm font-semibold text-primary transition hover:gap-2">View all <ArrowRight class="size-4" /></Link>
+                <h2 class="text-2xl font-bold sm:text-3xl">{{ $t('landing.latestJobs') }}</h2>
+                <Link href="/jobs" class="inline-flex items-center gap-1 text-sm font-semibold text-primary transition hover:gap-2">{{ $t('common.viewAll') }} <ArrowRight class="size-4" /></Link>
             </div>
 
             <div v-if="latestJobs.length" class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -326,7 +326,7 @@ const wage = (j: Job) => {
                         <ArrowUpRight class="size-4 text-muted-foreground transition group-hover:text-primary" />
                     </div>
                     <h3 class="mt-3 text-lg font-bold leading-snug">{{ job.title }}</h3>
-                    <p class="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground"><MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || 'N/A' }}</p>
+                    <p class="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground"><MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || $t('jobs.locationNA') }}</p>
                     <div class="mt-4 flex items-center justify-between border-t pt-3 text-sm">
                         <span class="font-bold text-primary">{{ wage(job) }}</span>
                         <span class="text-xs text-muted-foreground">{{ job.employer.name }}</span>
@@ -335,14 +335,14 @@ const wage = (j: Job) => {
             </div>
 
             <div v-else class="mt-6 rounded-3xl border border-dashed p-12 text-center text-muted-foreground">
-                No active jobs yet — be the first to <Link href="/employer/register" class="font-semibold text-primary underline">post one</Link>.
+                {{ $t('landing.noActiveJobs') }} <Link href="/employer/register" class="font-semibold text-primary underline">{{ $t('landing.postOne') }}</Link>.
             </div>
         </section>
 
         <!-- How it works -->
         <section id="how" class="mx-auto max-w-6xl px-5 py-20">
-            <p class="text-center text-sm font-semibold uppercase tracking-[0.2em] text-primary">Simple</p>
-            <h2 class="mt-3 text-center text-3xl font-bold sm:text-4xl">How it works</h2>
+            <p class="text-center text-sm font-semibold uppercase tracking-[0.2em] text-primary">{{ $t('landing.simple') }}</p>
+            <h2 class="mt-3 text-center text-3xl font-bold sm:text-4xl">{{ $t('landing.howItWorks') }}</h2>
             <div class="mt-12 grid gap-6 md:grid-cols-3">
                 <div v-for="(step, i) in steps" :key="step.n" class="relative rounded-3xl border bg-card p-7 shadow-sm">
                     <div class="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-lg font-extrabold text-white shadow-lg shadow-orange-500/30">{{ step.n }}</div>
@@ -355,7 +355,7 @@ const wage = (j: Job) => {
 
         <!-- Testimonials -->
         <section class="mx-auto max-w-6xl px-5 py-12">
-            <h2 class="text-center text-3xl font-bold sm:text-4xl">Loved by workers & employers</h2>
+            <h2 class="text-center text-3xl font-bold sm:text-4xl">{{ $t('landing.lovedBy') }}</h2>
             <div class="mt-12 grid gap-6 md:grid-cols-3">
                 <div v-for="t in testimonials" :key="t.name" class="rounded-3xl border bg-card p-7 shadow-sm">
                     <div class="flex gap-0.5 text-amber-400">
@@ -379,11 +379,11 @@ const wage = (j: Job) => {
                 <div class="absolute inset-0 bg-grid opacity-20"></div>
                 <div class="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/15 blur-3xl"></div>
                 <div class="relative">
-                    <h2 class="text-3xl font-extrabold text-white sm:text-4xl">Ready to get started?</h2>
-                    <p class="mx-auto mt-3 max-w-md text-orange-50/90">Join thousands building India's workforce on Karigar.</p>
+                    <h2 class="text-3xl font-extrabold text-white sm:text-4xl">{{ $t('landing.readyTitle') }}</h2>
+                    <p class="mx-auto mt-3 max-w-md text-orange-50/90">{{ $t('landing.readySubtitle') }}</p>
                     <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-                        <Link href="/worker/register" class="inline-flex items-center gap-1.5 rounded-xl bg-white px-7 py-3.5 font-bold text-orange-600 shadow-lg transition hover:bg-orange-50 active:scale-95">Join as worker <ArrowRight class="size-4" /></Link>
-                        <Link href="/employer/register" class="rounded-xl border border-white/40 bg-white/10 px-7 py-3.5 font-bold text-white backdrop-blur transition hover:bg-white/20">Hire workers</Link>
+                        <Link href="/worker/register" class="inline-flex items-center gap-1.5 rounded-xl bg-white px-7 py-3.5 font-bold text-orange-600 shadow-lg transition hover:bg-orange-50 active:scale-95">{{ $t('landing.joinAsWorker') }} <ArrowRight class="size-4" /></Link>
+                        <Link href="/employer/register" class="rounded-xl border border-white/40 bg-white/10 px-7 py-3.5 font-bold text-white backdrop-blur transition hover:bg-white/20">{{ $t('landing.hireWorkers') }}</Link>
                     </div>
                 </div>
             </div>

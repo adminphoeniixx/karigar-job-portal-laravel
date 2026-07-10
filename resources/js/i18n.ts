@@ -25,6 +25,7 @@ function initialLocale(): AppLocale {
 
 export const i18n = createI18n({
     legacy: false,
+    globalInjection: true,
     locale: initialLocale(),
     fallbackLocale: 'en',
     messages: { en, hi, hinglish, mr, bn, ta, te, gu },

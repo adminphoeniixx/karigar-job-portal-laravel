@@ -26,6 +26,7 @@ import {
     UsersRound,
 } from '@lucide/vue';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -41,29 +42,30 @@ import {
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
+const { t } = useI18n();
 const page = usePage();
 const role = computed(() => page.props.auth.user?.role ?? 'worker');
 const teamRole = computed(() => (page.props.auth as { teamRole?: string | null }).teamRole ?? 'owner');
 
-const navByRole: Record<string, NavItem[]> = {
+const navByRole = computed((): Record<string, NavItem[]> => ({
     worker: [
-        { title: 'Dashboard', href: dashboard().url, icon: LayoutGrid },
-        { title: 'Browse Jobs', href: '/worker/jobs', icon: Search },
-        { title: 'My Applications', href: '/worker/applications', icon: FileText },
-        { title: 'Saved Jobs', href: '/worker/saved', icon: Bookmark },
-        { title: 'My Profile', href: '/worker/profile', icon: UserRound },
-        { title: 'KYC Verification', href: '/kyc', icon: ShieldCheck },
+        { title: t('nav.dashboard'), href: dashboard().url, icon: LayoutGrid },
+        { title: t('nav.browseJobs'), href: '/worker/jobs', icon: Search },
+        { title: t('nav.myApplications'), href: '/worker/applications', icon: FileText },
+        { title: t('nav.savedJobs'), href: '/worker/saved', icon: Bookmark },
+        { title: t('nav.myProfile'), href: '/worker/profile', icon: UserRound },
+        { title: t('nav.kyc'), href: '/kyc', icon: ShieldCheck },
     ],
     employer: [
-        { title: 'Dashboard', href: dashboard().url, icon: LayoutGrid },
-        { title: 'My Jobs', href: '/employer/jobs', icon: BriefcaseBusiness },
-        { title: 'Post a Job', href: '/employer/jobs/create', icon: Plus },
-        { title: 'Shortlisted', href: '/employer/shortlisted', icon: Star },
-        { title: 'Find Workers', href: '/employer/workers', icon: Users },
-        { title: 'Team', href: '/employer/team', icon: UsersRound },
-        { title: 'Subscription', href: '/subscription', icon: CreditCard },
-        { title: 'Company Profile', href: '/employer/profile', icon: UserRound },
-        { title: 'KYC Verification', href: '/kyc', icon: ShieldCheck },
+        { title: t('nav.dashboard'), href: dashboard().url, icon: LayoutGrid },
+        { title: t('nav.myJobs'), href: '/employer/jobs', icon: BriefcaseBusiness },
+        { title: t('nav.postJob'), href: '/employer/jobs/create', icon: Plus },
+        { title: t('nav.shortlisted'), href: '/employer/shortlisted', icon: Star },
+        { title: t('nav.findWorkers'), href: '/employer/workers', icon: Users },
+        { title: t('nav.team'), href: '/employer/team', icon: UsersRound },
+        { title: t('nav.subscription'), href: '/subscription', icon: CreditCard },
+        { title: t('nav.companyProfile'), href: '/employer/profile', icon: UserRound },
+        { title: t('nav.kyc'), href: '/kyc', icon: ShieldCheck },
     ],
     admin: [
         { title: 'Dashboard', href: dashboard().url, icon: LayoutGrid },
@@ -80,10 +82,10 @@ const navByRole: Record<string, NavItem[]> = {
         { title: 'Coupons', href: '/admin/coupons', icon: TicketPercent },
         { title: 'Email Templates', href: '/admin/email-templates', icon: Mail },
     ],
-};
+}));
 
 const mainNavItems = computed(() => {
-    let items = navByRole[role.value] ?? navByRole.worker;
+    let items = navByRole.value[role.value] ?? navByRole.value.worker;
 
     // Team members see a trimmed menu: owner-only pages are hidden, and
     // recruiters (applicants-only) also lose job posting.
@@ -99,7 +101,7 @@ const mainNavItems = computed(() => {
 });
 
 const planLabel = computed(
-    () => ({ worker: 'Worker', employer: 'Employer', admin: 'Admin' })[role.value] ?? 'Member',
+    () => ({ worker: t('auth.worker'), employer: t('auth.employer'), admin: 'Admin' })[role.value] ?? 'Member',
 );
 </script>
 
@@ -127,7 +129,7 @@ const planLabel = computed(
                     <SidebarMenuButton as-child tooltip="Support">
                         <Link href="/jobs">
                             <LifeBuoy />
-                            <span>Support</span>
+                            <span>{{ t('nav.support') }}</span>
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -140,8 +142,8 @@ const planLabel = computed(
             >
                 <Crown class="size-5 shrink-0" />
                 <div class="leading-tight">
-                    <div class="text-sm font-semibold">{{ planLabel }} Plan</div>
-                    <div class="text-[11px] text-white/80">Manage account</div>
+                    <div class="text-sm font-semibold">{{ planLabel }} {{ t('nav.plan') }}</div>
+                    <div class="text-[11px] text-white/80">{{ t('nav.manageAccount') }}</div>
                 </div>
             </Link>
 
