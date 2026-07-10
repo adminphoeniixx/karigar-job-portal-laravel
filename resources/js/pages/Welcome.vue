@@ -154,7 +154,7 @@ const wage = (j: Job) => {
                     <Sparkles class="size-3.5 text-primary" />
                     {{ $t('landing.badge') }}
                 </span>
-                <h1 class="mt-7 text-5xl font-extrabold leading-[1.04] tracking-tight sm:text-6xl">
+                <h1 class="mt-7 text-5xl font-bold leading-[1.04] tracking-tight sm:text-6xl">
                     {{ $t('landing.heroTitle') }}
                     <span class="bg-gradient-to-r from-orange-600 via-rose-500 to-rose-400 bg-clip-text text-transparent">{{ $t('landing.heroAccent') }}</span>
                 </h1>
@@ -214,7 +214,7 @@ const wage = (j: Job) => {
         <section class="border-y bg-card">
             <div class="mx-auto grid max-w-6xl grid-cols-2 gap-px sm:grid-cols-4">
                 <div v-for="(s, key) in { [$t('landing.activeJobs')]: counters.jobs, [$t('landing.workers')]: counters.workers, [$t('landing.employers')]: counters.employers, [$t('landing.cities')]: counters.cities }" :key="key" class="px-4 py-10 text-center">
-                    <div class="text-4xl font-extrabold tracking-tight">{{ s }}<span class="text-primary">+</span></div>
+                    <div class="text-4xl font-bold tracking-tight">{{ s }}<span class="text-primary">+</span></div>
                     <div class="mt-1 text-sm font-medium text-muted-foreground">{{ key }}</div>
                 </div>
             </div>
@@ -345,7 +345,7 @@ const wage = (j: Job) => {
             <h2 class="mt-3 text-center text-3xl font-bold sm:text-4xl">{{ $t('landing.howItWorks') }}</h2>
             <div class="mt-12 grid gap-6 md:grid-cols-3">
                 <div v-for="(step, i) in steps" :key="step.n" class="relative rounded-3xl border bg-card p-7 shadow-sm">
-                    <div class="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-lg font-extrabold text-white shadow-lg shadow-orange-500/30">{{ step.n }}</div>
+                    <div class="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-lg font-bold text-white shadow-lg shadow-orange-500/30">{{ step.n }}</div>
                     <h3 class="mt-4 text-lg font-bold">{{ step.title }}</h3>
                     <p class="mt-2 text-sm text-muted-foreground">{{ step.desc }}</p>
                     <ArrowRight v-if="i < steps.length - 1" class="absolute right-6 top-9 hidden size-5 text-border md:block" />
@@ -379,7 +379,7 @@ const wage = (j: Job) => {
                 <div class="absolute inset-0 bg-grid opacity-20"></div>
                 <div class="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/15 blur-3xl"></div>
                 <div class="relative">
-                    <h2 class="text-3xl font-extrabold text-white sm:text-4xl">{{ $t('landing.readyTitle') }}</h2>
+                    <h2 class="text-3xl font-bold text-white sm:text-4xl">{{ $t('landing.readyTitle') }}</h2>
                     <p class="mx-auto mt-3 max-w-md text-orange-50/90">{{ $t('landing.readySubtitle') }}</p>
                     <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
                         <Link href="/worker/register" class="inline-flex items-center gap-1.5 rounded-xl bg-white px-7 py-3.5 font-bold text-orange-600 shadow-lg transition hover:bg-orange-50 active:scale-95">{{ $t('landing.joinAsWorker') }} <ArrowRight class="size-4" /></Link>

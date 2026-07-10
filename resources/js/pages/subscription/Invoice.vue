@@ -59,7 +59,7 @@ const printInvoice = () => window.print();
                     <p v-if="seller.email" class="text-xs text-muted-foreground">{{ seller.email }}</p>
                 </div>
                 <div class="text-right">
-                    <div class="text-2xl font-extrabold tracking-tight">TAX INVOICE</div>
+                    <div class="text-2xl font-bold tracking-tight">TAX INVOICE</div>
                     <div class="mt-2 text-sm font-semibold">{{ invoice.number }}</div>
                     <div class="text-xs text-muted-foreground">Date: {{ invoice.date }}</div>
                 </div>

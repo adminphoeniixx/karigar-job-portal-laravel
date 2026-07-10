@@ -12,8 +12,8 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.ts'],
             refresh: true,
             fonts: [
-                bunny('Poppins', {
-                    weights: [400, 500, 600, 700, 800],
+                bunny('Outfit', {
+                    weights: [400, 500, 600, 700],
                 }),
             ],
         }),

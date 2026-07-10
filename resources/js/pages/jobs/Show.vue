@@ -124,7 +124,7 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     </button>
                 </div>
 
-                <h1 class="mt-4 text-3xl font-extrabold tracking-tight text-white">{{ job.title }}</h1>
+                <h1 class="mt-4 text-3xl font-bold tracking-tight text-white">{{ job.title }}</h1>
                 <p class="mt-2 inline-flex items-center gap-1.5 text-sm text-slate-400">
                     <MapPin class="size-4" /> {{ [job.city, job.state].filter(Boolean).join(', ') || 'Location N/A' }}
                     <span class="text-slate-600">·</span> by {{ job.employer.name }}

@@ -150,7 +150,7 @@ const subscribe = () => {
                 </div>
                 <div class="relative mt-3 flex items-end gap-1">
                     <span
-                        class="text-4xl font-extrabold tracking-tight"
+                        class="text-4xl font-bold tracking-tight"
                         :class="discountFor(plan) > 0 ? 'text-orange-600 dark:text-orange-400' : ''"
                     >{{ discountFor(plan) > 0 ? money(finalPrice(plan)) : '₹' + plan.price }}</span>
                     <span class="pb-1 text-sm text-muted-foreground">/{{ plan.interval }}</span>

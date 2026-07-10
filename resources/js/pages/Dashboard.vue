@@ -203,7 +203,7 @@ const profileHref = computed(
             <!-- Recent table -->
             <div class="overflow-hidden rounded-2xl border bg-card shadow-sm">
                 <div class="flex items-center justify-between border-b px-5 py-4">
-                    <h2 class="font-semibold">{{ tr(table.title) }}</h2>
+                    <h2 class="text-lg font-bold">{{ tr(table.title) }}</h2>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">

@@ -112,7 +112,7 @@ const selectClass = inputClass + ' [&>option]:bg-[#141a33]';
 
         <main class="mx-auto max-w-5xl px-5 py-10">
             <div class="mb-8">
-                <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{{ t('jobs.browseTitle') }}</h1>
+                <h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">{{ t('jobs.browseTitle') }}</h1>
                 <p class="mt-2 text-slate-400">{{ t('jobs.browseSubtitle') }}</p>
             </div>
 
