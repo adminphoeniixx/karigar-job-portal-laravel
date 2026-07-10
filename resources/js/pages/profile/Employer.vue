@@ -11,6 +11,7 @@ import { citiesFor, indianStates } from '@/data/indianLocations';
 
 interface EmployerProfile {
     company_name: string | null;
+    gstin: string | null;
     phone: string | null;
     address: string | null;
     city: string | null;
@@ -33,6 +34,7 @@ const preview = ref<string | null>(props.profile.logo_url);
 
 const form = useForm<{
     company_name: string;
+    gstin: string;
     phone: string;
     address: string;
     city: string;
@@ -43,6 +45,7 @@ const form = useForm<{
     logo: File | null;
 }>({
     company_name: props.profile.company_name ?? '',
+    gstin: props.profile.gstin ?? '',
     phone: props.profile.phone ?? '',
     address: props.profile.address ?? '',
     city: props.profile.city ?? '',
@@ -137,10 +140,17 @@ const submit = () =>
                             <Input id="company_name" v-model="form.company_name" />
                             <InputError :message="form.errors.company_name" />
                         </div>
-                        <div class="grid gap-2">
-                            <Label for="phone">Phone</Label>
-                            <Input id="phone" v-model="form.phone" placeholder="+91…" />
-                            <InputError :message="form.errors.phone" />
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="grid gap-2">
+                                <Label for="phone">Phone</Label>
+                                <Input id="phone" v-model="form.phone" placeholder="+91…" />
+                                <InputError :message="form.errors.phone" />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="gstin">GSTIN <span class="font-normal text-muted-foreground">(for tax invoices)</span></Label>
+                                <Input id="gstin" v-model="form.gstin" maxlength="15" placeholder="22AAAAA0000A1Z5" class="uppercase" />
+                                <InputError :message="form.errors.gstin" />
+                            </div>
                         </div>
                         <InputError :message="form.errors.logo" />
                     </div>

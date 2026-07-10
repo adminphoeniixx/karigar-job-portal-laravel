@@ -9,12 +9,21 @@ class JobListingPolicy
 {
     public function create(User $user): bool
     {
-        return $user->isEmployer();
+        // Recruiters can work applicants but not post or edit jobs.
+        return $user->isEmployer() && $user->canManageJobs();
+    }
+
+    /**
+     * Any team member (incl. recruiters) may view the job's applicants.
+     */
+    public function view(User $user, JobListing $job): bool
+    {
+        return $user->isEmployer() && $user->employerAccount()->id === $job->employer_id;
     }
 
     public function update(User $user, JobListing $job): bool
     {
-        return $user->isEmployer() && $user->id === $job->employer_id;
+        return $this->view($user, $job) && $user->canManageJobs();
     }
 
     public function delete(User $user, JobListing $job): bool

@@ -26,6 +26,7 @@ class EmployerProfileUpdateRequest extends FormRequest
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'about' => ['nullable', 'string', 'max:2000'],
             'logo' => ['nullable', 'image', 'max:2048'],
+            'gstin' => ['nullable', 'string', 'size:15', 'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]{3}$/i'],
         ];
     }
 }

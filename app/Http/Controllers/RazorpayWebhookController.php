@@ -33,12 +33,10 @@ class RazorpayWebhookController extends Controller
         }
 
         match ($event) {
-            'subscription.activated', 'subscription.charged', 'subscription.authenticated' => $subscription->update([
-                'status' => SubscriptionStatus::Active,
-                'starts_at' => $subscription->starts_at ?? now(),
+            'subscription.activated', 'subscription.charged', 'subscription.authenticated' => tap($subscription)->activateWithInvoice()->update([
                 'ends_at' => isset($entity['current_end'])
                     ? now()->createFromTimestamp($entity['current_end'])
-                    : ($subscription->plan->interval === 'yearly' ? now()->addYear() : now()->addMonth()),
+                    : $subscription->ends_at,
             ]),
             'subscription.halted' => $subscription->update(['status' => SubscriptionStatus::Halted]),
             'subscription.cancelled' => $subscription->update(['status' => SubscriptionStatus::Cancelled]),

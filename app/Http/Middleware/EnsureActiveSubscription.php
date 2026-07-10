@@ -10,7 +10,7 @@ class EnsureActiveSubscription
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->user()?->hasActiveSubscription()) {
+        if (! $request->user()?->employerAccount()->hasActiveSubscription()) {
             return redirect()->route('subscription.pricing')->with('toast', [
                 'type' => 'error',
                 'message' => __('An active subscription is required to post jobs.'),

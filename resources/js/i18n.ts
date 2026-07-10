@@ -1,9 +1,14 @@
 import { createI18n } from 'vue-i18n';
+import bn from '@/lang/bn';
 import en from '@/lang/en';
+import gu from '@/lang/gu';
 import hi from '@/lang/hi';
 import hinglish from '@/lang/hinglish';
+import mr from '@/lang/mr';
+import ta from '@/lang/ta';
+import te from '@/lang/te';
 
-export const SUPPORTED_LOCALES = ['en', 'hi', 'hinglish'] as const;
+export const SUPPORTED_LOCALES = ['en', 'hi', 'hinglish', 'mr', 'bn', 'ta', 'te', 'gu'] as const;
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 
 function initialLocale(): AppLocale {
@@ -22,7 +27,7 @@ export const i18n = createI18n({
     legacy: false,
     locale: initialLocale(),
     fallbackLocale: 'en',
-    messages: { en, hi, hinglish },
+    messages: { en, hi, hinglish, mr, bn, ta, te, gu },
 });
 
 export function setI18nLocale(locale: AppLocale): void {

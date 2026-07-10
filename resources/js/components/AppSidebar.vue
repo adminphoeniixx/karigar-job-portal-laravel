@@ -3,6 +3,9 @@ import { Link, usePage } from '@inertiajs/vue3';
 import {
     Bookmark,
     BriefcaseBusiness,
+    Building2,
+    ChartColumn,
+    HardHat,
     ClipboardCheck,
     CreditCard,
     Crown,
@@ -20,6 +23,7 @@ import {
     Tags,
     Users,
     UserRound,
+    UsersRound,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -39,6 +43,7 @@ import type { NavItem } from '@/types';
 
 const page = usePage();
 const role = computed(() => page.props.auth.user?.role ?? 'worker');
+const teamRole = computed(() => (page.props.auth as { teamRole?: string | null }).teamRole ?? 'owner');
 
 const navByRole: Record<string, NavItem[]> = {
     worker: [
@@ -55,6 +60,7 @@ const navByRole: Record<string, NavItem[]> = {
         { title: 'Post a Job', href: '/employer/jobs/create', icon: Plus },
         { title: 'Shortlisted', href: '/employer/shortlisted', icon: Star },
         { title: 'Find Workers', href: '/employer/workers', icon: Users },
+        { title: 'Team', href: '/employer/team', icon: UsersRound },
         { title: 'Subscription', href: '/subscription', icon: CreditCard },
         { title: 'Company Profile', href: '/employer/profile', icon: UserRound },
         { title: 'KYC Verification', href: '/kyc', icon: ShieldCheck },
@@ -62,6 +68,9 @@ const navByRole: Record<string, NavItem[]> = {
     admin: [
         { title: 'Dashboard', href: dashboard().url, icon: LayoutGrid },
         { title: 'Overview', href: '/admin/overview', icon: Gauge },
+        { title: 'Reports', href: '/admin/reports', icon: ChartColumn },
+        { title: 'Employers', href: '/admin/employers', icon: Building2 },
+        { title: 'Karigars', href: '/admin/karigars', icon: HardHat },
         { title: 'Users', href: '/admin/users', icon: Users },
         { title: 'Job Moderation', href: '/admin/jobs', icon: BriefcaseBusiness },
         { title: 'Escrows', href: '/admin/escrows', icon: ShieldCheck },
@@ -73,7 +82,21 @@ const navByRole: Record<string, NavItem[]> = {
     ],
 };
 
-const mainNavItems = computed(() => navByRole[role.value] ?? navByRole.worker);
+const mainNavItems = computed(() => {
+    let items = navByRole[role.value] ?? navByRole.worker;
+
+    // Team members see a trimmed menu: owner-only pages are hidden, and
+    // recruiters (applicants-only) also lose job posting.
+    if (role.value === 'employer' && teamRole.value !== 'owner') {
+        const ownerOnly = ['/employer/team', '/subscription', '/employer/profile', '/kyc'];
+        items = items.filter((i) => !ownerOnly.includes(i.href as string));
+        if (teamRole.value === 'recruiter') {
+            items = items.filter((i) => i.href !== '/employer/jobs/create');
+        }
+    }
+
+    return items;
+});
 
 const planLabel = computed(
     () => ({ worker: 'Worker', employer: 'Employer', admin: 'Admin' })[role.value] ?? 'Member',

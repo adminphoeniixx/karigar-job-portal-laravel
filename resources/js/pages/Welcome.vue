@@ -21,6 +21,7 @@ import {
     Zap,
 } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 
 interface Job {
     id: number;
@@ -130,16 +131,19 @@ const wage = (j: Job) => {
                     <a href="#jobs" class="rounded-lg px-3 py-1.5 transition hover:text-foreground">Jobs</a>
                     <a href="#how" class="rounded-lg px-3 py-1.5 transition hover:text-foreground">How it works</a>
                 </nav>
-                <Link
-                    v-if="user"
-                    href="/dashboard"
-                    class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90"
-                >
-                    Dashboard
-                </Link>
-                <Link v-else href="/employer/login" class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90">
-                    Login
-                </Link>
+                <div class="flex items-center gap-2">
+                    <LanguageSwitcher />
+                    <Link
+                        v-if="user"
+                        href="/dashboard"
+                        class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90"
+                    >
+                        Dashboard
+                    </Link>
+                    <Link v-else href="/employer/login" class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90">
+                        Login
+                    </Link>
+                </div>
             </div>
         </header>
 

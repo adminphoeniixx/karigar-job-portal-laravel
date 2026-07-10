@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { Bell } from '@lucide/vue';
 import { computed } from 'vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem } from '@/types';
 
@@ -30,9 +31,11 @@ const unread = computed(() => (page.props.notifications as { unread?: number } |
             </template>
         </div>
 
+        <div class="ml-auto flex items-center gap-2">
+        <LanguageSwitcher />
         <Link
             href="/notifications"
-            class="relative ml-auto inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            class="relative inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
             title="Notifications"
         >
             <Bell class="size-5" />
@@ -43,5 +46,6 @@ const unread = computed(() => (page.props.notifications as { unread?: number } |
                 {{ unread > 9 ? '9+' : unread }}
             </span>
         </Link>
+        </div>
     </header>
 </template>

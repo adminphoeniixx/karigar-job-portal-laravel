@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user,
+                'teamRole' => $user?->isEmployer() ? $user->teamRole() : null,
             ],
             'notifications' => $user ? [
                 'unread' => $user->unreadNotifications()->count(),
@@ -60,6 +61,11 @@ class HandleInertiaRequests extends Middleware
                 'en' => 'English',
                 'hi' => 'हिन्दी',
                 'hinglish' => 'Hinglish',
+                'mr' => 'मराठी',
+                'bn' => 'বাংলা',
+                'ta' => 'தமிழ்',
+                'te' => 'తెలుగు',
+                'gu' => 'ગુજરાતી',
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

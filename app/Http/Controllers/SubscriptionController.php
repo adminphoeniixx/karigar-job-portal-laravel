@@ -22,6 +22,20 @@ class SubscriptionController extends Controller
             'plans' => Plan::where('is_active', true)->orderBy('price')->get(),
             'current' => $request->user()->activeSubscription()?->load('plan'),
             'razorpayConfigured' => app(RazorpayService::class)->configured(),
+            'gstPercent' => (float) config('billing.gst_percent'),
+            // Paid subscriptions with an issued tax invoice.
+            'invoices' => $request->user()->subscriptions()
+                ->whereNotNull('invoice_number')
+                ->with('plan:id,name')
+                ->orderByDesc('invoiced_at')
+                ->get()
+                ->map(fn (Subscription $s) => [
+                    'id' => $s->id,
+                    'invoice_number' => $s->invoice_number,
+                    'plan' => $s->plan->name,
+                    'total' => $s->total_amount,
+                    'date' => $s->invoiced_at?->format('d M Y'),
+                ]),
             // Partial-reloaded when the employer applies a coupon (?coupon=CODE).
             'couponResult' => $this->previewCoupon($request->query('coupon'), $request->user()),
         ]);
@@ -60,10 +74,19 @@ class SubscriptionController extends Controller
 
         $remote = $razorpay->createSubscription($plan, offerId: $coupon?->razorpay_offer_id);
 
+        // GST breakup, captured at purchase time.
+        $subtotal = round((float) $plan->price - $discount, 2);
+        $gstPercent = (float) config('billing.gst_percent');
+        $gstAmount = round($subtotal * $gstPercent / 100, 2);
+
         $subscription = $request->user()->subscriptions()->create([
             'plan_id' => $plan->id,
             'coupon_id' => $coupon?->id,
             'discount_amount' => $coupon ? $discount : null,
+            'subtotal_amount' => $subtotal,
+            'gst_percent' => $gstPercent,
+            'gst_amount' => $gstAmount,
+            'total_amount' => round($subtotal + $gstAmount, 2),
             'razorpay_subscription_id' => $remote['id'],
             'status' => SubscriptionStatus::Created,
         ]);
@@ -73,6 +96,12 @@ class SubscriptionController extends Controller
             'subscriptionId' => $subscription->razorpay_subscription_id,
             'plan' => $plan,
             'discountAmount' => $coupon ? $discount : null,
+            'gst' => [
+                'percent' => $gstPercent,
+                'amount' => $gstAmount,
+                'subtotal' => $subtotal,
+                'total' => $subscription->total_amount,
+            ],
         ]);
     }
 
@@ -97,11 +126,7 @@ class SubscriptionController extends Controller
             ]);
         }
 
-        $subscription->update([
-            'status' => SubscriptionStatus::Active,
-            'starts_at' => now(),
-            'ends_at' => $subscription->plan->interval === 'yearly' ? now()->addYear() : now()->addMonth(),
-        ]);
+        $subscription->activateWithInvoice();
 
         $this->recordRedemption($subscription);
 

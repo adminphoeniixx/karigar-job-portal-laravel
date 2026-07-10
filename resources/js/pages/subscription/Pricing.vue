@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { AlertTriangle, Check, CreditCard, Sparkles, Tag, X } from '@lucide/vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { AlertTriangle, Check, CreditCard, FileText, Sparkles, Tag, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -25,11 +25,21 @@ interface CouponResult {
     plan_ids?: number[];
 }
 
+interface InvoiceRow {
+    id: number;
+    invoice_number: string;
+    plan: string;
+    total: string | null;
+    date: string | null;
+}
+
 const props = defineProps<{
     plans: Plan[];
     current: { id: number; status: string; plan: Plan } | null;
     razorpayConfigured: boolean;
     couponResult: CouponResult | null;
+    gstPercent: number;
+    invoices: InvoiceRow[];
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Subscription', href: '/subscription' }] } });
@@ -82,6 +92,10 @@ const discountFor = (plan: Plan): number => {
 };
 
 const finalPrice = (plan: Plan): number => parseFloat(plan.price) - discountFor(plan);
+
+// GST is charged on the discounted base price.
+const gstFor = (plan: Plan): number => Math.round(finalPrice(plan) * props.gstPercent) / 100;
+const totalFor = (plan: Plan): number => Math.round((finalPrice(plan) + gstFor(plan)) * 100) / 100;
 
 const money = (n: number) => '₹' + n.toLocaleString('en-IN');
 
@@ -141,6 +155,7 @@ const subscribe = () => {
                     >{{ discountFor(plan) > 0 ? money(finalPrice(plan)) : '₹' + plan.price }}</span>
                     <span class="pb-1 text-sm text-muted-foreground">/{{ plan.interval }}</span>
                 </div>
+                <div class="relative mt-0.5 text-[11px] text-muted-foreground">+ {{ gstPercent }}% GST</div>
                 <div v-if="discountFor(plan) > 0" class="relative mt-1 flex items-center gap-2 text-sm">
                     <span class="text-muted-foreground line-through">₹{{ plan.price }}</span>
                     <span class="inline-flex items-center rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-500 ring-1 ring-inset ring-rose-500/20">
@@ -171,6 +186,24 @@ const subscribe = () => {
                 >
                     {{ current?.plan.id === plan.id ? 'Current plan' : 'View details & subscribe' }}
                 </button>
+            </div>
+        </div>
+        <!-- Tax invoices -->
+        <div v-if="invoices.length" class="rounded-2xl border bg-card shadow-sm">
+            <div class="border-b px-6 py-4">
+                <h2 class="flex items-center gap-2 text-sm font-semibold"><FileText class="size-4 text-orange-500" /> Tax invoices</h2>
+            </div>
+            <div class="divide-y">
+                <div v-for="inv in invoices" :key="inv.id" class="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 text-sm">
+                    <div>
+                        <div class="font-semibold">{{ inv.invoice_number }}</div>
+                        <div class="text-xs text-muted-foreground">{{ inv.plan }} plan · {{ inv.date }}</div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="font-bold tabular-nums">₹{{ inv.total }}</span>
+                        <Link :href="`/subscription/${inv.id}/invoice`" class="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">View invoice →</Link>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -240,7 +273,7 @@ const subscribe = () => {
                 </p>
             </div>
 
-            <!-- Price summary -->
+            <!-- Price summary (with GST breakup) -->
             <div class="mt-5 space-y-1.5 rounded-xl border p-4 text-sm">
                 <div class="flex justify-between text-muted-foreground">
                     <span>Plan price</span><span>₹{{ selected.price }}</span>
@@ -248,9 +281,12 @@ const subscribe = () => {
                 <div v-if="selectedDiscount > 0" class="flex justify-between font-medium text-emerald-600 dark:text-emerald-400">
                     <span>Coupon discount</span><span>− {{ money(selectedDiscount) }}</span>
                 </div>
+                <div class="flex justify-between text-muted-foreground">
+                    <span>GST ({{ gstPercent }}%)</span><span>+ {{ money(gstFor(selected)) }}</span>
+                </div>
                 <div class="flex justify-between border-t pt-2 text-base font-bold">
-                    <span>Total</span>
-                    <span>{{ money(finalPrice(selected)) }} <span class="text-xs font-normal text-muted-foreground">/{{ selected.interval }}</span></span>
+                    <span>Total payable</span>
+                    <span>{{ money(totalFor(selected)) }} <span class="text-xs font-normal text-muted-foreground">/{{ selected.interval }}</span></span>
                 </div>
             </div>
 
@@ -259,7 +295,7 @@ const subscribe = () => {
                 class="mt-5 w-full rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
                 @click="subscribe"
             >
-                {{ subscribing ? 'Starting checkout…' : `Subscribe — ${money(finalPrice(selected))}` }}
+                {{ subscribing ? 'Starting checkout…' : `Subscribe — ${money(totalFor(selected))} incl. GST` }}
             </button>
             <p class="mt-2 text-center text-[11px] text-muted-foreground">Secure payment via Razorpay. You can cancel anytime.</p>
         </div>

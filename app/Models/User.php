@@ -94,6 +94,48 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * Team membership of this user under another employer's account (if any).
+     *
+     * @return HasOne<TeamMember, $this>
+     */
+    public function teamMembership(): HasOne
+    {
+        return $this->hasOne(TeamMember::class, 'user_id');
+    }
+
+    /**
+     * Staff accounts working under this employer.
+     *
+     * @return HasMany<TeamMember, $this>
+     */
+    public function teamMembers(): HasMany
+    {
+        return $this->hasMany(TeamMember::class, 'employer_id');
+    }
+
+    /**
+     * The employer account this user operates under: the team owner's
+     * account for staff members, or their own account otherwise.
+     */
+    public function employerAccount(): User
+    {
+        return $this->teamMembership?->owner ?? $this;
+    }
+
+    /**
+     * This user's role within the employer account: owner | manager | recruiter.
+     */
+    public function teamRole(): string
+    {
+        return $this->teamMembership?->role ?? 'owner';
+    }
+
+    public function canManageJobs(): bool
+    {
+        return in_array($this->teamRole(), ['owner', 'manager'], true);
+    }
+
+    /**
      * @return HasOne<KycDocument, $this>
      */
     public function kyc(): HasOne
@@ -180,8 +222,9 @@ class User extends Authenticatable implements PasskeyUser
      */
     public function contactDatabaseQuota(): int
     {
-        $planQuota = $this->activeSubscription()?->plan->contactDatabaseLimit() ?? 0;
-        $bonus = (int) ($this->employerProfile?->contact_quota_bonus ?? 0);
+        $owner = $this->employerAccount();
+        $planQuota = $owner->activeSubscription()?->plan->contactDatabaseLimit() ?? 0;
+        $bonus = (int) ($owner->employerProfile?->contact_quota_bonus ?? 0);
 
         return $planQuota + $bonus;
     }

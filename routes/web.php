@@ -3,20 +3,24 @@
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DirectoryController as AdminDirectoryController;
 use App\Http\Controllers\Admin\EmailTemplateController as AdminEmailTemplateController;
 use App\Http\Controllers\Admin\EscrowController as AdminEscrowController;
 use App\Http\Controllers\Admin\JobModerationController as AdminJobModerationController;
 use App\Http\Controllers\Admin\KycController as AdminKycController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
+use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\PhoneOtpController;
 use App\Http\Controllers\Auth\RoleAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Employer\ApplicantController;
 use App\Http\Controllers\Employer\EscrowController;
+use App\Http\Controllers\Employer\TeamController;
 use App\Http\Controllers\Employer\WorkerDirectoryController;
 use App\Http\Controllers\EmployerProfileController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\JobBrowseController;
 use App\Http\Controllers\JobListingController;
@@ -128,6 +132,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('employer/escrows/{escrow}/callback', [EscrowController::class, 'callback'])->name('escrow.callback');
         Route::post('employer/escrows/{escrow}/release', [EscrowController::class, 'release'])->name('escrow.release');
 
+        // Team role management (owner only)
+        Route::get('employer/team', [TeamController::class, 'index'])->name('team.index');
+        Route::post('employer/team', [TeamController::class, 'store'])->name('team.store');
+        Route::patch('employer/team/{member}', [TeamController::class, 'update'])->name('team.update');
+        Route::delete('employer/team/{member}', [TeamController::class, 'destroy'])->name('team.destroy');
+
         // Worker directory (Typesense)
         Route::get('employer/workers', [WorkerDirectoryController::class, 'index'])->name('workers.index');
         Route::get('employer/workers/{worker}', [WorkerDirectoryController::class, 'show'])->name('workers.show');
@@ -136,6 +146,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('subscription', [SubscriptionController::class, 'pricing'])->name('subscription.pricing');
         Route::post('subscription/{plan}/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
         Route::post('subscription/callback', [SubscriptionController::class, 'callback'])->name('subscription.callback');
+        Route::get('subscription/{subscription}/invoice', [InvoiceController::class, 'show'])->name('subscription.invoice');
     });
 });
 
@@ -146,6 +157,14 @@ Route::post('razorpay/webhook', [RazorpayWebhookController::class, 'handle'])->n
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Overview / analytics
     Route::get('overview', [AdminDashboardController::class, 'index'])->name('overview');
+
+    // Separate employer / karigar directories (location-filterable)
+    Route::get('employers', [AdminDirectoryController::class, 'employers'])->name('employers.index');
+    Route::get('karigars', [AdminDirectoryController::class, 'karigars'])->name('karigars.index');
+
+    // Reports with data filters + CSV export
+    Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/export', [AdminReportController::class, 'export'])->name('reports.export');
 
     // User management (suspend / reinstate)
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
@@ -190,3 +209,4 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 });
 
 require __DIR__.'/settings.php';
+

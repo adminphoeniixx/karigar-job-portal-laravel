@@ -22,7 +22,7 @@ class JobListingController extends Controller
             'status' => ['nullable', 'string', 'in:draft,active,closed,expired'],
         ]);
 
-        $jobs = $request->user()->jobListings()
+        $jobs = $request->user()->employerAccount()->jobListings()
             ->withCount('applications')
             ->when($filters['q'] ?? null, fn ($q, $term) => $q->where('title', 'ilike', "%{$term}%"))
             ->when($filters['status'] ?? null, function ($q, $status) {
@@ -57,7 +57,7 @@ class JobListingController extends Controller
     {
         $this->authorize('create', JobListing::class);
 
-        $user = $request->user();
+        $user = $request->user()->employerAccount();
         $limit = $user->activeSubscription()?->plan->jobPostLimit() ?? 0;
 
         if ($limit > 0 && $user->jobListings()->count() >= $limit) {

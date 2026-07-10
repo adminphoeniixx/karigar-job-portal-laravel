@@ -12,6 +12,8 @@ const props = defineProps<{
     razorpayKey: string;
     subscriptionId: string;
     plan: Plan;
+    discountAmount?: string | null;
+    gst?: { percent: number; amount: number; subtotal: number; total: string | null } | null;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Checkout', href: '/subscription' }] } });

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $user_id
  * @property string|null $company_name
+ * @property string|null $gstin
  * @property string|null $phone
  * @property string|null $address
  * @property string|null $city
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class EmployerProfile extends Model
 {
     protected $fillable = [
-        'company_name', 'phone', 'address', 'city', 'state',
+        'company_name', 'gstin', 'phone', 'address', 'city', 'state',
         'latitude', 'longitude', 'logo_path', 'about', 'contact_quota_bonus',
     ];
 

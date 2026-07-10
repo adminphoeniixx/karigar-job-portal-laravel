@@ -21,7 +21,7 @@ class ApplicantController extends Controller
      */
     public function index(Request $request, JobListing $job): Response
     {
-        $this->authorize('update', $job);
+        $this->authorize('view', $job);
 
         $applications = $job->applications()
             ->with('worker:id,name,email', 'worker.workerProfile', 'escrow')
@@ -61,7 +61,7 @@ class ApplicantController extends Controller
             'applications' => $applications,
             'contactUnlocks' => [
                 'used' => $this->unlocksUsed($request),
-                'limit' => $request->user()->activeSubscription()?->plan->contactUnlockLimit() ?? 0,
+                'limit' => $request->user()->employerAccount()->activeSubscription()?->plan->contactUnlockLimit() ?? 0,
             ],
         ]);
     }
@@ -111,7 +111,7 @@ class ApplicantController extends Controller
     public function shortlisted(Request $request): Response
     {
         $applications = JobApplication::whereNotNull('shortlisted_at')
-            ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->id))
+            ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->employerAccount()->id))
             ->with('worker:id,name,email', 'worker.workerProfile', 'job:id,title,city,state')
             ->orderByDesc('shortlisted_at')
             ->get()
@@ -151,7 +151,8 @@ class ApplicantController extends Controller
      */
     public function toggleShortlist(JobApplication $application): RedirectResponse
     {
-        $this->authorize('update', $application->job);
+        // Recruiters can shortlist too.
+        $this->authorize('view', $application->job);
 
         if ($application->shortlisted_at !== null) {
             $application->update(['shortlisted_at' => null]);
@@ -195,7 +196,7 @@ class ApplicantController extends Controller
             return back();
         }
 
-        $limit = $request->user()->activeSubscription()?->plan->contactUnlockLimit() ?? 0;
+        $limit = $request->user()->employerAccount()->activeSubscription()?->plan->contactUnlockLimit() ?? 0;
 
         if ($limit > 0 && $this->unlocksUsed($request) >= $limit) {
             return back()->with('toast', [
@@ -218,7 +219,7 @@ class ApplicantController extends Controller
     private function unlocksUsed(Request $request): int
     {
         return JobApplication::where('contact_unlocked', true)
-            ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->id))
+            ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->employerAccount()->id))
             ->count();
     }
 }
