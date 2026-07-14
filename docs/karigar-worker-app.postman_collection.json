@@ -1,0 +1,392 @@
+{
+  "info": {
+    "name": "Karigar — Worker App API (v1)",
+    "description": "Token-based (Sanctum) JSON API for the Karigar worker mobile app.\n\nQuick start:\n1. Set the `base_url` collection variable (default http://localhost:8000).\n2. Run **Auth → Send OTP**, then check storage/logs for the dev OTP.\n3. Run **Auth → Verify OTP** — it auto-saves the returned token into the `token` variable, so every other request is authenticated.\n\nFull reference: docs/worker-app-api.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "phone", "value": "9876543210", "type": "string" },
+    { "key": "otp", "value": "1234", "type": "string" },
+    { "key": "job_id", "value": "1", "type": "string" },
+    { "key": "application_id", "value": "1", "type": "string" },
+    { "key": "notification_id", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{phone}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/otp/send", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "otp", "send"] },
+            "description": "Send/resend a 4-digit OTP. In dev (no MSG91 keys) the code is written to storage/logs."
+          }
+        },
+        {
+          "name": "Verify OTP (saves token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.token) {",
+                  "  pm.collectionVariables.set('token', res.token);",
+                  "  console.log('Token saved to {{token}}');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"otp\": \"{{otp}}\",\n  \"role\": \"worker\",\n  \"device_name\": \"Postman\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/otp/verify", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "otp", "verify"] },
+            "description": "Verify OTP → issue token (auto-registers on first login). The test script stores the token in the collection variable."
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "me"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/logout", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "logout"] }
+          }
+        },
+        {
+          "name": "Delete account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"confirm\": true\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/account", "host": ["{{base_url}}"], "path": ["api", "v1", "account"] },
+            "description": "Permanently delete the account (revokes all tokens). Requires confirm=true."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reference",
+      "item": [
+        {
+          "name": "All reference data",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/reference", "host": ["{{base_url}}"], "path": ["api", "v1", "reference"] },
+            "description": "States, skills, spoken languages, education levels, wage types, app languages, job categories."
+          }
+        },
+        {
+          "name": "Cities for state",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reference/cities?state=Tamil Nadu",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "reference", "cities"],
+              "query": [{ "key": "state", "value": "Tamil Nadu" }]
+            }
+          }
+        },
+        {
+          "name": "Job categories",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/reference/job-categories", "host": ["{{base_url}}"], "path": ["api", "v1", "reference", "job-categories"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile & Registration",
+      "item": [
+        {
+          "name": "Get my profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/worker/profile", "host": ["{{base_url}}"], "path": ["api", "v1", "worker", "profile"] }
+          }
+        },
+        {
+          "name": "Update profile (registration)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Rakesh Kumar\",\n  \"gender\": \"male\",\n  \"skills\": [\"Plumbing\", \"Tiling\"],\n  \"experience_years\": 6,\n  \"education\": \"12th Pass\",\n  \"spoken_languages\": [\"Hindi\", \"Tamil\"],\n  \"bio\": \"6 years experience in plumbing and tiling.\",\n  \"expected_wage\": 900,\n  \"wage_type\": \"daily\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"travel_radius_km\": 15,\n  \"available\": true,\n  \"payout_upi\": \"rakesh@okhdfcbank\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/worker/profile", "host": ["{{base_url}}"], "path": ["api", "v1", "worker", "profile"] },
+            "description": "Send any subset of fields. The signup wizard calls this per step."
+          }
+        },
+        {
+          "name": "Upload avatar",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "avatar", "type": "file", "src": [] }]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/worker/profile/avatar", "host": ["{{base_url}}"], "path": ["api", "v1", "worker", "profile", "avatar"] },
+            "description": "Attach an image file (≤2 MB) to the `avatar` form field."
+          }
+        },
+        {
+          "name": "Toggle availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"available\": false\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/worker/availability", "host": ["{{base_url}}"], "path": ["api", "v1", "worker", "availability"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "Browse jobs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/jobs?q=&city=&state=&category=&skill=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "jobs"],
+              "query": [
+                { "key": "q", "value": "" },
+                { "key": "city", "value": "" },
+                { "key": "state", "value": "" },
+                { "key": "category", "value": "" },
+                { "key": "skill", "value": "" },
+                { "key": "lat", "value": "", "disabled": true },
+                { "key": "lng", "value": "", "disabled": true },
+                { "key": "radius", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Job detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/jobs/{{job_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "jobs", "{{job_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "My applications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/worker/applications?status=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "worker", "applications"],
+              "query": [{ "key": "status", "value": "", "description": "pending|accepted|rejected|withdrawn" }]
+            }
+          }
+        },
+        {
+          "name": "Apply to job",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"cover_note\": \"Available from tomorrow.\",\n  \"expected_wage\": 900\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/jobs/{{job_id}}/apply", "host": ["{{base_url}}"], "path": ["api", "v1", "jobs", "{{job_id}}", "apply"] }
+          }
+        },
+        {
+          "name": "Withdraw application",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/applications/{{application_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "applications", "{{application_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Saved Jobs",
+      "item": [
+        {
+          "name": "Saved list",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/worker/saved", "host": ["{{base_url}}"], "path": ["api", "v1", "worker", "saved"] }
+          }
+        },
+        {
+          "name": "Toggle save",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/jobs/{{job_id}}/save", "host": ["{{base_url}}"], "path": ["api", "v1", "jobs", "{{job_id}}", "save"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "KYC (optional)",
+      "item": [
+        {
+          "name": "Get KYC status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/kyc", "host": ["{{base_url}}"], "path": ["api", "v1", "kyc"] }
+          }
+        },
+        {
+          "name": "Submit KYC",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "pan_number", "value": "ABCDE1234F", "type": "text" },
+                { "key": "aadhaar_number", "value": "123456789012", "type": "text" },
+                { "key": "pan_doc", "type": "file", "src": [] },
+                { "key": "aadhaar_doc", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/kyc", "host": ["{{base_url}}"], "path": ["api", "v1", "kyc"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/notifications", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications"] }
+          }
+        },
+        {
+          "name": "Mark one read",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}/read", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "{{notification_id}}", "read"] }
+          }
+        },
+        {
+          "name": "Mark all read",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/notifications/read-all", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "read-all"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Reviews received",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/worker/reviews", "host": ["{{base_url}}"], "path": ["api", "v1", "worker", "reviews"] }
+          }
+        },
+        {
+          "name": "Rate employer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Great to work with.\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/applications/{{application_id}}/review", "host": ["{{base_url}}"], "path": ["api", "v1", "applications", "{{application_id}}", "review"] },
+            "description": "Only allowed once the application is Accepted."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard & Locale",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/worker/dashboard", "host": ["{{base_url}}"], "path": ["api", "v1", "worker", "dashboard"] }
+          }
+        },
+        {
+          "name": "Set locale",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"locale\": \"hi\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/locale", "host": ["{{base_url}}"], "path": ["api", "v1", "locale"] }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -11,8 +11,11 @@ use Laravel\Scout\Searchable;
  * @property int $id
  * @property int $user_id
  * @property string|null $phone
+ * @property string|null $gender
  * @property array<int, string>|null $skills
  * @property int|null $experience_years
+ * @property string|null $education
+ * @property array<int, string>|null $spoken_languages
  * @property string|null $bio
  * @property string|null $expected_wage
  * @property string|null $wage_type
@@ -21,6 +24,7 @@ use Laravel\Scout\Searchable;
  * @property string|null $state
  * @property string|null $latitude
  * @property string|null $longitude
+ * @property int|null $travel_radius_km
  * @property bool $available
  */
 class WorkerProfile extends Model
@@ -28,8 +32,9 @@ class WorkerProfile extends Model
     use Searchable;
 
     protected $fillable = [
-        'phone', 'skills', 'experience_years', 'bio', 'expected_wage',
-        'wage_type', 'avatar_path', 'city', 'state', 'latitude', 'longitude', 'available',
+        'phone', 'gender', 'skills', 'experience_years', 'education', 'spoken_languages',
+        'bio', 'expected_wage', 'wage_type', 'avatar_path', 'city', 'state',
+        'latitude', 'longitude', 'travel_radius_km', 'available',
         'payout_upi', 'razorpayx_fund_account_id',
     ];
 
@@ -40,6 +45,7 @@ class WorkerProfile extends Model
     {
         return [
             'skills' => 'array',
+            'spoken_languages' => 'array',
             'available' => 'boolean',
             'expected_wage' => 'decimal:2',
         ];
