@@ -28,6 +28,12 @@ class ReferenceController extends Controller
             'wage_types' => ReferenceData::WAGE_TYPES,
             'app_languages' => ReferenceData::APP_LANGUAGES,
             'job_categories' => $this->categories(),
+            // Employer-app dropdowns.
+            'shifts' => ReferenceData::SHIFTS,
+            'perks' => ReferenceData::PERKS,
+            'contact_modes' => ReferenceData::CONTACT_MODES,
+            'industries' => ReferenceData::INDUSTRIES,
+            'company_sizes' => ReferenceData::COMPANY_SIZES,
         ]);
     }
 

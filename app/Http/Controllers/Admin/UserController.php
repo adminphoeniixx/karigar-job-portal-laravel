@@ -79,6 +79,30 @@ class UserController extends Controller
     }
 
     /**
+     * Permanently delete a user account. All owned records (profile, KYC, jobs,
+     * applications, escrows, reviews, subscriptions, team links…) cascade via
+     * their foreign keys; morph-based notifications are cleaned up explicitly.
+     */
+    public function destroy(User $user, Request $request): RedirectResponse
+    {
+        if ($user->id === $request->user()->id) {
+            return back()->with('error', __('You cannot delete your own account.'));
+        }
+
+        if ($user->role === UserRole::Admin) {
+            return back()->with('error', __('Admin accounts cannot be deleted.'));
+        }
+
+        $name = $user->name;
+
+        $user->notifications()->delete();
+        $user->tokens()->delete();
+        $user->delete();
+
+        return back()->with('success', __(':name has been permanently deleted.', ['name' => $name]));
+    }
+
+    /**
      * Grant/adjust an employer's bonus worker-database contacts (on top of plan quota).
      */
     public function updateQuota(User $user, Request $request): RedirectResponse

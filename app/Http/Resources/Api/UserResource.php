@@ -22,7 +22,8 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'role' => $this->role->value,
             'locale' => $this->locale,
-            'avatar_url' => $this->workerProfile?->avatar_url,
+            'avatar_url' => $this->workerProfile?->avatar_url ?? $this->employerProfile?->logo_url,
+            'company_name' => $this->employerProfile?->company_name,
             'rating' => [
                 'average' => $this->averageRating(),
                 'count' => $this->reviewsReceived()->count(),

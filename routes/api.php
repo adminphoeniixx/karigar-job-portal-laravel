@@ -2,6 +2,14 @@
 
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\Auth\OtpAuthController;
+use App\Http\Controllers\Api\Employer\ApplicantController as EmployerApplicantController;
+use App\Http\Controllers\Api\Employer\DashboardController as EmployerDashboardController;
+use App\Http\Controllers\Api\Employer\JobController as EmployerJobController;
+use App\Http\Controllers\Api\Employer\KycController as EmployerKycController;
+use App\Http\Controllers\Api\Employer\ProfileController as EmployerProfileController;
+use App\Http\Controllers\Api\Employer\ReviewController as EmployerReviewController;
+use App\Http\Controllers\Api\Employer\TeamController as EmployerTeamController;
+use App\Http\Controllers\Api\Employer\WorkerDirectoryController;
 use App\Http\Controllers\Api\LocaleController;
 use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Api\Worker\ApplicationController;
@@ -81,6 +89,49 @@ Route::prefix('v1')->group(function () {
             // Reviews
             Route::get('worker/reviews', [ReviewController::class, 'received'])->name('api.reviews.received');
             Route::post('applications/{application}/review', [ReviewController::class, 'store'])->name('api.reviews.store');
+        });
+
+        // ---- Employer-only ----
+        Route::middleware('role:employer')->group(function () {
+            Route::get('employer/dashboard', [EmployerDashboardController::class, 'index'])->name('api.employer.dashboard');
+
+            // Business profile / registration
+            Route::get('employer/profile', [EmployerProfileController::class, 'show'])->name('api.employer.profile.show');
+            Route::match(['put', 'patch'], 'employer/profile', [EmployerProfileController::class, 'update'])->name('api.employer.profile.update');
+            Route::post('employer/profile/logo', [EmployerProfileController::class, 'logo'])->name('api.employer.profile.logo');
+
+            // Jobs
+            Route::get('employer/jobs', [EmployerJobController::class, 'index'])->name('api.employer.jobs');
+            Route::post('employer/jobs', [EmployerJobController::class, 'store'])->name('api.employer.jobs.store');
+            Route::get('employer/jobs/{job}', [EmployerJobController::class, 'show'])->name('api.employer.jobs.show');
+            Route::match(['put', 'patch'], 'employer/jobs/{job}', [EmployerJobController::class, 'update'])->name('api.employer.jobs.update');
+            Route::post('employer/jobs/{job}/close', [EmployerJobController::class, 'close'])->name('api.employer.jobs.close');
+            Route::delete('employer/jobs/{job}', [EmployerJobController::class, 'destroy'])->name('api.employer.jobs.destroy');
+
+            // Applicants
+            Route::get('employer/jobs/{job}/applicants', [EmployerApplicantController::class, 'index'])->name('api.employer.applicants');
+            Route::get('employer/applicants/{application}', [EmployerApplicantController::class, 'show'])->name('api.employer.applicants.show');
+            Route::patch('employer/applicants/{application}/status', [EmployerApplicantController::class, 'updateStatus'])->name('api.employer.applicants.status');
+            Route::post('employer/applicants/{application}/shortlist', [EmployerApplicantController::class, 'toggleShortlist'])->name('api.employer.applicants.shortlist');
+            Route::post('employer/applicants/{application}/unlock', [EmployerApplicantController::class, 'unlockContact'])->name('api.employer.applicants.unlock');
+
+            // Find workers
+            Route::get('employer/workers', [WorkerDirectoryController::class, 'index'])->name('api.employer.workers');
+            Route::get('employer/workers/{worker}', [WorkerDirectoryController::class, 'show'])->name('api.employer.workers.show');
+
+            // Business verification (GST / PAN)
+            Route::get('employer/kyc', [EmployerKycController::class, 'show'])->name('api.employer.kyc.show');
+            Route::post('employer/kyc', [EmployerKycController::class, 'store'])->name('api.employer.kyc.store');
+
+            // Reviews — received from workers + rate a hired worker
+            Route::get('employer/reviews', [EmployerReviewController::class, 'received'])->name('api.employer.reviews');
+            Route::post('employer/applicants/{application}/review', [EmployerReviewController::class, 'store'])->name('api.employer.reviews.store');
+
+            // Team members (owner only)
+            Route::get('employer/team', [EmployerTeamController::class, 'index'])->name('api.employer.team');
+            Route::post('employer/team', [EmployerTeamController::class, 'store'])->name('api.employer.team.store');
+            Route::patch('employer/team/{member}', [EmployerTeamController::class, 'update'])->name('api.employer.team.update');
+            Route::delete('employer/team/{member}', [EmployerTeamController::class, 'destroy'])->name('api.employer.team.destroy');
         });
     });
 });

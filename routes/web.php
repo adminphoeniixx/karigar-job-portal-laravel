@@ -171,6 +171,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('users/{user}/suspend', [AdminUserController::class, 'suspend'])->name('users.suspend');
     Route::post('users/{user}/unsuspend', [AdminUserController::class, 'unsuspend'])->name('users.unsuspend');
     Route::post('users/{user}/quota', [AdminUserController::class, 'updateQuota'])->name('users.quota');
+    Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
 
     // Subscription plans & limits (incl. worker-database contact quota)
     Route::get('plans', [AdminPlanController::class, 'index'])->name('plans.index');

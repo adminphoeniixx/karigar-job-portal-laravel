@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Users as UsersIcon, Search, Ban, Database, RotateCcw } from '@lucide/vue';
+import { Users as UsersIcon, Search, Ban, Database, RotateCcw, Trash2 } from '@lucide/vue';
 import { reactive, ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -45,6 +45,12 @@ const suspend = (u: Row) => {
     }
 };
 const reinstate = (u: Row) => router.post(`/admin/users/${u.id}/unsuspend`, {}, { preserveScroll: true });
+
+const destroy = (u: Row) => {
+    if (window.confirm(`Permanently delete ${u.name} (${u.email})?\n\nThis removes their profile, KYC, jobs, applications and reviews. This CANNOT be undone.`)) {
+        router.delete(`/admin/users/${u.id}`, { preserveScroll: true });
+    }
+};
 
 // Per-employer bonus quota editing.
 const bonuses = reactive<Record<number, number>>({});
@@ -109,7 +115,7 @@ const roleBadge: Record<string, string> = {
                         <button class="rounded-lg bg-orange-500/10 px-2.5 py-1 font-medium text-orange-600 transition hover:bg-orange-500/20 dark:text-orange-300" @click="saveQuota(u)">Save</button>
                     </div>
                 </div>
-                <div class="shrink-0">
+                <div class="flex shrink-0 items-center gap-1">
                     <button
                         v-if="!u.suspended && u.role !== 'admin'"
                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400"
@@ -123,6 +129,14 @@ const roleBadge: Record<string, string> = {
                         @click="reinstate(u)"
                     >
                         <RotateCcw class="size-3.5" /> Reinstate
+                    </button>
+                    <button
+                        v-if="u.role !== 'admin'"
+                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400"
+                        title="Permanently delete account"
+                        @click="destroy(u)"
+                    >
+                        <Trash2 class="size-3.5" /> Delete
                     </button>
                 </div>
             </div>

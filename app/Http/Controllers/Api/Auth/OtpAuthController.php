@@ -105,19 +105,21 @@ class OtpAuthController extends Controller
 
         abort_if($user->isSuspended(), 403, __('Your account has been suspended.'));
 
-        $token = $user->createToken($data['device_name'] ?? 'worker-app')->plainTextToken;
+        $token = $user->createToken($data['device_name'] ?? $data['role'].'-app')->plainTextToken;
 
-        // Ensure a worker has a profile row to fill in.
+        // Ensure the matching profile row exists to fill in during registration.
         if ($user->isWorker()) {
             $user->workerProfile()->firstOrCreate([]);
+        } elseif ($user->isEmployer()) {
+            $user->employerProfile()->firstOrCreate([]);
         }
 
         return response()->json([
             'token' => $token,
             'is_new' => $isNew,
-            // New workers should be routed into the registration wizard.
-            'needs_registration' => $isNew && $user->isWorker(),
-            'user' => new UserResource($user->load('workerProfile')),
+            // New users should be routed into the registration wizard.
+            'needs_registration' => $isNew,
+            'user' => new UserResource($user->load('workerProfile', 'employerProfile')),
         ]);
     }
 
@@ -136,7 +138,7 @@ class OtpAuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load('workerProfile');
+        $user = $request->user()->load('workerProfile', 'employerProfile');
 
         return response()->json([
             'user' => new UserResource($user),

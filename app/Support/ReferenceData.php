@@ -96,6 +96,44 @@ class ReferenceData
     public const WAGE_TYPES = ['hourly', 'daily', 'monthly'];
 
     /**
+     * Work-shift options for a job post (must match JobListingRequest shift rule).
+     *
+     * @var list<string>
+     */
+    public const SHIFTS = ['day', 'night', 'rotational'];
+
+    /**
+     * Perks a job can offer (must match JobListingRequest perks.* rule).
+     *
+     * @var list<string>
+     */
+    public const PERKS = ['Food', 'Accommodation', 'Travel allowance', 'Bonus', 'Overtime pay', 'Weekly off'];
+
+    /**
+     * How a worker may reach the employer (must match JobListingRequest contact_mode rule).
+     *
+     * @var list<string>
+     */
+    public const CONTACT_MODES = ['apply', 'call', 'both'];
+
+    /**
+     * Industry options for the employer registration/profile dropdown.
+     *
+     * @var list<string>
+     */
+    public const INDUSTRIES = [
+        'Construction & Real Estate', 'Interiors & Furnishing', 'Facility & Maintenance',
+        'Manufacturing', 'Home Services', 'Hospitality', 'Logistics & Transport', 'Other',
+    ];
+
+    /**
+     * Company-size buckets for the employer registration dropdown.
+     *
+     * @var list<string>
+     */
+    public const COMPANY_SIZES = ['1–10', '11–50', '51–200', '200+'];
+
+    /**
      * App UI languages (mirrors the LANGS list in the frontend switcher).
      *
      * @var list<array{code: string, native: string, english: string}>
