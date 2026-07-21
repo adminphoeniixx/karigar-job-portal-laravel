@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\WorkerProfileUpdateRequest;
+use App\Services\BunnyCdn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,9 +27,9 @@ class WorkerProfileController extends Controller
 
         if ($request->hasFile('avatar')) {
             if ($profile->avatar_path) {
-                Storage::disk('public')->delete($profile->avatar_path);
+                BunnyCdn::delete($profile->avatar_path);
             }
-            $profile->avatar_path = $request->file('avatar')->store('avatars', 'public');
+            $profile->avatar_path = BunnyCdn::upload($request->file('avatar'), 'avatars');
         }
 
         $profile->save();

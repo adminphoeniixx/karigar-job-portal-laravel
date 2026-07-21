@@ -122,6 +122,7 @@ export default {
     jobForm: {
         postTitle: 'Post a Job',
         editTitle: 'Edit Job',
+        freePost: 'Your first job post is free — no subscription needed. Post it now!',
         subtitle: 'Fill in the details to reach the right workers',
         details: 'Job details',
         titleLabel: 'Title',

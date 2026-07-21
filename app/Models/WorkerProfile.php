@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\BunnyCdn;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -59,7 +60,7 @@ class WorkerProfile extends Model
     protected function avatarUrl(): Attribute
     {
         return Attribute::get(
-            fn (): ?string => $this->avatar_path ? asset('storage/'.$this->avatar_path) : null,
+            fn (): ?string => BunnyCdn::url($this->avatar_path),
         );
     }
 

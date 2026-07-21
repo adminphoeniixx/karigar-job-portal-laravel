@@ -35,7 +35,7 @@ interface Job {
     worker_fee_amount: string | null;
 }
 
-const props = defineProps<{ job: Job | null; defaultPhone: string | null }>();
+const props = defineProps<{ job: Job | null; defaultPhone: string | null; freePostAvailable?: boolean }>();
 
 const isEdit = props.job !== null;
 
@@ -146,6 +146,14 @@ const submit = () => {
                 </Link>
             </template>
         </PageHeader>
+
+        <div
+            v-if="!isEdit && freePostAvailable"
+            class="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300"
+        >
+            <Gift class="size-5 shrink-0" />
+            <span>{{ $t('jobForm.freePost') }}</span>
+        </div>
 
         <form class="space-y-5" @submit.prevent="submit">
             <!-- Basics -->

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\EmployerProfileUpdateRequest;
+use App\Services\BunnyCdn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,9 +27,9 @@ class EmployerProfileController extends Controller
 
         if ($request->hasFile('logo')) {
             if ($profile->logo_path) {
-                Storage::disk('public')->delete($profile->logo_path);
+                BunnyCdn::delete($profile->logo_path);
             }
-            $profile->logo_path = $request->file('logo')->store('logos', 'public');
+            $profile->logo_path = BunnyCdn::upload($request->file('logo'), 'logos');
         }
 
         $profile->save();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\BunnyCdn;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,13 +21,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $logo_path
  * @property string|null $about
  * @property int $contact_quota_bonus
+ * @property \Illuminate\Support\Carbon|null $free_post_used_at
  */
 class EmployerProfile extends Model
 {
     protected $fillable = [
         'company_name', 'gstin', 'phone', 'address', 'city', 'state',
         'latitude', 'longitude', 'logo_path', 'about', 'contact_quota_bonus',
+        'free_post_used_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'free_post_used_at' => 'datetime',
+        ];
+    }
 
     /** @var list<string> */
     protected $appends = ['logo_url'];
@@ -39,7 +49,7 @@ class EmployerProfile extends Model
     protected function logoUrl(): Attribute
     {
         return Attribute::get(
-            fn (): ?string => $this->logo_path ? asset('storage/'.$this->logo_path) : null,
+            fn (): ?string => BunnyCdn::url($this->logo_path),
         );
     }
 

@@ -122,6 +122,7 @@ export default {
     jobForm: {
         postTitle: 'Naukri post karein',
         editTitle: 'Naukri edit karein',
+        freePost: 'Aapki pehli job posting bilkul free hai — koi subscription nahi chahiye. Abhi post karein!',
         subtitle: 'Sahi karigaron tak pahunchne ke liye details bharein',
         details: 'Naukri ki details',
         titleLabel: 'Title',

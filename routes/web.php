@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\JobModerationController as AdminJobModerationCont
 use App\Http\Controllers\Admin\KycController as AdminKycController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\PhoneOtpController;
 use App\Http\Controllers\Auth\RoleAuthController;
@@ -207,6 +208,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('categories', [AdminCategoryController::class, 'store'])->name('categories.store');
     Route::patch('categories/{category}', [AdminCategoryController::class, 'update'])->name('categories.update');
     Route::delete('categories/{category}', [AdminCategoryController::class, 'destroy'])->name('categories.destroy');
+
+    // App-wide settings (feature toggles)
+    Route::get('settings', [AdminSettingController::class, 'index'])->name('settings.index');
+    Route::patch('settings', [AdminSettingController::class, 'update'])->name('settings.update');
 });
 
 require __DIR__.'/settings.php';

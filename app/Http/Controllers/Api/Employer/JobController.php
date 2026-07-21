@@ -10,6 +10,8 @@ use App\Http\Resources\Api\EmployerJobResource;
 use App\Models\JobListing;
 use App\Models\User;
 use App\Notifications\NewJobNotification;
+use App\Services\JobPostingGate;
+use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -69,18 +71,23 @@ class JobController extends Controller
         $this->authorize('create', JobListing::class);
 
         $account = $request->user()->employerAccount();
-        $limit = $account->activeSubscription()?->plan->jobPostLimit() ?? 0;
+        $gate = JobPostingGate::evaluate($account);
 
-        if ($limit > 0 && $account->jobListings()->count() >= $limit) {
+        if (! $gate['allowed']) {
             return response()->json([
-                'message' => __('You have reached your plan\'s job posting limit.'),
+                'message' => $gate['message'],
             ], 422);
         }
 
         $job = $account->jobListings()->create($request->validated());
 
+        if ($gate['consumesFreePost']) {
+            JobPostingGate::consumeFreePost($account);
+        }
+
         if ($job->status === JobStatus::Active) {
             $this->notifyWorkers($job);
+            $this->sendPostedEmail($job, $account);
         }
 
         return response()->json([
@@ -102,6 +109,7 @@ class JobController extends Controller
         // Newly-activated job → notify workers, same as the web flow.
         if (! $wasActive && $job->status === JobStatus::Active) {
             $this->notifyWorkers($job);
+            $this->sendPostedEmail($job, $request->user()->employerAccount());
         }
 
         return response()->json([
@@ -135,6 +143,20 @@ class JobController extends Controller
         $job->delete();
 
         return response()->json(['message' => __('Job deleted.')]);
+    }
+
+    /**
+     * Email the employer a confirmation that their job is live. Uses the
+     * admin-editable "job_posted" template; no-ops if it is missing/inactive.
+     */
+    private function sendPostedEmail(JobListing $job, User $account): void
+    {
+        TemplatedMailer::send('job_posted', $account->email, [
+            'employer_name' => $account->name,
+            'job_title' => $job->title,
+            'job_location' => trim(implode(', ', array_filter([$job->city, $job->state]))) ?: '—',
+            'action_url' => url("/employer/jobs/{$job->id}/applicants"),
+        ]);
     }
 
     /**

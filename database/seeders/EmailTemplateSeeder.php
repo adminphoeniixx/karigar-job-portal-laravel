@@ -34,6 +34,22 @@ class EmailTemplateSeeder extends Seeder
 
         return [
             [
+                'key' => 'job_posted',
+                'name' => 'Job posted (to employer)',
+                'description' => 'Confirmation sent to the employer right after they post a job.',
+                'subject' => 'Your job “{{ job_title }}” is now live',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>Your job <strong>“{{ job_title }}”</strong> in {{ job_location }} has been posted successfully and is now live for {{ app_name }} workers to see.</p>
+<p>We’ll notify you as soon as candidates start applying.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View my job</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'job_title', 'job_location', 'action_url'],
+                'is_active' => true,
+            ],
+            [
                 'key' => 'application_received',
                 'name' => 'New application received (to employer)',
                 'description' => 'Sent to the employer when a worker applies to one of their jobs.',

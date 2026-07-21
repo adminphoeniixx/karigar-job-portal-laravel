@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api\Employer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EmployerProfileUpdateRequest;
 use App\Http\Resources\Api\EmployerProfileResource;
+use App\Services\BunnyCdn;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
@@ -40,9 +40,9 @@ class ProfileController extends Controller
 
         if ($request->hasFile('logo')) {
             if ($profile->logo_path) {
-                Storage::disk('public')->delete($profile->logo_path);
+                BunnyCdn::delete($profile->logo_path);
             }
-            $profile->logo_path = $request->file('logo')->store('logos', 'public');
+            $profile->logo_path = BunnyCdn::upload($request->file('logo'), 'logos');
         }
 
         $profile->save();
@@ -62,10 +62,10 @@ class ProfileController extends Controller
         $profile = $account->employerProfile()->firstOrCreate([]);
 
         if ($profile->logo_path) {
-            Storage::disk('public')->delete($profile->logo_path);
+            BunnyCdn::delete($profile->logo_path);
         }
 
-        $profile->logo_path = $request->file('logo')->store('logos', 'public');
+        $profile->logo_path = BunnyCdn::upload($request->file('logo'), 'logos');
         $profile->save();
 
         return response()->json(['logo_url' => $profile->logo_url]);

@@ -7,6 +7,8 @@ use App\Http\Requests\JobListingRequest;
 use App\Models\JobListing;
 use App\Models\User;
 use App\Notifications\NewJobNotification;
+use App\Services\JobPostingGate;
+use App\Support\TemplatedMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
@@ -47,9 +49,13 @@ class JobListingController extends Controller
     {
         $this->authorize('create', JobListing::class);
 
+        $account = $request->user()->employerAccount();
+
         return Inertia::render('jobs/Form', [
             'job' => null,
             'defaultPhone' => $request->user()->employerProfile?->phone,
+            // Show a "your first post is free" hint when this applies.
+            'freePostAvailable' => JobPostingGate::evaluate($account)['consumesFreePost'],
         ]);
     }
 
@@ -57,26 +63,45 @@ class JobListingController extends Controller
     {
         $this->authorize('create', JobListing::class);
 
-        $user = $request->user()->employerAccount();
-        $limit = $user->activeSubscription()?->plan->jobPostLimit() ?? 0;
+        $account = $request->user()->employerAccount();
+        $gate = JobPostingGate::evaluate($account);
 
-        if ($limit > 0 && $user->jobListings()->count() >= $limit) {
+        if (! $gate['allowed']) {
             return back()->with('toast', [
                 'type' => 'error',
-                'message' => __('You have reached your plan\'s job posting limit.'),
+                'message' => $gate['message'],
             ]);
         }
 
-        $job = $user->jobListings()->create($request->validated());
+        $job = $account->jobListings()->create($request->validated());
+
+        if ($gate['consumesFreePost']) {
+            JobPostingGate::consumeFreePost($account);
+        }
 
         // Notify workers about the new opening (active jobs only).
         if ($job->status === JobStatus::Active) {
             $this->notifyWorkers($job);
+            $this->sendPostedEmail($job, $account);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Job posted.')]);
 
         return to_route('jobs.index');
+    }
+
+    /**
+     * Email the employer a confirmation that their job is live. Uses the
+     * admin-editable "job_posted" template; no-ops if it is missing/inactive.
+     */
+    private function sendPostedEmail(JobListing $job, User $account): void
+    {
+        TemplatedMailer::send('job_posted', $account->email, [
+            'employer_name' => $account->name,
+            'job_title' => $job->title,
+            'job_location' => trim(implode(', ', array_filter([$job->city, $job->state]))) ?: '—',
+            'action_url' => url("/employer/jobs/{$job->id}/applicants"),
+        ]);
     }
 
     /**
