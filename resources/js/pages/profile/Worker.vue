@@ -28,7 +28,7 @@ interface WorkerProfile {
     avatar_url: string | null;
 }
 
-const props = defineProps<{ profile: WorkerProfile }>();
+const props = defineProps<{ profile: WorkerProfile; email: string | null }>();
 
 defineOptions({
     layout: {
@@ -39,6 +39,7 @@ defineOptions({
 const preview = ref<string | null>(props.profile.avatar_url);
 
 const form = useForm<{
+    email: string;
     phone: string;
     skills: string[];
     experience_years: number | string;
@@ -53,6 +54,7 @@ const form = useForm<{
     payout_upi: string;
     avatar: File | null;
 }>({
+    email: props.email ?? '',
     phone: props.profile.phone ?? '',
     skills: props.profile.skills ?? [],
     experience_years: props.profile.experience_years ?? '',
@@ -148,6 +150,12 @@ const submit = () => {
                         </label>
                     </div>
                     <div class="flex-1 space-y-4">
+                        <div class="grid gap-2">
+                            <Label for="email">{{ $t('profile.email') }}</Label>
+                            <Input id="email" type="email" v-model="form.email" placeholder="you@example.com" />
+                            <p class="text-xs text-muted-foreground">{{ $t('profile.emailHint') }}</p>
+                            <InputError :message="form.errors.email" />
+                        </div>
                         <div class="grid gap-2">
                             <Label for="phone">{{ $t('common.phone') }}</Label>
                             <Input id="phone" v-model="form.phone" placeholder="+91…" />

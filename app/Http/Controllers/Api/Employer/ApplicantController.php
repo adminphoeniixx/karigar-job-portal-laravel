@@ -72,7 +72,7 @@ class ApplicantController extends Controller
             'status' => ['required', 'in:accepted,rejected'],
         ]);
 
-        $application->update(['status' => ApplicationStatus::from($data['status'])]);
+        $application->update(['status' => ApplicationStatus::from($data['status']), 'status_changed_at' => now()]);
         $application->loadMissing('job.employer', 'worker.workerProfile', 'worker.kyc');
         $application->worker->notify(new ApplicationStatusNotification($application));
 

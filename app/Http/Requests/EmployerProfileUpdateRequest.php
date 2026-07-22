@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class EmployerProfileUpdateRequest extends FormRequest
 {
@@ -17,8 +18,9 @@ class EmployerProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Contact-person name lives on the user record, handled by the controller.
+            // Contact-person name and email live on the user record, handled by the controller.
             'name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->user()->id)],
             'company_name' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:500'],

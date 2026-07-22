@@ -99,6 +99,7 @@ Any subset of these fields (JSON):
 ```json
 {
   "name": "Rakesh Kumar",
+  "email": "rakesh@example.com",          // real email for job/application updates; must be unique
   "gender": "male",                       // male | female | other
   "skills": ["Plumbing", "Tiling"],
   "experience_years": 6,
@@ -127,7 +128,7 @@ Field `avatar` (image, ≤2 MB). → `{ "avatar_url": "https://.../storage/avata
 **WorkerProfileResource**
 ```json
 {
-  "id": 3, "name": "Rakesh Kumar", "phone": "9876543210", "gender": "male",
+  "id": 3, "name": "Rakesh Kumar", "email": "rakesh@example.com", "phone": "9876543210", "gender": "male",
   "skills": ["Plumbing"], "experience_years": 6, "education": "12th Pass",
   "spoken_languages": ["Hindi","Tamil"], "bio": "...", "expected_wage": "900.00",
   "wage_type": "daily", "city": "Chennai", "state": "Tamil Nadu",
@@ -172,6 +173,20 @@ Full detail + the worker's context.
 ### `GET /worker/applications?status=pending`
 `status` optional (`pending|accepted|rejected|withdrawn`). Paginated
 `ApplicationResource` list.
+
+**`ApplicationResource`** now also returns `status_changed_at` and a
+`tracking_steps` array for the parcel-style status tracker:
+```json
+"tracking_steps": [
+  { "key": "applied",     "state": "done",     "at": "2026-07-17T14:30:00+05:30", "result": null },
+  { "key": "review",      "state": "done",     "at": null, "result": null },
+  { "key": "shortlisted", "state": "done",     "at": "2026-07-18T09:00:00+05:30", "result": null },
+  { "key": "decision",    "state": "done",     "at": "2026-07-19T11:00:00+05:30", "result": "accepted" }
+]
+```
+`state`: `done | current | upcoming | rejected | skipped`. On the `decision`
+step, `result` is `accepted | rejected | withdrawn | null`. The app maps each
+`key` to a localized label and renders the icon from `state`.
 
 ### `POST /jobs/{job}/apply`
 ```json

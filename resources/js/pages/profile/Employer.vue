@@ -22,7 +22,7 @@ interface EmployerProfile {
     logo_url: string | null;
 }
 
-const props = defineProps<{ profile: EmployerProfile }>();
+const props = defineProps<{ profile: EmployerProfile; email: string | null }>();
 
 defineOptions({
     layout: {
@@ -33,6 +33,7 @@ defineOptions({
 const preview = ref<string | null>(props.profile.logo_url);
 
 const form = useForm<{
+    email: string;
     company_name: string;
     gstin: string;
     phone: string;
@@ -44,6 +45,7 @@ const form = useForm<{
     about: string;
     logo: File | null;
 }>({
+    email: props.email ?? '',
     company_name: props.profile.company_name ?? '',
     gstin: props.profile.gstin ?? '',
     phone: props.profile.phone ?? '',
@@ -139,6 +141,12 @@ const submit = () =>
                             <Label for="company_name">{{ $t('profile.companyName') }}</Label>
                             <Input id="company_name" v-model="form.company_name" />
                             <InputError :message="form.errors.company_name" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="email">{{ $t('profile.email') }}</Label>
+                            <Input id="email" type="email" v-model="form.email" placeholder="you@example.com" />
+                            <p class="text-xs text-muted-foreground">{{ $t('profile.emailHint') }}</p>
+                            <InputError :message="form.errors.email" />
                         </div>
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">

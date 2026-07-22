@@ -23,8 +23,11 @@ class ApplicationResource extends JsonResource
             'cover_note' => $this->cover_note,
             'expected_wage' => $this->expected_wage,
             'shortlisted_at' => $this->shortlisted_at?->toIso8601String(),
+            'status_changed_at' => $this->status_changed_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),
+            // Parcel-style timeline for the app tracker (see trackingSteps()).
+            'tracking_steps' => $this->trackingSteps(),
             'job' => $this->whenLoaded('job', fn () => [
                 'id' => $this->job->id,
                 'title' => $this->job->title,

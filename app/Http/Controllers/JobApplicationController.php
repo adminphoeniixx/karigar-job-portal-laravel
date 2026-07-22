@@ -25,6 +25,8 @@ class JobApplicationController extends Controller
             ->latest()
             ->paginate(15);
 
+        $applications->getCollection()->each->append('tracking_steps');
+
         return Inertia::render('applications/Index', [
             'applications' => $applications,
         ]);
@@ -91,7 +93,7 @@ class JobApplicationController extends Controller
     {
         abort_unless($application->worker_id === $request->user()->id, 403);
 
-        $application->update(['status' => ApplicationStatus::Withdrawn]);
+        $application->update(['status' => ApplicationStatus::Withdrawn, 'status_changed_at' => now()]);
 
         return back()->with('toast', [
             'type' => 'success',

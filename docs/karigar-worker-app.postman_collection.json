@@ -152,7 +152,7 @@
               { "key": "Accept", "value": "application/json" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Rakesh Kumar\",\n  \"gender\": \"male\",\n  \"skills\": [\"Plumbing\", \"Tiling\"],\n  \"experience_years\": 6,\n  \"education\": \"12th Pass\",\n  \"spoken_languages\": [\"Hindi\", \"Tamil\"],\n  \"bio\": \"6 years experience in plumbing and tiling.\",\n  \"expected_wage\": 900,\n  \"wage_type\": \"daily\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"travel_radius_km\": 15,\n  \"available\": true,\n  \"payout_upi\": \"rakesh@okhdfcbank\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Rakesh Kumar\",\n  \"email\": \"rakesh@example.com\",\n  \"gender\": \"male\",\n  \"skills\": [\"Plumbing\", \"Tiling\"],\n  \"experience_years\": 6,\n  \"education\": \"12th Pass\",\n  \"spoken_languages\": [\"Hindi\", \"Tamil\"],\n  \"bio\": \"6 years experience in plumbing and tiling.\",\n  \"expected_wage\": 900,\n  \"wage_type\": \"daily\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"travel_radius_km\": 15,\n  \"available\": true,\n  \"payout_upi\": \"rakesh@okhdfcbank\"\n}" },
             "url": { "raw": "{{base_url}}/api/v1/worker/profile", "host": ["{{base_url}}"], "path": ["api", "v1", "worker", "profile"] },
             "description": "Send any subset of fields. The signup wizard calls this per step."
           }

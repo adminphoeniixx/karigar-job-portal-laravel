@@ -19,7 +19,10 @@ class TemplatedMailer
      */
     public static function send(string $key, ?string $email, array $data = []): void
     {
-        if (empty($email)) {
+        // No address, or a phone-OTP placeholder address (<phone>@phone.karigar)
+        // that has no real inbox — skip rather than send a guaranteed bounce,
+        // which would waste quota and hurt sender reputation.
+        if (empty($email) || str_ends_with($email, '@phone.karigar')) {
             return;
         }
 

@@ -95,7 +95,7 @@ class ApplicationController extends Controller
     {
         abort_unless($application->worker_id === $request->user()->id, 403);
 
-        $application->update(['status' => ApplicationStatus::Withdrawn]);
+        $application->update(['status' => ApplicationStatus::Withdrawn, 'status_changed_at' => now()]);
 
         return response()->json(['message' => __('Application withdrawn.')]);
     }

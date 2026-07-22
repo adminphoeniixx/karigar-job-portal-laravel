@@ -2,8 +2,11 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, IndianRupee, MapPin, Phone, Sun, Users, Wallet } from '@lucide/vue';
 import { ref } from 'vue';
+import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import JobMap from '@/components/JobMap.vue';
 import PageHeader from '@/components/PageHeader.vue';
+
+interface TrackStep { key: string; state: string; at: string | null; result: string | null }
 
 interface Job {
     id: number;
@@ -33,7 +36,7 @@ interface Job {
 const props = defineProps<{
     job: Job;
     employerRating: { average: number; count: number } | null;
-    application: { status: string; created_at: string } | null;
+    application: { status: string; created_at: string; tracking_steps: TrackStep[] } | null;
     isSaved: boolean;
 }>();
 
@@ -165,6 +168,7 @@ const fmtDate = (iso: string | null): string =>
                             <div class="mt-2 inline-flex items-center gap-1.5 text-sm capitalize"><Clock class="size-3.5" /> {{ $t('kyc.status') }}: <b>{{ $t(`status.${application.status}`) }}</b></div>
                             <div class="mt-1 text-xs opacity-70">{{ $t('jobs.applied') }} {{ application.created_at }}</div>
                         </div>
+                        <ApplicationTracker :steps="application.tracking_steps" class="mt-5 rounded-xl border bg-card p-4" />
                         <Link href="/worker/applications" class="mt-4 inline-flex w-full items-center justify-center gap-1 rounded-xl border px-4 py-2.5 text-sm font-semibold transition hover:bg-muted">
                             {{ $t('jobs.trackApplications') }} <ArrowRight class="size-3.5" />
                         </Link>

@@ -291,6 +291,7 @@
           <h2 class="reg-h">What's your name?</h2>
           <p class="reg-p">Employers will see this on your profile.</p>
           <div class="field"><label>Full name</label><input class="input" id="regName" placeholder="e.g. Rakesh Kumar" /></div>
+          <div class="field"><label>Email <span class="muted tiny">(optional)</span></label><input class="input" id="regEmail" type="email" placeholder="you@example.com" /><p class="hint">Get job & application updates by email.</p></div>
           <div class="field"><label>Gender</label>
             <div class="row" style="gap:8px" id="regGender">
               <span class="chip chip-line" onclick="pickOne(this,'#regGender')">Male</span>
@@ -593,6 +594,10 @@
         </div>
 
         <div class="field"><label>Full name</label><input class="input" value="Rakesh Kumar" /></div>
+        <div class="field"><label>Email</label>
+          <input class="input" type="email" placeholder="you@example.com" />
+          <p class="hint">Add a real email to get job & application updates by email.</p>
+        </div>
         <div class="field"><label>Mobile number</label>
           <input class="input" value="+91 98765 43210" disabled style="background:var(--line2);color:var(--muted)" />
           <p class="hint">Verified via OTP · can't be changed</p>
@@ -1080,6 +1085,27 @@ function toggleSave(btn){
 function callEmployer(){ toast('📞 Calling employer… (demo)'); }
 
 /* ============================ APPLICATIONS ============================ */
+// Parcel-style status timeline (mirrors backend JobApplication::trackingSteps()).
+function trackerHtml(a){
+  const shortlisted=a.shortlisted, decided=['accepted','rejected','withdrawn'].includes(a.status);
+  const steps=[
+    {label:'Applied', state:'done'},
+    {label:'Under review', state:(shortlisted||decided)?'done':'current'},
+    {label:'Shortlisted', state: shortlisted?'done':(decided?'skipped':'upcoming')},
+    {label: a.status==='accepted'?'Selected 🎉':a.status==='rejected'?'Not selected':a.status==='withdrawn'?'Withdrawn':'Decision',
+      state: a.status==='accepted'?'done':a.status==='rejected'?'rejected':a.status==='withdrawn'?'done':(shortlisted?'current':'upcoming')}
+  ];
+  const col={done:'#10b981',current:'#f97316',rejected:'#ef4444',skipped:'#cbd5e1',upcoming:'transparent'};
+  const bd={done:'#10b981',current:'#f97316',rejected:'#ef4444',skipped:'#cbd5e1',upcoming:'var(--line)'};
+  const dot=(s)=>`<span style="display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:${col[s]};border:2px solid ${bd[s]};color:#fff;font-size:10px;font-weight:700;flex:0 0 auto">${s==='done'?'✓':s==='rejected'?'✕':s==='current'?'●':''}</span>`;
+  return `<div style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px">
+    <div class="tiny" style="font-weight:700;margin-bottom:8px">Application status</div>
+    ${steps.map((st,i)=>`<div style="display:flex;gap:9px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;align-items:center">${dot(st.state)}${i<steps.length-1?`<span style="width:2px;height:16px;background:${st.state==='done'?'#10b981':st.state==='rejected'?'#ef4444':'var(--line)'}"></span>`:''}</div>
+      <div class="tiny" style="padding-bottom:${i<steps.length-1?'10px':'0'};font-weight:600;color:${st.state==='upcoming'||st.state==='skipped'?'var(--muted)':(st.state==='rejected'?'#ef4444':'var(--fg)')}">${st.label}</div>
+    </div>`).join('')}
+  </div>`;
+}
 function appCardHtml(a){
   return `<div class="card" style="padding:15px;margin-bottom:12px">
     <div class="between">
@@ -1095,6 +1121,7 @@ function appCardHtml(a){
       <span class="metaitem"><svg class="ic" viewBox="0 0 24 24"><path d="M16 2v4M8 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>Applied ${a.date}</span>
     </div>
     ${a.shortlisted?'<div class="tiny" style="margin-top:8px;color:var(--green-fg);font-weight:600">★ Shortlisted by employer</div>':''}
+    ${trackerHtml(a)}
     <div class="row" style="gap:10px;margin-top:12px">
       ${a.status==='accepted'?'<button class="btn btn-primary btn-sm" style="flex:1" onclick="callEmployer()">Contact employer</button><button class="btn btn-outline btn-sm" style="flex:1" onclick="openSheet(\'sheet-review\')">Leave review</button>':''}
       ${a.status==='pending'?'<button class="btn btn-outline btn-sm" style="flex:1;color:var(--rose-fg)" onclick="withdraw('+a.id+')">Withdraw</button>':''}

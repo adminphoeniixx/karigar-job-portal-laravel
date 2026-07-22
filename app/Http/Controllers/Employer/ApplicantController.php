@@ -35,6 +35,7 @@ class ApplicantController extends Controller
                 'contact_unlocked' => $a->contact_unlocked,
                 'shortlisted' => $a->shortlisted_at !== null,
                 'created_at' => $a->created_at?->diffForHumans(),
+                'tracking_steps' => $a->trackingSteps(),
                 'escrow' => $a->escrow ? [
                     'id' => $a->escrow->id,
                     'status' => $a->escrow->status->value,
@@ -77,7 +78,7 @@ class ApplicantController extends Controller
             'status' => ['required', 'in:accepted,rejected'],
         ]);
 
-        $application->update(['status' => ApplicationStatus::from($data['status'])]);
+        $application->update(['status' => ApplicationStatus::from($data['status']), 'status_changed_at' => now()]);
         $application->loadMissing('job.employer', 'worker');
         $application->worker->notify(new ApplicationStatusNotification($application));
 

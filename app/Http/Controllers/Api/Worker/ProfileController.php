@@ -30,12 +30,16 @@ class ProfileController extends Controller
         $user = $request->user();
         $profile = $user->workerProfile()->firstOrCreate([]);
 
-        // The display name lives on the user record, not the profile.
+        // The display name and email live on the user record, not the profile.
         if ($request->filled('name')) {
             $user->update(['name' => $request->validated('name')]);
         }
 
-        $profile->fill($request->safe()->except('name'));
+        if ($request->filled('email')) {
+            $user->update(['email' => $request->validated('email')]);
+        }
+
+        $profile->fill($request->safe()->except('name', 'email'));
         $profile->save();
         $profile->setRelation('user', $user->fresh());
 

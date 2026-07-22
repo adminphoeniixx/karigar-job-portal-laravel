@@ -25,6 +25,7 @@ class WorkerProfileRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:100'],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->user()->id)],
             'phone' => ['nullable', 'string', 'max:20'],
             'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
             'skills' => ['nullable', 'array', 'max:30'],

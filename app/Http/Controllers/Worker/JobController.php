@@ -44,6 +44,7 @@ class JobController extends Controller
             'application' => $application ? [
                 'status' => $application->status->value,
                 'created_at' => $application->created_at?->diffForHumans(),
+                'tracking_steps' => $application->trackingSteps(),
             ] : null,
             'isSaved' => $user->savedJobs()->where('job_listing_id', $job->id)->exists(),
         ]);

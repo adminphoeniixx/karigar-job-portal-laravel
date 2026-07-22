@@ -35,6 +35,7 @@ class ApplicantResource extends JsonResource
             'contact_unlocked' => $this->contact_unlocked,
             'created_ago' => $this->created_at?->diffForHumans(),
             'created_at' => $this->created_at?->toIso8601String(),
+            'tracking_steps' => $this->trackingSteps(),
             'job' => $this->whenLoaded('job', fn () => [
                 'id' => $this->job->id,
                 'title' => $this->job->title,

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class WorkerProfileUpdateRequest extends FormRequest
 {
@@ -17,6 +18,8 @@ class WorkerProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // Real email lives on the user record; handled by the controller.
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->user()->id)],
             'phone' => ['nullable', 'string', 'max:20'],
             'skills' => ['nullable', 'array', 'max:30'],
             'skills.*' => ['string', 'max:50'],

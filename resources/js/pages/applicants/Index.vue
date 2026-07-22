@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, IndianRupee, Lock, Mail, MapPin, Phone, Send, Star, Unlock, Users, X } from '@lucide/vue';
+import { Check, ChevronDown, IndianRupee, Lock, Mail, MapPin, Phone, Send, Star, Unlock, Users, X } from '@lucide/vue';
 import { ref } from 'vue';
+import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import PageHeader from '@/components/PageHeader.vue';
+
+interface TrackStep { key: string; state: string; at: string | null; result: string | null }
 
 interface Applicant {
     id: number;
@@ -12,6 +15,7 @@ interface Applicant {
     contact_unlocked: boolean;
     shortlisted: boolean;
     created_at: string;
+    tracking_steps: TrackStep[];
     escrow: { id: number; status: string; status_label: string; amount: string; payout_amount: string } | null;
     worker: {
         id: number;
@@ -51,6 +55,11 @@ const unlock = (id: number) => {
 
 const toggleShortlist = (id: number) => {
     router.post(`/employer/applications/${id}/shortlist`, {}, { preserveScroll: true });
+};
+
+const expanded = ref<Set<number>>(new Set());
+const toggleTrack = (id: number) => {
+    expanded.value.has(id) ? expanded.value.delete(id) : expanded.value.add(id);
 };
 
 const fund = (a: Applicant) => {
@@ -212,6 +221,18 @@ const submitReview = () => {
                     </template>
 
                     <Unlock v-if="a.contact_unlocked" class="ml-auto size-4 text-orange-500" />
+
+                    <button
+                        class="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-500/10 dark:text-orange-300"
+                        @click="toggleTrack(a.id)"
+                    >
+                        {{ $t('tracker.track') }}
+                        <ChevronDown class="size-3.5 transition-transform" :class="{ 'rotate-180': expanded.has(a.id) }" />
+                    </button>
+                </div>
+
+                <div v-if="expanded.has(a.id)" class="mt-4 border-t pt-4">
+                    <ApplicationTracker :steps="a.tracking_steps" class="max-w-md" />
                 </div>
             </div>
         </div>

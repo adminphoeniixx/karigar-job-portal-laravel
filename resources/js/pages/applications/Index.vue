@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { FileText, MapPin, Star } from '@lucide/vue';
+import { ChevronDown, FileText, MapPin, Star } from '@lucide/vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import PageHeader from '@/components/PageHeader.vue';
+
+interface TrackStep { key: string; state: string; at: string | null; result: string | null }
 
 interface Application {
     id: number;
@@ -10,6 +14,7 @@ interface Application {
     expected_wage: string | null;
     created_at: string;
     shortlisted_at: string | null;
+    tracking_steps: TrackStep[];
     job: {
         id: number;
         title: string;
@@ -39,6 +44,11 @@ const statusPill: Record<string, string> = {
 const fmtDate = (iso: string | null): string =>
     iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
+const expanded = ref<Set<number>>(new Set());
+const toggleTrack = (id: number) => {
+    expanded.value.has(id) ? expanded.value.delete(id) : expanded.value.add(id);
+};
+
 const withdraw = (id: number) => {
     if (window.confirm(t('applications.withdrawConfirm'))) {
         router.delete(`/applications/${id}`, { preserveScroll: true });
@@ -65,7 +75,8 @@ const withdraw = (id: number) => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="a in applications.data" :key="a.id" class="border-t transition hover:bg-muted/30">
+                        <template v-for="a in applications.data" :key="a.id">
+                        <tr class="border-t transition hover:bg-muted/30">
                             <td class="px-5 py-3.5">
                                 <Link :href="`/jobs/${a.job.id}`" class="font-medium hover:text-orange-600 dark:hover:text-orange-300">{{ a.job.title }}</Link>
                                 <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
@@ -89,7 +100,14 @@ const withdraw = (id: number) => {
                                     </span>
                                 </div>
                             </td>
-                            <td class="px-5 py-3.5 text-right">
+                            <td class="px-5 py-3.5 text-right whitespace-nowrap">
+                                <button
+                                    class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-500/10 dark:text-orange-300"
+                                    @click="toggleTrack(a.id)"
+                                >
+                                    {{ $t('tracker.track') }}
+                                    <ChevronDown class="size-3.5 transition-transform" :class="{ 'rotate-180': expanded.has(a.id) }" />
+                                </button>
                                 <button
                                     v-if="a.status === 'pending'"
                                     class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400"
@@ -97,9 +115,14 @@ const withdraw = (id: number) => {
                                 >
                                     {{ $t('applications.withdraw') }}
                                 </button>
-                                <span v-else class="text-xs text-muted-foreground">—</span>
                             </td>
                         </tr>
+                        <tr v-if="expanded.has(a.id)" class="border-t bg-muted/20">
+                            <td colspan="5" class="px-5 py-4">
+                                <ApplicationTracker :steps="a.tracking_steps" class="max-w-md" />
+                            </td>
+                        </tr>
+                        </template>
                         <tr v-if="applications.data.length === 0">
                             <td colspan="5" class="px-5 py-16 text-center">
                                 <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
