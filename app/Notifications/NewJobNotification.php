@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Models\JobListing;
+use App\Notifications\Channels\FcmChannel;
+use App\Notifications\Messages\FcmMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -17,7 +19,25 @@ class NewJobNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', FcmChannel::class];
+    }
+
+    /**
+     * Push payload delivered to the worker's device.
+     */
+    public function toFcm(object $notifiable): FcmMessage
+    {
+        $location = collect([$this->job->city, $this->job->state])->filter()->join(', ');
+
+        return FcmMessage::create(
+            'New job posted',
+            "\"{$this->job->title}\"".($location ? " in {$location}." : '.'),
+            [
+                'type' => 'job.posted',
+                'job_listing_id' => $this->job->id,
+                'url' => "/worker/jobs/{$this->job->id}",
+            ],
+        );
     }
 
     /**

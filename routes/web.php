@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\EscrowController as AdminEscrowController;
 use App\Http\Controllers\Admin\JobModerationController as AdminJobModerationController;
 use App\Http\Controllers\Admin\KycController as AdminKycController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
+use App\Http\Controllers\Admin\PushNotificationController as AdminPushNotificationController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -208,6 +209,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('categories', [AdminCategoryController::class, 'store'])->name('categories.store');
     Route::patch('categories/{category}', [AdminCategoryController::class, 'update'])->name('categories.update');
     Route::delete('categories/{category}', [AdminCategoryController::class, 'destroy'])->name('categories.destroy');
+
+    // Push notifications — manual broadcasts to workers
+    Route::get('push-notifications', [AdminPushNotificationController::class, 'index'])->name('push-notifications.index');
+    Route::get('push-notifications/workers', [AdminPushNotificationController::class, 'searchWorkers'])->name('push-notifications.workers');
+    Route::post('push-notifications', [AdminPushNotificationController::class, 'store'])->name('push-notifications.store');
 
     // App-wide settings (feature toggles)
     Route::get('settings', [AdminSettingController::class, 'index'])->name('settings.index');

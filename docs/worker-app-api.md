@@ -228,6 +228,29 @@ encrypted at rest and never returned.
 - `POST /notifications/{id}/read` → `{ "unread": 1 }`
 - `POST /notifications/read-all` → `{ "unread": 0 }`
 
+### Push notification device tokens
+
+Register the device's FCM token so it receives push notifications (application status, new jobs, shortlist, admin broadcasts). Call after login and whenever FCM rotates the token; remove on logout.
+
+#### `POST /device-tokens` 🔒
+
+```json
+{ "token": "<FCM_DEVICE_TOKEN>", "platform": "android" }
+```
+
+- `token` — **required**, the FCM registration token from the device.
+- `platform` — optional, one of `android` | `ios` | `web`.
+
+Idempotent (`updateOrCreate` on the token). → `{ "registered": true }`
+
+#### `DELETE /device-tokens` 🔒
+
+```json
+{ "token": "<FCM_DEVICE_TOKEN>" }
+```
+
+Removes the token so the device stops receiving pushes. → `{ "removed": true }`
+
 ---
 
 ## 9. Reviews 🔒 (worker)

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\Auth\OtpAuthController;
 use App\Http\Controllers\Api\Employer\ApplicantController as EmployerApplicantController;
 use App\Http\Controllers\Api\Employer\DashboardController as EmployerDashboardController;
@@ -53,6 +54,10 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/logout', [OtpAuthController::class, 'logout'])->name('api.logout');
         Route::delete('account', [AccountController::class, 'destroy'])->name('api.account.destroy');
         Route::post('locale', [LocaleController::class, 'update'])->name('api.locale');
+
+        // Push notification device tokens (any authenticated user)
+        Route::post('device-tokens', [DeviceTokenController::class, 'store'])->name('api.device-tokens.store');
+        Route::delete('device-tokens', [DeviceTokenController::class, 'destroy'])->name('api.device-tokens.destroy');
 
         // Notifications (any authenticated user)
         Route::get('notifications', [NotificationController::class, 'index'])->name('api.notifications');

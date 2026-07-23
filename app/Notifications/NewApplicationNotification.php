@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Models\JobApplication;
+use App\Notifications\Channels\FcmChannel;
+use App\Notifications\Messages\FcmMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -17,7 +19,23 @@ class NewApplicationNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', FcmChannel::class];
+    }
+
+    /**
+     * Push payload delivered to the employer's device.
+     */
+    public function toFcm(object $notifiable): FcmMessage
+    {
+        return FcmMessage::create(
+            'New applicant',
+            "{$this->application->worker->name} applied to \"{$this->application->job->title}\".",
+            [
+                'type' => 'application.received',
+                'application_id' => $this->application->id,
+                'url' => "/employer/jobs/{$this->application->job_listing_id}/applicants",
+            ],
+        );
     }
 
     /**

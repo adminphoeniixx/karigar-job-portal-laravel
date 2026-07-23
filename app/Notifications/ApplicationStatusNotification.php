@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Models\JobApplication;
+use App\Notifications\Channels\FcmChannel;
+use App\Notifications\Messages\FcmMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -17,7 +19,25 @@ class ApplicationStatusNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', FcmChannel::class];
+    }
+
+    /**
+     * Push payload delivered to the worker's device.
+     */
+    public function toFcm(object $notifiable): FcmMessage
+    {
+        $status = $this->application->status->label();
+
+        return FcmMessage::create(
+            "Application {$status}",
+            "Your application for \"{$this->application->job->title}\" was {$status}.",
+            [
+                'type' => 'application.'.$this->application->status->value,
+                'application_id' => $this->application->id,
+                'url' => '/worker/applications',
+            ],
+        );
     }
 
     /**

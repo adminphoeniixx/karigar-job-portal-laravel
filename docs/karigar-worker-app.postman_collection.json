@@ -15,7 +15,8 @@
     { "key": "otp", "value": "1234", "type": "string" },
     { "key": "job_id", "value": "1", "type": "string" },
     { "key": "application_id", "value": "1", "type": "string" },
-    { "key": "notification_id", "value": "", "type": "string" }
+    { "key": "notification_id", "value": "", "type": "string" },
+    { "key": "fcm_token", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -333,6 +334,32 @@
             "method": "POST",
             "header": [{ "key": "Accept", "value": "application/json" }],
             "url": { "raw": "{{base_url}}/api/v1/notifications/read-all", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "read-all"] }
+          }
+        },
+        {
+          "name": "Register device token (push)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{fcm_token}}\",\n  \"platform\": \"android\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/device-tokens", "host": ["{{base_url}}"], "path": ["api", "v1", "device-tokens"] },
+            "description": "Register/refresh the device's FCM token for push. Idempotent. platform: android | ios | web (optional)."
+          }
+        },
+        {
+          "name": "Remove device token (push)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{fcm_token}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/device-tokens", "host": ["{{base_url}}"], "path": ["api", "v1", "device-tokens"] },
+            "description": "Remove the device's FCM token on logout so it stops receiving pushes."
           }
         }
       ]

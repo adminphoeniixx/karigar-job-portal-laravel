@@ -19,6 +19,7 @@ import {
     Star,
     TicketPercent,
     Search,
+    Send,
     Settings,
     ShieldCheck,
     Tags,
@@ -82,6 +83,7 @@ const navByRole = computed((): Record<string, NavItem[]> => ({
         { title: 'Plans & Limits', href: '/admin/plans', icon: Layers },
         { title: 'Coupons', href: '/admin/coupons', icon: TicketPercent },
         { title: 'Email Templates', href: '/admin/email-templates', icon: Mail },
+        { title: 'Push Notifications', href: '/admin/push-notifications', icon: Send },
         { title: 'Settings', href: '/admin/settings', icon: Settings },
     ],
 }));
