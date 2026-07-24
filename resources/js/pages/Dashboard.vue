@@ -3,8 +3,6 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Activity, ArrowUpRight } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Sparkline from '@/components/Sparkline.vue';
-import { areaPath, chartPoints, linePath } from '@/lib/chart';
 import { dashboard } from '@/routes';
 
 interface Stat {
@@ -20,11 +18,17 @@ interface Table {
     rows: (string | number)[][];
 }
 
+interface RangeData {
+    labels: string[];
+    series: number[][];
+}
+
 const props = defineProps<{
     greeting: string;
     role: string;
     stats: Stat[];
     table: Table;
+    activity: Record<string, RangeData>;
 }>();
 
 const { t } = useI18n();
@@ -66,44 +70,56 @@ defineOptions({
     layout: { breadcrumbs: [{ title: 'Dashboard', href: dashboard() }] },
 });
 
-// Jobick-style tile accents: line color + decorative trend wave
-const tiles = [
-    { color: '#f24711', wave: [8, 14, 9, 16, 11, 18, 13, 20] },
-    { color: '#2bc155', wave: [12, 9, 15, 11, 17, 12, 19, 16] },
-    { color: '#4a6cf7', wave: [10, 16, 12, 9, 15, 12, 18, 14] },
-    { color: '#c544d8', wave: [14, 10, 16, 12, 18, 13, 17, 20] },
-];
+// Tile accent colors (cycled across the stat tiles).
+const tileColors = ['#f24711', '#2bc155', '#4a6cf7', '#c544d8'];
 
-// Activity overview chart (Jobick "Vacancy Status" style, decorative trends)
+// Activity overview chart — real data from the backend, one series per stage.
 const ranges = ['Daily', 'Weekly', 'Monthly'] as const;
 const rangeLabel: Record<string, string> = { Daily: 'dashboard.daily', Weekly: 'dashboard.weekly', Monthly: 'dashboard.monthly' };
 const activeRange = ref<(typeof ranges)[number]>('Monthly');
-const series: Record<(typeof ranges)[number], number[][]> = {
-    Daily: [
-        [42, 55, 48, 62, 50, 66, 58, 70, 60, 64, 55, 68],
-        [28, 34, 30, 38, 33, 36, 31, 40, 35, 38, 33, 42],
-        [18, 24, 20, 27, 22, 30, 24, 28, 21, 26, 23, 29],
-    ],
-    Weekly: [
-        [40, 58, 45, 66, 52, 70, 56, 64, 60, 72, 58, 66],
-        [30, 36, 32, 42, 34, 38, 33, 44, 36, 40, 34, 45],
-        [20, 26, 22, 30, 24, 32, 25, 29, 22, 28, 24, 31],
-    ],
-    Monthly: [
-        [40, 62, 48, 65, 44, 66, 50, 64, 46, 60, 52, 62],
-        [30, 33, 36, 34, 32, 38, 30, 24, 34, 36, 32, 44],
-        [28, 30, 26, 25, 30, 24, 28, 36, 26, 30, 27, 31],
-    ],
-};
 const legend = [
     { label: 'dashboard.applications', color: '#2bc155' },
     { label: 'dashboard.inProgress', color: '#4a6cf7' },
     { label: 'dashboard.closedSeries', color: '#ff4a55' },
 ];
+
 const CW = 720;
 const CH = 230;
-const chartLines = computed(() => series[activeRange.value].map((s) => linePath(chartPoints(s, CW, CH, 8))));
-const chartAreas = computed(() => chartLines.value.map((l) => areaPath(l, CW, CH, 8)));
+const PAD = 12;
+
+const activeData = computed<RangeData>(() => props.activity[activeRange.value] ?? { labels: [], series: [[], [], []] });
+const pointCount = computed(() => activeData.value.labels.length);
+// One shared 0-based y-scale so the three series are honestly comparable.
+const sharedMax = computed(() => Math.max(1, ...activeData.value.series.flat()));
+const rangeTotal = computed(() => activeData.value.series[0]?.reduce((a, b) => a + b, 0) ?? 0);
+const hasActivity = computed(() => activeData.value.series.some((s) => s.some((v) => v > 0)));
+
+const xAt = (i: number) => (pointCount.value < 2 ? CW / 2 : PAD + (i / (pointCount.value - 1)) * (CW - PAD * 2));
+const yAt = (v: number) => PAD + (1 - v / sharedMax.value) * (CH - PAD * 2);
+
+// Straight polylines (rounded joins) — honest for counts, no spline overshoot.
+const seriesPaths = computed(() =>
+    activeData.value.series.map((s) => s.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(1)} ${yAt(v).toFixed(1)}`).join(' ')),
+);
+
+// --- Hover crosshair + tooltip ---
+const chartWrap = ref<HTMLElement | null>(null);
+const hoverIndex = ref<number | null>(null);
+const onChartMove = (e: MouseEvent) => {
+    const el = chartWrap.value;
+    if (!el || pointCount.value < 2) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    hoverIndex.value = Math.round(ratio * (pointCount.value - 1));
+};
+const onChartLeave = () => (hoverIndex.value = null);
+const hoverLeftPct = computed(() => (hoverIndex.value === null ? 0 : (xAt(hoverIndex.value) / CW) * 100));
+const axisTicks = computed(() => {
+    const l = activeData.value.labels;
+    if (l.length === 0) return [];
+    const mid = Math.floor(l.length / 2);
+    return [l[0], l[mid], l[l.length - 1]];
+});
 
 // Right-rail snapshot derived from the real stats
 const numeric = computed(() => props.stats.map((s) => Number(String(s.value).replace(/[^\d.]/g, '')) || 0));
@@ -137,15 +153,11 @@ const profileHref = computed(
                 <div
                     v-for="(stat, i) in stats"
                     :key="stat.label"
-                    class="rounded-2xl border bg-card p-5 shadow-sm transition hover:shadow-md"
+                    class="relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <div class="text-3xl font-bold tracking-tight tabular-nums">{{ tr(stat.value) }}</div>
-                            <div class="mt-1 truncate text-sm font-medium text-muted-foreground">{{ tr(stat.label) }}</div>
-                        </div>
-                        <Sparkline :points="tiles[i % tiles.length].wave" :color="tiles[i % tiles.length].color" :width="88" :height="40" />
-                    </div>
+                    <span class="absolute inset-y-0 left-0 w-1" :style="{ background: tileColors[i % tileColors.length] }" />
+                    <div class="text-3xl font-bold tracking-tight tabular-nums">{{ tr(stat.value) }}</div>
+                    <div class="mt-1 truncate text-sm font-medium text-muted-foreground">{{ tr(stat.label) }}</div>
                     <div class="mt-3">
                         <span class="inline-flex rounded-md bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">{{ tr(stat.hint) }}</span>
                     </div>
@@ -175,29 +187,66 @@ const profileHref = computed(
                         {{ $t(l.label) }}
                     </span>
                 </div>
-                <svg class="mt-4 w-full" :viewBox="`0 0 ${CW} ${CH}`" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                    <defs>
-                        <linearGradient v-for="(l, i) in legend" :id="`area-${i}`" :key="i" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" :stop-color="l.color" stop-opacity="0.16" />
-                            <stop offset="100%" :stop-color="l.color" stop-opacity="0" />
-                        </linearGradient>
-                    </defs>
-                    <line
-                        v-for="g in 4"
-                        :key="g"
-                        x1="8"
-                        :x2="CW - 8"
-                        :y1="(CH / 5) * g"
-                        :y2="(CH / 5) * g"
-                        stroke="currentColor"
-                        class="text-border"
-                        stroke-dasharray="4 6"
-                    />
-                    <template v-for="(line, i) in chartLines" :key="i">
-                        <path :d="chartAreas[i]" :fill="`url(#area-${i})`" />
-                        <path :d="line" :stroke="legend[i].color" stroke-width="3" stroke-linecap="round" />
+
+                <div ref="chartWrap" class="relative mt-4 select-none" @mousemove="onChartMove" @mouseleave="onChartLeave">
+                    <svg class="w-full" :viewBox="`0 0 ${CW} ${CH}`" fill="none" preserveAspectRatio="none" aria-hidden="true">
+                        <line
+                            v-for="g in 4"
+                            :key="g"
+                            x1="0"
+                            :x2="CW"
+                            :y1="(CH / 5) * g"
+                            :y2="(CH / 5) * g"
+                            stroke="currentColor"
+                            class="text-border"
+                            stroke-dasharray="3 7"
+                        />
+                        <path
+                            v-for="(d, i) in seriesPaths"
+                            :key="i"
+                            :d="d"
+                            :stroke="legend[i].color"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            vector-effect="non-scaling-stroke"
+                        />
+                    </svg>
+
+                    <!-- Hover crosshair, per-series dots, and tooltip -->
+                    <template v-if="hoverIndex !== null && hasActivity">
+                        <div class="pointer-events-none absolute top-0 bottom-0 w-px bg-foreground/15" :style="{ left: `${hoverLeftPct}%` }" />
+                        <div
+                            v-for="(s, i) in activeData.series"
+                            :key="i"
+                            class="pointer-events-none absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-background"
+                            :style="{ left: `${hoverLeftPct}%`, top: `${(yAt(s[hoverIndex]) / CH) * 100}%`, borderColor: legend[i].color }"
+                        />
+                        <div
+                            class="pointer-events-none absolute top-2 z-10 -translate-x-1/2 rounded-xl border bg-popover px-3 py-2 shadow-lg"
+                            :style="{ left: `${Math.min(82, Math.max(18, hoverLeftPct))}%` }"
+                        >
+                            <div class="mb-1 text-[11px] font-semibold text-muted-foreground">{{ activeData.labels[hoverIndex] }}</div>
+                            <div v-for="(l, i) in legend" :key="i" class="flex items-center gap-1.5 text-xs">
+                                <span class="size-2 rounded-full" :style="{ background: l.color }" />
+                                <span class="text-muted-foreground">{{ $t(l.label) }}</span>
+                                <span class="ml-auto pl-3 font-bold tabular-nums">{{ activeData.series[i][hoverIndex] }}</span>
+                            </div>
+                        </div>
                     </template>
-                </svg>
+
+                    <!-- Empty state -->
+                    <div v-if="!hasActivity" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <span class="rounded-lg bg-muted px-3 py-1.5 text-xs text-muted-foreground">{{ $t('dashboard.noData') }}</span>
+                    </div>
+                </div>
+
+                <div class="mt-2 flex justify-between px-1 text-[10px] tabular-nums text-muted-foreground">
+                    <span v-for="(tick, i) in axisTicks" :key="i">{{ tick }}</span>
+                </div>
+                <p class="mt-3 text-xs text-muted-foreground">
+                    {{ rangeTotal }} {{ $t('dashboard.applications').toLowerCase() }} · {{ $t(rangeLabel[activeRange]).toLowerCase() }}
+                </p>
             </div>
 
             <!-- Recent table -->

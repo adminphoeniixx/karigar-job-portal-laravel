@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ApplicationStatus;
 use App\Enums\JobStatus;
 use App\Enums\KycStatus;
 use App\Enums\SubscriptionStatus;
@@ -33,6 +34,8 @@ class DashboardController extends Controller
             ->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
             ->sum('plans.price');
 
+        $weekAgo = now()->subDays(7);
+
         return Inertia::render('admin/Dashboard', [
             'stats' => [
                 'workers' => User::where('role', UserRole::Worker->value)->count(),
@@ -44,6 +47,20 @@ class DashboardController extends Controller
                 'activeSubscriptions' => Subscription::whereIn('status', $entitled)->count(),
                 'pendingKyc' => KycDocument::where('status', KycStatus::Pending->value)->count(),
                 'mrr' => $mrr,
+            ],
+            // Real "new in the last 7 days" deltas shown as trend chips on the tiles.
+            'deltas' => [
+                'workers' => User::where('role', UserRole::Worker->value)->where('created_at', '>=', $weekAgo)->count(),
+                'employers' => User::where('role', UserRole::Employer->value)->where('created_at', '>=', $weekAgo)->count(),
+                'activeJobs' => JobListing::where('status', JobStatus::Active->value)->where('created_at', '>=', $weekAgo)->count(),
+                'applications' => JobApplication::where('created_at', '>=', $weekAgo)->count(),
+            ],
+            // Application funnel breakdown for the composition bar.
+            'applicationBreakdown' => [
+                'pending' => JobApplication::where('status', ApplicationStatus::Pending->value)->count(),
+                'accepted' => JobApplication::where('status', ApplicationStatus::Accepted->value)->count(),
+                'rejected' => JobApplication::where('status', ApplicationStatus::Rejected->value)->count(),
+                'withdrawn' => JobApplication::where('status', ApplicationStatus::Withdrawn->value)->count(),
             ],
             'signups' => $this->signupTrend(),
             'recentUsers' => User::latest()->limit(8)->get(['id', 'name', 'email', 'role', 'created_at', 'suspended_at']),

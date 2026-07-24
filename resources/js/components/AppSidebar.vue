@@ -13,7 +13,6 @@ import {
     Gauge,
     Layers,
     LayoutGrid,
-    LifeBuoy,
     Mail,
     Plus,
     Star,
@@ -128,17 +127,6 @@ const planLabel = computed(
         </SidebarContent>
 
         <SidebarFooter>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarMenuButton as-child tooltip="Support">
-                        <Link href="/jobs">
-                            <LifeBuoy />
-                            <span>{{ t('nav.support') }}</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-
             <!-- Plan badge (Velocity-style) -->
             <Link
                 :href="role === 'employer' ? '/subscription' : dashboard()"
