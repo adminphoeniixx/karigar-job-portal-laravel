@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\KycStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
@@ -162,6 +163,17 @@ class User extends Authenticatable implements PasskeyUser
     public function kyc(): HasOne
     {
         return $this->hasOne(KycDocument::class);
+    }
+
+    /**
+     * Whether this user shows a "verified" badge. Always false while the
+     * verification feature is switched off in admin settings, so the badge
+     * disappears everywhere without touching each call site.
+     */
+    public function isKycVerified(): bool
+    {
+        return Setting::bool('kyc_verification_enabled', true)
+            && $this->kyc?->status === KycStatus::Verified;
     }
 
     /**

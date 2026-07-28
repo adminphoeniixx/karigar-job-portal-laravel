@@ -30,7 +30,7 @@ class EmployerProfileResource extends JsonResource
             'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
             'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
             'logo_url' => $this->logo_url,
-            'verified' => $this->user?->kyc?->status->value === 'verified',
+            'verified' => (bool) $this->user?->isKycVerified(),
             'rating' => [
                 'average' => $this->user?->averageRating() ?? 0.0,
                 'count' => $this->user ? $this->user->reviewsReceived()->count() : 0,

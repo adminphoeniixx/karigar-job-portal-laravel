@@ -87,9 +87,11 @@ Route::prefix('v1')->group(function () {
             Route::get('worker/saved', [SavedJobController::class, 'index'])->name('api.saved');
             Route::post('jobs/{job}/save', [SavedJobController::class, 'toggle'])->name('api.saved.toggle');
 
-            // KYC (optional)
-            Route::get('kyc', [KycController::class, 'show'])->name('api.kyc.show');
-            Route::post('kyc', [KycController::class, 'store'])->name('api.kyc.store');
+            // KYC (optional; 404s while verification is switched off in admin)
+            Route::middleware('kyc.enabled')->group(function () {
+                Route::get('kyc', [KycController::class, 'show'])->name('api.kyc.show');
+                Route::post('kyc', [KycController::class, 'store'])->name('api.kyc.store');
+            });
 
             // Reviews
             Route::get('worker/reviews', [ReviewController::class, 'received'])->name('api.reviews.received');
@@ -125,9 +127,11 @@ Route::prefix('v1')->group(function () {
             Route::get('employer/workers', [WorkerDirectoryController::class, 'index'])->name('api.employer.workers');
             Route::get('employer/workers/{worker}', [WorkerDirectoryController::class, 'show'])->name('api.employer.workers.show');
 
-            // Business verification (GST / PAN)
-            Route::get('employer/kyc', [EmployerKycController::class, 'show'])->name('api.employer.kyc.show');
-            Route::post('employer/kyc', [EmployerKycController::class, 'store'])->name('api.employer.kyc.store');
+            // Business verification (GST / PAN) — same admin toggle as worker KYC.
+            Route::middleware('kyc.enabled')->group(function () {
+                Route::get('employer/kyc', [EmployerKycController::class, 'show'])->name('api.employer.kyc.show');
+                Route::post('employer/kyc', [EmployerKycController::class, 'store'])->name('api.employer.kyc.store');
+            });
 
             // Reviews — received from workers + rate a hired worker
             Route::get('employer/reviews', [EmployerReviewController::class, 'received'])->name('api.employer.reviews');

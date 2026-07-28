@@ -9,6 +9,7 @@ use App\Http\Resources\Api\ApplicantResource;
 use App\Http\Resources\Api\EmployerJobResource;
 use App\Http\Resources\Api\EmployerProfileResource;
 use App\Models\JobApplication;
+use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -55,8 +56,13 @@ class DashboardController extends Controller
                 'shortlisted' => (clone $applications)->whereNotNull('shortlisted_at')->count(),
                 'hired' => (clone $applications)->where('status', ApplicationStatus::Accepted)->count(),
                 'unread_notifications' => $user->unreadNotifications()->count(),
-                'verified' => $account->kyc?->status->value === 'verified',
+                'verified' => $account->isKycVerified(),
                 'profile_completion' => (new EmployerProfileResource($profile))->toArray($request)['completion'],
+            ],
+            // Admin-controlled feature flags; the app hides its KYC screens when
+            // verification_enabled is false.
+            'features' => [
+                'verification_enabled' => Setting::bool('kyc_verification_enabled', true),
             ],
             'active_jobs' => EmployerJobResource::collection($recentJobs),
             'recent_applicants' => ApplicantResource::collection($recentApplicants),

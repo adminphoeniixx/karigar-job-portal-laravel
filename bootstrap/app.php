@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
             'subscription' => \App\Http\Middleware\EnsureActiveSubscription::class,
+            'kyc.enabled' => \App\Http\Middleware\EnsureKycEnabled::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

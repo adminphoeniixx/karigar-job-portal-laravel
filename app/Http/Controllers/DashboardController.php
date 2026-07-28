@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Models\KycDocument;
+use App\Models\Setting;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Database\Query\Builder;
@@ -151,11 +152,14 @@ class DashboardController extends Controller
         $kyc = $user->kyc;
 
         return [
-            'stats' => [
-                ['label' => 'KYC Status', 'value' => $kyc?->status->label() ?? 'Not submitted', 'hint' => 'Verification', 'tone' => 'amber'],
+            // The KYC tile drops out entirely while verification is switched off.
+            'stats' => array_values(array_filter([
+                Setting::bool('kyc_verification_enabled', true)
+                    ? ['label' => 'KYC Status', 'value' => $kyc?->status->label() ?? 'Not submitted', 'hint' => 'Verification', 'tone' => 'amber']
+                    : null,
                 ['label' => 'Available Jobs', 'value' => (string) JobListing::active()->count(), 'hint' => 'Near you', 'tone' => 'emerald'],
                 ['label' => 'Profile', 'value' => $user->workerProfile?->skills ? 'Active' : 'Incomplete', 'hint' => 'Skills', 'tone' => 'violet'],
-            ],
+            ])),
             'table' => [
                 'title' => 'Latest jobs',
                 'columns' => ['Title', 'Location', 'Wage', 'Category'],

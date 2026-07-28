@@ -87,8 +87,17 @@ const navByRole = computed((): Record<string, NavItem[]> => ({
     ],
 }));
 
+const verificationEnabled = computed(
+    () => (page.props.features as { verification_enabled?: boolean } | undefined)?.verification_enabled ?? true,
+);
+
 const mainNavItems = computed(() => {
     let items = navByRole.value[role.value] ?? navByRole.value.worker;
+
+    // Verification switched off in admin settings — drop the KYC entries.
+    if (!verificationEnabled.value) {
+        items = items.filter((i) => i.href !== '/kyc' && i.href !== '/admin/kyc');
+    }
 
     // Team members see a trimmed menu: owner-only pages are hidden, and
     // recruiters (applicants-only) also lose job posting.

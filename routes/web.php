@@ -82,9 +82,12 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('employer/profile', [EmployerProfileController::class, 'update'])->name('employer.profile.update');
     });
 
-    // KYC (any authenticated user)
-    Route::get('kyc', [KycController::class, 'show'])->name('kyc.show');
-    Route::post('kyc', [KycController::class, 'store'])->name('kyc.store');
+    // KYC (any authenticated user) — hidden entirely when admin turns
+    // verification off in Settings.
+    Route::middleware('kyc.enabled')->group(function () {
+        Route::get('kyc', [KycController::class, 'show'])->name('kyc.show');
+        Route::post('kyc', [KycController::class, 'store'])->name('kyc.store');
+    });
 
     // Notifications (any authenticated user)
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');

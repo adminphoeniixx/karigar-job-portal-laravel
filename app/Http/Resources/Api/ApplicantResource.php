@@ -63,7 +63,7 @@ class ApplicantResource extends JsonResource
                 'expected_wage' => $profile?->expected_wage,
                 'wage_type' => $profile?->wage_type,
                 'available' => (bool) ($profile?->available ?? false),
-                'verified' => $worker->kyc?->status->value === 'verified',
+                'verified' => $worker->isKycVerified(),
                 // Only revealed once the contact has been unlocked.
                 'phone' => $this->contact_unlocked ? ($profile?->phone ?? $worker->phone) : null,
                 'email' => $this->contact_unlocked ? $worker->email : null,
