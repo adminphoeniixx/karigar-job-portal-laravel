@@ -40,6 +40,20 @@ return [
         'template_id' => env('MSG91_TEMPLATE_ID'),
     ],
 
+    'ai' => [
+        // Swappable LLM provider for AI candidate scoring. Any OpenAI-compatible
+        // chat-completions endpoint works: DigitalOcean Serverless Inference,
+        // Groq, OpenAI, local Ollama, etc. Anthropic is also supported via the
+        // 'anthropic' provider (native Messages API).
+        'provider' => env('AI_PROVIDER', 'digitalocean'), // digitalocean | openai-compatible | anthropic
+        'base_url' => env('AI_BASE_URL', 'https://inference.do-ai.run/v1'),
+        'key' => env('AI_KEY'),
+        'model' => env('AI_MODEL', 'llama3.3-70b-instruct'),
+        // Applicants scoring at or above this are auto-shortlisted. 0 disables.
+        'auto_shortlist_threshold' => (int) env('AI_AUTO_SHORTLIST_THRESHOLD', 0),
+        'timeout' => (int) env('AI_TIMEOUT', 45),
+    ],
+
     'razorpay' => [
         'key' => env('RAZORPAY_KEY'),
         'secret' => env('RAZORPAY_SECRET'),

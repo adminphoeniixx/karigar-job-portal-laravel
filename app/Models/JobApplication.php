@@ -25,6 +25,7 @@ class JobApplication extends Model
 {
     protected $fillable = [
         'job_listing_id', 'worker_id', 'cover_note', 'expected_wage', 'status', 'contact_unlocked', 'shortlisted_at', 'status_changed_at',
+        'ai_score', 'ai_recommendation', 'ai_summary', 'ai_matched_skills', 'ai_red_flags', 'ai_scored_at',
     ];
 
     protected function casts(): array
@@ -35,6 +36,10 @@ class JobApplication extends Model
             'shortlisted_at' => 'datetime',
             'status_changed_at' => 'datetime',
             'expected_wage' => 'decimal:2',
+            'ai_score' => 'integer',
+            'ai_matched_skills' => 'array',
+            'ai_red_flags' => 'array',
+            'ai_scored_at' => 'datetime',
         ];
     }
 

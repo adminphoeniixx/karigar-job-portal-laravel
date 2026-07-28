@@ -60,6 +60,8 @@ class JobApplicationController extends Controller
             'status' => ApplicationStatus::Pending,
         ]);
 
+        \App\Jobs\ScoreApplication::dispatch($application->id);
+
         $job->employer->notify(new NewApplicationNotification($application));
 
         // Transactional emails (templates are admin-editable at /admin/email-templates).

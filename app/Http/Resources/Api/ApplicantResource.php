@@ -33,6 +33,14 @@ class ApplicantResource extends JsonResource
             'cover_note' => $this->cover_note,
             'expected_wage' => $this->expected_wage,
             'contact_unlocked' => $this->contact_unlocked,
+            // AI match scoring (null until the ScoreApplication job has run).
+            'ai' => $this->ai_scored_at !== null ? [
+                'score' => $this->ai_score,
+                'recommendation' => $this->ai_recommendation,
+                'summary' => $this->ai_summary,
+                'matched_skills' => $this->ai_matched_skills ?? [],
+                'red_flags' => $this->ai_red_flags ?? [],
+            ] : null,
             'created_ago' => $this->created_at?->diffForHumans(),
             'created_at' => $this->created_at?->toIso8601String(),
             'tracking_steps' => $this->trackingSteps(),

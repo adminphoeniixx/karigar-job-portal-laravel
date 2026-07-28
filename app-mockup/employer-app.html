@@ -221,6 +221,57 @@
   .actbar{display:flex;gap:8px;margin-top:12px}
   .actbar .btn{flex:1}
   .kv{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)}
+  .pill.interview{background:#eff6ff;color:#1d4ed8}
+
+  /* ===== Credits / contact lock ===== */
+  .creditpill{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:20px;font-size:13.5px;font-weight:700;
+    background:var(--card);color:var(--brand-700);border:1px solid var(--brand-200);cursor:pointer}
+  .creditpill svg{width:15px;height:15px;stroke:var(--primary)}
+  .btn-wa{background:#25D366;color:#fff}
+  .btn-wa:active{background:#1da851}
+  .lockcard{display:flex;align-items:center;gap:12px;padding:13px 14px}
+  .lockcard .num{font-weight:700;font-size:16px;letter-spacing:.4px}
+
+  /* ===== Chat ===== */
+  .chatthread{flex:1;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:7px;background:var(--bg)}
+  .bubble{max-width:80%;padding:9px 13px;border-radius:16px;font-size:14px;line-height:1.42;box-shadow:var(--shadow)}
+  .bubble.me{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:5px}
+  .bubble.them{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .bubble .bt{font-size:10px;opacity:.7;margin-top:3px;text-align:right}
+  .daylabel{align-self:center;font-size:11px;color:var(--muted);background:var(--line2);padding:3px 12px;border-radius:12px;margin:6px 0}
+  .chatbar{display:flex;gap:8px;align-items:center;padding:10px 12px 20px;background:var(--card);border-top:1px solid var(--line)}
+  .chatbar input{flex:1;border:1px solid var(--line);border-radius:22px;padding:11px 16px;font-size:14px;font-family:inherit;outline:none;background:var(--bg)}
+  .chatbar input:focus{border-color:var(--brand-400)}
+  .chatbar .send{width:44px;height:44px;border-radius:50%;background:var(--primary);border:none;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+  .chatbar .send svg{stroke:#fff;width:20px;height:20px}
+  .quickreplies{display:flex;gap:8px;overflow-x:auto;padding:9px 12px;background:var(--card);border-top:1px solid var(--line2)}
+  .quickreplies::-webkit-scrollbar{height:0}
+  .quickreplies .chip-line{white-space:nowrap;cursor:pointer}
+  .convrow{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line2);cursor:pointer;align-items:center}
+  .convrow .unreadn{background:var(--primary);color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 5px;font-weight:700;flex:0 0 auto}
+
+  /* ===== Plans ===== */
+  .plan{padding:18px;margin-bottom:14px;position:relative;border:1.5px solid var(--line)}
+  .plan.featured{border-color:var(--primary);box-shadow:0 8px 24px rgba(244,71,15,.14)}
+  .plan .badge-pop{position:absolute;top:-11px;left:18px;background:var(--primary);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px}
+  .plan .price{font-size:28px;font-weight:700;letter-spacing:-.5px}
+  .plan ul{list-style:none;padding:0;margin:13px 0 0;display:flex;flex-direction:column;gap:8px}
+  .plan li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:#374151}
+  .plan li svg{flex:0 0 auto;margin-top:2px;stroke:var(--green-fg)}
+
+  /* ===== Funnel / analytics ===== */
+  .funnel{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+  .fbar{position:relative;height:36px;border-radius:10px;background:var(--line2);overflow:hidden;display:flex;align-items:center}
+  .fbar .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--brand-200),var(--brand-100));border-radius:10px}
+  .fbar .lab{position:relative;padding:0 12px;font-size:13px;font-weight:600;z-index:1}
+  .fbar .num{position:relative;margin-left:auto;padding:0 12px;font-weight:700;z-index:1}
+
+  /* ===== AI match score ===== */
+  .aiscore{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;border:1px solid transparent}
+  .aiscore.strong{background:var(--green-bg);color:var(--green-fg);border-color:#a7f3d0}
+  .aiscore.good{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+  .aiscore.maybe{background:var(--amber-bg);color:var(--amber-fg);border-color:#fde68a}
+  .aiscore.weak{background:#f1f3f5;color:#667085;border-color:var(--line)}
 </style>
 </head>
 <body>
@@ -390,6 +441,10 @@
           <div class="tiny muted">Welcome back 👋</div>
           <h1 style="font-size:17px">Sri Sai Constructions</h1>
         </div>
+        <button class="iconbtn" onclick="go('s-chatlist')" style="position:relative">
+          <svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span style="position:absolute;top:5px;right:6px;width:8px;height:8px;background:var(--primary);border-radius:50%;border:2px solid #fff"></span>
+        </button>
         <button class="iconbtn" onclick="switchTab('s-noti')" style="position:relative">
           <svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span style="position:absolute;top:5px;right:6px;width:8px;height:8px;background:var(--primary);border-radius:50%;border:2px solid #fff"></span>
@@ -425,6 +480,22 @@
           <div class="card stat">
             <div class="ib" style="background:var(--green-bg)"><svg class="ic ic-lg" style="stroke:var(--green-fg)" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
             <div class="v">5</div><div class="l">Hired</div>
+          </div>
+        </div>
+
+        <!-- Credits / plan card -->
+        <div class="card" style="padding:16px;margin-top:16px" onclick="go('s-plans')">
+          <div class="between">
+            <div class="row" style="gap:12px">
+              <div class="ib stat" style="width:44px;height:44px;border-radius:13px;background:var(--brand-50);display:grid;place-items:center">
+                <svg class="ic ic-lg" style="stroke:var(--primary)" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:17px" id="homeCredits">12 contact credits</div>
+                <div class="tiny muted" id="homePlan">Free plan · unlock worker numbers</div>
+              </div>
+            </div>
+            <button class="btn-sm btn-primary" style="width:auto" onclick="event.stopPropagation();go('s-plans')">Buy</button>
           </div>
         </div>
 
@@ -574,16 +645,8 @@
         <h1 style="font-size:16px">Worker Profile</h1>
       </div>
       <div class="scroll pb-nav" id="workerBody"></div>
-      <!-- sticky action bar -->
-      <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px 20px;display:flex;gap:10px;z-index:20">
-        <button class="btn btn-outline" style="flex:0 0 52px;padding:13px 0" onclick="callWorker()">
-          <svg class="ic ic-lg" style="stroke:var(--primary)" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        </button>
-        <button class="btn btn-outline" id="wShortlistBtn" style="flex:1" onclick="shortlistWorker(this)">
-          <svg class="ic" style="stroke:var(--indigo-fg)" viewBox="0 0 24 24"><path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/></svg> Shortlist
-        </button>
-        <button class="btn btn-primary" style="flex:1" onclick="openSheet('sheet-hire')">Hire</button>
-      </div>
+      <!-- sticky action bar (populated per worker) -->
+      <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px 16px;z-index:20" id="workerActions"></div>
     </section>
 
     <!-- ========================= FIND WORKERS ========================= -->
@@ -674,9 +737,9 @@
           <div class="g"><div class="t">Reviews &amp; Ratings</div><div class="tiny muted">How workers rated you</div></div>
           <span class="tiny muted">★ 4.6 →</span>
         </div>
-        <div class="listrow">
-          <div class="ib"><svg class="ic ic-lg" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg></div>
-          <div class="g"><div class="t">Billing &amp; Plans</div><div class="tiny muted">Free plan · Boost jobs</div></div>
+        <div class="listrow" onclick="go('s-plans')">
+          <div class="ib"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+          <div class="g"><div class="t">Credits &amp; Plans</div><div class="tiny muted" id="profilePlan">Free plan · 12 credits left</div></div>
           <span class="tiny muted">→</span>
         </div>
         <div class="listrow" onclick="go('s-settings')">
@@ -821,6 +884,104 @@
       </div>
     </section>
 
+    <!-- ========================= CREDITS & PLANS ========================= -->
+    <section class="screen" id="s-plans">
+      <div class="appbar">
+        <button class="backbtn" onclick="back()"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+        <h1 style="font-size:16px">Credits &amp; Plans</h1>
+      </div>
+      <div class="scroll pad pb-nav">
+        <div class="card" style="padding:18px;background:linear-gradient(160deg,var(--primary),#c93a06);border:none;color:#fff;margin-bottom:8px">
+          <div class="tiny" style="opacity:.9">Current balance</div>
+          <div style="font-size:34px;font-weight:700;letter-spacing:-.5px;margin:2px 0" id="plansBalance">12 credits</div>
+          <div class="tiny" style="opacity:.92" id="plansPlan">Free plan · 1 credit unlocks a worker's contact</div>
+        </div>
+        <p class="tiny muted" style="margin:14px 4px 12px">Use credits to unlock worker phone numbers, chat directly and boost your job posts.</p>
+
+        <div class="card plan">
+          <div class="between"><div style="font-weight:700;font-size:17px">Free</div><span class="pill" style="background:var(--green-bg);color:var(--green-fg)">Current</span></div>
+          <div style="margin-top:6px"><span class="price">₹0</span><span class="tiny muted"> / month</span></div>
+          <ul>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>12 contact credits / month</li>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Unlimited free job posts</li>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Applicant management</li>
+          </ul>
+          <button class="btn btn-outline" style="margin-top:14px" disabled>Your current plan</button>
+        </div>
+
+        <div class="card plan">
+          <div style="font-weight:700;font-size:17px">Starter</div>
+          <div style="margin-top:6px"><span class="price">₹499</span><span class="tiny muted"> / month</span></div>
+          <ul>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>50 contact unlocks / month</li>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>1 boosted job</li>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Direct chat with workers</li>
+          </ul>
+          <button class="btn btn-primary" style="margin-top:14px" onclick="buyPlan('Starter',50)">Choose Starter</button>
+        </div>
+
+        <div class="card plan featured">
+          <span class="badge-pop">Most popular</span>
+          <div style="font-weight:700;font-size:17px">Growth</div>
+          <div style="margin-top:6px"><span class="price">₹1,499</span><span class="tiny muted"> / month</span></div>
+          <ul>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>200 contact unlocks / month</li>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>5 boosted jobs</li>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Top placement in worker search</li>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Priority support</li>
+          </ul>
+          <button class="btn btn-primary" style="margin-top:14px" onclick="buyPlan('Growth',200)">Choose Growth</button>
+        </div>
+
+        <div class="card plan">
+          <div style="font-weight:700;font-size:17px">Pro</div>
+          <div style="margin-top:6px"><span class="price">₹3,999</span><span class="tiny muted"> / month</span></div>
+          <ul>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Unlimited contact unlocks</li>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Unlimited boosted jobs</li>
+            <li><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Dedicated account manager</li>
+          </ul>
+          <button class="btn btn-primary" style="margin-top:14px" onclick="buyPlan('Pro',9999)">Choose Pro</button>
+        </div>
+
+        <div class="card" style="padding:14px;margin-top:2px">
+          <div class="between">
+            <div><div style="font-weight:700;font-size:14.5px">Just need a few unlocks?</div><div class="tiny muted" style="margin-top:2px">Buy a one-time credit top-up</div></div>
+            <button class="btn-sm btn-ghost" style="width:auto" onclick="buyPlan('Top-up',25)">+25 credits · ₹299</button>
+          </div>
+        </div>
+        <p class="tiny muted" style="text-align:center;margin:16px 8px 0">Payments are secured by Razorpay · GST invoice provided</p>
+      </div>
+    </section>
+
+    <!-- ========================= MESSAGES (conversation list) ========================= -->
+    <section class="screen" id="s-chatlist">
+      <div class="appbar">
+        <button class="backbtn" onclick="back()"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+        <h1 style="font-size:16px">Messages</h1>
+      </div>
+      <div class="scroll pb-nav" id="convList"></div>
+    </section>
+
+    <!-- ========================= CHAT (thread) ========================= -->
+    <section class="screen" id="s-chat">
+      <div class="appbar">
+        <button class="backbtn" onclick="back()"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+        <div class="avatar" id="chatAvatar" style="width:36px;height:36px;display:grid;place-items:center;font-weight:700;color:var(--brand-700);font-size:14px"></div>
+        <div style="flex:1;min-width:0">
+          <h1 style="font-size:15px;margin:0" id="chatName">Worker</h1>
+          <div class="tiny" style="color:var(--green-fg);font-weight:600" id="chatSub">● Online</div>
+        </div>
+        <button class="iconbtn" onclick="callWorker(curChatId)"><svg class="ic ic-lg" style="stroke:var(--primary)" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+      </div>
+      <div class="chatthread" id="chatThread"></div>
+      <div class="quickreplies" id="chatQuick"></div>
+      <div class="chatbar">
+        <input id="chatInput" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendMsg()" />
+        <button class="send" onclick="sendMsg()"><svg class="ic" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+      </div>
+    </section>
+
   </div><!-- /viewport -->
 
   <!-- ===== Bottom nav ===== -->
@@ -870,7 +1031,7 @@
       <h3>Job actions</h3>
       <div style="margin-top:10px">
         <div class="listrow" onclick="closeSheet('sheet-jobactions');go('s-postjob')"><div class="ib"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></div><div class="g"><div class="t">Edit job</div></div></div>
-        <div class="listrow" onclick="closeSheet('sheet-jobactions');toast('Job boosted — shown to more workers 🚀')"><div class="ib"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div><div class="g"><div class="t">Boost job</div><div class="tiny muted">Reach 3x more workers</div></div></div>
+        <div class="listrow" onclick="closeSheet('sheet-jobactions');openSheet('sheet-boost')"><div class="ib"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div><div class="g"><div class="t">Boost job</div><div class="tiny muted">Reach 3x more workers</div></div></div>
         <div class="listrow" onclick="closeSheet('sheet-jobactions');toast('Share link copied')"><div class="ib"><svg class="ic ic-lg" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg></div><div class="g"><div class="t">Share job</div></div></div>
         <div class="listrow" onclick="closeSheet('sheet-jobactions');toast('Job closed')"><div class="ib" style="background:var(--rose-bg);color:var(--rose-fg)"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div><div class="g"><div class="t" style="color:var(--rose-fg)">Close job</div><div class="tiny muted">Stop receiving applications</div></div></div>
       </div>
@@ -885,6 +1046,21 @@
       <h3>Filter workers</h3>
       <div class="field" style="margin-top:14px"><label>Trade / Category</label><select class="select"><option>All trades</option><option>Plumbing</option><option>Electrical</option><option>Carpentry</option><option>Painting</option><option>Masonry</option></select></div>
       <div class="field"><label>Minimum experience</label><select class="select"><option>Any</option><option>1+ years</option><option>3+ years</option><option>5+ years</option></select></div>
+      <div class="field"><label>Expected wage (₹/day)</label>
+        <div class="row" style="gap:10px">
+          <div class="row" style="flex:1;border:1px solid var(--line);border-radius:12px;padding:0 12px"><span class="muted">₹</span><input class="input" style="border:none;padding:11px 6px" placeholder="Min 600" inputmode="numeric" /></div>
+          <div class="row" style="flex:1;border:1px solid var(--line);border-radius:12px;padding:0 12px"><span class="muted">₹</span><input class="input" style="border:none;padding:11px 6px" placeholder="Max 1200" inputmode="numeric" /></div>
+        </div>
+      </div>
+      <div class="field"><label>Distance from site</label><select class="select"><option>Any distance</option><option>Within 3 km</option><option>Within 5 km</option><option>Within 10 km</option></select></div>
+      <div class="field"><label>Speaks</label>
+        <div class="row" style="flex-wrap:wrap;gap:8px">
+          <span class="chip-line" onclick="toggleSel(this)">Hindi</span><span class="chip-line" onclick="toggleSel(this)">Tamil</span>
+          <span class="chip-line" onclick="toggleSel(this)">Telugu</span><span class="chip-line" onclick="toggleSel(this)">English</span>
+          <span class="chip-line" onclick="toggleSel(this)">Kannada</span>
+        </div>
+      </div>
+      <div class="field"><label>Sort by</label><select class="select"><option>Best match</option><option>Nearest first</option><option>Highest rated</option><option>Most experienced</option><option>Lowest wage</option></select></div>
       <div class="field">
         <label class="row between" style="cursor:pointer"><span>Only KYC-verified</span><button class="toggle on" onclick="event.preventDefault();this.classList.toggle('on')"></button></label>
       </div>
@@ -928,6 +1104,56 @@
     </div>
   </div>
 
+  <!-- Interview sheet -->
+  <div class="sheet-wrap" id="sheet-interview">
+    <div class="sheet-bg" onclick="closeSheet('sheet-interview')"></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <h3>Schedule interview</h3>
+      <p class="tiny muted" style="margin:0 0 16px" id="ivWho">The worker gets an invite and can confirm the slot.</p>
+      <div class="field"><label>Mode</label>
+        <div class="row" style="gap:8px;flex-wrap:wrap" id="ivMode">
+          <span class="chip" onclick="pickOne(this,'#ivMode')">At site</span>
+          <span class="chip-line" onclick="pickOne(this,'#ivMode')">Phone call</span>
+          <span class="chip-line" onclick="pickOne(this,'#ivMode')">Video call</span>
+        </div>
+      </div>
+      <div class="row" style="gap:12px">
+        <div class="field" style="flex:1"><label>Date</label><input class="input" type="date" /></div>
+        <div class="field" style="flex:1"><label>Time</label><input class="input" type="time" /></div>
+      </div>
+      <div class="field"><label>Address / note (optional)</label><textarea class="textarea" placeholder="Site address, what to bring, whom to meet…"></textarea></div>
+      <button class="btn btn-primary" onclick="confirmInterview()">Send interview invite</button>
+    </div>
+  </div>
+
+  <!-- Boost sheet -->
+  <div class="sheet-wrap" id="sheet-boost">
+    <div class="sheet-bg" onclick="closeSheet('sheet-boost')"></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <h3>Boost this job 🚀</h3>
+      <p class="tiny muted" style="margin:0 0 16px">Boosted jobs sit at the top of worker search and get more applicants.</p>
+      <div id="boostOpts">
+        <div class="edu-row sel" onclick="pickBoost(this)"><div class="rd"></div><div style="flex:1"><div>Standard boost</div><div class="tiny muted" style="font-weight:400">3 days · ~2x reach · 1 credit</div></div></div>
+        <div class="edu-row" onclick="pickBoost(this)"><div class="rd"></div><div style="flex:1"><div>Turbo boost</div><div class="tiny muted" style="font-weight:400">7 days · ~3x reach · 3 credits</div></div></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:6px" onclick="confirmBoost()">Boost now</button>
+    </div>
+  </div>
+
+  <!-- Out of credits sheet -->
+  <div class="sheet-wrap" id="sheet-nocredits">
+    <div class="sheet-bg" onclick="closeSheet('sheet-nocredits')"></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <div style="width:52px;height:52px;border-radius:15px;background:var(--brand-50);display:grid;place-items:center;margin:6px auto 10px"><svg class="ic" style="stroke:var(--primary);width:26px;height:26px" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <h3 style="text-align:center">You're out of credits</h3>
+      <p class="tiny muted" style="text-align:center;margin:6px 0 18px">Buy a plan to keep unlocking worker contacts, chatting and boosting jobs.</p>
+      <button class="btn btn-primary" onclick="closeSheet('sheet-nocredits');go('s-plans')">See plans</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 </div>
 
@@ -951,6 +1177,8 @@ const WORKERS = [
   {id:4,name:"Vijay Anand",init:"VA",trade:"Electrician",exp:7,city:"Chennai",dist:5.5,rating:"4.9",count:31,wage:1100,verified:true,available:true,skills:["Electrical Wiring","DB Board","Testing"],langs:["Tamil","English"],bio:"Certified electrician (ITI). Residential & commercial wiring expert.",appliedFor:2,status:"shortlisted"},
   {id:5,name:"Karthik R",init:"KR",trade:"Electrician",exp:4,city:"Chennai",dist:3.4,rating:"4.5",count:15,wage:950,verified:true,available:false,skills:["Electrician","Appliance Repair"],langs:["Tamil","Kannada"],bio:"House wiring and appliance repair. Own tools.",appliedFor:2,status:"pending"},
   {id:6,name:"Ganesh Iyer",init:"GI",trade:"Mason",exp:12,city:"Chennai",dist:7.2,rating:"4.7",count:52,wage:1000,verified:true,available:true,skills:["Masonry","Plastering","Bricklaying"],langs:["Tamil","Hindi"],bio:"12 years masonry experience. Compound walls, plastering, brickwork.",appliedFor:3,status:"hired"},
+  {id:7,name:"Prakash M",init:"PM",trade:"Plumber",exp:5,city:"Chennai",dist:3.1,rating:"4.5",count:18,wage:850,verified:true,available:true,skills:["Plumbing","Pipe Fitting","Sanitary"],langs:["Tamil","Hindi"],bio:"5 years plumbing experience across residential projects. Available immediately.",appliedFor:0,status:"pending"},
+  {id:8,name:"Imran Shaikh",init:"IS",trade:"Electrician",exp:8,city:"Chennai",dist:4.8,rating:"4.7",count:29,wage:1050,verified:true,available:true,skills:["Electrical Wiring","DB Board","Motor Repair"],langs:["Hindi","Urdu","Tamil"],bio:"8 years as an electrician. Wiring, panel work and motor repair. Own tools & bike.",appliedFor:0,status:"pending"},
 ];
 
 const NOTIS = [
@@ -972,6 +1200,142 @@ const LANGS = [["en","English","English"],["hi","हिन्दी","Hindi"],["
 const REG_CATS = ["Plumbing","Electrical","Carpentry","Painting","Masonry","AC Repair","Welding","Driving","Housekeeping","Helper","Fabrication","Tiling"];
 const POST_SKILLS = ["Plumbing","Pipe Fitting","Waterproofing","Tiling","Electrical Wiring","Carpentry","Painting","Masonry","Plastering","AC Repair","Welding","Helper"];
 const POST_PERKS = ["Food","Accommodation","Travel","Incentives","PF / ESI","Weekly pay","Tools provided","Overtime"];
+
+/* ============================ CREDITS / PLANS ============================ */
+let credits = 12, planName = 'Free';
+const unlocked = new Set();
+const phoneFor = id => ({1:"98765 43210",2:"91234 56789",3:"90045 11228",4:"98884 22337",5:"97773 55669",6:"96662 88991"}[id] || "98765 43210");
+function refreshCredits(){
+  const set=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t;};
+  set('homeCredits', credits+' contact credits');
+  set('homePlan', planName+' plan · unlock worker numbers');
+  set('plansBalance', credits+' credits');
+  set('plansPlan', planName+" plan · 1 credit unlocks a worker's contact");
+  set('profilePlan', planName+' plan · '+credits+' credits left');
+}
+function buyPlan(name, add){
+  if(name!=='Top-up') planName = name;
+  credits += add; refreshCredits();
+  toast(name==='Top-up' ? add+' credits added ✓' : name+' plan activated · +'+add+' credits 🎉');
+}
+function needCredit(){ if(credits>0) return true; openSheet('sheet-nocredits'); return false; }
+function unlockContact(id){
+  if(unlocked.has(id)) return;
+  if(!needCredit()) return;
+  credits--; unlocked.add(id); refreshCredits();
+  toast('Contact unlocked · '+credits+' credits left');
+  refreshCurrent();
+}
+function waWorker(id){ if(!unlocked.has(id)){unlockContact(id);return;} toast('Opening WhatsApp… (demo)'); }
+
+/* refresh whichever screen is on top after a state change */
+function refreshCurrent(){
+  const top = stack[stack.length-1];
+  if(top==='s-worker') openWorker(curWorkerId);
+  else if(top==='s-jobmanage') renderManage();
+  else if(top==='s-workers') renderWorkers(WORKERS);
+  else if(top==='s-jobs') renderMyJobs(document.querySelector('#jobSeg .active')?.textContent.toLowerCase()||'active');
+}
+
+/* ============================ CONTACT + PIPELINE BUTTONS ============================ */
+const SVG_PHONE='<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>';
+const SVG_STAR='<path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/>';
+const SVG_CAL='<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>';
+const SVG_CHAT='<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>';
+const SVG_WA='<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>';
+function contactBtns(w){
+  if(unlocked.has(w.id)){
+    return `<button class="btn btn-outline btn-sm" onclick="callWorker(${w.id})"><svg class="ic" style="stroke:var(--primary)" viewBox="0 0 24 24">${SVG_PHONE}</svg> Call</button>
+      <button class="btn btn-wa btn-sm" onclick="waWorker(${w.id})"><svg class="ic" style="stroke:#fff" viewBox="0 0 24 24">${SVG_WA}</svg> WhatsApp</button>
+      <button class="btn btn-outline btn-sm" onclick="openChat(${w.id})"><svg class="ic" viewBox="0 0 24 24">${SVG_CHAT}</svg> Chat</button>`;
+  }
+  return `<button class="btn btn-ghost btn-sm" style="flex:1" onclick="unlockContact(${w.id})"><svg class="ic" style="stroke:var(--brand-700)" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg> View contact · 1 credit</button>`;
+}
+function pipelineBtns(w){
+  const rej = `<button class="btn btn-outline btn-sm" style="flex:0 0 46px;border-color:var(--rose-bg)" onclick="rejectWorker(${w.id})" title="Reject"><svg class="ic" style="stroke:var(--rose-fg)" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>`;
+  if(w.status==='hired') return `<button class="btn btn-outline btn-sm" style="flex:1" onclick="reviewWorker(${w.id})"><svg class="ic" style="stroke:var(--amber-fg)" viewBox="0 0 24 24">${SVG_STAR}</svg> Review</button>`;
+  if(w.status==='rejected') return `<button class="btn btn-outline btn-sm" style="flex:1" onclick="restoreWorker(${w.id})">Move back to New</button>`;
+  const hire = `<button class="btn btn-primary btn-sm" style="flex:1" onclick="quickHire(${w.id})">Hire</button>`;
+  let left='';
+  if(w.status==='pending') left=`<button class="btn btn-outline btn-sm" style="flex:1" onclick="quickShortlist(${w.id})"><svg class="ic" style="stroke:var(--indigo-fg)" viewBox="0 0 24 24">${SVG_STAR}</svg> Shortlist</button>`;
+  else if(w.status==='shortlisted') left=`<button class="btn btn-outline btn-sm" style="flex:1" onclick="openInterview(${w.id})"><svg class="ic" viewBox="0 0 24 24">${SVG_CAL}</svg> Interview</button>`;
+  else if(w.status==='interview') left=`<button class="btn btn-outline btn-sm" style="flex:1" onclick="openInterview(${w.id})"><svg class="ic" viewBox="0 0 24 24">${SVG_CAL}</svg> Reschedule</button>`;
+  return left+hire+rej;
+}
+
+/* ============================ INTERVIEW / REJECT / REVIEW ============================ */
+function openInterview(id){ curWorkerId=id; const w=WORKERS.find(x=>x.id===id); document.getElementById('ivWho').textContent=(w?w.name:'The worker')+' will get an invite and can confirm the slot.'; openSheet('sheet-interview'); }
+function confirmInterview(){ const w=WORKERS.find(x=>x.id===curWorkerId); if(w&&w.status!=='hired')w.status='interview'; closeSheet('sheet-interview'); toast('Interview invite sent to '+(w?w.name:'worker')+' 📅'); refreshCurrent(); }
+function rejectWorker(id){ const w=WORKERS.find(x=>x.id===id); w.status='rejected'; toast(w.name+' rejected'); refreshCurrent(); }
+function restoreWorker(id){ const w=WORKERS.find(x=>x.id===id); w.status='pending'; toast(w.name+' moved back to New'); refreshCurrent(); }
+function reviewWorker(id){ curWorkerId=id; openSheet('sheet-review'); }
+function inviteWorker(id){ const w=WORKERS.find(x=>x.id===id); toast('Invite sent to '+w.name+' — asked to apply'); }
+
+/* ============================ BOOST ============================ */
+let boostSel='Standard';
+function pickBoost(el){ document.querySelectorAll('#boostOpts .edu-row').forEach(r=>r.classList.remove('sel')); el.classList.add('sel'); boostSel=el.textContent.includes('Turbo')?'Turbo':'Standard'; }
+function confirmBoost(){ const cost=boostSel==='Turbo'?3:1; if(credits<cost){closeSheet('sheet-boost');openSheet('sheet-nocredits');return;} credits-=cost; refreshCredits(); closeSheet('sheet-boost'); toast('Job boosted 🚀 · '+credits+' credits left'); }
+
+/* ============================ CHAT ============================ */
+const THREADS = {
+  1:[{me:false,text:"Namaste sir, I saw your plumber job. I have 6 years experience.",t:"10:24 AM"},{me:true,text:"Good. Can you start this week?",t:"10:26 AM"},{me:false,text:"Yes sir, available from Monday.",t:"10:27 AM"}],
+  4:[{me:false,text:"Sir, I'm an ITI-certified electrician. Interested in the wiring job.",t:"Yesterday"}],
+  6:[{me:true,text:"We'd like to hire you for the mason work. Congrats!",t:"Mon"},{me:false,text:"Thank you sir! I'll report at 9 AM.",t:"Mon"}],
+};
+const CONVS = [{wid:1,unread:2},{wid:4,unread:0},{wid:6,unread:0}];
+
+/* ============================ AI MATCH SCORE (demo) ============================ */
+const AI_SCORE = {1:92,2:78,3:64,4:88,5:71,6:95,7:81,8:69};
+const AI_SUMMARY = {
+  1:"Matches all required skills, 6 yrs exp, same city.",
+  2:"Strong plumbing skills, wage slightly high.",
+  3:"Basic match, limited experience.",
+  4:"ITI certified, all skills match.",
+  5:"Good skills, currently busy.",
+  6:"12 yrs masonry, top match, on-time record.",
+  7:"5 yrs, available now, nearby.",
+  8:"Solid electrician, wage a bit high.",
+};
+function aiBucket(s){ return s>=80?'strong':s>=60?'good':s>=40?'maybe':'weak'; }
+function aiChip(w){ const s=AI_SCORE[w.id]; if(s==null) return ''; return `<span class="aiscore ${aiBucket(s)}" title="${AI_SUMMARY[w.id]||''}">✨ ${s}% AI match</span>`; }
+function bySortScore(a,b){ return (AI_SCORE[b.id]||0)-(AI_SCORE[a.id]||0); }
+const QUICK = ["Are you available?","Come for an interview?","Expected wage?","Share your location","Please call me"];
+let curChatId=null;
+function renderConvList(){
+  document.getElementById('convList').innerHTML = CONVS.map(c=>{
+    const w=WORKERS.find(x=>x.id===c.wid); const th=THREADS[c.wid]||[]; const last=th[th.length-1];
+    return `<div class="convrow" onclick="openChat(${c.wid})">
+      <div class="avatar" style="display:grid;place-items:center;font-weight:700;color:var(--brand-700)">${w.init}</div>
+      <div style="flex:1;min-width:0">
+        <div class="between"><span class="nm" style="font-size:14.5px;font-weight:700">${w.name}</span><span class="tiny muted">${last?last.t:''}</span></div>
+        <div class="tiny muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px">${last?(last.me?'You: ':'')+last.text:'Start a conversation'}</div>
+      </div>
+      ${c.unread?`<span class="unreadn">${c.unread}</span>`:''}
+    </div>`;
+  }).join('') || emptyHtml('No messages yet','Chat with applicants from their profile');
+}
+function openChat(id){
+  curChatId=id; const w=WORKERS.find(x=>x.id===id);
+  if(!THREADS[id]) THREADS[id]=[];
+  let conv=CONVS.find(c=>c.wid===id); if(!conv){conv={wid:id,unread:0};CONVS.unshift(conv);} conv.unread=0;
+  document.getElementById('chatAvatar').textContent=w.init;
+  document.getElementById('chatName').textContent=w.name;
+  document.getElementById('chatQuick').innerHTML=QUICK.map(q=>`<span class="chip-line" onclick="sendQuick(this)">${q}</span>`).join('');
+  renderThread(); renderConvList();
+  go('s-chat');
+}
+function renderThread(){
+  const th=THREADS[curChatId]||[];
+  document.getElementById('chatThread').innerHTML = th.map(m=>`<div class="bubble ${m.me?'me':'them'}">${m.text}<div class="bt">${m.t}${m.me?' ✓✓':''}</div></div>`).join('');
+  const el=document.getElementById('chatThread'); el.scrollTop=el.scrollHeight;
+}
+function nowTime(){ return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+function pushMsg(text){
+  THREADS[curChatId].push({me:true,text,t:nowTime()}); renderThread();
+  setTimeout(()=>{ if(curChatId!=null){ THREADS[curChatId].push({me:false,text:"Ok sir 👍",t:nowTime()}); renderThread(); } },1100);
+}
+function sendMsg(){ const i=document.getElementById('chatInput'); const v=i.value.trim(); if(!v)return; i.value=''; pushMsg(v); }
+function sendQuick(el){ pushMsg(el.textContent); }
 
 /* ============================ NAV ============================ */
 let stack = ['s-onboard'];
@@ -1114,11 +1478,17 @@ function openManage(id){
   curJobId=id; curTab='pending';
   renderManage(); go('s-jobmanage');
 }
+const TRADE_MAP={"Plumbing":"Plumber","Electrical":"Electrician","Masonry":"Mason","Carpentry":"Carpenter","Painting":"Painter"};
 function renderManage(){
   const j = MYJOBS.find(x=>x.id===curJobId);
   const applicants = WORKERS.filter(w=>w.appliedFor===curJobId);
   const byStatus = s => applicants.filter(a=>a.status===s);
-  const listFor = curTab==='all'?applicants:byStatus(curTab);
+  const listFor = byStatus(curTab).slice().sort(bySortScore);
+  const wantTrade = TRADE_MAP[j.cat]||j.cat;
+  const matched = WORKERS.filter(w=>w.appliedFor!==curJobId && w.trade===wantTrade).slice().sort(bySortScore);
+  const funnel = [['Views',j.views],['Applied',j.applicants],['Shortlisted',j.shortlisted],['Interview',byStatus('interview').length],['Hired',j.hired]];
+  const fmax = Math.max(...funnel.map(f=>f[1]),1);
+  const seg=(k,l)=>`<button style="font-size:12px;padding:8px 3px" class="${curTab===k?'active':''}" onclick="segManage('${k}')">${l} ${byStatus(k).length}</button>`;
   document.getElementById('jobManageBody').innerHTML = `
     <div class="pad" style="padding-bottom:0">
       <span class="chip">${j.cat}</span>
@@ -1126,21 +1496,24 @@ function renderManage(){
       <h1 style="font-size:20px;font-weight:700;margin:10px 0 2px;letter-spacing:-.3px">${j.title}</h1>
       <div class="tiny muted">${wageStr(j)} · ${j.vac} openings · Posted ${j.posted}</div>
 
-      <div class="stats" style="margin-top:14px">
-        <div class="card stat" style="padding:12px"><div class="l">Views</div><div class="v" style="font-size:20px;margin-top:2px">${j.views}</div></div>
-        <div class="card stat" style="padding:12px"><div class="l">Applicants</div><div class="v" style="font-size:20px;margin-top:2px">${j.applicants}</div></div>
+      <div class="between" style="margin:18px 2px 8px"><div class="sec-title" style="margin:0">Performance</div><button class="btn-sm btn-ghost" style="width:auto" onclick="openSheet('sheet-boost')"><svg class="ic" style="stroke:var(--brand-700)" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg> Boost</button></div>
+      <div class="funnel">
+        ${funnel.map(([l,n])=>`<div class="fbar"><div class="fill" style="width:${Math.max(n/fmax*100,7)}%"></div><span class="lab">${l}</span><span class="num">${n}</span></div>`).join('')}
       </div>
     </div>
 
-    <div style="padding:14px 16px 0">
+    <div style="padding:16px 16px 0">
       <div class="segmented" id="mSeg">
-        <button class="${curTab==='pending'?'active':''}" onclick="segManage('pending')">New (${byStatus('pending').length})</button>
-        <button class="${curTab==='shortlisted'?'active':''}" onclick="segManage('shortlisted')">Shortlisted (${byStatus('shortlisted').length})</button>
-        <button class="${curTab==='hired'?'active':''}" onclick="segManage('hired')">Hired (${byStatus('hired').length})</button>
+        ${seg('pending','New')}${seg('shortlisted','Short')}${seg('interview','Intrvw')}${seg('hired','Hired')}
       </div>
     </div>
     <div class="pad">
-      ${listFor.map(applicantCardHtml).join('') || emptyHtml('No '+curTab+' applicants yet')}
+      ${curTab==='pending' && matched.length ? `
+        <div class="between" style="margin:2px 2px 10px"><div class="sec-title" style="margin:0">✨ Matched for this job</div><span class="tiny muted">${matched.length} nearby</span></div>
+        ${matched.map(matchedCardHtml).join('')}
+        <div class="sec-title" style="margin:18px 2px 10px">Applicants</div>`:''}
+      ${listFor.length?`<div class="tiny muted" style="margin:0 2px 10px">✨ AI-ranked · best match first</div>`:''}
+      ${listFor.map(applicantCardHtml).join('') || emptyHtml('No applicants in this stage yet')}
     </div>`;
 }
 function segManage(t){ curTab=t; renderManage(); }
@@ -1153,6 +1526,7 @@ function applicantCardHtml(w){
       <div style="flex:1;min-width:0">
         <div class="row" style="gap:6px"><span class="nm">${w.name}</span>${w.verified?'<svg class="ic" style="stroke:var(--green-fg)" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>':''}</div>
         <div class="tiny muted">${w.trade} · ${w.exp} yrs exp · ★ ${w.rating} (${w.count})</div>
+        ${AI_SCORE[w.id]!=null?`<div style="margin-top:6px">${aiChip(w)}</div>`:''}
         <div class="row" style="gap:10px;margin-top:5px">
           <span class="kv"><svg class="ic" viewBox="0 0 24 24"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${w.dist} km</span>
           <span class="kv wage" style="color:var(--fg)">₹${w.wage}/day</span>
@@ -1161,14 +1535,24 @@ function applicantCardHtml(w){
       <span class="pill ${w.status}">${w.status[0].toUpperCase()+w.status.slice(1)}</span>
     </div>
     <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:10px">${w.skills.slice(0,3).map(s=>`<span class="chip chip-line" style="font-size:11px">${s}</span>`).join('')}</div>
-    <div class="actbar" onclick="event.stopPropagation()">
-      <button class="btn btn-outline btn-sm" onclick="callWorker()"><svg class="ic" style="stroke:var(--primary)" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Call</button>
-      ${w.status==='pending'?`<button class="btn btn-outline btn-sm" onclick="quickShortlist(${w.id})"><svg class="ic" style="stroke:var(--indigo-fg)" viewBox="0 0 24 24"><path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/></svg> Shortlist</button>`:''}
-      ${w.status!=='hired'?`<button class="btn btn-primary btn-sm" onclick="quickHire(${w.id})">Hire</button>`:'<button class="btn btn-outline btn-sm" onclick="openSheet(\'sheet-review\')">Review</button>'}
+    <div class="actbar" onclick="event.stopPropagation()">${contactBtns(w)}</div>
+    <div class="actbar" style="margin-top:8px" onclick="event.stopPropagation()">${pipelineBtns(w)}</div>
+  </div>`;
+}
+function matchedCardHtml(w){
+  return `<div class="card wcard" style="margin-bottom:10px" onclick="openWorker(${w.id})">
+    <div class="top">
+      <div class="avatar" style="display:grid;place-items:center;font-weight:700;color:var(--brand-700)">${w.init}</div>
+      <div style="flex:1;min-width:0">
+        <div class="row" style="gap:6px"><span class="nm">${w.name}</span>${w.verified?`<svg class="ic" style="stroke:var(--green-fg)" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>`:''}</div>
+        <div class="tiny muted">${w.trade} · ${w.exp} yrs · ★ ${w.rating} · ${w.dist} km</div>
+        ${AI_SCORE[w.id]!=null?`<div style="margin-top:6px">${aiChip(w)}</div>`:''}
+      </div>
+      <button class="btn-sm btn-ghost" style="width:auto" onclick="event.stopPropagation();inviteWorker(${w.id})">Invite</button>
     </div>
   </div>`;
 }
-function quickShortlist(id){ const w=WORKERS.find(x=>x.id===id); w.status='shortlisted'; renderManage(); toast(w.name+' shortlisted ★'); }
+function quickShortlist(id){ const w=WORKERS.find(x=>x.id===id); w.status='shortlisted'; refreshCurrent(); toast(w.name+' shortlisted ★'); }
 function quickHire(id){ curWorkerId=id; openSheet('sheet-hire'); }
 
 function renderHomeApplicants(){
@@ -1179,11 +1563,7 @@ function renderHomeApplicants(){
 let curWorkerId=null;
 function openWorker(id){
   const w = WORKERS.find(x=>x.id===id); curWorkerId=id;
-  const sb = document.getElementById('wShortlistBtn');
-  const isSl = w.status==='shortlisted'||w.status==='hired';
-  sb.innerHTML = isSl
-    ? '<svg class="ic" style="stroke:var(--indigo-fg);fill:var(--indigo-fg)" viewBox="0 0 24 24"><path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/></svg> Shortlisted'
-    : '<svg class="ic" style="stroke:var(--indigo-fg)" viewBox="0 0 24 24"><path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/></svg> Shortlist';
+  const unl = unlocked.has(id);
   document.getElementById('workerBody').innerHTML = `
     <div style="padding:22px 16px;background:linear-gradient(160deg,var(--primary),#c93a06);color:#fff">
       <div class="row" style="gap:14px">
@@ -1203,6 +1583,19 @@ function openWorker(id){
         <span class="pill" style="background:#fff;color:var(--primary)">₹${w.wage}/day</span>
       </div>
     </div>
+    <div class="pad" style="padding-bottom:0">
+      <div class="card lockcard">
+        <div style="width:40px;height:40px;border-radius:12px;background:var(--brand-50);color:var(--brand-700);display:grid;place-items:center;flex:0 0 auto"><svg class="ic ic-lg" style="stroke:var(--primary)" viewBox="0 0 24 24">${SVG_PHONE}</svg></div>
+        <div style="flex:1"><div class="tiny muted">Phone number</div><div class="num">+91 ${unl?phoneFor(id):phoneFor(id).slice(0,6)+'•••••'}</div></div>
+        ${unl?'<span class="pill" style="background:var(--green-bg);color:var(--green-fg)">Unlocked</span>':`<button class="btn-sm btn-ghost" style="width:auto" onclick="unlockContact(${id})">Unlock · 1 credit</button>`}
+      </div>
+    </div>
+    ${AI_SCORE[id]!=null?`<div class="pad" style="padding-bottom:0">
+      <div class="card" style="padding:13px 14px;display:flex;align-items:center;gap:12px">
+        <span class="aiscore ${aiBucket(AI_SCORE[id])}" style="font-size:14px;padding:6px 12px">✨ ${AI_SCORE[id]}%</span>
+        <div style="flex:1"><div style="font-weight:700;font-size:14px">AI match for this job</div><div class="tiny muted">${AI_SUMMARY[id]||''}</div></div>
+      </div>
+    </div>`:''}
     <div class="pad">
       <div class="sec-title" style="margin-top:4px">About</div>
       <p style="font-size:14.5px;line-height:1.55;color:#374151;margin:0">${w.bio}</p>
@@ -1219,11 +1612,13 @@ function openWorker(id){
         <p class="tiny" style="color:#374151;margin:6px 0 0;line-height:1.5">Neat work and finished ahead of time. Reliable.</p>
       </div>
     </div>`;
+  document.getElementById('workerActions').innerHTML =
+    `<div class="actbar" style="margin-top:0">${contactBtns(w)}</div>
+     <div class="actbar" style="margin-top:8px">${pipelineBtns(w)}</div>`;
   go('s-worker');
 }
-function shortlistWorker(btn){ const w=WORKERS.find(x=>x.id===curWorkerId); if(w.status==='pending')w.status='shortlisted'; btn.innerHTML='<svg class="ic" style="stroke:var(--indigo-fg);fill:var(--indigo-fg)" viewBox="0 0 24 24"><path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z"/></svg> Shortlisted'; toast('Added to shortlist ★'); }
-function callWorker(){ toast('📞 Calling worker… (demo)'); }
-function confirmHire(){ const w=WORKERS.find(x=>x.id===curWorkerId); if(w)w.status='hired'; closeSheet('sheet-hire'); toast('Hire offer sent to '+(w?w.name:'worker')+' 🎉'); if(stack[stack.length-1]==='s-jobmanage')renderManage(); }
+function callWorker(id){ if(id && !unlocked.has(id)){ unlockContact(id); return; } toast('📞 Calling '+(id?'+91 '+phoneFor(id):'worker')+'… (demo)'); }
+function confirmHire(){ const w=WORKERS.find(x=>x.id===curWorkerId); if(w)w.status='hired'; closeSheet('sheet-hire'); toast('Hire offer sent to '+(w?w.name:'worker')+' 🎉'); refreshCurrent(); }
 
 /* ============================ FIND WORKERS ============================ */
 function workerBrowseCardHtml(w){
@@ -1323,6 +1718,7 @@ renderRegChips(); renderPostChips();
 renderMyJobs('active'); renderHomeJobs(); renderHomeApplicants();
 renderWCatChips(); renderWorkers(WORKERS);
 renderNotis(); renderReviews(); renderLangs();
+renderConvList(); refreshCredits();
 
 // Optional deep-link for demo/testing: employer-app.html#s-home (or any screen id)
 (function(){
@@ -1331,6 +1727,7 @@ renderNotis(); renderReviews(); renderLangs();
   document.getElementById('bnav').classList.remove('hidden');
   if(h.startsWith('manage')){ stack=['s-jobs']; openManage(parseInt(h.slice(6))||1); }
   else if(h.startsWith('worker')){ stack=['s-workers']; openWorker(parseInt(h.slice(6))||1); }
+  else if(h.startsWith('chat')){ stack=['s-home']; openChat(parseInt(h.slice(4))||1); }
   else if(h.startsWith('reg')){ document.getElementById('bnav').classList.add('hidden'); stack=['s-otp']; go('s-register'); regStep(parseInt(h.slice(3))||1); }
   else if(TABS.includes(h)){ switchTab(h); }
   else if(document.getElementById(h)){ stack=['s-home']; go(h); }

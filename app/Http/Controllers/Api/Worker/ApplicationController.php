@@ -63,6 +63,8 @@ class ApplicationController extends Controller
             'status' => ApplicationStatus::Pending,
         ]);
 
+        \App\Jobs\ScoreApplication::dispatch($application->id);
+
         $job->loadMissing('employer');
         $job->employer->notify(new NewApplicationNotification($application));
 

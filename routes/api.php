@@ -119,6 +119,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('employer/applicants/{application}/status', [EmployerApplicantController::class, 'updateStatus'])->name('api.employer.applicants.status');
             Route::post('employer/applicants/{application}/shortlist', [EmployerApplicantController::class, 'toggleShortlist'])->name('api.employer.applicants.shortlist');
             Route::post('employer/applicants/{application}/unlock', [EmployerApplicantController::class, 'unlockContact'])->name('api.employer.applicants.unlock');
+            Route::post('employer/jobs/{job}/rescore', [EmployerApplicantController::class, 'rescore'])->name('api.employer.applicants.rescore');
 
             // Find workers
             Route::get('employer/workers', [WorkerDirectoryController::class, 'index'])->name('api.employer.workers');

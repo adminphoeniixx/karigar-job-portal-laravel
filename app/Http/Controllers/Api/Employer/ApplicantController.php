@@ -32,8 +32,10 @@ class ApplicantController extends Controller
 
         $filters = $request->validate([
             'stage' => ['nullable', 'string', 'in:all,pending,shortlisted,hired,rejected'],
+            'sort' => ['nullable', 'string', 'in:best_match,recent'],
         ]);
         $stage = $filters['stage'] ?? 'all';
+        $sort = $filters['sort'] ?? 'best_match';
 
         $applications = $job->applications()
             ->with(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc')
@@ -41,6 +43,8 @@ class ApplicantController extends Controller
             ->when($stage === 'shortlisted', fn ($q) => $q->whereNotNull('shortlisted_at')->where('status', '!=', ApplicationStatus::Accepted))
             ->when($stage === 'hired', fn ($q) => $q->where('status', ApplicationStatus::Accepted))
             ->when($stage === 'rejected', fn ($q) => $q->where('status', ApplicationStatus::Rejected))
+            // Best-match sorts by AI score (unscored applicants fall to the bottom).
+            ->when($sort === 'best_match', fn ($q) => $q->orderByRaw('ai_score DESC NULLS LAST'))
             ->latest()
             ->paginate(20);
 
@@ -168,6 +172,30 @@ class ApplicantController extends Controller
         return response()->json([
             'message' => __('Contact unlocked.'),
             'applicant' => new ApplicantResource($application),
+        ]);
+    }
+
+    /**
+     * (Re)run AI scoring for a job's applicants. By default only unscored ones
+     * are queued; pass force=1 to re-score everyone.
+     */
+    public function rescore(Request $request, JobListing $job): JsonResponse
+    {
+        $this->authorize('update', $job);
+
+        $force = $request->boolean('force');
+
+        $ids = $job->applications()
+            ->when(! $force, fn ($q) => $q->whereNull('ai_scored_at'))
+            ->pluck('id');
+
+        foreach ($ids as $id) {
+            \App\Jobs\ScoreApplication::dispatch((int) $id);
+        }
+
+        return response()->json([
+            'message' => trans_choice(':count applicant queued for AI scoring.|:count applicants queued for AI scoring.', $ids->count(), ['count' => $ids->count()]),
+            'queued' => $ids->count(),
         ]);
     }
 
