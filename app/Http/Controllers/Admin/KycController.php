@@ -40,6 +40,8 @@ class KycController extends Controller
             'remarks' => $request->string('remarks')->trim()->value() ?: null,
         ]);
 
+        $this->reindexWorker($kyc);
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('KYC verified.')]);
 
         return back();
@@ -56,9 +58,20 @@ class KycController extends Controller
             'remarks' => $request->string('remarks')->trim()->value(),
         ]);
 
+        $this->reindexWorker($kyc);
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('KYC rejected.')]);
 
         return back();
+    }
+
+    /**
+     * The worker directory indexes a `verified` flag, so a KYC decision has to
+     * push the profile back into the search index.
+     */
+    private function reindexWorker(KycDocument $kyc): void
+    {
+        $kyc->user?->workerProfile?->searchable();
     }
 
     public function document(KycDocument $kyc, string $type): StreamedResponse

@@ -9,8 +9,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * One applicant as the employer sees them. Contact details are only revealed
- * once the application's contact has been unlocked. `stage` collapses status +
- * shortlist into the three buckets the app shows: pending / shortlisted / hired.
+ * once the application's contact has been unlocked. `stage` collapses status,
+ * shortlist and interview into the app's pipeline tabs:
+ * pending / shortlisted / interview / hired / rejected.
  *
  * @mixin JobApplication
  */
@@ -33,6 +34,19 @@ class ApplicantResource extends JsonResource
             'cover_note' => $this->cover_note,
             'expected_wage' => $this->expected_wage,
             'contact_unlocked' => $this->contact_unlocked,
+            // Hire sheet: what was offered when the applicant was accepted.
+            'offer' => $this->offered_wage !== null || $this->start_date !== null || $this->offer_message !== null ? [
+                'wage' => $this->offered_wage,
+                'start_date' => $this->start_date?->toDateString(),
+                'message' => $this->offer_message,
+            ] : null,
+            // Interview sheet: the scheduled slot, if any.
+            'interview' => $this->interview_at !== null ? [
+                'at' => $this->interview_at->toIso8601String(),
+                'at_label' => $this->interview_at->format('d M Y, g:i A'),
+                'mode' => $this->interview_mode,
+                'note' => $this->interview_note,
+            ] : null,
             // AI match scoring (null until the ScoreApplication job has run).
             'ai' => $this->ai_scored_at !== null ? [
                 'score' => $this->ai_score,
@@ -79,6 +93,7 @@ class ApplicantResource extends JsonResource
         return match (true) {
             $this->status === ApplicationStatus::Accepted => 'hired',
             $this->status === ApplicationStatus::Rejected => 'rejected',
+            $this->interview_at !== null => 'interview',
             $this->shortlisted_at !== null => 'shortlisted',
             default => 'pending',
         };

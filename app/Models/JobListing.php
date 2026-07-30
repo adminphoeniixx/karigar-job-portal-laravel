@@ -25,6 +25,10 @@ use Laravel\Scout\Searchable;
  * @property string|null $latitude
  * @property string|null $longitude
  * @property int $vacancies
+ * @property int|null $experience_min
+ * @property int $views_count
+ * @property string|null $boost_tier
+ * @property Carbon|null $boosted_until
  * @property string|null $shift
  * @property array<int, string>|null $perks
  * @property bool $requires_worker_fee
@@ -42,9 +46,10 @@ class JobListing extends Model
         'title', 'description', 'category', 'skills',
         'wage_min', 'wage_max', 'wage_type',
         'city', 'state', 'latitude', 'longitude',
-        'vacancies', 'status', 'expires_at',
+        'vacancies', 'experience_min', 'status', 'expires_at',
         'contact_mode', 'contact_phone', 'shift', 'perks',
         'requires_worker_fee', 'worker_fee_amount',
+        'boost_tier', 'boosted_until',
     ];
 
     protected function casts(): array
@@ -52,6 +57,9 @@ class JobListing extends Model
         return [
             'skills' => 'array',
             'perks' => 'array',
+            'experience_min' => 'integer',
+            'views_count' => 'integer',
+            'boosted_until' => 'datetime',
             'requires_worker_fee' => 'boolean',
             'worker_fee_amount' => 'decimal:2',
             'status' => JobStatus::class,
@@ -89,6 +97,7 @@ class JobListing extends Model
             'city' => $this->city,
             'state' => $this->state,
             'wage_max' => $this->wage_max !== null ? (float) $this->wage_max : null,
+            'boosted' => $this->isBoosted(),
             'created_at' => $this->created_at?->timestamp ?? now()->timestamp,
         ];
 
@@ -105,6 +114,22 @@ class JobListing extends Model
     public function employer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'employer_id');
+    }
+
+    /**
+     * Is this job currently promoted (boost still running)?
+     */
+    public function isBoosted(): bool
+    {
+        return $this->boosted_until !== null && $this->boosted_until->isFuture();
+    }
+
+    /**
+     * @return HasMany<JobInvite, $this>
+     */
+    public function invites(): HasMany
+    {
+        return $this->hasMany(JobInvite::class);
     }
 
     /**

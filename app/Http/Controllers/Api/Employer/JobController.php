@@ -7,9 +7,13 @@ use App\Enums\JobStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\JobListingRequest;
 use App\Http\Resources\Api\EmployerJobResource;
+use App\Models\JobInvite;
 use App\Models\JobListing;
 use App\Models\User;
+use App\Models\WorkerProfile;
+use App\Notifications\JobInviteNotification;
 use App\Notifications\NewJobNotification;
+use App\Services\CreditWallet;
 use App\Services\JobPostingGate;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
@@ -37,6 +41,8 @@ class JobController extends Controller
             ->withCount([
                 'applications',
                 'applications as shortlisted_count' => fn ($q) => $q->whereNotNull('shortlisted_at'),
+                'applications as interview_count' => fn ($q) => $q->whereNotNull('interview_at')
+                    ->whereNotIn('status', [ApplicationStatus::Accepted, ApplicationStatus::Rejected]),
                 'applications as hired_count' => fn ($q) => $q->where('status', ApplicationStatus::Accepted),
             ])
             ->when($filters['q'] ?? null, fn ($q, $term) => $q->where('title', 'ilike', "%{$term}%"))
@@ -57,6 +63,8 @@ class JobController extends Controller
         $job->loadCount([
             'applications',
             'applications as shortlisted_count' => fn ($q) => $q->whereNotNull('shortlisted_at'),
+            'applications as interview_count' => fn ($q) => $q->whereNotNull('interview_at')
+                ->whereNotIn('status', [ApplicationStatus::Accepted, ApplicationStatus::Rejected]),
             'applications as hired_count' => fn ($q) => $q->where('status', ApplicationStatus::Accepted),
         ]);
 
@@ -143,6 +151,134 @@ class JobController extends Controller
         $job->delete();
 
         return response()->json(['message' => __('Job deleted.')]);
+    }
+
+    /**
+     * Boost a job to the top of worker search, paid for with contact credits.
+     */
+    public function boost(Request $request, JobListing $job): JsonResponse
+    {
+        $this->authorize('update', $job);
+
+        $tiers = config('billing.boost_tiers');
+
+        $data = $request->validate([
+            'tier' => ['required', 'string', 'in:'.implode(',', array_keys($tiers))],
+        ]);
+
+        $tier = $tiers[$data['tier']];
+        $wallet = CreditWallet::for($request->user());
+
+        if (! $wallet->spend((int) $tier['credits'])) {
+            return response()->json([
+                'message' => __('You do not have enough credits to boost this job.'),
+                'code' => 'out_of_credits',
+                'credits' => $wallet->summary(),
+            ], 422);
+        }
+
+        // Stack on top of a running boost instead of shortening it.
+        $from = $job->isBoosted() ? $job->boosted_until : now();
+
+        $job->update([
+            'boost_tier' => $data['tier'],
+            'boosted_until' => $from->copy()->addDays((int) $tier['days']),
+        ]);
+
+        return response()->json([
+            'message' => __('Job boosted for :days days.', ['days' => $tier['days']]),
+            'job' => new EmployerJobResource($job),
+            'credits' => $wallet->summary(),
+        ]);
+    }
+
+    /**
+     * Workers who match this job but have not applied — the "✨ Matched for
+     * this job" strip on the Manage Job screen.
+     */
+    public function matches(Request $request, JobListing $job): JsonResponse
+    {
+        $this->authorize('view', $job);
+
+        $applied = $job->applications()->pluck('worker_id');
+        $invited = $job->invites()->pluck('worker_id');
+        $skills = collect($job->skills ?? [])->filter()->values();
+
+        $profiles = WorkerProfile::query()
+            ->with('user:id,name', 'user.kyc')
+            ->whereHas('user', fn ($q) => $q->where('role', 'worker')->whereNotIn('id', $applied))
+            ->where('available', true)
+            ->when($skills->isNotEmpty() || $job->category, function ($q) use ($skills, $job) {
+                $q->where(function ($q) use ($skills, $job) {
+                    foreach ($skills as $skill) {
+                        $q->orWhereJsonContains('skills', $skill);
+                    }
+
+                    if ($job->category) {
+                        $q->orWhereJsonContains('skills', $job->category);
+                    }
+                });
+            })
+            ->when($job->city, fn ($q) => $q->where('city', $job->city))
+            ->when($job->experience_min, fn ($q, $min) => $q->where('experience_years', '>=', $min))
+            ->orderByDesc('experience_years')
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'workers' => $profiles->map(fn (WorkerProfile $w) => [
+                'id' => $w->id,
+                'user_id' => $w->user_id,
+                'name' => $w->user?->name,
+                'avatar_url' => $w->avatar_url,
+                'skills' => $w->skills ?? [],
+                'city' => $w->city,
+                'state' => $w->state,
+                'experience_years' => $w->experience_years,
+                'expected_wage' => $w->expected_wage,
+                'wage_type' => $w->wage_type,
+                'available' => (bool) $w->available,
+                'verified' => (bool) $w->user?->isKycVerified(),
+                'rating' => $w->user?->averageRating() ?? 0.0,
+                'invited' => $invited->contains($w->user_id),
+            ])->values(),
+            'total' => $profiles->count(),
+        ]);
+    }
+
+    /**
+     * Invite a matched worker to apply. Idempotent per job+worker.
+     */
+    public function invite(Request $request, JobListing $job): JsonResponse
+    {
+        $this->authorize('update', $job);
+
+        $data = $request->validate([
+            'worker_id' => ['required', 'integer', 'exists:users,id'],
+            'message' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $worker = User::where('id', $data['worker_id'])->where('role', 'worker')->firstOrFail();
+
+        $invite = JobInvite::firstOrCreate(
+            ['job_listing_id' => $job->id, 'worker_id' => $worker->id],
+            ['employer_id' => $job->employer_id, 'message' => $data['message'] ?? null],
+        );
+
+        if (! $invite->wasRecentlyCreated) {
+            return response()->json([
+                'message' => __('This worker has already been invited.'),
+                'invited' => true,
+            ]);
+        }
+
+        $job->loadMissing('employer:id,name');
+        $worker->notify(new JobInviteNotification($job, $data['message'] ?? null));
+
+        return response()->json([
+            'message' => __('Invite sent to :name.', ['name' => $worker->name]),
+            'invited' => true,
+        ], 201);
     }
 
     /**

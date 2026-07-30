@@ -27,4 +27,29 @@ return [
     ],
 
     'invoice_prefix' => env('INVOICE_PREFIX', 'KRG'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Contact-credit top-ups
+    |--------------------------------------------------------------------------
+    | One-time credit packs sold outside a subscription ("Just need a few
+    | unlocks?" on the Plans screen). Prices are inclusive of GST.
+    */
+
+    'credit_packs' => [
+        'topup_25' => ['credits' => 25, 'price' => 299, 'label' => '25 credits'],
+        'topup_60' => ['credits' => 60, 'price' => 649, 'label' => '60 credits'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Job boost tiers
+    |--------------------------------------------------------------------------
+    | Credit cost and duration of each boost offered on the Manage Job screen.
+    */
+
+    'boost_tiers' => [
+        'standard' => ['credits' => 1, 'days' => 3, 'label' => 'Standard boost'],
+        'turbo' => ['credits' => 3, 'days' => 7, 'label' => 'Turbo boost'],
+    ],
 ];

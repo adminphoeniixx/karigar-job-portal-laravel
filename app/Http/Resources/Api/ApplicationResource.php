@@ -24,6 +24,19 @@ class ApplicationResource extends JsonResource
             'expected_wage' => $this->expected_wage,
             'shortlisted_at' => $this->shortlisted_at?->toIso8601String(),
             'status_changed_at' => $this->status_changed_at?->toIso8601String(),
+            // Set once the employer schedules an interview.
+            'interview' => $this->interview_at !== null ? [
+                'at' => $this->interview_at->toIso8601String(),
+                'at_label' => $this->interview_at->format('d M Y, g:i A'),
+                'mode' => $this->interview_mode,
+                'note' => $this->interview_note,
+            ] : null,
+            // Set once the employer accepts with hire details.
+            'offer' => $this->offered_wage !== null || $this->start_date !== null ? [
+                'wage' => $this->offered_wage,
+                'start_date' => $this->start_date?->toDateString(),
+                'message' => $this->offer_message,
+            ] : null,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),
             // Parcel-style timeline for the app tracker (see trackingSteps()).

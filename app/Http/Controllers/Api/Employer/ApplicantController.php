@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Api\Employer;
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\ApplicantResource;
+use App\Jobs\ScoreApplication;
 use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Notifications\ApplicationStatusNotification;
+use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ShortlistedNotification;
+use App\Services\CreditWallet;
+use App\Support\ReferenceData;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,7 +35,7 @@ class ApplicantController extends Controller
         $this->authorize('view', $job);
 
         $filters = $request->validate([
-            'stage' => ['nullable', 'string', 'in:all,pending,shortlisted,hired,rejected'],
+            'stage' => ['nullable', 'string', 'in:all,pending,shortlisted,interview,hired,rejected'],
             'sort' => ['nullable', 'string', 'in:best_match,recent'],
         ]);
         $stage = $filters['stage'] ?? 'all';
@@ -39,10 +43,7 @@ class ApplicantController extends Controller
 
         $applications = $job->applications()
             ->with(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc')
-            ->when($stage === 'pending', fn ($q) => $q->where('status', ApplicationStatus::Pending)->whereNull('shortlisted_at'))
-            ->when($stage === 'shortlisted', fn ($q) => $q->whereNotNull('shortlisted_at')->where('status', '!=', ApplicationStatus::Accepted))
-            ->when($stage === 'hired', fn ($q) => $q->where('status', ApplicationStatus::Accepted))
-            ->when($stage === 'rejected', fn ($q) => $q->where('status', ApplicationStatus::Rejected))
+            ->when($stage !== 'all', fn ($q) => $this->scopeStage($q, $stage))
             // Best-match sorts by AI score (unscored applicants fall to the bottom).
             ->when($sort === 'best_match', fn ($q) => $q->orderByRaw('ai_score DESC NULLS LAST'))
             ->latest()
@@ -74,9 +75,23 @@ class ApplicantController extends Controller
 
         $data = $request->validate([
             'status' => ['required', 'in:accepted,rejected'],
+            // Hire-sheet fields, only meaningful on an accept.
+            'offered_wage' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
+            'start_date' => ['nullable', 'date'],
+            'message' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $application->update(['status' => ApplicationStatus::from($data['status']), 'status_changed_at' => now()]);
+        $status = ApplicationStatus::from($data['status']);
+
+        $application->update([
+            'status' => $status,
+            'status_changed_at' => now(),
+            ...($status === ApplicationStatus::Accepted ? [
+                'offered_wage' => $data['offered_wage'] ?? $application->offered_wage,
+                'start_date' => $data['start_date'] ?? $application->start_date,
+                'offer_message' => $data['message'] ?? $application->offer_message,
+            ] : []),
+        ]);
         $application->loadMissing('job.employer', 'worker.workerProfile', 'worker.kyc');
         $application->worker->notify(new ApplicationStatusNotification($application));
 
@@ -142,7 +157,59 @@ class ApplicantController extends Controller
     }
 
     /**
-     * Reveal an applicant's contact details, consuming one plan unlock.
+     * Schedule (or reschedule) an interview — moves the applicant into the
+     * Interview stage and invites the worker.
+     */
+    public function scheduleInterview(Request $request, JobApplication $application): JsonResponse
+    {
+        $this->authorize('update', $application->job);
+
+        $data = $request->validate([
+            'interview_at' => ['required', 'date'],
+            'mode' => ['required', 'string', 'in:'.implode(',', ReferenceData::INTERVIEW_MODES)],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $application->update([
+            'interview_at' => $data['interview_at'],
+            'interview_mode' => $data['mode'],
+            'interview_note' => $data['note'] ?? null,
+            // Interviewing implies the applicant is shortlisted.
+            'shortlisted_at' => $application->shortlisted_at ?? now(),
+        ]);
+
+        $application->loadMissing('job.employer', self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc');
+        $application->worker->notify(new InterviewScheduledNotification($application));
+
+        return response()->json([
+            'message' => __('Interview invite sent.'),
+            'applicant' => new ApplicantResource($application),
+        ]);
+    }
+
+    /**
+     * Cancel a scheduled interview (back to the shortlisted stage).
+     */
+    public function cancelInterview(JobApplication $application): JsonResponse
+    {
+        $this->authorize('update', $application->job);
+
+        $application->update([
+            'interview_at' => null,
+            'interview_mode' => null,
+            'interview_note' => null,
+        ]);
+
+        $application->loadMissing(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title');
+
+        return response()->json([
+            'message' => __('Interview cancelled.'),
+            'applicant' => new ApplicantResource($application),
+        ]);
+    }
+
+    /**
+     * Reveal an applicant's contact details, spending one contact credit.
      */
     public function unlockContact(Request $request, JobApplication $application): JsonResponse
     {
@@ -154,17 +221,17 @@ class ApplicantController extends Controller
             return response()->json(['applicant' => new ApplicantResource($application)]);
         }
 
-        $account = $request->user()->employerAccount();
-        $limit = $account->activeSubscription()?->plan->contactUnlockLimit() ?? 0;
-        $used = JobApplication::where('contact_unlocked', true)
-            ->whereHas('job', fn ($q) => $q->where('employer_id', $account->id))
-            ->count();
+        $wallet = CreditWallet::for($request->user());
 
-        if ($limit > 0 && $used >= $limit) {
+        if (! $wallet->canUnlock()) {
             return response()->json([
                 'message' => __('You have reached your plan\'s contact unlock limit.'),
+                'code' => 'out_of_credits',
+                'credits' => $wallet->summary(),
             ], 422);
         }
+
+        $wallet->consumeUnlock();
 
         $application->update(['contact_unlocked' => true]);
         $application->loadMissing(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title');
@@ -172,6 +239,7 @@ class ApplicantController extends Controller
         return response()->json([
             'message' => __('Contact unlocked.'),
             'applicant' => new ApplicantResource($application),
+            'credits' => CreditWallet::for($request->user())->summary(),
         ]);
     }
 
@@ -190,7 +258,7 @@ class ApplicantController extends Controller
             ->pluck('id');
 
         foreach ($ids as $id) {
-            \App\Jobs\ScoreApplication::dispatch((int) $id);
+            ScoreApplication::dispatch((int) $id);
         }
 
         return response()->json([
@@ -206,12 +274,38 @@ class ApplicantController extends Controller
      */
     private function stageCounts(JobListing $job): array
     {
-        return [
-            'all' => $job->applications()->count(),
-            'pending' => $job->applications()->where('status', ApplicationStatus::Pending)->whereNull('shortlisted_at')->count(),
-            'shortlisted' => $job->applications()->whereNotNull('shortlisted_at')->where('status', '!=', ApplicationStatus::Accepted)->count(),
-            'hired' => $job->applications()->where('status', ApplicationStatus::Accepted)->count(),
-            'rejected' => $job->applications()->where('status', ApplicationStatus::Rejected)->count(),
-        ];
+        $counts = ['all' => $job->applications()->count()];
+
+        foreach (['pending', 'shortlisted', 'interview', 'hired', 'rejected'] as $stage) {
+            $counts[$stage] = $this->scopeStage($job->applications(), $stage)->count();
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Constrain a query to one pipeline stage. The stages are exclusive so the
+     * segmented tabs add up: New → Shortlisted → Interview → Hired / Rejected.
+     *
+     * @template TQuery of \Illuminate\Database\Eloquent\Builder<JobApplication>
+     *
+     * @param  TQuery  $query
+     * @return TQuery
+     */
+    private function scopeStage($query, string $stage)
+    {
+        return match ($stage) {
+            'pending' => $query->where('status', ApplicationStatus::Pending)
+                ->whereNull('shortlisted_at')
+                ->whereNull('interview_at'),
+            'shortlisted' => $query->whereNotNull('shortlisted_at')
+                ->whereNull('interview_at')
+                ->whereNotIn('status', [ApplicationStatus::Accepted, ApplicationStatus::Rejected]),
+            'interview' => $query->whereNotNull('interview_at')
+                ->whereNotIn('status', [ApplicationStatus::Accepted, ApplicationStatus::Rejected]),
+            'hired' => $query->where('status', ApplicationStatus::Accepted),
+            'rejected' => $query->where('status', ApplicationStatus::Rejected),
+            default => $query,
+        };
     }
 }

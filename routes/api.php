@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\AccountController;
-use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\Auth\OtpAuthController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\Employer\ApplicantController as EmployerApplicantController;
+use App\Http\Controllers\Api\Employer\BillingController;
 use App\Http\Controllers\Api\Employer\DashboardController as EmployerDashboardController;
 use App\Http\Controllers\Api\Employer\JobController as EmployerJobController;
 use App\Http\Controllers\Api\Employer\KycController as EmployerKycController;
@@ -12,7 +14,9 @@ use App\Http\Controllers\Api\Employer\ReviewController as EmployerReviewControll
 use App\Http\Controllers\Api\Employer\TeamController as EmployerTeamController;
 use App\Http\Controllers\Api\Employer\WorkerDirectoryController;
 use App\Http\Controllers\Api\LocaleController;
+use App\Http\Controllers\Api\PreferenceController;
 use App\Http\Controllers\Api\ReferenceController;
+use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\Worker\ApplicationController;
 use App\Http\Controllers\Api\Worker\DashboardController;
 use App\Http\Controllers\Api\Worker\JobController;
@@ -54,6 +58,21 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/logout', [OtpAuthController::class, 'logout'])->name('api.logout');
         Route::delete('account', [AccountController::class, 'destroy'])->name('api.account.destroy');
         Route::post('locale', [LocaleController::class, 'update'])->name('api.locale');
+
+        // Settings → app preferences (theme, alert toggles)
+        Route::get('preferences', [PreferenceController::class, 'show'])->name('api.preferences.show');
+        Route::match(['put', 'patch'], 'preferences', [PreferenceController::class, 'update'])->name('api.preferences.update');
+
+        // Settings → login & security (signed-in devices)
+        Route::get('auth/sessions', [SessionController::class, 'index'])->name('api.sessions');
+        Route::delete('auth/sessions/{token}', [SessionController::class, 'destroy'])->name('api.sessions.destroy');
+
+        // Messages — employer ↔ worker chat (both roles share these)
+        Route::get('conversations', [ChatController::class, 'index'])->name('api.conversations');
+        Route::post('conversations', [ChatController::class, 'store'])->name('api.conversations.store');
+        Route::get('conversations/{conversation}', [ChatController::class, 'show'])->name('api.conversations.show');
+        Route::post('conversations/{conversation}/messages', [ChatController::class, 'send'])->name('api.conversations.send');
+        Route::post('conversations/{conversation}/read', [ChatController::class, 'read'])->name('api.conversations.read');
 
         // Push notification device tokens (any authenticated user)
         Route::post('device-tokens', [DeviceTokenController::class, 'store'])->name('api.device-tokens.store');
@@ -114,6 +133,11 @@ Route::prefix('v1')->group(function () {
             Route::match(['put', 'patch'], 'employer/jobs/{job}', [EmployerJobController::class, 'update'])->name('api.employer.jobs.update');
             Route::post('employer/jobs/{job}/close', [EmployerJobController::class, 'close'])->name('api.employer.jobs.close');
             Route::delete('employer/jobs/{job}', [EmployerJobController::class, 'destroy'])->name('api.employer.jobs.destroy');
+            Route::post('employer/jobs/{job}/boost', [EmployerJobController::class, 'boost'])->name('api.employer.jobs.boost');
+
+            // Matched workers for a job + inviting them to apply
+            Route::get('employer/jobs/{job}/matches', [EmployerJobController::class, 'matches'])->name('api.employer.jobs.matches');
+            Route::post('employer/jobs/{job}/invite', [EmployerJobController::class, 'invite'])->name('api.employer.jobs.invite');
 
             // Applicants
             Route::get('employer/jobs/{job}/applicants', [EmployerApplicantController::class, 'index'])->name('api.employer.applicants');
@@ -121,6 +145,8 @@ Route::prefix('v1')->group(function () {
             Route::patch('employer/applicants/{application}/status', [EmployerApplicantController::class, 'updateStatus'])->name('api.employer.applicants.status');
             Route::post('employer/applicants/{application}/shortlist', [EmployerApplicantController::class, 'toggleShortlist'])->name('api.employer.applicants.shortlist');
             Route::post('employer/applicants/{application}/unlock', [EmployerApplicantController::class, 'unlockContact'])->name('api.employer.applicants.unlock');
+            Route::post('employer/applicants/{application}/interview', [EmployerApplicantController::class, 'scheduleInterview'])->name('api.employer.applicants.interview');
+            Route::delete('employer/applicants/{application}/interview', [EmployerApplicantController::class, 'cancelInterview'])->name('api.employer.applicants.interview.cancel');
             Route::post('employer/jobs/{job}/rescore', [EmployerApplicantController::class, 'rescore'])->name('api.employer.applicants.rescore');
 
             // Find workers
@@ -136,6 +162,13 @@ Route::prefix('v1')->group(function () {
             // Reviews — received from workers + rate a hired worker
             Route::get('employer/reviews', [EmployerReviewController::class, 'received'])->name('api.employer.reviews');
             Route::post('employer/applicants/{application}/review', [EmployerReviewController::class, 'store'])->name('api.employer.reviews.store');
+
+            // Credits & Plans — catalogue, Razorpay checkout hand-off, top-ups
+            Route::get('employer/plans', [BillingController::class, 'index'])->name('api.employer.plans');
+            Route::post('employer/plans/callback', [BillingController::class, 'callback'])->name('api.employer.plans.callback');
+            Route::post('employer/plans/{plan}/subscribe', [BillingController::class, 'subscribe'])->name('api.employer.plans.subscribe');
+            Route::post('employer/credits/top-up', [BillingController::class, 'topUp'])->name('api.employer.credits.topup');
+            Route::post('employer/credits/callback', [BillingController::class, 'topUpCallback'])->name('api.employer.credits.callback');
 
             // Team members (owner only)
             Route::get('employer/team', [EmployerTeamController::class, 'index'])->name('api.employer.team');

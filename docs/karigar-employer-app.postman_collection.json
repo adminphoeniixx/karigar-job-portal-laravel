@@ -6,18 +6,75 @@
   },
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
-    { "key": "token", "value": "", "type": "string" },
-    { "key": "phone", "value": "9876543210", "type": "string" },
-    { "key": "otp", "value": "1234", "type": "string" },
-    { "key": "job_id", "value": "1", "type": "string" },
-    { "key": "application_id", "value": "1", "type": "string" },
-    { "key": "worker_id", "value": "1", "type": "string" },
-    { "key": "member_id", "value": "", "type": "string" },
-    { "key": "notification_id", "value": "", "type": "string" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "phone",
+      "value": "9876543210",
+      "type": "string"
+    },
+    {
+      "key": "otp",
+      "value": "1234",
+      "type": "string"
+    },
+    {
+      "key": "job_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "application_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "worker_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "member_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notification_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conversation_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "plan_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "1",
+      "type": "string"
+    }
   ],
   "item": [
     {
@@ -26,14 +83,37 @@
         {
           "name": "Send OTP",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{phone}}\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/auth/otp/send", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "otp", "send"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/otp/send",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "otp",
+                "send"
+              ]
+            },
             "description": "Send/resend a 4-digit OTP. In dev (no MSG91 keys) the code is written to storage/logs."
           }
         },
@@ -55,14 +135,37 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"otp\": \"{{otp}}\",\n  \"role\": \"employer\",\n  \"device_name\": \"Postman\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/auth/otp/verify", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "otp", "verify"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"otp\": \"{{otp}}\",\n  \"role\": \"employer\",\n  \"device_name\": \"Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/otp/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "otp",
+                "verify"
+              ]
+            },
             "description": "Verify OTP → issue token (auto-registers an employer + empty profile on first login). The test script stores the token. `needs_registration: true` → route into the business setup wizard."
           }
         },
@@ -70,8 +173,24 @@
           "name": "Me",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "me"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
           }
         },
         {
@@ -79,19 +198,54 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"locale\": \"hi\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/locale", "host": ["{{base_url}}"], "path": ["api", "v1", "locale"] }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locale\": \"hi\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/locale",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "locale"
+              ]
+            }
           }
         },
         {
           "name": "Logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/auth/logout", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "logout"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
           }
         },
         {
@@ -99,11 +253,30 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"confirm\": true\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/account", "host": ["{{base_url}}"], "path": ["api", "v1", "account"] }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirm\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/account",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "account"
+              ]
+            }
           }
         }
       ]
@@ -114,20 +287,61 @@
         {
           "name": "All reference data",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/reference", "host": ["{{base_url}}"], "path": ["api", "v1", "reference"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reference",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reference"
+              ]
+            },
             "description": "Dropdowns/chips: states, skills, job_categories, wage_types, shifts, perks, contact_modes, industries, company_sizes, app_languages."
           }
         },
         {
           "name": "Cities for state",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/reference/cities?state=Tamil Nadu", "host": ["{{base_url}}"], "path": ["api", "v1", "reference", "cities"], "query": [{ "key": "state", "value": "Tamil Nadu" }] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reference/cities?state=Tamil Nadu",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reference",
+                "cities"
+              ],
+              "query": [
+                {
+                  "key": "state",
+                  "value": "Tamil Nadu"
+                }
+              ]
+            }
           }
         }
       ]
@@ -139,8 +353,24 @@
           "name": "Home dashboard",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/dashboard", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "dashboard"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "dashboard"
+              ]
+            },
             "description": "Stats + active jobs + recent applicants in one call."
           }
         }
@@ -153,8 +383,24 @@
           "name": "Get my profile",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/profile", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "profile"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "profile"
+              ]
+            }
           }
         },
         {
@@ -162,11 +408,31 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Anil Sharma\",\n  \"company_name\": \"Sri Sai Constructions\",\n  \"phone\": \"{{phone}}\",\n  \"about\": \"Residential & commercial construction firm.\",\n  \"address\": \"12 MG Road\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"gstin\": \"22ABCDE1234F1Z5\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/employer/profile", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "profile"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Anil Sharma\",\n  \"company_name\": \"Sri Sai Constructions\",\n  \"phone\": \"{{phone}}\",\n  \"about\": \"Residential & commercial construction firm.\",\n  \"address\": \"12 MG Road\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"gstin\": \"22ABCDE1234F1Z5\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "profile"
+              ]
+            },
             "description": "`name` = contact person (saved on the user); everything else on the profile. Also finishes the registration wizard."
           }
         },
@@ -174,9 +440,35 @@
           "name": "Upload logo",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "body": { "mode": "formdata", "formdata": [{ "key": "logo", "type": "file", "src": [] }] },
-            "url": { "raw": "{{base_url}}/api/v1/employer/profile/logo", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "profile", "logo"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "logo",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/profile/logo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "profile",
+                "logo"
+              ]
+            }
           }
         }
       ]
@@ -188,8 +480,37 @@
           "name": "List my jobs (status filter)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/jobs?status=active", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "jobs"], "query": [{ "key": "status", "value": "active", "description": "active | closed | draft (optional)" }, { "key": "q", "value": "", "description": "title search (optional)", "disabled": true }] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs?status=active",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "active | closed | draft (optional)"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "title search (optional)",
+                  "disabled": true
+                }
+              ]
+            }
           }
         },
         {
@@ -212,11 +533,31 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Plumber for Apartment Project\",\n  \"description\": \"12-floor residential project. Bathroom & kitchen line fitting, drainage and testing.\",\n  \"category\": \"Plumbing\",\n  \"skills\": [\"Plumbing\", \"Pipe Fitting\"],\n  \"wage_min\": 800,\n  \"wage_max\": 1000,\n  \"wage_type\": \"daily\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"vacancies\": 3,\n  \"shift\": \"day\",\n  \"perks\": [\"Food\", \"Accommodation\"],\n  \"contact_mode\": \"both\",\n  \"contact_phone\": \"{{phone}}\",\n  \"requires_worker_fee\": false,\n  \"status\": \"active\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/employer/jobs", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "jobs"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Plumber for Apartment Project\",\n  \"description\": \"12-floor residential project. Bathroom & kitchen line fitting, drainage and testing.\",\n  \"category\": \"Plumbing\",\n  \"skills\": [\"Plumbing\", \"Pipe Fitting\"],\n  \"wage_min\": 800,\n  \"wage_max\": 1000,\n  \"wage_type\": \"daily\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"vacancies\": 3,\n  \"shift\": \"day\",\n  \"perks\": [\"Food\", \"Accommodation\"],\n  \"contact_mode\": \"both\",\n  \"contact_phone\": \"{{phone}}\",\n  \"requires_worker_fee\": false,\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs"
+              ]
+            },
             "description": "Post a job (or `status: draft`). Notifies matching workers when active. Set `status` to draft to Save-draft."
           }
         },
@@ -224,8 +565,25 @@
           "name": "Get job",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "jobs", "{{job_id}}"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}"
+              ]
+            }
           }
         },
         {
@@ -233,27 +591,177 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Plumber for Apartment Project (updated)\",\n  \"description\": \"Updated description.\",\n  \"vacancies\": 4,\n  \"contact_mode\": \"apply\",\n  \"requires_worker_fee\": false,\n  \"status\": \"active\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "jobs", "{{job_id}}"] }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Plumber for Apartment Project (updated)\",\n  \"description\": \"Updated description.\",\n  \"vacancies\": 4,\n  \"contact_mode\": \"apply\",\n  \"requires_worker_fee\": false,\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}"
+              ]
+            }
           }
         },
         {
           "name": "Close job",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/close", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "jobs", "{{job_id}}", "close"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/close",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}",
+                "close"
+              ]
+            }
           }
         },
         {
           "name": "Delete job",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "jobs", "{{job_id}}"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Boost job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/boost",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}",
+                "boost"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tier\": \"standard\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Matched workers for job",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/matches",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}",
+                "matches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Invite worker to job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/invite",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}",
+                "invite"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"worker_id\": \"{{worker_id}}\",\n  \"message\": \"Site is in Guindy, start Monday.\"\n}"
+            }
           }
         }
       ]
@@ -265,8 +773,33 @@
           "name": "List applicants for job (stage)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/applicants?stage=all", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "jobs", "{{job_id}}", "applicants"], "query": [{ "key": "stage", "value": "all", "description": "all | pending | shortlisted | hired | rejected" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/applicants?stage=all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}",
+                "applicants"
+              ],
+              "query": [
+                {
+                  "key": "stage",
+                  "value": "all",
+                  "description": "all | pending | shortlisted | hired | rejected"
+                }
+              ]
+            },
             "description": "Paginated + a `counts` block for the segmented tabs."
           }
         },
@@ -274,8 +807,25 @@
           "name": "Get one applicant",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "applicants", "{{application_id}}"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}"
+              ]
+            }
           }
         },
         {
@@ -283,11 +833,33 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"accepted\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/status", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "applicants", "{{application_id}}", "status"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "status"
+              ]
+            },
             "description": "`accepted` = hire, `rejected` = reject. Notifies the worker (in-app + email)."
           }
         },
@@ -295,16 +867,52 @@
           "name": "Toggle shortlist",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/shortlist", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "applicants", "{{application_id}}", "shortlist"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/shortlist",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "shortlist"
+              ]
+            }
           }
         },
         {
           "name": "Unlock contact",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/unlock", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "applicants", "{{application_id}}", "unlock"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/unlock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "unlock"
+              ]
+            },
             "description": "Reveals the worker's phone/email, consuming one plan unlock. 422 if the limit is reached."
           }
         },
@@ -313,12 +921,154 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Neat work, finished ahead of time.\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/review", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "applicants", "{{application_id}}", "review"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Neat work, finished ahead of time.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "review"
+              ]
+            },
             "description": "Application must be accepted (hired). One review per worker+job."
+          }
+        },
+        {
+          "name": "Schedule interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/interview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "interview"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"interview_at\": \"2026-08-02T10:30:00+05:30\",\n  \"mode\": \"site\",\n  \"note\": \"Gate 2, ask for Anil\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cancel interview",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/interview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "interview"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hire with offer",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\",\n  \"offered_wage\": 900,\n  \"start_date\": \"2026-08-05\",\n  \"message\": \"Report by 9 AM\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Rescore applicants (AI)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/rescore",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}",
+                "rescore"
+              ]
+            }
           }
         }
       ]
@@ -330,8 +1080,42 @@
           "name": "Search workers",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/workers?q=&skill=&state=&city=", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "workers"], "query": [{ "key": "q", "value": "" }, { "key": "skill", "value": "" }, { "key": "state", "value": "" }, { "key": "city", "value": "" }] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/workers?q=&skill=&state=&city=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "workers"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "skill",
+                  "value": ""
+                },
+                {
+                  "key": "state",
+                  "value": ""
+                },
+                {
+                  "key": "city",
+                  "value": ""
+                }
+              ]
+            },
             "description": "Typesense-powered. Rows beyond the plan quota come back locked (phone null)."
           }
         },
@@ -339,9 +1123,50 @@
           "name": "Get worker (profile id)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/workers/{{worker_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "workers", "{{worker_id}}"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/workers/{{worker_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "workers",
+                "{{worker_id}}"
+              ]
+            },
             "description": "`worker_id` is a worker PROFILE id. Contact shown only if unlocked via an application."
+          }
+        },
+        {
+          "name": "Search workers (all filters)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/workers?q=plumber&city=Chennai&experience_min=3&wage_min=600&wage_max=1200&languages[]=Tamil&verified=1&available=1&sort=nearest&latitude=13.08&longitude=80.27&radius_km=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "workers?q=plumber&city=Chennai&experience_min=3&wage_min=600&wage_max=1200&languages[]=Tamil&verified=1&available=1&sort=nearest&latitude=13.08&longitude=80.27&radius_km=10"
+              ]
+            }
           }
         }
       ]
@@ -353,22 +1178,73 @@
           "name": "Get verification status",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/kyc", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "kyc"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/kyc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "kyc"
+              ]
+            }
           }
         },
         {
           "name": "Submit verification (GST + PAN)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "body": { "mode": "formdata", "formdata": [
-              { "key": "gstin", "value": "22ABCDE1234F1Z5", "type": "text" },
-              { "key": "pan_number", "value": "ABCDE1234F", "type": "text" },
-              { "key": "gst_doc", "type": "file", "src": [] },
-              { "key": "pan_doc", "type": "file", "src": [] }
-            ] },
-            "url": { "raw": "{{base_url}}/api/v1/employer/kyc", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "kyc"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "gstin",
+                  "value": "22ABCDE1234F1Z5",
+                  "type": "text"
+                },
+                {
+                  "key": "pan_number",
+                  "value": "ABCDE1234F",
+                  "type": "text"
+                },
+                {
+                  "key": "gst_doc",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "pan_doc",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/kyc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "kyc"
+              ]
+            },
             "description": "multipart/form-data. Docs jpg/png/pdf ≤5 MB (optional on re-submit)."
           }
         }
@@ -381,24 +1257,72 @@
           "name": "List notifications",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/notifications", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ]
+            }
           }
         },
         {
           "name": "Mark one read",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}/read", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "{{notification_id}}", "read"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}/read",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notification_id}}",
+                "read"
+              ]
+            }
           }
         },
         {
           "name": "Mark all read",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/notifications/read-all", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "read-all"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/read-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "read-all"
+              ]
+            }
           }
         }
       ]
@@ -410,8 +1334,24 @@
           "name": "Reviews received",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/reviews", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "reviews"] },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/reviews",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "reviews"
+              ]
+            },
             "description": "Reviews workers left for this employer, with a rating summary."
           }
         }
@@ -424,8 +1364,24 @@
           "name": "List team",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/team", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "team"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/team",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "team"
+              ]
+            }
           }
         },
         {
@@ -448,11 +1404,31 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ravi\",\n  \"phone\": \"9876500000\",\n  \"role\": \"recruiter\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/employer/team", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "team"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ravi\",\n  \"phone\": \"9876500000\",\n  \"role\": \"recruiter\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/team",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "team"
+              ]
+            },
             "description": "Roles: manager | recruiter. The member logs in with their own mobile OTP."
           }
         },
@@ -461,19 +1437,468 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"role\": \"manager\"\n}" },
-            "url": { "raw": "{{base_url}}/api/v1/employer/team/{{member_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "team", "{{member_id}}"] }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"manager\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/team/{{member_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "team",
+                "{{member_id}}"
+              ]
+            }
           }
         },
         {
           "name": "Remove member",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/api/v1/employer/team/{{member_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "employer", "team", "{{member_id}}"] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/team/{{member_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "team",
+                "{{member_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messages (chat)",
+      "item": [
+        {
+          "name": "Conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "conversations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Start conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "conversations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"worker_id\": \"{{worker_id}}\",\n  \"job_id\": \"{{job_id}}\",\n  \"body\": \"Can you start Monday?\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Thread",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "conversations",
+                "{{conversation_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "conversations",
+                "{{conversation_id}}",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"See you at 9.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Mark thread read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}/read",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "conversations",
+                "{{conversation_id}}",
+                "read"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Credits & Plans",
+      "item": [
+        {
+          "name": "Plans & credit balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/plans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "plans"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Subscribe to plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/plans/{{plan_id}}/subscribe",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "plans",
+                "{{plan_id}}",
+                "subscribe"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"coupon\": \"\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Subscription callback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/plans/callback",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "plans",
+                "callback"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_payment_id\": \"pay_xxx\",\n  \"razorpay_subscription_id\": \"sub_xxx\",\n  \"razorpay_signature\": \"xxx\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Buy credit top-up",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/credits/top-up",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "credits",
+                "top-up"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pack\": \"topup_25\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Top-up callback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/credits/callback",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "credits",
+                "callback"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_payment_id\": \"pay_xxx\",\n  \"razorpay_order_id\": \"order_xxx\",\n  \"razorpay_signature\": \"xxx\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "item": [
+        {
+          "name": "Get preferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "preferences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"theme\": \"dark\",\n  \"applicant_alerts\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Device sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "sessions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sign out a device",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/sessions/{{session_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "sessions",
+                "{{session_id}}"
+              ]
+            }
           }
         }
       ]

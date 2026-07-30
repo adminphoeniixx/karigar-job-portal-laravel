@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\ReferenceData;
 use Illuminate\Foundation\Http\FormRequest;
 
 class JobListingRequest extends FormRequest
@@ -47,9 +48,10 @@ class JobListingRequest extends FormRequest
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'vacancies' => ['required', 'integer', 'min:1', 'max:10000'],
-            'shift' => ['nullable', 'string', 'in:day,night,rotational'],
+            'experience_min' => ['nullable', 'integer', 'min:0', 'max:60'],
+            'shift' => ['nullable', 'string', 'in:'.implode(',', ReferenceData::SHIFTS)],
             'perks' => ['nullable', 'array', 'max:10'],
-            'perks.*' => ['string', 'in:Food,Accommodation,Travel allowance,Bonus,Overtime pay,Weekly off'],
+            'perks.*' => ['string', 'in:'.implode(',', ReferenceData::PERKS)],
             'requires_worker_fee' => ['required', 'boolean'],
             'worker_fee_amount' => ['nullable', 'numeric', 'min:1', 'max:1000000', 'required_if:requires_worker_fee,true'],
             'contact_mode' => ['required', 'string', 'in:apply,call,both'],

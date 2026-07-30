@@ -34,6 +34,9 @@ class JobController extends Controller
     {
         abort_unless($job->status->value === 'active', 404);
 
+        // Feeds the employer's job-funnel "Views" metric.
+        $job->incrementQuietly('views_count');
+
         $job->load('employer:id,name');
         $user = $request->user();
         $application = $job->applications()->where('worker_id', $user->id)->first();

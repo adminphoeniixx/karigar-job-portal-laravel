@@ -101,6 +101,11 @@ class WorkerProfile extends Model
             'state' => $this->state,
             'experience_years' => (int) ($this->experience_years ?? 0),
             'expected_wage' => $this->expected_wage !== null ? (float) $this->expected_wage : null,
+            // Employer "Find Workers" filters & sorts.
+            'spoken_languages' => $this->spoken_languages ?? [],
+            'available' => (bool) $this->available,
+            'verified' => (bool) $this->user?->isKycVerified(),
+            'rating' => (float) ($this->user?->averageRating() ?? 0),
             'created_at' => $this->created_at?->timestamp ?? now()->timestamp,
         ];
 

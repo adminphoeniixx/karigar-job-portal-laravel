@@ -20,6 +20,10 @@ class EmployerProfileResource extends JsonResource
             'id' => $this->id,
             'name' => $this->user?->name,
             'company_name' => $this->company_name,
+            'hiring_as' => $this->hiring_as,
+            'industry' => $this->industry,
+            'company_size' => $this->company_size,
+            'hiring_categories' => $this->hiring_categories ?? [],
             'gstin' => $this->gstin,
             'phone' => $this->phone ?? $this->user?->phone,
             'about' => $this->about,
@@ -47,6 +51,7 @@ class EmployerProfileResource extends JsonResource
         $fields = [
             $this->company_name, $this->phone ?? $this->user?->phone, $this->about,
             $this->address, $this->city, $this->state, $this->latitude, $this->gstin,
+            $this->industry, $this->hiring_categories ?: null,
         ];
         $filled = collect($fields)->filter(fn ($v) => $v !== null && $v !== '')->count();
 

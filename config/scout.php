@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\JobListing;
+use App\Models\WorkerProfile;
+
 return [
 
     /*
@@ -181,7 +184,7 @@ return [
         ],
         // 'max_total_results' => env('TYPESENSE_MAX_TOTAL_RESULTS', 1000),
         'model-settings' => [
-            \App\Models\JobListing::class => [
+            JobListing::class => [
                 'collection-schema' => [
                     'fields' => [
                         ['name' => 'id', 'type' => 'string'],
@@ -192,6 +195,7 @@ return [
                         ['name' => 'city', 'type' => 'string', 'facet' => true, 'optional' => true],
                         ['name' => 'state', 'type' => 'string', 'facet' => true, 'optional' => true],
                         ['name' => 'wage_max', 'type' => 'float', 'optional' => true],
+                        ['name' => 'boosted', 'type' => 'bool', 'facet' => true, 'optional' => true],
                         ['name' => 'location', 'type' => 'geopoint', 'optional' => true],
                         ['name' => 'created_at', 'type' => 'int64'],
                     ],
@@ -201,7 +205,7 @@ return [
                     'query_by' => 'title,description,skills,category',
                 ],
             ],
-            \App\Models\WorkerProfile::class => [
+            WorkerProfile::class => [
                 'collection-schema' => [
                     'fields' => [
                         ['name' => 'id', 'type' => 'string'],
@@ -213,6 +217,10 @@ return [
                         ['name' => 'state', 'type' => 'string', 'facet' => true, 'optional' => true],
                         ['name' => 'experience_years', 'type' => 'int32', 'optional' => true],
                         ['name' => 'expected_wage', 'type' => 'float', 'optional' => true],
+                        ['name' => 'spoken_languages', 'type' => 'string[]', 'facet' => true, 'optional' => true],
+                        ['name' => 'available', 'type' => 'bool', 'facet' => true, 'optional' => true],
+                        ['name' => 'verified', 'type' => 'bool', 'facet' => true, 'optional' => true],
+                        ['name' => 'rating', 'type' => 'float', 'optional' => true],
                         ['name' => 'location', 'type' => 'geopoint', 'optional' => true],
                         ['name' => 'created_at', 'type' => 'int64'],
                     ],

@@ -16,6 +16,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $expected_wage
  * @property ApplicationStatus $status
  * @property bool $contact_unlocked
+ * @property string|null $offered_wage
+ * @property Carbon|null $start_date
+ * @property string|null $offer_message
+ * @property Carbon|null $interview_at
+ * @property string|null $interview_mode
+ * @property string|null $interview_note
  * @property Carbon|null $shortlisted_at
  * @property Carbon|null $status_changed_at
  * @property Carbon|null $created_at
@@ -25,6 +31,8 @@ class JobApplication extends Model
 {
     protected $fillable = [
         'job_listing_id', 'worker_id', 'cover_note', 'expected_wage', 'status', 'contact_unlocked', 'shortlisted_at', 'status_changed_at',
+        'offered_wage', 'start_date', 'offer_message',
+        'interview_at', 'interview_mode', 'interview_note',
         'ai_score', 'ai_recommendation', 'ai_summary', 'ai_matched_skills', 'ai_red_flags', 'ai_scored_at',
     ];
 
@@ -36,6 +44,9 @@ class JobApplication extends Model
             'shortlisted_at' => 'datetime',
             'status_changed_at' => 'datetime',
             'expected_wage' => 'decimal:2',
+            'offered_wage' => 'decimal:2',
+            'start_date' => 'date',
+            'interview_at' => 'datetime',
             'ai_score' => 'integer',
             'ai_matched_skills' => 'array',
             'ai_red_flags' => 'array',

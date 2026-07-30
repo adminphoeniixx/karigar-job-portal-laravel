@@ -170,6 +170,11 @@ Full detail + the worker's context.
 
 ## 5. Applications 🔒 (worker)
 
+`ApplicationResource` also carries `interview` (`{ at, at_label, mode, note }`,
+set when the employer schedules one) and `offer`
+(`{ wage, start_date, message }`, set when they hire you) — both `null` until
+they happen.
+
 ### `GET /worker/applications?status=pending`
 `status` optional (`pending|accepted|rejected|withdrawn`). Paginated
 `ApplicationResource` list.
@@ -223,6 +228,10 @@ encrypted at rest and never returned.
 ---
 
 ## 8. Notifications 🔒 (any auth)
+
+Notification `type`s include `job.new`, `application.shortlisted`,
+`application.status`, `application.interview`, `job.invite` (an employer invited
+you to apply) and `chat.message`.
 
 - `GET /notifications` → `{ "notifications": { paginated [{id,type,message,url,read,created_at,created_ago}] }, "unread": 2 }`
 - `POST /notifications/{id}/read` → `{ "unread": 1 }`
@@ -283,6 +292,29 @@ Everything the home screen needs:
 
 ### `POST /locale`
 `{ "locale": "hi" }` → `{ "locale": "hi", "supported": [...] }`
+
+---
+
+## 11. Messages 🔒 (chat with employers)
+Same endpoints the employer app uses — a worker may chat with any employer whose
+job they applied to.
+
+- `GET /conversations` → threads + `unread_total`
+- `POST /conversations` — `{ "employer_id": 8, "job_id": 3, "body": "..." }`
+  (`422 { "code": "chat_not_allowed" }` without an application between you)
+- `GET /conversations/{id}` → latest 30 messages, marks the thread read
+- `POST /conversations/{id}/messages` — `{ "body": "Yes, I can." }`
+- `POST /conversations/{id}/read`
+
+See `docs/employer-app-api.md` §12 for the exact payload shapes.
+
+---
+
+## 12. Settings 🔒 (shared)
+
+- `GET /preferences`, `PUT|PATCH /preferences` — `theme` (`system|light|dark`),
+  `job_alerts`, `message_alerts`, `applicant_alerts`
+- `GET /auth/sessions`, `DELETE /auth/sessions/{token}` — signed-in devices
 
 ---
 

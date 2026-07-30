@@ -27,6 +27,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string|null $phone
  * @property UserRole $role
  * @property string $locale
+ * @property array<string, mixed>|null $preferences
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -36,7 +37,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'phone', 'password', 'role', 'locale', 'email_verified_at'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'role', 'locale', 'preferences', 'email_verified_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -56,6 +57,7 @@ class User extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'suspended_at' => 'datetime',
             'role' => UserRole::class,
+            'preferences' => 'array',
         ];
     }
 
@@ -113,6 +115,36 @@ class User extends Authenticatable implements PasskeyUser
     public function employerProfile(): HasOne
     {
         return $this->hasOne(EmployerProfile::class);
+    }
+
+    /**
+     * Chat threads where this user is the worker.
+     *
+     * @return HasMany<Conversation, $this>
+     */
+    public function workerConversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class, 'worker_id');
+    }
+
+    /**
+     * Chat threads owned by this employer account.
+     *
+     * @return HasMany<Conversation, $this>
+     */
+    public function employerConversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class, 'employer_id');
+    }
+
+    /**
+     * Job invites this worker has received.
+     *
+     * @return HasMany<JobInvite, $this>
+     */
+    public function jobInvites(): HasMany
+    {
+        return $this->hasMany(JobInvite::class, 'worker_id');
     }
 
     /**

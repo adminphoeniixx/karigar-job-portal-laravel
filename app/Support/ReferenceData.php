@@ -100,7 +100,7 @@ class ReferenceData
      *
      * @var list<string>
      */
-    public const SHIFTS = ['day', 'night', 'rotational'];
+    public const SHIFTS = ['day', 'night', 'rotational', 'flexible'];
 
     /**
      * Perks a job can offer (must match JobListingRequest perks.* rule).
@@ -132,6 +132,27 @@ class ReferenceData
      * @var list<string>
      */
     public const COMPANY_SIZES = ['1–10', '11–50', '51–200', '200+'];
+
+    /**
+     * "You are hiring as" options on the employer registration wizard.
+     *
+     * @var list<string>
+     */
+    public const HIRING_AS = ['business', 'contractor', 'individual'];
+
+    /**
+     * How an interview can be held (Schedule interview sheet).
+     *
+     * @var list<string>
+     */
+    public const INTERVIEW_MODES = ['site', 'phone', 'video'];
+
+    /**
+     * Sort options for the employer's Find Workers screen.
+     *
+     * @var list<string>
+     */
+    public const WORKER_SORTS = ['best_match', 'nearest', 'rating', 'experience', 'wage_low'];
 
     /**
      * App UI languages (mirrors the LANGS list in the frontend switcher).

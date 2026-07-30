@@ -34,6 +34,15 @@ class ReferenceController extends Controller
             'contact_modes' => ReferenceData::CONTACT_MODES,
             'industries' => ReferenceData::INDUSTRIES,
             'company_sizes' => ReferenceData::COMPANY_SIZES,
+            'hiring_as' => ReferenceData::HIRING_AS,
+            'interview_modes' => ReferenceData::INTERVIEW_MODES,
+            'worker_sorts' => ReferenceData::WORKER_SORTS,
+            'credit_packs' => collect(config('billing.credit_packs'))
+                ->map(fn (array $pack, string $key) => ['key' => $key] + $pack)
+                ->values(),
+            'boost_tiers' => collect(config('billing.boost_tiers'))
+                ->map(fn (array $tier, string $key) => ['key' => $key] + $tier)
+                ->values(),
         ]);
     }
 
