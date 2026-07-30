@@ -125,6 +125,35 @@ Field `avatar` (image, ≤2 MB). → `{ "avatar_url": "https://.../storage/avata
 ### `PATCH /worker/availability`
 `{ "available": false }` → `{ "available": false }`
 
+### Resume
+
+The AI matcher reads the worker's resume when scoring a new application, so an
+uploaded resume directly changes the match score the employer sees.
+
+#### `GET /worker/resume`
+→ `{ "resume": null }` when none is uploaded, otherwise:
+```json
+{ "resume": { "name": "suresh-plumber.pdf", "uploaded_at": "2026-07-30T05:20:11+00:00",
+              "uploaded_ago": "2 minutes ago", "characters": 1660, "max_characters": 8000 } }
+```
+`characters` is how much text was extracted — useful for reassuring the worker
+their file was actually read.
+
+#### `POST /worker/resume` (multipart)
+Field `resume` — **PDF only**, ≤4 MB. Replaces any existing resume.
+→ `201 { "message": "Resume uploaded — …", "resume": { … } }`
+
+→ `422` when the file is not a PDF, is over 4 MB, or has no text layer (a scan or
+photo saved as PDF): `{ "message": "We could not read any text in that PDF…" }`.
+Tell the worker to upload a text PDF rather than a photo.
+
+#### `DELETE /worker/resume`
+→ `{ "message": "Resume removed.", "resume": null }` — drops the file and the
+extracted text, so later applications are scored on the profile alone.
+
+The PDF is stored on the private disk (same as KYC documents) and is never
+publicly reachable. Only an employer the worker has applied to can fetch it.
+
 **WorkerProfileResource**
 ```json
 {

@@ -469,6 +469,97 @@
       ]
     },
     {
+      "name": "Resume",
+      "description": "Worker resume upload. The AI matcher reads the resume text when scoring a new application, so it directly affects the match score the employer sees.",
+      "item": [
+        {
+          "name": "Get resume",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/worker/resume",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "worker",
+                "resume"
+              ]
+            },
+            "description": "Current resume metadata, or `{ \"resume\": null }` when none is uploaded."
+          }
+        },
+        {
+          "name": "Upload resume",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "resume",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/worker/resume",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "worker",
+                "resume"
+              ]
+            },
+            "description": "Attach a **PDF** (≤4 MB) to the `resume` form field. Replaces any existing resume. Returns 422 if the file is not a PDF or has no readable text layer (a scan/photo saved as PDF). The extracted text feeds the AI match score."
+          }
+        },
+        {
+          "name": "Delete resume",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/worker/resume",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "worker",
+                "resume"
+              ]
+            },
+            "description": "Removes the PDF and its extracted text; later applications are scored on the profile alone."
+          }
+        }
+      ]
+    },
+    {
       "name": "Jobs",
       "item": [
         {

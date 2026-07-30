@@ -4,10 +4,17 @@ import { Check, Settings as SettingsIcon } from '@lucide/vue';
 import { computed, reactive } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
-type SettingKey = 'first_post_free_enabled' | 'kyc_verification_enabled' | 'ai_auto_shortlist_enabled';
+type SettingKey =
+    | 'first_post_free_enabled'
+    | 'kyc_verification_enabled'
+    | 'ai_auto_shortlist_enabled'
+    | 'ai_auto_reject_enabled';
 
 const props = defineProps<{
-    settings: Record<SettingKey, boolean> & { ai_auto_shortlist_threshold: number };
+    settings: Record<SettingKey, boolean> & {
+        ai_auto_shortlist_threshold: number;
+        ai_auto_reject_below: number;
+    };
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Settings', href: '/admin/settings' }] } });
@@ -17,6 +24,8 @@ const form = reactive({
     kyc_verification_enabled: props.settings.kyc_verification_enabled,
     ai_auto_shortlist_enabled: props.settings.ai_auto_shortlist_enabled,
     ai_auto_shortlist_threshold: props.settings.ai_auto_shortlist_threshold,
+    ai_auto_reject_enabled: props.settings.ai_auto_reject_enabled,
+    ai_auto_reject_below: props.settings.ai_auto_reject_below,
 });
 
 const toggles: { key: SettingKey; title: string; description: string }[] = [
@@ -46,6 +55,15 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'When off, shortlisting stays a manual employer action. When on, any applicant ' +
             'scoring at or above the threshold below is shortlisted and the worker is notified.',
     },
+    {
+        key: 'ai_auto_reject_enabled',
+        title: 'AI auto-reject',
+        description:
+            'When on, an applicant scoring below the floor below is rejected automatically and told so. ' +
+            'Only untouched applications are affected — never one the employer has already shortlisted, ' +
+            'interviewed or decided. Leave this off unless you trust the scores: a wrong auto-reject ' +
+            'costs a real worker a real job.',
+    },
 ];
 
 // Mirrors AiMatcher's recommendation buckets, so the admin can see how wide a
@@ -55,6 +73,18 @@ const thresholdHint = computed(() => {
     const bucket = n >= 80 ? 'only "strong match" applicants' : n >= 60 ? '"good match" and above' : '"maybe" and above — a wide net';
 
     return `Shortlists ${bucket}. Each auto-shortlist notifies the worker, so a lower number means more notifications.`;
+});
+
+// Warn when the two bands are set close together — the gap between them is the
+// range the employer still decides for themselves.
+const rejectHint = computed(() => {
+    const floor = form.ai_auto_reject_below;
+    const top = form.ai_auto_shortlist_enabled ? form.ai_auto_shortlist_threshold : 100;
+    const band = `Applicants scoring under ${floor}% are rejected and notified.`;
+
+    return floor >= top
+        ? `${band} This overlaps your shortlist threshold — widen the gap.`
+        : `${band} ${floor}–${top}% is left for the employer to decide.`;
 });
 
 const save = () => {
@@ -125,6 +155,31 @@ const save = () => {
                     <p class="mt-2 text-xs text-muted-foreground">
                         {{ thresholdHint }}
                     </p>
+                </div>
+
+                <!-- Reject floor only matters while auto-reject is on. -->
+                <div
+                    v-if="toggle.key === 'ai_auto_reject_enabled' && form.ai_auto_reject_enabled"
+                    class="mt-4 rounded-xl border border-rose-200 bg-rose-50/60 p-4 dark:border-rose-900 dark:bg-rose-950/30"
+                >
+                    <label class="font-medium text-sm" for="ai-reject-below">
+                        Auto-reject below score
+                    </label>
+                    <div class="mt-2 flex items-center gap-3">
+                        <input
+                            id="ai-reject-below"
+                            v-model.number="form.ai_auto_reject_below"
+                            type="range"
+                            min="5"
+                            max="40"
+                            step="5"
+                            class="h-2 w-full max-w-xs accent-rose-500"
+                        />
+                        <span class="w-14 shrink-0 text-right font-semibold tabular-nums">
+                            {{ form.ai_auto_reject_below }}%
+                        </span>
+                    </div>
+                    <p class="mt-2 text-xs text-muted-foreground">{{ rejectHint }}</p>
                 </div>
             </div>
 

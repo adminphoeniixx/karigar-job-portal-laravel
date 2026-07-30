@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Worker\JobController;
 use App\Http\Controllers\Api\Worker\KycController;
 use App\Http\Controllers\Api\Worker\NotificationController;
 use App\Http\Controllers\Api\Worker\ProfileController;
+use App\Http\Controllers\Api\Worker\ResumeController as WorkerResumeController;
 use App\Http\Controllers\Api\Worker\ReviewController;
 use App\Http\Controllers\Api\Worker\SavedJobController;
 use Illuminate\Support\Facades\Route;
@@ -91,6 +92,11 @@ Route::prefix('v1')->group(function () {
             Route::get('worker/profile', [ProfileController::class, 'show'])->name('api.worker.profile.show');
             Route::match(['put', 'patch'], 'worker/profile', [ProfileController::class, 'update'])->name('api.worker.profile.update');
             Route::post('worker/profile/avatar', [ProfileController::class, 'avatar'])->name('api.worker.profile.avatar');
+
+            // Resume: the AI matcher reads it when scoring new applications.
+            Route::get('worker/resume', [WorkerResumeController::class, 'show'])->name('api.worker.resume.show');
+            Route::post('worker/resume', [WorkerResumeController::class, 'store'])->name('api.worker.resume.store');
+            Route::delete('worker/resume', [WorkerResumeController::class, 'destroy'])->name('api.worker.resume.destroy');
             Route::patch('worker/availability', [ProfileController::class, 'availability'])->name('api.worker.availability');
 
             // Jobs

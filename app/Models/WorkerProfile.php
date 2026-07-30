@@ -32,6 +32,8 @@ class WorkerProfile extends Model
 {
     use Searchable;
 
+    // The resume_* columns are deliberately absent here: they are only ever
+    // written as a set by App\Services\ResumeStore, never mass-assigned.
     protected $fillable = [
         'phone', 'gender', 'skills', 'experience_years', 'education', 'spoken_languages',
         'bio', 'expected_wage', 'wage_type', 'avatar_path', 'city', 'state',
@@ -49,6 +51,7 @@ class WorkerProfile extends Model
             'spoken_languages' => 'array',
             'available' => 'boolean',
             'expected_wage' => 'decimal:2',
+            'resume_uploaded_at' => 'datetime',
         ];
     }
 

@@ -23,6 +23,11 @@ class SettingController extends Controller
                     ScoreApplication::THRESHOLD_KEY,
                     ScoreApplication::DEFAULT_THRESHOLD,
                 ),
+                'ai_auto_reject_enabled' => Setting::bool(ScoreApplication::REJECT_ENABLED_KEY, false),
+                'ai_auto_reject_below' => Setting::int(
+                    ScoreApplication::REJECT_BELOW_KEY,
+                    ScoreApplication::DEFAULT_REJECT_BELOW,
+                ),
             ],
         ]);
     }
@@ -36,12 +41,18 @@ class SettingController extends Controller
             // Below 40 the model calls a candidate a "weak" match, so allow the
             // admin to be lenient but not to shortlist literally everyone.
             'ai_auto_shortlist_threshold' => ['required', 'integer', 'min:40', 'max:100'],
+            'ai_auto_reject_enabled' => ['required', 'boolean'],
+            // Capped at 40 (the model's "weak" ceiling) so auto-reject can never
+            // be widened into applicants the model considered a plausible match.
+            'ai_auto_reject_below' => ['required', 'integer', 'min:5', 'max:40'],
         ]);
 
         Setting::set('first_post_free_enabled', $data['first_post_free_enabled'] ? '1' : '0');
         Setting::set('kyc_verification_enabled', $data['kyc_verification_enabled'] ? '1' : '0');
         Setting::set(ScoreApplication::ENABLED_KEY, $data['ai_auto_shortlist_enabled'] ? '1' : '0');
         Setting::set(ScoreApplication::THRESHOLD_KEY, (string) $data['ai_auto_shortlist_threshold']);
+        Setting::set(ScoreApplication::REJECT_ENABLED_KEY, $data['ai_auto_reject_enabled'] ? '1' : '0');
+        Setting::set(ScoreApplication::REJECT_BELOW_KEY, (string) $data['ai_auto_reject_below']);
 
         return back()->with('toast', ['type' => 'success', 'message' => __('Settings updated.')]);
     }

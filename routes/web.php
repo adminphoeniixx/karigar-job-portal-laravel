@@ -30,6 +30,7 @@ use App\Http\Controllers\KycController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RazorpayWebhookController;
+use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SavedJobController;
 use App\Http\Controllers\SubscriptionController;
@@ -109,6 +110,10 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('worker/saved', [SavedJobController::class, 'index'])->name('saved.index');
         Route::post('jobs/{job}/save', [SavedJobController::class, 'toggle'])->name('saved.toggle');
+
+        // Resume: the AI matcher reads it when scoring new applications.
+        Route::post('worker/resume', [ResumeController::class, 'store'])->name('worker.resume.store');
+        Route::delete('worker/resume', [ResumeController::class, 'destroy'])->name('worker.resume.destroy');
     });
 
     // Employer job management
@@ -125,6 +130,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Applicants for a job
         Route::get('employer/jobs/{job}/applicants', [ApplicantController::class, 'index'])->name('applicants.index');
+        Route::get('employer/applications/{application}/resume', [ResumeController::class, 'download'])->name('applicants.resume');
         Route::patch('employer/applications/{application}', [ApplicantController::class, 'updateStatus'])->name('applicants.status');
         Route::post('employer/applications/{application}/unlock', [ApplicantController::class, 'unlockContact'])->name('applicants.unlock');
 

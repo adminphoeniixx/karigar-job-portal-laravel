@@ -69,6 +69,8 @@ it('lets an admin toggle verification from settings', function () {
         'kyc_verification_enabled' => false,
         'ai_auto_shortlist_enabled' => false,
         'ai_auto_shortlist_threshold' => 80,
+        'ai_auto_reject_enabled' => false,
+        'ai_auto_reject_below' => 30,
     ])->assertRedirect();
 
     expect(Setting::bool('kyc_verification_enabled', true))->toBeFalse();

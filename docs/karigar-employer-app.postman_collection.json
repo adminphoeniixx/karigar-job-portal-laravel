@@ -1070,6 +1070,31 @@
               ]
             }
           }
+        },
+        {
+          "name": "Download applicant resume",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/pdf"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employer/applications/{{application_id}}/resume",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employer",
+                "applications",
+                "{{application_id}}",
+                "resume"
+              ]
+            },
+            "description": "Streams the applicant's resume PDF. This is a **web** route (no `/api/v1` prefix) and is the same URL returned as `ApplicantResource.resume.download_url`. Authorised per application: only the employer account that received it may fetch the file. 404 when the worker has no resume."
+          }
         }
       ]
     },

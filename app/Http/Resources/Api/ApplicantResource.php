@@ -47,6 +47,13 @@ class ApplicantResource extends JsonResource
                 'mode' => $this->interview_mode,
                 'note' => $this->interview_note,
             ] : null,
+            // Uploaded resume, when the worker has one. The PDF is private, so
+            // only the filename and upload time travel in the payload.
+            'resume' => $profile?->resume_path !== null ? [
+                'name' => $profile->resume_name,
+                'uploaded_at' => $profile->resume_uploaded_at?->toIso8601String(),
+                'download_url' => route('applicants.resume', $this->id),
+            ] : null,
             // AI match scoring (null until the ScoreApplication job has run).
             'ai' => $this->ai_scored_at !== null ? [
                 'score' => $this->ai_score,

@@ -112,6 +112,9 @@ class AiMatcher
         electricians, masons, drivers, helpers, etc.). Score how well a WORKER matches a
         JOB. Judge on skills overlap, relevant experience, expected wage vs the job's
         budget, and location proximity. Do not penalise the worker for a short profile.
+        If the WORKER block includes resume text, treat it as the fuller picture and
+        prefer it over the profile fields wherever the two disagree; a resume showing a
+        different trade from the job is a strong signal of a weak match.
         Reply with ONLY a JSON object, no prose, in exactly this shape:
         {"score":<0-100 integer>,"recommendation":"strong_match|good_match|maybe|weak",
         "summary":"<one short sentence, max 20 words>","matched_skills":["..."],
@@ -151,7 +154,7 @@ class AiMatcher
             ? '₹'.number_format((float) $profile->expected_wage).($profile->wage_type ? ' / '.$profile->wage_type : '')
             : '—';
 
-        return implode("\n", [
+        $lines = [
             'Name: '.$worker->name,
             "Skills: {$skills}",
             'Experience: '.($profile?->experience_years !== null ? $profile->experience_years.' years' : '—'),
@@ -160,7 +163,16 @@ class AiMatcher
             "Location: {$location}",
             "Languages: {$langs}",
             'Bio: '.(trim((string) $profile?->bio) ?: '—'),
-        ]);
+        ];
+
+        // An uploaded resume is richer than the profile fields, so hand the model
+        // its text too and tell it to prefer the resume where the two disagree.
+        if (trim((string) $profile?->resume_text) !== '') {
+            $lines[] = "Resume text (extracted from the worker's uploaded PDF):";
+            $lines[] = trim((string) $profile->resume_text);
+        }
+
+        return implode("\n", $lines);
     }
 
     private function wageString(?string $min, ?string $max, ?string $type): string

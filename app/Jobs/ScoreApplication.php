@@ -2,8 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Enums\ApplicationStatus;
 use App\Models\JobApplication;
 use App\Models\Setting;
+use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\ShortlistedNotification;
 use App\Services\AiMatcher;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,8 +13,8 @@ use Illuminate\Foundation\Queue\Queueable;
 
 /**
  * Scores one applicant against its job using {@see AiMatcher}, persists the
- * result on the application, and auto-shortlists strong matches when the admin
- * has switched auto-shortlisting on (Admin → Settings).
+ * result on the application, then — when the admin has switched them on in
+ * Admin → Settings — auto-shortlists strong matches and auto-rejects poor ones.
  *
  * Dispatched right after a worker applies (web + API). Runs on the queue so the
  * apply request returns instantly; the score appears once the worker processes.
@@ -28,6 +30,14 @@ class ScoreApplication implements ShouldQueue
 
     /** Used until the admin saves a threshold of their own. */
     public const DEFAULT_THRESHOLD = 80;
+
+    /** Admin → Settings keys driving auto-rejection of poor matches. */
+    public const REJECT_ENABLED_KEY = 'ai_auto_reject_enabled';
+
+    public const REJECT_BELOW_KEY = 'ai_auto_reject_below';
+
+    /** Anything under this is a "weak" match to the model. */
+    public const DEFAULT_REJECT_BELOW = 30;
 
     public int $tries = 2;
 
@@ -54,7 +64,11 @@ class ScoreApplication implements ShouldQueue
             'ai_scored_at' => now(),
         ])->save();
 
-        $this->maybeAutoShortlist($application, $result['score']);
+        // A single application can only go one way, and a strong match wins:
+        // check shortlisting first and only consider rejection if it declined.
+        if (! $this->maybeAutoShortlist($application, $result['score'])) {
+            $this->maybeAutoReject($application, $result['score']);
+        }
     }
 
     /**
@@ -62,19 +76,53 @@ class ScoreApplication implements ShouldQueue
      * manual shortlist. Admin-controlled: off unless the admin enabled it, and
      * only for applicants scoring at or above the admin's threshold.
      */
-    private function maybeAutoShortlist(JobApplication $application, int $score): void
+    private function maybeAutoShortlist(JobApplication $application, int $score): bool
     {
         if (! Setting::bool(self::ENABLED_KEY, false)) {
-            return;
+            return false;
         }
 
         $threshold = Setting::int(self::THRESHOLD_KEY, self::DEFAULT_THRESHOLD);
 
         if ($threshold <= 0 || $score < $threshold || $application->shortlisted_at !== null) {
-            return;
+            return false;
         }
 
         $application->update(['shortlisted_at' => now()]);
         $application->worker->notify(new ShortlistedNotification($application));
+
+        return true;
+    }
+
+    /**
+     * Reject a poor match on the employer's behalf, mirroring the manual reject
+     * (same status, same timestamp, same notification). Admin-controlled and off
+     * by default: a wrong auto-reject costs a real worker a real job, so this
+     * never touches an application the employer has already moved on.
+     */
+    private function maybeAutoReject(JobApplication $application, int $score): void
+    {
+        if (! Setting::bool(self::REJECT_ENABLED_KEY, false)) {
+            return;
+        }
+
+        $below = Setting::int(self::REJECT_BELOW_KEY, self::DEFAULT_REJECT_BELOW);
+
+        // Only ever act on an untouched application: still pending, never
+        // shortlisted, no interview booked.
+        $untouched = $application->status === ApplicationStatus::Pending
+            && $application->shortlisted_at === null
+            && $application->interview_at === null;
+
+        if ($below <= 0 || $score >= $below || ! $untouched) {
+            return;
+        }
+
+        $application->update([
+            'status' => ApplicationStatus::Rejected,
+            'status_changed_at' => now(),
+        ]);
+
+        $application->worker->notify(new ApplicationStatusNotification($application));
     }
 }

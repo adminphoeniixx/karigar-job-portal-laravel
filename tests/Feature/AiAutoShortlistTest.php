@@ -134,6 +134,8 @@ it('lets an admin switch auto-shortlist on and set the threshold', function () {
         'kyc_verification_enabled' => true,
         'ai_auto_shortlist_enabled' => true,
         'ai_auto_shortlist_threshold' => 65,
+        'ai_auto_reject_enabled' => false,
+        'ai_auto_reject_below' => 30,
     ])->assertRedirect();
 
     expect(Setting::bool(ScoreApplication::ENABLED_KEY))->toBeTrue()

@@ -270,6 +270,32 @@ allowance first, then purchased top-up credits.
 Queue AI scoring for the job's applicants (`force=1` re-scores everyone).
 → `{ "message": "...", "queued": 7 }`
 
+### Applicant resumes
+When the worker has uploaded one, `ApplicantResource.resume` carries it:
+```json
+"resume": { "name": "suresh-plumber.pdf",
+            "uploaded_at": "2026-07-30T05:20:11+00:00",
+            "download_url": "https://…/employer/applications/14/resume" }
+```
+`null` when the worker has no resume. `download_url` streams the PDF and is
+authorised per-application — only the employer account that received the
+application can fetch it. The resume's text also feeds the AI score, so an
+applicant with a resume is scored on it rather than on their profile alone.
+
+### AI scoring, shortlisting and rejection
+Scoring always runs and always drives `sort=best_match` — nothing gates it. What
+the **admin** controls (Admin → Settings, both off by default) is whether the
+score also *acts*:
+
+| Setting | Effect when on |
+| --- | --- |
+| `ai_auto_shortlist_enabled` + `ai_auto_shortlist_threshold` (default 80) | An applicant at or above the threshold is shortlisted and notified. |
+| `ai_auto_reject_enabled` + `ai_auto_reject_below` (default 30) | An applicant below the floor is set to `rejected` and notified. |
+
+Auto-reject only ever touches an untouched application — still `pending`, never
+shortlisted, no interview booked — so an employer decision is never overwritten.
+When both gates could fire on the same applicant, shortlisting wins.
+
 ---
 
 ## 7. Find Workers 🔒
