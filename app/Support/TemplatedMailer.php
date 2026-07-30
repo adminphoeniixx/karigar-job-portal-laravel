@@ -43,13 +43,28 @@ class TemplatedMailer
         }
     }
 
+    /**
+     * Cache the template's ATTRIBUTES, not the model.
+     *
+     * config/cache.php sets 'serializable_classes' => false, so every cache
+     * store unserialises with allowed_classes: false — any cached object comes
+     * back as __PHP_Incomplete_Class. Caching the Eloquent model therefore threw
+     * a TypeError from here on the first cache hit, 500-ing whichever request was
+     * sending mail (applying to a job, shortlisting, status changes). A plain
+     * array survives that round trip; re-hydrate an unsaved model from it so
+     * render() and is_active still work for the caller.
+     */
     protected static function template(string $key): ?EmailTemplate
     {
-        return Cache::remember(
+        $attributes = Cache::remember(
             "email_template.$key",
             now()->addHour(),
-            fn () => EmailTemplate::where('key', $key)->first(),
+            fn () => EmailTemplate::where('key', $key)->first()?->only([
+                'key', 'name', 'description', 'subject', 'body_html', 'placeholders', 'is_active',
+            ]),
         );
+
+        return $attributes === null ? null : EmailTemplate::make($attributes);
     }
 
     /**
