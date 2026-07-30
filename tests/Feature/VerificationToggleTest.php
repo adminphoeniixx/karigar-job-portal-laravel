@@ -67,6 +67,8 @@ it('lets an admin toggle verification from settings', function () {
     $this->actingAs($admin)->patch('/admin/settings', [
         'first_post_free_enabled' => true,
         'kyc_verification_enabled' => false,
+        'ai_auto_shortlist_enabled' => false,
+        'ai_auto_shortlist_threshold' => 80,
     ])->assertRedirect();
 
     expect(Setting::bool('kyc_verification_enabled', true))->toBeFalse();

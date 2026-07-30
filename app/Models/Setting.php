@@ -45,6 +45,16 @@ class Setting extends Model
     }
 
     /**
+     * Read a setting as an integer.
+     */
+    public static function int(string $key, int $default = 0): int
+    {
+        $value = self::get($key);
+
+        return is_numeric($value) ? (int) $value : $default;
+    }
+
+    /**
      * Persist a setting value and bust its cache.
      */
     public static function set(string $key, ?string $value): void

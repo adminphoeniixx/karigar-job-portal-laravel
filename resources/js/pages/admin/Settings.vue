@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Check, Settings as SettingsIcon } from '@lucide/vue';
-import { reactive } from 'vue';
+import { computed, reactive } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
-type SettingKey = 'first_post_free_enabled' | 'kyc_verification_enabled';
+type SettingKey = 'first_post_free_enabled' | 'kyc_verification_enabled' | 'ai_auto_shortlist_enabled';
 
 const props = defineProps<{
-    settings: Record<SettingKey, boolean>;
+    settings: Record<SettingKey, boolean> & { ai_auto_shortlist_threshold: number };
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Settings', href: '/admin/settings' }] } });
@@ -15,6 +15,8 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Settings', href: '/admin/setti
 const form = reactive({
     first_post_free_enabled: props.settings.first_post_free_enabled,
     kyc_verification_enabled: props.settings.kyc_verification_enabled,
+    ai_auto_shortlist_enabled: props.settings.ai_auto_shortlist_enabled,
+    ai_auto_shortlist_threshold: props.settings.ai_auto_shortlist_threshold,
 });
 
 const toggles: { key: SettingKey; title: string; description: string }[] = [
@@ -35,7 +37,25 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'the apps hide their KYC screens, the badge stops showing, and the KYC endpoints ' +
             'return 404. Submitted documents are kept, so turning it back on restores them.',
     },
+    {
+        key: 'ai_auto_shortlist_enabled',
+        title: 'AI auto-shortlist',
+        description:
+            'Every applicant is always scored by the AI and ranked best-match-first — that never ' +
+            'changes. This only controls whether a high scorer is shortlisted automatically. ' +
+            'When off, shortlisting stays a manual employer action. When on, any applicant ' +
+            'scoring at or above the threshold below is shortlisted and the worker is notified.',
+    },
 ];
+
+// Mirrors AiMatcher's recommendation buckets, so the admin can see how wide a
+// net the chosen threshold casts before saving it.
+const thresholdHint = computed(() => {
+    const n = form.ai_auto_shortlist_threshold;
+    const bucket = n >= 80 ? 'only "strong match" applicants' : n >= 60 ? '"good match" and above' : '"maybe" and above — a wide net';
+
+    return `Shortlists ${bucket}. Each auto-shortlist notifies the worker, so a lower number means more notifications.`;
+});
 
 const save = () => {
     router.patch('/admin/settings', form, { preserveScroll: true });
@@ -56,28 +76,56 @@ const save = () => {
             <div
                 v-for="(toggle, index) in toggles"
                 :key="toggle.key"
-                class="flex items-start justify-between gap-4"
                 :class="index > 0 ? 'mt-5 border-t pt-5' : ''"
             >
-                <div>
-                    <h3 class="font-semibold">{{ toggle.title }}</h3>
-                    <p class="mt-1 text-sm text-muted-foreground">{{ toggle.description }}</p>
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="font-semibold">{{ toggle.title }}</h3>
+                        <p class="mt-1 text-sm text-muted-foreground">{{ toggle.description }}</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        role="switch"
+                        :aria-checked="form[toggle.key]"
+                        :aria-label="toggle.title"
+                        class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition"
+                        :class="form[toggle.key] ? 'bg-emerald-500' : 'bg-muted'"
+                        @click="form[toggle.key] = !form[toggle.key]"
+                    >
+                        <span
+                            class="inline-block size-5 transform rounded-full bg-white shadow transition"
+                            :class="form[toggle.key] ? 'translate-x-5' : 'translate-x-0.5'"
+                        />
+                    </button>
                 </div>
 
-                <button
-                    type="button"
-                    role="switch"
-                    :aria-checked="form[toggle.key]"
-                    :aria-label="toggle.title"
-                    class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition"
-                    :class="form[toggle.key] ? 'bg-emerald-500' : 'bg-muted'"
-                    @click="form[toggle.key] = !form[toggle.key]"
+                <!-- Threshold only matters while auto-shortlisting is on. -->
+                <div
+                    v-if="toggle.key === 'ai_auto_shortlist_enabled' && form.ai_auto_shortlist_enabled"
+                    class="mt-4 rounded-xl bg-muted/50 p-4"
                 >
-                    <span
-                        class="inline-block size-5 transform rounded-full bg-white shadow transition"
-                        :class="form[toggle.key] ? 'translate-x-5' : 'translate-x-0.5'"
-                    />
-                </button>
+                    <label class="font-medium text-sm" for="ai-threshold">
+                        Auto-shortlist at score
+                    </label>
+                    <div class="mt-2 flex items-center gap-3">
+                        <input
+                            id="ai-threshold"
+                            v-model.number="form.ai_auto_shortlist_threshold"
+                            type="range"
+                            min="40"
+                            max="100"
+                            step="5"
+                            class="h-2 w-full max-w-xs accent-orange-500"
+                        />
+                        <span class="w-14 shrink-0 text-right font-semibold tabular-nums">
+                            {{ form.ai_auto_shortlist_threshold }}%
+                        </span>
+                    </div>
+                    <p class="mt-2 text-xs text-muted-foreground">
+                        {{ thresholdHint }}
+                    </p>
+                </div>
             </div>
 
             <div class="mt-5 flex justify-end border-t pt-4">

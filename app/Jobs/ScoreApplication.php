@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\JobApplication;
+use App\Models\Setting;
 use App\Notifications\ShortlistedNotification;
 use App\Services\AiMatcher;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -10,8 +11,8 @@ use Illuminate\Foundation\Queue\Queueable;
 
 /**
  * Scores one applicant against its job using {@see AiMatcher}, persists the
- * result on the application, and auto-shortlists strong matches when the
- * AI_AUTO_SHORTLIST_THRESHOLD is set.
+ * result on the application, and auto-shortlists strong matches when the admin
+ * has switched auto-shortlisting on (Admin → Settings).
  *
  * Dispatched right after a worker applies (web + API). Runs on the queue so the
  * apply request returns instantly; the score appears once the worker processes.
@@ -19,6 +20,14 @@ use Illuminate\Foundation\Queue\Queueable;
 class ScoreApplication implements ShouldQueue
 {
     use Queueable;
+
+    /** Admin → Settings keys driving auto-shortlisting. */
+    public const ENABLED_KEY = 'ai_auto_shortlist_enabled';
+
+    public const THRESHOLD_KEY = 'ai_auto_shortlist_threshold';
+
+    /** Used until the admin saves a threshold of their own. */
+    public const DEFAULT_THRESHOLD = 80;
 
     public int $tries = 2;
 
@@ -50,11 +59,16 @@ class ScoreApplication implements ShouldQueue
 
     /**
      * Auto-shortlist a strong match (and notify the worker), mirroring the
-     * manual shortlist. Disabled when the threshold is 0.
+     * manual shortlist. Admin-controlled: off unless the admin enabled it, and
+     * only for applicants scoring at or above the admin's threshold.
      */
     private function maybeAutoShortlist(JobApplication $application, int $score): void
     {
-        $threshold = (int) config('services.ai.auto_shortlist_threshold', 0);
+        if (! Setting::bool(self::ENABLED_KEY, false)) {
+            return;
+        }
+
+        $threshold = Setting::int(self::THRESHOLD_KEY, self::DEFAULT_THRESHOLD);
 
         if ($threshold <= 0 || $score < $threshold || $application->shortlisted_at !== null) {
             return;

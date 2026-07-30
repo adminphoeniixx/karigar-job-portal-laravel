@@ -49,8 +49,9 @@ return [
         'base_url' => env('AI_BASE_URL', 'https://inference.do-ai.run/v1'),
         'key' => env('AI_KEY'),
         'model' => env('AI_MODEL', 'llama3.3-70b-instruct'),
-        // Applicants scoring at or above this are auto-shortlisted. 0 disables.
-        'auto_shortlist_threshold' => (int) env('AI_AUTO_SHORTLIST_THRESHOLD', 0),
+        // Auto-shortlisting is NOT configured here — it is admin-managed at
+        // Admin → Settings ('ai_auto_shortlist_enabled' / '..._threshold' in the
+        // settings table). See App\Jobs\ScoreApplication.
         'timeout' => (int) env('AI_TIMEOUT', 45),
     ],
 
