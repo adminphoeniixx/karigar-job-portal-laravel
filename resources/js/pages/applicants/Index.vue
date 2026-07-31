@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, ChevronDown, IndianRupee, Lock, Mail, MapPin, Phone, Send, Star, Unlock, Users, X } from '@lucide/vue';
+import { Check, ChevronDown, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, Send, Star, Unlock, Users, X } from '@lucide/vue';
 import { ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -51,6 +51,11 @@ const setStatus = (id: number, status: 'accepted' | 'rejected') => {
 
 const unlock = (id: number) => {
     router.post(`/employer/applications/${id}/unlock`, {}, { preserveScroll: true });
+};
+
+// Opens (or re-opens) the chat thread with this applicant, pinned to this job.
+const message = (a: Applicant) => {
+    router.post('/messages', { worker_id: a.worker.id, job_id: props.job.id });
 };
 
 const toggleShortlist = (id: number) => {
@@ -178,6 +183,12 @@ const submitReview = () => {
                     >
                         <Star class="size-3.5" :fill="a.shortlisted ? 'currentColor' : 'none'" />
                         {{ a.shortlisted ? $t('applicants.shortlisted') : $t('applicants.shortlist') }}
+                    </button>
+                    <button
+                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        @click="message(a)"
+                    >
+                        <MessageSquare class="size-3.5" /> {{ $t('applicants.message') }}
                     </button>
                     <template v-if="a.status === 'pending'">
                         <button class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700" @click="setStatus(a.id, 'accepted')">

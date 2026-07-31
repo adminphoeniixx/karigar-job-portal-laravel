@@ -14,6 +14,7 @@ import {
     Layers,
     LayoutGrid,
     Mail,
+    MessageSquare,
     Plus,
     Star,
     TicketPercent,
@@ -47,6 +48,7 @@ const { t } = useI18n();
 const page = usePage();
 const role = computed(() => page.props.auth.user?.role ?? 'worker');
 const teamRole = computed(() => (page.props.auth as { teamRole?: string | null }).teamRole ?? 'owner');
+const chatUnread = computed(() => (page.props.chatUnread as number | undefined) ?? 0);
 
 const navByRole = computed((): Record<string, NavItem[]> => ({
     worker: [
@@ -62,6 +64,7 @@ const navByRole = computed((): Record<string, NavItem[]> => ({
         { title: t('nav.myJobs'), href: '/employer/jobs', icon: BriefcaseBusiness },
         { title: t('nav.postJob'), href: '/employer/jobs/create', icon: Plus },
         { title: t('nav.shortlisted'), href: '/employer/shortlisted', icon: Star },
+        { title: t('nav.messages'), href: '/messages', icon: MessageSquare, badge: chatUnread.value },
         { title: t('nav.findWorkers'), href: '/employer/workers', icon: Users },
         { title: t('nav.team'), href: '/employer/team', icon: UsersRound },
         { title: t('nav.subscription'), href: '/subscription', icon: CreditCard },

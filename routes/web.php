@@ -28,6 +28,7 @@ use App\Http\Controllers\JobBrowseController;
 use App\Http\Controllers\JobListingController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RazorpayWebhookController;
 use App\Http\Controllers\ResumeController;
@@ -94,6 +95,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
+
+    // Messages — employer ↔ worker chat threads (same rules as the app API)
+    Route::get('messages', [MessageController::class, 'index'])->name('messages.index');
+    Route::post('messages', [MessageController::class, 'store'])->name('messages.store');
+    Route::get('messages/{conversation}', [MessageController::class, 'show'])->name('messages.show');
+    Route::post('messages/{conversation}', [MessageController::class, 'send'])->name('messages.send');
 
     // Reviews (either party of an accepted application)
     Route::post('applications/{application}/review', [ReviewController::class, 'store'])->name('reviews.store');

@@ -5,12 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\ChatMessageResource;
 use App\Http\Resources\Api\ConversationResource;
-use App\Models\ChatMessage;
 use App\Models\Conversation;
-use App\Models\JobApplication;
-use App\Models\JobListing;
-use App\Models\User;
-use App\Notifications\NewMessageNotification;
+use App\Support\Chat;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -18,9 +14,13 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 /**
  * Direct employer ↔ worker chat — the Messages screens in both apps. Threads
  * are scoped to the employer *account*, so team members share one inbox.
+ *
+ * The rules live in App\Support\Chat, shared with the web Messages screen.
  */
 class ChatController extends Controller
 {
+    public function __construct(private readonly Chat $chat) {}
+
     /**
      * The user's conversation list, newest activity first.
      */
@@ -35,7 +35,7 @@ class ChatController extends Controller
             ->paginate(20);
 
         return ConversationResource::collection($conversations)->additional([
-            'unread_total' => $this->unreadTotal($user),
+            'unread_total' => $this->chat->unreadTotal($user),
         ]);
     }
 
@@ -54,8 +54,7 @@ class ChatController extends Controller
             'body' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        // Each side names the *other* participant; the caller's own side is
-        // always taken from the token, never from the request body.
+        // Each side names the *other* participant.
         $counterpart = $user->isWorker() ? ($data['employer_id'] ?? null) : ($data['worker_id'] ?? null);
 
         if ($counterpart === null) {
@@ -66,27 +65,21 @@ class ChatController extends Controller
             ], 422);
         }
 
-        [$employerId, $workerId] = $user->isWorker()
-            ? [(int) $counterpart, $user->id]
-            : [$user->employerAccount()->id, (int) $counterpart];
+        $participants = $this->chat->participants($user, (int) $counterpart);
 
-        if (! $this->mayChat($employerId, $workerId)) {
+        if ($participants === null) {
             return response()->json([
                 'message' => __('You can only message workers who applied to your job or whose contact you have unlocked.'),
                 'code' => 'chat_not_allowed',
             ], 422);
         }
 
-        $jobId = $this->resolveJobId($data['job_id'] ?? null, $employerId);
+        [$employerId, $workerId] = $participants;
 
-        $conversation = Conversation::firstOrCreate([
-            'employer_id' => $employerId,
-            'worker_id' => $workerId,
-            'job_listing_id' => $jobId,
-        ]);
+        $conversation = $this->chat->open($employerId, $workerId, $data['job_id'] ?? null);
 
         if (! empty($data['body'])) {
-            $this->push($conversation, $user, $data['body']);
+            $this->chat->push($conversation, $user, $data['body']);
         }
 
         $conversation->load(['job:id,title', 'worker.workerProfile', 'employer.employerProfile', 'messages']);
@@ -109,7 +102,7 @@ class ChatController extends Controller
             ->latest('id')
             ->paginate(30);
 
-        $this->markRead($conversation, $user);
+        $this->chat->markRead($conversation, $user);
 
         $conversation->load(['job:id,title', 'worker.workerProfile', 'employer.employerProfile', 'messages']);
 
@@ -137,7 +130,7 @@ class ChatController extends Controller
             'body' => ['required', 'string', 'max:2000'],
         ]);
 
-        $message = $this->push($conversation, $user, $data['body']);
+        $message = $this->chat->push($conversation, $user, $data['body']);
 
         return response()->json([
             'message' => new ChatMessageResource($message),
@@ -152,85 +145,11 @@ class ChatController extends Controller
         $user = $request->user();
         abort_unless($conversation->isParticipant($user), 403);
 
-        $this->markRead($conversation, $user);
+        $this->chat->markRead($conversation, $user);
 
         return response()->json([
             'unread' => 0,
-            'unread_total' => $this->unreadTotal($user),
+            'unread_total' => $this->chat->unreadTotal($user),
         ]);
-    }
-
-    /**
-     * Store a message, bump the thread and notify the other side.
-     */
-    private function push(Conversation $conversation, User $sender, string $body): ChatMessage
-    {
-        $message = $conversation->messages()->create([
-            'sender_id' => $sender->id,
-            'body' => $body,
-        ]);
-
-        $conversation->update(['last_message_at' => $message->created_at]);
-
-        $recipient = $conversation->isWorker($sender)
-            ? $conversation->employer
-            : $conversation->worker;
-
-        $message->setRelation('sender', $sender);
-        $recipient?->notify(new NewMessageNotification($message));
-
-        return $message;
-    }
-
-    private function markRead(Conversation $conversation, User $user): void
-    {
-        $conversation->messages()
-            ->whereNull('read_at')
-            ->when(
-                $conversation->isWorker($user),
-                fn ($q) => $q->where('sender_id', '!=', $conversation->worker_id),
-                fn ($q) => $q->where('sender_id', $conversation->worker_id),
-            )
-            ->update(['read_at' => now()]);
-    }
-
-    /**
-     * Employers may only message workers who applied to one of their jobs or
-     * whose contact they have already unlocked; workers may reply to those.
-     */
-    private function mayChat(int $employerId, int $workerId): bool
-    {
-        return JobApplication::where('worker_id', $workerId)
-            ->whereHas('job', fn ($q) => $q->where('employer_id', $employerId))
-            ->exists();
-    }
-
-    /**
-     * Only accept a job id the employer actually owns.
-     */
-    private function resolveJobId(?int $jobId, int $employerId): ?int
-    {
-        if ($jobId === null) {
-            return null;
-        }
-
-        return JobListing::where('id', $jobId)->where('employer_id', $employerId)->exists()
-            ? $jobId
-            : null;
-    }
-
-    private function unreadTotal(User $user): int
-    {
-        return ChatMessage::whereNull('read_at')
-            ->whereHas('conversation', function ($q) use ($user) {
-                $q->forUser($user);
-
-                // "Not mine": the worker's own messages for the employer side,
-                // and everything but the worker's for the worker side.
-                $user->isWorker()
-                    ? $q->whereColumn('conversations.worker_id', '!=', 'chat_messages.sender_id')
-                    : $q->whereColumn('conversations.worker_id', '=', 'chat_messages.sender_id');
-            })
-            ->count();
     }
 }
