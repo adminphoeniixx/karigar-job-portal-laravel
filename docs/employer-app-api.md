@@ -9,20 +9,34 @@ verification. Additive and independent of the web (Inertia/Fortify) app.
 - **Content type:** `application/json` (file uploads use `multipart/form-data`)
 - **Always send:** `Accept: application/json`
 
-Validation errors return `422` with `{ "message": ..., "errors": { field: [msg] } }`.
-Auth failures `401`; role/permission failures `403`. 🔒 = requires a token.
-All `employer/*` routes require the token's user to have the **employer** role.
+🔒 = requires a token. All `employer/*` routes additionally require the token's
+user to have the **employer** role (`403` otherwise).
 
-Jobs, applicants, contact-unlock quota and reviews are scoped to the
+| Code | When |
+| --- | --- |
+| `401` | missing / revoked token |
+| `403` | wrong role, not your job/applicant, not the account owner, suspended account |
+| `404` | not found — **also** what the KYC routes return while admin has verification switched off |
+| `422` | validation (`{ "message", "errors": { field: [msg] } }`) or a business rule (`out_of_credits`, `chat_not_allowed`, plan limits) |
+| `429` | OTP throttles |
+
+Jobs, applicants, contact-unlock quota, chat and reviews are scoped to the
 **employer account** (owner + team members see the same data), exactly like the web.
+
+**Response envelope.** Endpoints that return a single resource on their own wrap
+it in `data` — `GET /employer/profile`, `PUT|PATCH /employer/profile`,
+`GET /employer/jobs/{job}` and `GET /employer/applicants/{application}` all come
+back as `{ "data": { …resource } }`. Paginated lists use the usual
+`{ "data": [...], "links": {...}, "meta": {...} }`. Everywhere else the resource
+is a named key inside a plain object (`{ "message": ..., "job": {...} }`,
+`dashboard.profile`, …) with **no** `data` wrapper.
 
 ---
 
-## 1. Auth (public/shared)
-
-Same endpoints as the worker app — pass `role: "employer"` when verifying.
+## 1. Auth (public / shared with the worker app)
 
 ### `POST /auth/otp/send`
+Route throttle `6/min`; on top of that 3 OTPs per minute per phone+IP.
 ```json
 // body → 200
 { "phone": "9876543210" }
@@ -30,8 +44,11 @@ Same endpoints as the worker app — pass `role: "employer"` when verifying.
 ```
 
 ### `POST /auth/otp/verify`
-Verify OTP → issue a token. Registers the account (and an empty employer profile)
-on first login.
+Verify the OTP → issue a token. Registers the account (and an empty employer
+profile) on first login. Route throttle `10/min`; 5 verify attempts per minute
+per phone+IP.
+
+**OTP is 4 digits** (`digits:4`), not 6.
 ```json
 // body
 { "phone": "9876543210", "otp": "4821", "role": "employer", "device_name": "iPhone 15" }
@@ -45,19 +62,25 @@ on first login.
             "rating": { "average": 0, "count": 0 } }
 }
 ```
+`role` only applies when the number is **new** — an existing account keeps the
+role it already has, so check `user.role` in the response before routing.
+A suspended account gets `403`.
 
-### `POST /auth/logout` 🔒 → `{ "message": "Logged out." }`
+### `POST /auth/logout` 🔒 → `{ "message": "Logged out." }` (revokes only this device's token)
 ### `GET /auth/me` 🔒 → `{ "user": { ...UserResource }, "unread_notifications": 3 }`
-### `DELETE /account` 🔒 — body `{ "confirm": true }`, revokes all tokens.
-### `POST /locale` 🔒 — body `{ "locale": "hi" }`, updates app language.
+### `DELETE /account` 🔒 — body `{ "confirm": true }`, revokes all tokens and deletes the user.
+### `POST /locale` 🔒 — body `{ "locale": "hi" }` → `{ "locale", "supported": [...] }`
 
 ---
 
 ## 2. Reference data (public)
-`GET /reference` now also returns the employer-app dropdowns:
+
+### `GET /reference`
+One call the app can cache on first launch:
 ```json
 {
-  "states": [...], "skills": [...], "job_categories": [...],
+  "states": [...], "skills": [...], "spoken_languages": [...],
+  "education_levels": [...], "job_categories": [...],
   "wage_types": ["hourly", "daily", "monthly"],
   "shifts": ["day", "night", "rotational", "flexible"],
   "perks": ["Food", "Accommodation", "Travel allowance", "Bonus", "Overtime pay", "Weekly off"],
@@ -67,12 +90,16 @@ on first login.
   "hiring_as": ["business", "contractor", "individual"],
   "interview_modes": ["site", "phone", "video"],
   "worker_sorts": ["best_match", "nearest", "rating", "experience", "wage_low"],
-  "credit_packs": [{ "key": "topup_25", "credits": 25, "price": 299, "label": "25 credits" }],
-  "boost_tiers": [{ "key": "standard", "credits": 1, "days": 3, "label": "Standard boost" }],
-  "app_languages": [...]
+  "credit_packs": [{ "key": "topup_25", "credits": 25, "price": 299, "label": "25 credits" },
+                   { "key": "topup_60", "credits": 60, "price": 649, "label": "60 credits" }],
+  "boost_tiers": [{ "key": "standard", "credits": 1, "days": 3, "label": "Standard boost" },
+                  { "key": "turbo", "credits": 3, "days": 7, "label": "Turbo boost" }],
+  "app_languages": [{ "code": "en", "native": "English", "english": "English" }, ...]
 }
 ```
-`GET /reference/cities?state=Tamil%20Nadu` → `{ "cities": [...] }`
+
+### `GET /reference/cities?state=Tamil%20Nadu` → `{ "cities": [...] }`
+### `GET /reference/job-categories` → `{ "job_categories": [...] }`
 
 ---
 
@@ -87,7 +114,7 @@ Everything the home screen needs in one call.
   "credits": { ...CreditSummary },          // home "12 contact credits" card
   "stats": {
     "active_jobs": 4, "total_applicants": 37, "shortlisted": 9,
-    "interview": 2, "hired": 5,
+    "hired": 5, "interview": 2,
     "unread_notifications": 3, "unread_messages": 1,
     "verified": true, "profile_completion": 88
   },
@@ -96,12 +123,15 @@ Everything the home screen needs in one call.
   "recent_applicants": [ { ...ApplicantResource } ]    // up to 5 newest
 }
 ```
+`features.verification_enabled` is the admin verification switch — when it is
+`false` the app must hide every KYC screen, badge and prompt (the `kyc`
+endpoints `404` in that state).
 
 ---
 
 ## 4. Business profile 🔒
 
-### `GET /employer/profile` → `EmployerProfileResource`
+### `GET /employer/profile` → `{ "data": EmployerProfileResource }`
 ```json
 {
   "id": 3, "name": "Anil Sharma", "company_name": "Sri Sai Constructions",
@@ -110,17 +140,20 @@ Everything the home screen needs in one call.
   "gstin": "22ABCDE1234F1Z5", "phone": "9876543210", "about": "...",
   "address": "...", "city": "Chennai", "state": "Tamil Nadu",
   "location_label": "Chennai, Tamil Nadu", "latitude": 13.08, "longitude": 80.27,
-  "logo_url": "https://.../storage/logos/x.jpg", "verified": true,
+  "logo_url": "https://cdn.../logos/x.jpg", "verified": true,
   "rating": { "average": 4.6, "count": 18 }, "completion": 88
 }
 ```
+`completion` is a 0–100 score over company_name, phone, about, address, city,
+state, latitude, gstin, industry and hiring_categories — the dashboard nudge.
 
 ### `PUT|PATCH /employer/profile`
-Create/update the business profile — also used to finish the registration wizard.
-`name` is the contact person (saved on the user); everything else on the profile.
+Create/update the business profile — also how the registration wizard finishes.
+`name` and `email` are saved on the **user**; everything else on the profile.
 ```json
 // body (all optional)
-{ "name": "Anil Sharma", "company_name": "Sri Sai Constructions",
+{ "name": "Anil Sharma", "email": "anil@sri-sai.in",
+  "company_name": "Sri Sai Constructions",
   "hiring_as": "business",                    // business | contractor | individual
   "industry": "Construction & Real Estate",
   "company_size": "11–50",                    // from reference company_sizes
@@ -128,30 +161,51 @@ Create/update the business profile — also used to finish the registration wiza
   "phone": "9876543210", "about": "...", "address": "...",
   "city": "Chennai", "state": "Tamil Nadu", "latitude": 13.08, "longitude": 80.27,
   "gstin": "22ABCDE1234F1Z5" }
-// 200 → EmployerProfileResource
+// 200 → { "data": EmployerProfileResource }
 ```
+Limits: `about` ≤2000, `address` ≤500, `hiring_categories` ≤20 items,
+`gstin` exactly 15 chars matching `22ABCDE1234F1Z5`, `email` unique across users.
+Setting a real `email` here is what makes transactional email actually reach the
+employer — OTP-created accounts start with a placeholder `<phone>@phone.karigar`
+address, which the mailer skips.
 
-### `POST /employer/profile/logo` — `multipart/form-data`, field `logo` (image ≤2 MB)
-→ `{ "logo_url": "https://.../storage/logos/x.jpg" }`
+### `POST /employer/profile/logo`
+`multipart/form-data`, field `logo` (image ≤2 MB) → `{ "logo_url": "https://cdn.../logos/x.jpg" }`
+Use this rather than sending the logo on `PATCH /employer/profile` — PHP does
+not parse multipart bodies on PUT/PATCH. Images go to BunnyCDN.
 
 ---
 
 ## 5. Jobs 🔒
 
-**EmployerJobResource** includes the full editable field set plus
-`status`, `status_label`, `wage_label`, `location_label`, `share_url`,
-`boost: { active, tier, until }` and
-`stats: { views, applicants, shortlisted, interview, hired }` — everything the
-Manage Job funnel needs.
+**EmployerJobResource**
+```json
+{
+  "id": 12, "title": "...", "description": "...", "category": "Plumbing",
+  "skills": [...], "wage_min": 800, "wage_max": 1000, "wage_type": "daily",
+  "wage_label": "₹800–1000 / daily",
+  "city": "Chennai", "state": "Tamil Nadu", "location_label": "Chennai, Tamil Nadu",
+  "latitude": 13.08, "longitude": 80.27,
+  "vacancies": 3, "experience_min": 1, "shift": "day", "perks": [...],
+  "contact_mode": "both", "contact_phone": "9876543210",
+  "requires_worker_fee": false, "worker_fee_amount": null,
+  "status": "active", "status_label": "Active",
+  "stats": { "views": 240, "applicants": 12, "shortlisted": 3, "interview": 1, "hired": 1 },
+  "boost": { "active": true, "tier": "standard", "until": "2026-08-09T..." },
+  "share_url": "https://.../jobs/12",
+  "created_at": "...", "created_ago": "2 days ago", "expires_at": null
+}
+```
 
-### `GET /employer/jobs?status=active|closed|draft&q=<search>`
-Paginated (15/page), newest first. `status`/`q` optional (the My Jobs tabs).
+### `GET /employer/jobs?status=draft|active|closed&q=<search>`
+Paginated (15/page), newest first — the My Jobs tabs. `q` matches the title.
 
-### `GET /employer/jobs/{job}` → `EmployerJobResource`
+### `GET /employer/jobs/{job}` → `{ "data": EmployerJobResource }`
 
 ### `POST /employer/jobs`
-Post a job (or save a draft with `status: "draft"`). Notifies matching workers
-when `status: "active"`. Returns `422` if the plan's job-post limit is reached.
+Post a job (or save a draft with `status: "draft"`). An active job notifies
+matching workers (same city or overlapping skill; everyone if nothing matches)
+and emails the employer a confirmation.
 ```json
 // body
 {
@@ -167,21 +221,30 @@ when `status: "active"`. Returns `422` if the plan's job-post limit is reached.
 }
 // 201 → { "message": "Job posted.", "job": { ...EmployerJobResource } }
 ```
-Rules: `title` req; `description` req ≤5000; `vacancies` req ≥1;
-`wage_type` in hourly/daily/monthly; `wage_max` ≥ `wage_min`;
-`experience_min` 0–60; `shift` in day/night/rotational/flexible;
-`contact_mode` in apply/call/both
-(`contact_phone` required for call/both); `status` in draft/active/closed;
-`perks.*` from the reference `perks` list.
+Rules: `title` required ≤255 · `description` required ≤5000 ·
+`vacancies` required 1–10000 · `status` required in draft/active/closed ·
+`wage_type` in hourly/daily/monthly · `wage_max` ≥ `wage_min` ·
+`experience_min` 0–60 · `shift` in day/night/rotational/flexible ·
+`perks.*` from the reference `perks` list (≤10) · `skills.*` ≤30 items ·
+`contact_mode` in apply/call/both (defaults to `apply`; `contact_phone`
+required for call/both) · `requires_worker_fee` boolean (defaults false;
+`worker_fee_amount` required when true) · `expires_at` optional, after today.
 
-### `PUT|PATCH /employer/jobs/{job}` — same body → `{ "message", "job" }`
-### `POST /employer/jobs/{job}/close` → sets status `closed`, `{ "message", "job" }`
+**Posting gate** — `422` before anything is created:
+- `"Subscribe to a plan to post jobs."` — no active plan and the free first post
+  is used up / switched off in admin.
+- `"You have reached your plan's job posting limit."` — plan limit hit.
+
+### `PUT|PATCH /employer/jobs/{job}` — same body → `{ "message": "Job updated.", "job": {...} }`
+A draft flipped to `active` fires the same worker notifications as a fresh post.
+### `POST /employer/jobs/{job}/close` → `{ "message": "Job closed.", "job": {...} }`
 ### `DELETE /employer/jobs/{job}` → `{ "message": "Job deleted." }`
 
 ### `POST /employer/jobs/{job}/boost`
-Promote a job (Boost sheet). Costs purchased credits — `standard` = 1 credit /
-3 days, `turbo` = 3 credits / 7 days (see `boost_tiers` in `/reference`).
-Boosting a boosted job extends it instead of shortening it.
+Promote a job (Boost sheet). Paid for out of **purchased** credits only —
+plan allowance does not cover boosts. `standard` = 1 credit / 3 days,
+`turbo` = 3 credits / 7 days (see `boost_tiers` in `/reference`).
+Boosting an already-boosted job extends it instead of shortening it.
 ```json
 // body → 200
 { "tier": "standard" }
@@ -192,36 +255,58 @@ Boosting a boosted job extends it instead of shortening it.
 ```
 
 ### `GET /employer/jobs/{job}/matches`
-"✨ Matched for this job" — available workers whose skills/category, city and
-minimum experience fit the job and who have **not** applied yet.
+"✨ Matched for this job" — up to 20 **available** workers whose skills or
+category, city and minimum experience fit the job and who have **not** applied
+yet, best experience first.
 ```json
-{ "workers": [ { "id", "user_id", "name", "avatar_url", "skills": [...], "city",
+{ "workers": [ { "id", "user_id", "name", "avatar_url", "skills": [...], "city", "state",
     "experience_years", "expected_wage", "wage_type", "available", "verified",
     "rating", "invited": false } ], "total": 6 }
 ```
+`id` is the worker **profile** id; `invited` is true once you have invited them.
 
 ### `POST /employer/jobs/{job}/invite`
-Invite a matched worker to apply — pushes + in-app notification. Idempotent:
+Invite a matched worker to apply — in-app + push notification. Idempotent:
 inviting twice returns `200` with `"invited": true` and sends nothing.
 ```json
-// body → 201
+// body (worker_id is the worker's USER id) → 201
 { "worker_id": 42, "message": "Site is in Guindy, start Monday." }
 { "message": "Invite sent to Ravi.", "invited": true }
+// 200 on a repeat
+{ "message": "This worker has already been invited.", "invited": true }
 ```
 
 ---
 
 ## 6. Applicants 🔒
 
-**ApplicantResource** carries the application (`status`, `stage`, `shortlisted`,
-`cover_note`, `expected_wage`, `contact_unlocked`, `ai`, `offer`, `interview`)
-and an embedded `worker` summary. Worker `phone`/`email` are `null` until the
-contact is unlocked. `stage` is one of
-`pending | shortlisted | interview | hired | rejected` — the stages are
-exclusive, so the segmented tabs add up.
+**ApplicantResource**
+```json
+{
+  "id": 14, "status": "pending", "status_label": "Pending", "stage": "pending",
+  "shortlisted": false, "cover_note": "...", "expected_wage": 900,
+  "contact_unlocked": false,
+  "offer": { "wage": 900, "start_date": "2026-08-10", "message": "Report by 9 AM" } | null,
+  "interview": { "at": "2026-08-02T10:30:00+05:30", "at_label": "02 Aug 2026, 10:30 AM",
+                 "mode": "site", "note": "Gate 2" } | null,
+  "resume": { "name": "suresh-plumber.pdf", "uploaded_at": "...", "download_url": "..." } | null,
+  "ai": { "score": 82, "recommendation": "shortlist", "summary": "...",
+          "matched_skills": [...], "red_flags": [...] } | null,
+  "created_at": "...", "created_ago": "3 hours ago", "tracking_steps": [...],
+  "job": { "id": 12, "title": "..." },
+  "worker": { "id", "name", "rating", "reviews_count", "avatar_url", "bio",
+              "skills": [...], "spoken_languages": [...], "experience_years",
+              "city", "state", "expected_wage", "wage_type", "available",
+              "verified", "phone": null, "email": null }
+}
+```
+Worker `phone` / `email` stay `null` until the contact is unlocked. `stage` is
+one of `pending | shortlisted | interview | hired | rejected` and the stages are
+**exclusive**, so the segmented tabs add up to `all`.
 
 ### `GET /employer/jobs/{job}/applicants?stage=all|pending|shortlisted|interview|hired|rejected&sort=best_match|recent`
-Paginated (20/page). Response `additional`:
+Paginated (20/page). **`sort` defaults to `best_match`** (AI score descending,
+unscored applicants last); `recent` is newest first.
 ```json
 {
   "data": [ { ...ApplicantResource } ],
@@ -230,11 +315,11 @@ Paginated (20/page). Response `additional`:
 }
 ```
 
-### `GET /employer/applicants/{application}` → single `ApplicantResource`
+### `GET /employer/applicants/{application}` → `{ "data": ApplicantResource }`
 
 ### `PATCH /employer/applicants/{application}/status`
-Hire or reject — notifies the worker (in-app + email). The Hire sheet's offer
-fields are stored on the application and echoed back as `applicant.offer`
+Hire or reject — notifies the worker (in-app + push + email). The Hire sheet's
+offer fields are stored on the application and echoed back as `applicant.offer`
 (ignored on a reject).
 ```json
 // body → 200
@@ -242,6 +327,10 @@ fields are stored on the application and echoed back as `applicant.offer`
   "offered_wage": 900, "start_date": "2026-08-05", "message": "Report by 9 AM" }
 { "message": "Applicant Accepted.", "applicant": { ...ApplicantResource } }
 ```
+
+### `POST /employer/applicants/{application}/shortlist`
+Toggle shortlist. Shortlisting notifies + emails the worker; un-shortlisting is silent.
+→ `{ "message", "applicant": { ...ApplicantResource } }`
 
 ### `POST /employer/applicants/{application}/interview`
 Schedule (or reschedule) an interview — moves the applicant into the Interview
@@ -251,24 +340,30 @@ stage, auto-shortlists them and notifies the worker (in-app + push).
 { "interview_at": "2026-08-02T10:30:00+05:30", "mode": "site", "note": "Gate 2, ask for Anil" }
 { "message": "Interview invite sent.", "applicant": { ...stage: "interview" } }
 ```
-`mode` is one of `site | phone | video` (see `interview_modes` in `/reference`).
+`mode` is one of `site | phone | video` (`interview_modes` in `/reference`),
+`note` ≤1000 chars.
 
 ### `DELETE /employer/applicants/{application}/interview`
 Cancel it — the applicant drops back to `shortlisted`.
-
-### `POST /employer/applicants/{application}/shortlist`
-Toggle shortlist. Shortlisting notifies the worker.
-→ `{ "message", "applicant": { ...ApplicantResource } }`
+→ `{ "message": "Interview cancelled.", "applicant": {...} }`
 
 ### `POST /employer/applicants/{application}/unlock`
 Reveal the worker's contact, spending one contact credit — the plan's unlock
 allowance first, then purchased top-up credits.
-→ `{ "message": "Contact unlocked.", "applicant": {...}, "credits": { ...CreditSummary } }`
-`422` with `"code": "out_of_credits"` when nothing is left.
+```json
+// 200
+{ "message": "Contact unlocked.", "applicant": {...}, "credits": { ...CreditSummary } }
+// 422 — nothing left
+{ "message": "You have reached your plan's contact unlock limit.",
+  "code": "out_of_credits", "credits": {...} }
+```
+Already unlocked → `200 { "applicant": {...} }` only (no `message`, no `credits`,
+nothing charged), so treat both shapes as success.
 
 ### `POST /employer/jobs/{job}/rescore`
-Queue AI scoring for the job's applicants (`force=1` re-scores everyone).
-→ `{ "message": "...", "queued": 7 }`
+Queue AI scoring for the job's applicants — unscored ones only, or everyone with
+`?force=1`.
+→ `{ "message": "7 applicants queued for AI scoring.", "queued": 7 }`
 
 ### Applicant resumes
 When the worker has uploaded one, `ApplicantResource.resume` carries it:
@@ -277,10 +372,13 @@ When the worker has uploaded one, `ApplicantResource.resume` carries it:
             "uploaded_at": "2026-07-30T05:20:11+00:00",
             "download_url": "https://…/employer/applications/14/resume" }
 ```
-`null` when the worker has no resume. `download_url` streams the PDF and is
-authorised per-application — only the employer account that received the
-application can fetch it. The resume's text also feeds the AI score, so an
-applicant with a resume is scored on it rather than on their profile alone.
+`null` when the worker has no resume. The resume's text feeds the AI score, so
+an applicant with a resume is scored on it rather than on their profile alone.
+
+⚠️ `download_url` is the **web** (session-authenticated) route — a Bearer token
+will not open it. In the app, show the filename and upload date from this
+object; a token-auth download endpoint is still to be added if in-app preview
+is needed.
 
 ### AI scoring, shortlisting and rejection
 Scoring always runs and always drives `sort=best_match` — nothing gates it. What
@@ -299,21 +397,23 @@ When both gates could fire on the same applicant, shortlisting wins.
 ---
 
 ## 7. Find Workers 🔒
-Typesense-powered directory. Rows beyond the plan's contact quota are returned
-`locked: true` with `phone: null`.
+Typesense-powered directory, 15/page. Rows beyond the plan's contact quota come
+back `locked: true` with `phone: null`.
 
 ### `GET /employer/workers?q=&state=&city=&skill=&page=`
 Full filter-sheet support:
-`experience_min` (years), `wage_min` / `wage_max`, `languages[]`,
+`experience_min` (0–60), `wage_min` / `wage_max`, `languages[]` (≤10),
 `verified=1` (KYC only), `available=1` (available now),
 `sort=best_match|nearest|rating|experience|wage_low`, and
-`latitude` + `longitude` (+ optional `radius_km`) for "distance from site".
-When a point is given, each row also carries `distance_km`.
+`latitude` + `longitude` (send both) with optional `radius_km` (1–500) for
+"distance from site". With a point, every row also carries `distance_km`;
+`sort=nearest` needs the point or it falls back to relevance.
 ```json
 {
   "workers": { "data": [ { "id", "user_id", "name", "avatar_url", "bio",
       "skills": [...], "city", "state", "experience_years", "expected_wage",
-      "wage_type", "available", "verified", "rating", "phone", "locked" } ],
+      "wage_type", "available", "verified", "rating", "distance_km",
+      "phone", "locked" } ],
     "links": {...}, "meta": {...} },
   "filters": { "q": null, ... },
   "access": { "quota": 25, "accessible": 6, "total": 6, "has_plan": true }
@@ -321,8 +421,8 @@ When a point is given, each row also carries `distance_km`.
 ```
 
 ### `GET /employer/workers/{worker}`
-`{worker}` is a **worker profile id**. Contact revealed only if this employer
-has unlocked the worker through any application.
+`{worker}` is a **worker profile id**. Contact is revealed only if this employer
+account has unlocked that worker through any application.
 ```json
 {
   "worker": { "id", "user_id", "name", "avatar_url", "bio", "skills": [...],
@@ -330,43 +430,68 @@ has unlocked the worker through any application.
     "expected_wage", "wage_type", "available", "verified",
     "phone": null, "email": null, "contact_unlocked": false },
   "rating": { "average": 4.8, "count": 23 },
-  "reviews": [ { ...ReviewResource } ]
+  "reviews": [ { ...ReviewResource } ]        // latest 10
 }
 ```
 
 ---
 
 ## 8. Business verification (KYC) 🔒
-GSTIN is stored on the profile; business PAN + proof docs on the shared KYC record.
+GSTIN is stored on the profile; business PAN + proof docs on the shared KYC
+record. Docs stay on the local private disk (never BunnyCDN).
+
+**Both routes `404` while `features.verification_enabled` is `false`** — that is
+the admin switch, not an error; hide the screens instead of showing "not found".
 
 ### `GET /employer/kyc`
-→ `{ "gstin": "22ABCDE1234F1Z5", "kyc": { "status": "verified", "status_label": ...,
-     "masked_pan": "ABCXX1234F", "remarks": null, ... } | null }`
+```json
+{ "gstin": "22ABCDE1234F1Z5",
+  "kyc": { "status": "verified", "status_label": "Verified", "masked_pan": "ABCXX1234F",
+           "masked_aadhaar": null, "remarks": null,
+           "reviewed_at": "...", "submitted_at": "..." } | null }
+```
 
 ### `POST /employer/kyc` — `multipart/form-data`
 ```
-gstin=22ABCDE1234F1Z5   pan_number=ABCDE1234F
-gst_doc=@gst.pdf        pan_doc=@pan.jpg      (jpg/png/pdf ≤5 MB; docs optional on re-submit)
+gstin=22ABCDE1234F1Z5      (required, 15 chars, format 22ABCDE1234F1Z5)
+pan_number=ABCDE1234F      (required, format ABCDE1234F)
+gst_doc=@gst.pdf           (jpg/png/pdf ≤5 MB)
+pan_doc=@pan.jpg           (jpg/png/pdf ≤5 MB)
 // 201 → { "message": "Business verification submitted for review.", "gstin", "kyc": {...} }
 ```
+Both files are **required on the first submission** and optional on a re-submit
+(existing files are kept). A re-submit resets the status to `pending` and clears
+the admin's remarks.
 
 ---
 
-## 9. Notifications 🔒 (shared with worker app)
+## 9. Notifications & push 🔒 (shared with the worker app)
 
-### `GET /notifications` → `{ "notifications": { paginated }, "unread": 3 }`
+### `GET /notifications` → `{ "notifications": { paginated 20/page }, "unread": 3 }`
+Each row: `{ id, type, message, url, read, created_at, created_ago }`.
 ### `POST /notifications/{id}/read` → `{ "unread": 2 }`
 ### `POST /notifications/read-all` → `{ "unread": 0 }`
+
+### `POST /device-tokens`
+Register/refresh this device's FCM token — call after login and on every FCM
+token rotation.
+```json
+// body → 200
+{ "token": "fcm-token...", "platform": "android" }   // platform: android | ios | web
+{ "registered": true }
+```
+### `DELETE /device-tokens` — body `{ "token": "fcm-token..." }` → `{ "removed": true }`
+Call this on logout so the device stops receiving pushes.
 
 ---
 
 ## 10. Reviews 🔒
 
 ### `GET /employer/reviews`
-Reviews workers left for this employer, paginated (15/page).
+Reviews workers left for this employer account, paginated (15/page).
 ```json
 {
-  "data": [ { "id", "rating": 5, "comment": "...", "created_ago": "1 month ago",
+  "data": [ { "id", "rating": 5, "comment": "...", "created_at", "created_ago": "1 month ago",
               "reviewer": { "id", "name" }, "job": { "id", "title" } } ],
   "summary": { "average": 4.6, "count": 18 },
   "links": {...}, "meta": {...}
@@ -374,7 +499,8 @@ Reviews workers left for this employer, paginated (15/page).
 ```
 
 ### `POST /employer/applicants/{application}/review`
-Rate a **hired** worker (application must be `accepted`; one review per worker+job).
+Rate a **hired** worker — the application must be `accepted` (`403` otherwise)
+and one review per worker+job (`422` on a repeat).
 ```json
 // body → 201
 { "rating": 5, "comment": "Neat work, finished ahead of time." }
@@ -384,9 +510,9 @@ Rate a **hired** worker (application must be `accepted`; one review per worker+j
 ---
 
 ## 11. Team members 🔒 (account owner only)
-Owner invites staff by mobile number; they log in with their own OTP.
+The owner invites staff by mobile number; they log in with their own OTP.
 Roles: `manager` (posts & manages jobs) · `recruiter` (works applicants only).
-Non-owners get `403`.
+Non-owners get `403` on every route here.
 
 ### `GET /employer/team`
 → `{ "members": [ { "id", "name", "phone", "role", "added_ago" } ], "roles": ["manager", "recruiter"] }`
@@ -398,20 +524,22 @@ Non-owners get `403`.
 { "message": "Team member added — they can log in with their mobile number.",
   "member": { "id", "name", "phone", "role", "added_ago" } }
 ```
-`422` if the number is your own, belongs to a worker, already runs/joins a team,
-or already has its own job posts.
+`phone` must be a valid 10-digit Indian mobile. `422` if the number is your own,
+belongs to a worker account, already runs or belongs to another team, or already
+has its own job posts.
 
-### `PATCH /employer/team/{member}` — body `{ "role": "manager" }` → `{ "message", "role" }`
+### `PATCH /employer/team/{member}` — body `{ "role": "manager" }` → `{ "message": "Role updated.", "role" }`
 ### `DELETE /employer/team/{member}` → `{ "message": "Team member removed." }`
 
 ---
 
 ## 12. Messages 🔒 (chat — shared with the worker app)
 Employer ↔ worker threads, scoped to the employer **account** so team members
-share one inbox. An employer may only open a thread with a worker who applied
-to one of their jobs (unlocking a contact implies an application).
+share one inbox. An employer may only open a thread with a worker who applied to
+one of their jobs (unlocking a contact implies an application).
 
 ### `GET /conversations`
+Paginated 20/page, newest activity first.
 ```json
 {
   "data": [ { "id": 4, "job": { "id", "title" },
@@ -423,14 +551,14 @@ to one of their jobs (unlocking a contact implies an application).
 ```
 
 ### `POST /conversations`
-Start or re-open a thread. Employers send `worker_id`, workers send
-`employer_id`; `job_id` (optional) pins the thread to a job and `body`
-(optional) sends the first message.
+Start or re-open a thread. Employers send `worker_id` (worker's user id),
+workers send `employer_id`; `job_id` optionally pins the thread to a job and
+`body` (≤2000) sends the first message.
 → `201` (new) / `200` (existing) `{ "conversation": { ...ConversationResource } }`
-`422 { "code": "chat_not_allowed" }` when there is no application between them.
+→ `422 { "code": "chat_not_allowed" }` when there is no application between you.
 
 ### `GET /conversations/{conversation}`
-Latest 30 messages (oldest→newest) and marks the thread read.
+Latest 30 messages (returned oldest→newest) and marks the thread read.
 ```json
 { "conversation": {...},
   "messages": [ { "id", "body", "sender_id", "sent_by_me", "read", "created_at", "created_ago" } ],
@@ -456,7 +584,9 @@ Non-participants get `403`.
 ```
 Credits come from the plan's contact-unlock allowance plus purchased top-ups.
 Unlocks spend the plan allowance first; boosts always spend purchased credits.
-A `plan_limit` of 0 means the plan does not meter unlocks (`unmetered: true`).
+`plan_limit: 0` means the plan does not meter unlocks — then `unmetered` is
+`true` and `plan_remaining` is `null`. With no subscription, `plan_label` reads
+"Free plan · unlock worker numbers".
 
 ### `GET /employer/plans`
 ```json
@@ -471,10 +601,13 @@ A `plan_limit` of 0 means the plan does not meter unlocks (`unmetered: true`).
   "payment": { "configured": true, "key": "rzp_live_xxx", "gst_percent": 18 }
 }
 ```
+`purchasable: false` means the plan has no Razorpay plan id yet — hide or
+disable its buy button. `invoices[].url` is a web (session) PDF link, best
+opened in an external browser.
 
 ### `POST /employer/plans/{plan}/subscribe`
-Owner only. Creates the Razorpay subscription; the app opens Razorpay checkout
-with `razorpay_subscription_id` + `razorpay_key`.
+**Owner only** (`403` for team members). Creates the Razorpay subscription; the
+app then opens Razorpay checkout with `razorpay_subscription_id` + `razorpay_key`.
 ```json
 // body (optional) → 201
 { "coupon": "FIRST20" }
@@ -483,15 +616,17 @@ with `razorpay_subscription_id` + `razorpay_key`.
   "amounts": { "discount": 100, "subtotal": 399, "gst_percent": 18, "gst": 71.82, "total": 470.82 } }
 ```
 `422` when payments are unconfigured, the plan has no Razorpay plan id, or the
-coupon is invalid.
+coupon is invalid/expired (the message says which).
 
 ### `POST /employer/plans/callback`
-Verify checkout and activate (issues the tax invoice + records the coupon).
+Verify the checkout signature and activate — issues the tax invoice and records
+the coupon redemption.
 ```json
 // body → 200
 { "razorpay_payment_id": "pay_x", "razorpay_subscription_id": "sub_x", "razorpay_signature": "..." }
 { "message": "Subscription activated!", "credits": { ...CreditSummary } }
 ```
+`422 { "message": "Payment verification failed." }` on a bad signature.
 
 ### `POST /employer/credits/top-up` — body `{ "pack": "topup_25" }`
 → `201 { "purchase_id", "razorpay_order_id", "razorpay_key", "amount", "credits", "currency" }`
@@ -508,7 +643,8 @@ Idempotent — replaying the same order does not double-credit.
 
 ## 14. Settings 🔒 (shared with the worker app)
 
-### `GET /preferences` → `{ "preferences": { "theme": "system", "applicant_alerts": true, "job_alerts": true, "message_alerts": true } }`
+### `GET /preferences`
+→ `{ "preferences": { "theme": "system", "applicant_alerts": true, "job_alerts": true, "message_alerts": true } }`
 ### `PUT|PATCH /preferences` — any subset of the same keys (`theme` in `system|light|dark`)
 → `{ "message": "Preferences saved.", "preferences": {...} }`
 
@@ -519,29 +655,55 @@ Signed-in devices (Sanctum tokens) for "Login & security".
 
 ---
 
-## Not included (still no backend)
+## Endpoint index
+
+| Method | Path | Section |
+| --- | --- | --- |
+| POST | `/auth/otp/send` · `/auth/otp/verify` | 1 |
+| GET/POST | `/auth/me` · `/auth/logout` · `/locale` · `DELETE /account` | 1 |
+| GET | `/reference` · `/reference/cities` · `/reference/job-categories` | 2 |
+| GET | `/employer/dashboard` | 3 |
+| GET/PUT/PATCH/POST | `/employer/profile` · `/employer/profile/logo` | 4 |
+| GET/POST/PATCH/DELETE | `/employer/jobs`, `/employer/jobs/{job}`, `/close`, `/boost`, `/matches`, `/invite` | 5 |
+| GET/PATCH/POST/DELETE | `/employer/jobs/{job}/applicants`, `/employer/applicants/{application}` (+ `/status`, `/shortlist`, `/unlock`, `/interview`), `/employer/jobs/{job}/rescore` | 6 |
+| GET | `/employer/workers` · `/employer/workers/{worker}` | 7 |
+| GET/POST | `/employer/kyc` | 8 |
+| GET/POST | `/notifications` (+ `/{id}/read`, `/read-all`) · `/device-tokens` | 9 |
+| GET/POST | `/employer/reviews` · `/employer/applicants/{application}/review` | 10 |
+| GET/POST/PATCH/DELETE | `/employer/team` · `/employer/team/{member}` | 11 |
+| GET/POST | `/conversations` (+ `/{id}`, `/messages`, `/read`) | 12 |
+| GET/POST | `/employer/plans` (+ `/{plan}/subscribe`, `/callback`) · `/employer/credits/top-up` (+ `/callback`) | 13 |
+| GET/PUT/PATCH/DELETE | `/preferences` · `/auth/sessions` (+ `/{token}`) | 14 |
+
+Postman collection: `docs/karigar-employer-app.postman_collection.json`.
+
+---
+
+## Not included (no backend yet)
 - **Job "Share" link** — no dedicated endpoint; use `job.share_url` from
   EmployerJobResource (the public web job page).
-- **Escrow / worker payouts** — separate payment surface, unrelated to the
+- **Token-auth resume download** — see §6; only the web session route exists.
+- **Escrow / worker payouts** — a separate payment surface, unrelated to the
   employer app screens.
 
 ---
 
-## Deploy notes for this pass
+## Deploy notes
 
-1. `php artisan migrate` — adds employer-profile wizard fields + `credit_balance`,
+1. `php artisan migrate` — employer-profile wizard fields + `credit_balance`,
    job `experience_min` / `views_count` / boost columns, application offer +
-   interview columns, and the `conversations`, `chat_messages`, `job_invites`,
-   `credit_purchases` tables.
-2. **Typesense schema changed** (worker `spoken_languages`, `available`,
-   `verified`, `rating`; job `boosted`). Recreate the collections so the new
-   filters/sorts work:
+   interview + AI-score columns, worker `resume_*` columns, and the
+   `conversations`, `chat_messages`, `job_invites`, `credit_purchases` tables.
+2. **Typesense** — the worker collection carries `spoken_languages`, `available`,
+   `verified`, `rating`, `location`, and jobs carry `boosted`. Recreate the
+   collections after deploying so the filters/sorts work:
    ```
    php artisan scout:delete-index "App\Models\WorkerProfile"
    php artisan scout:import "App\Models\WorkerProfile"
    php artisan scout:delete-index "App\Models\JobListing"
    php artisan scout:import "App\Models\JobListing"
    ```
-3. Credit packs and boost tiers live in `config/billing.php` — edit there, not
-   in code. Top-ups need the same Razorpay keys as subscriptions.
-
+3. Credit packs, boost tiers and GST live in `config/billing.php` — edit there,
+   not in code. Top-ups use the same Razorpay keys as subscriptions.
+4. A queue worker must be running: AI scoring (`ScoreApplication`), push
+   notifications and emails are all queued.

@@ -63,6 +63,35 @@ it('rejects a wrong or reused OTP', function () {
         ->assertSessionHasErrors('otp');
 });
 
+it('logs the configured test number in with its fixed OTP, without an SMS', function () {
+    config(['services.msg91.test_phone' => '9000000001', 'services.msg91.test_otp' => '1234']);
+
+    // "Sending" the OTP must not cache a random one over the fixed value.
+    $this->post('/otp/send', ['phone' => '9000000001'])->assertRedirect()->assertSessionHasNoErrors();
+    expect(Cache::get('phone_otp.9000000001'))->toBeNull();
+
+    $this->post('/employer/otp/verify', ['phone' => '9000000001', 'otp' => '9999'])
+        ->assertSessionHasErrors('otp');
+
+    // The fixed OTP works, and keeps working (it is never consumed).
+    $this->post('/employer/otp/verify', ['phone' => '9000000001', 'otp' => '1234'])->assertRedirect();
+    auth()->logout();
+    $this->post('/employer/otp/verify', ['phone' => '9000000001', 'otp' => '1234'])->assertRedirect();
+
+    expect(User::where('phone', '9000000001')->count())->toBe(1);
+});
+
+it('leaves normal OTP login alone when the test number is not configured', function () {
+    config(['services.msg91.test_phone' => null, 'services.msg91.test_otp' => null]);
+
+    $this->post('/otp/send', ['phone' => '9000000001'])->assertRedirect();
+    $otp = Cache::get('phone_otp.9000000001');
+    expect($otp)->not->toBeNull();
+
+    $this->post('/worker/otp/verify', ['phone' => '9000000001', 'otp' => $otp === '1234' ? '4321' : '1234'])
+        ->assertSessionHasErrors('otp');
+});
+
 it('rejects invalid phone numbers', function () {
     $this->post('/otp/send', ['phone' => '12345'])->assertSessionHasErrors('phone');
     $this->post('/otp/send', ['phone' => '1234567890'])->assertSessionHasErrors('phone'); // must start 6-9

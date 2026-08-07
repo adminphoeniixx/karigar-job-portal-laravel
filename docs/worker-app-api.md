@@ -92,7 +92,9 @@ is just repeated calls to **`PATCH /worker/profile`** with whatever fields the s
 collected, then optionally `POST /kyc`.
 
 ### `GET /worker/profile`
-Returns `WorkerProfileResource` (see below), including `completion` (0–100).
+→ `{ "data": WorkerProfileResource }` (see below), including `completion` (0–100).
+Like `GET /jobs/{job}`, this endpoint wraps its resource in `data`; endpoints that
+return a named key inside a plain object (`dashboard.profile`, …) do not.
 
 ### `PUT|PATCH /worker/profile`
 Any subset of these fields (JSON):
@@ -117,7 +119,7 @@ Any subset of these fields (JSON):
   "payout_upi": "rakesh@okhdfcbank"
 }
 ```
-→ returns the updated `WorkerProfileResource`.
+→ `{ "data": WorkerProfileResource }` with the updated profile.
 
 ### `POST /worker/profile/avatar` (multipart)
 Field `avatar` (image, ≤2 MB). → `{ "avatar_url": "https://.../storage/avatars/x.jpg" }`

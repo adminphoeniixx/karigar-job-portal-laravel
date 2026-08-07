@@ -74,6 +74,10 @@
       "key": "session_id",
       "value": "1",
       "type": "string"
+    },
+    {
+      "key": "fcm_token",
+      "value": "paste-a-device-token-here"
     }
   ],
   "item": [
@@ -340,6 +344,30 @@
                   "key": "state",
                   "value": "Tamil Nadu"
                 }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Job categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/reference/job-categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reference",
+                "job-categories"
               ]
             }
           }
@@ -1348,6 +1376,70 @@
                 "read-all"
               ]
             }
+          }
+        },
+        {
+          "name": "Register device token (FCM)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{fcm_token}}\",\n  \"platform\": \"android\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/device-tokens",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "device-tokens"
+              ]
+            },
+            "description": "Call after login and whenever FCM rotates the token. platform: android | ios | web."
+          }
+        },
+        {
+          "name": "Remove device token (on logout)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{fcm_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/device-tokens",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "device-tokens"
+              ]
+            },
+            "description": "Stops pushes to this device."
           }
         }
       ]

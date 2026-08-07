@@ -13,6 +13,11 @@ use Throwable;
  * The generated OTP is always cached for 15 minutes so that local/dev
  * environments (no MSG91 keys) can still complete the flow — the OTP is
  * written to the log instead of being SMSed.
+ *
+ * One number can be exempted from all of that for app testing: set both
+ * AUTH_TEST_PHONE and AUTH_TEST_OTP and that number logs in with the fixed OTP
+ * without any SMS. It is a deliberate auth bypass — leave the values blank
+ * unless a test login is actually needed.
  */
 class Msg91Service
 {
@@ -28,6 +33,14 @@ class Msg91Service
      */
     public function sendOtp(string $phone): array
     {
+        // The test number has a fixed OTP — send nothing, and in particular do
+        // not cache a random one over it.
+        if ($this->isTestPhone($phone)) {
+            Log::info("Test login number {$phone} — no OTP sent.");
+
+            return ['status' => true, 'message' => 'OTP sent successfully'];
+        }
+
         $otp = random_int(1111, 9999);
 
         Cache::put($this->cacheKey($phone), (string) $otp, now()->addMinutes(self::TTL_MINUTES));
@@ -67,6 +80,12 @@ class Msg91Service
      */
     public function verifyOtp(string $phone, string $otp): array
     {
+        if ($this->isTestPhone($phone)) {
+            return hash_equals((string) config('services.msg91.test_otp'), $otp)
+                ? ['status' => true, 'message' => 'OTP verified successfully']
+                : ['status' => false, 'message' => 'Invalid or expired OTP.'];
+        }
+
         // Local check first: covers dev mode and saves an API call when wrong.
         $cached = Cache::get($this->cacheKey($phone));
 
@@ -107,5 +126,17 @@ class Msg91Service
     private function cacheKey(string $phone): string
     {
         return "phone_otp.{$phone}";
+    }
+
+    /**
+     * The app-testing number, if one is configured. Both env values must be
+     * set, so the bypass stays off unless it is switched on deliberately.
+     */
+    private function isTestPhone(string $phone): bool
+    {
+        $testPhone = (string) config('services.msg91.test_phone');
+        $testOtp = (string) config('services.msg91.test_otp');
+
+        return $testPhone !== '' && $testOtp !== '' && hash_equals($testPhone, $phone);
     }
 }
