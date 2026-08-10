@@ -48,7 +48,7 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Find Workers', href: '/employe
                 <div class="rounded-2xl border bg-card p-6 shadow-sm">
                     <div class="flex items-center gap-4">
                         <img v-if="worker.avatar_url" :src="worker.avatar_url" alt="" class="size-16 rounded-2xl object-cover" />
-                        <div v-else class="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-white"><UserRound class="size-8" /></div>
+                        <div v-else class="flex size-16 items-center justify-center rounded-2xl bg-primary text-white"><UserRound class="size-8" /></div>
                         <div>
                             <div class="flex items-center gap-2">
                                 <h1 class="text-2xl font-bold tracking-tight">{{ worker.name }}</h1>

@@ -144,7 +144,7 @@ const subscribe = () => {
                 <div v-if="plan.features?.featured" class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/15 blur-2xl"></div>
                 <div class="relative flex items-center justify-between">
                     <h3 class="text-lg font-bold">{{ plan.name }}</h3>
-                    <span v-if="plan.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-rose-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                    <span v-if="plan.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-white">
                         <Sparkles class="size-3" /> {{ $t('subscription.popular') }}
                     </span>
                 </div>
@@ -180,7 +180,7 @@ const subscribe = () => {
                     class="relative mt-6 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95 disabled:opacity-50"
                     :class="current?.plan.id === plan.id
                         ? 'cursor-default border text-muted-foreground'
-                        : 'bg-gradient-to-r from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-600/25 hover:opacity-90'"
+                        : 'bg-primary text-white shadow-lg shadow-orange-600/25 hover:opacity-90'"
                     :disabled="current?.plan.id === plan.id"
                     @click="openPlan(plan)"
                 >
@@ -215,7 +215,7 @@ const subscribe = () => {
                 <div>
                     <h3 class="flex items-center gap-2 text-lg font-bold">
                         {{ selected.name }}
-                        <span v-if="selected.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-rose-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                        <span v-if="selected.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-white">
                             <Sparkles class="size-2.5" /> {{ $t('subscription.popular') }}
                         </span>
                     </h3>
@@ -292,7 +292,7 @@ const subscribe = () => {
 
             <button
                 :disabled="subscribing"
-                class="mt-5 w-full rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
+                class="mt-5 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
                 @click="subscribe"
             >
                 {{ subscribing ? $t('subscription.startingCheckout') : `${$t('subscription.subscribe')} — ${money(totalFor(selected))} ${$t('subscription.inclGst')}` }}

@@ -5,6 +5,7 @@ import { ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import JobMap from '@/components/JobMap.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ResumeUpload, { type Resume } from '@/components/ResumeUpload.vue';
 
 interface TrackStep { key: string; state: string; at: string | null; result: string | null }
 
@@ -38,6 +39,7 @@ const props = defineProps<{
     employerRating: { average: number; count: number } | null;
     application: { status: string; created_at: string; tracking_steps: TrackStep[] } | null;
     isSaved: boolean;
+    resume: Resume | null;
 }>();
 
 const employerLine = (() => {
@@ -191,7 +193,7 @@ const fmtDate = (iso: string | null): string =>
 
                         <button
                             v-if="canApply && !showForm"
-                            class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
+                            class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
                             @click="showForm = true"
                         >
                             {{ $t('jobs.applyNow') }} <ArrowRight class="size-4" />
@@ -208,8 +210,12 @@ const fmtDate = (iso: string | null): string =>
                                 <input v-model="form.expected_wage" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                                 <p v-if="form.errors.expected_wage" class="mt-1 text-xs text-rose-500">{{ form.errors.expected_wage }}</p>
                             </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ $t('resume.title') }}</label>
+                                <ResumeUpload :resume="resume" compact />
+                            </div>
                             <div class="flex gap-2">
-                                <button type="submit" :disabled="form.processing" class="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{{ $t('common.submit') }}</button>
+                                <button type="submit" :disabled="form.processing" class="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{{ $t('common.submit') }}</button>
                                 <button type="button" class="rounded-xl border px-4 py-2.5 text-sm font-semibold transition hover:bg-muted" @click="showForm = false">{{ $t('common.cancel') }}</button>
                             </div>
                         </form>

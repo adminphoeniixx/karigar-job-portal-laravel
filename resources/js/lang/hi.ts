@@ -290,6 +290,7 @@ export default {
         saveAmount: 'बचत',
     },
     resume: {
+        applyHint: 'ज़रूरी नहीं, पर employer इसे देखते हैं और match score भी इसी से बनता है. PDF, 4 MB तक.',
         title: 'रिज़्यूमे',
         subtitle: 'PDF रिज़्यूमे लगाएँ — नई एप्लिकेशन इसी से मैच होंगी।',
         upload: 'रिज़्यूमे अपलोड करें (PDF)',

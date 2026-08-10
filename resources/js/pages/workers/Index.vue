@@ -70,7 +70,7 @@ const num = (n: number) => n.toLocaleString('en-IN');
         <!-- Access banner -->
         <div v-if="!access.has_plan" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
             <span class="inline-flex items-center gap-2"><Lock class="size-4 shrink-0" /> Subscribe to a plan to unlock worker contact numbers.</span>
-            <Link href="/subscription" class="shrink-0 rounded-lg bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2 text-xs font-semibold text-white">View plans</Link>
+            <Link href="/subscription" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white">View plans</Link>
         </div>
         <div v-else class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-orange-500/5 px-5 py-4 text-sm">
             <span>
@@ -98,7 +98,7 @@ const num = (n: number) => n.toLocaleString('en-IN');
                     <option value="">{{ form.state ? 'All cities' : 'Select state first' }}</option>
                     <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
                 </select>
-                <button type="submit" class="shrink-0 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2.5 text-sm font-semibold text-white">Go</button>
+                <button type="submit" class="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white">Go</button>
             </div>
         </form>
 
@@ -110,7 +110,7 @@ const num = (n: number) => n.toLocaleString('en-IN');
             >
                 <div class="flex items-center gap-3">
                     <img v-if="w.avatar_url" :src="w.avatar_url" alt="" class="size-12 rounded-full object-cover" />
-                    <div v-else class="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-rose-600 text-white"><UserRound class="size-6" /></div>
+                    <div v-else class="flex size-12 items-center justify-center rounded-full bg-primary text-white"><UserRound class="size-6" /></div>
                     <div class="min-w-0">
                         <div class="font-semibold">{{ w.name }}</div>
                         <div class="inline-flex items-center gap-1 text-xs text-muted-foreground"><MapPin class="size-3" /> {{ [w.city, w.state].filter(Boolean).join(', ') || '—' }}</div>
@@ -131,7 +131,7 @@ const num = (n: number) => n.toLocaleString('en-IN');
                     <template v-if="!w.locked && w.phone">
                         <a
                             :href="`tel:${w.phone}`"
-                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
                         >
                             <Phone class="size-4" /> {{ w.phone }}
                         </a>

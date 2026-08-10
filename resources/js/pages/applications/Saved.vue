@@ -59,7 +59,7 @@ const wage = (j: Saved['job']) => {
             <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Bookmark class="size-7" /></div>
             <p class="mt-4 font-medium">No saved jobs</p>
             <p class="mt-1 text-sm text-muted-foreground">Tap the bookmark on any job to save it here.</p>
-            <Link href="/jobs" class="mt-4 inline-flex rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2 text-sm font-semibold text-white">Browse jobs</Link>
+            <Link href="/jobs" class="mt-4 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">Browse jobs</Link>
         </div>
     </div>
 </template>

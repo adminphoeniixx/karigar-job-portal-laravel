@@ -107,7 +107,7 @@ const funnelSegments = computed(() => {
     const b = props.applicationBreakdown;
     const total = b.pending + b.accepted + b.rejected + b.withdrawn || 1;
     return [
-        { key: 'accepted', label: 'Accepted', value: b.accepted, color: '#2bc155', pct: (b.accepted / total) * 100 },
+        { key: 'accepted', label: 'Accepted', value: b.accepted, color: '#4f6b4a', pct: (b.accepted / total) * 100 },
         { key: 'pending', label: 'Pending', value: b.pending, color: '#f5a623', pct: (b.pending / total) * 100 },
         { key: 'rejected', label: 'Rejected', value: b.rejected, color: '#f43f7a', pct: (b.rejected / total) * 100 },
         { key: 'withdrawn', label: 'Withdrawn', value: b.withdrawn, color: '#94a3b8', pct: (b.withdrawn / total) * 100 },
@@ -132,7 +132,7 @@ const roleBadge: Record<string, string> = {
     admin: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
 };
 const avatarTone: Record<string, string> = {
-    worker: 'bg-gradient-to-br from-orange-500 to-rose-600',
+    worker: 'bg-primary',
     employer: 'bg-gradient-to-br from-blue-500 to-indigo-600',
     admin: 'bg-gradient-to-br from-amber-500 to-orange-600',
 };
@@ -213,8 +213,8 @@ const timeAgo = (iso: string) => {
                     <svg class="w-full" :viewBox="`0 0 ${CW} ${CH}`" fill="none" preserveAspectRatio="none" aria-hidden="true">
                         <defs>
                             <linearGradient id="signup-area" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#f24711" stop-opacity="0.24" />
-                                <stop offset="100%" stop-color="#f24711" stop-opacity="0" />
+                                <stop offset="0%" stop-color="#bf3a16" stop-opacity="0.24" />
+                                <stop offset="100%" stop-color="#bf3a16" stop-opacity="0" />
                             </linearGradient>
                         </defs>
                         <line
@@ -229,7 +229,7 @@ const timeAgo = (iso: string) => {
                             stroke-dasharray="3 7"
                         />
                         <path :d="signupArea" fill="url(#signup-area)" />
-                        <path :d="signupLine" stroke="#f24711" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                        <path :d="signupLine" stroke="#bf3a16" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
 
                     <!-- Hover crosshair + active point -->
@@ -262,7 +262,7 @@ const timeAgo = (iso: string) => {
             </div>
 
             <!-- Revenue hero -->
-            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 p-6 text-white shadow-lg shadow-orange-500/25">
+            <div class="relative overflow-hidden rounded-2xl bg-primary p-6 text-white shadow-lg shadow-orange-500/25">
                 <div class="absolute -right-8 -top-8 size-32 rounded-full bg-white/10" />
                 <div class="absolute -bottom-10 -left-6 size-28 rounded-full bg-white/10" />
                 <div class="relative">

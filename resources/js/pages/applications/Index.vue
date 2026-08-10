@@ -130,7 +130,7 @@ const withdraw = (id: number) => {
                                 </div>
                                 <p class="mt-4 font-medium">{{ $t('applications.empty') }}</p>
                                 <p class="mt-1 text-sm text-muted-foreground">Browse jobs and apply to get started.</p>
-                                <Link href="/jobs" class="mt-4 inline-flex rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2 text-sm font-semibold text-white">Browse jobs</Link>
+                                <Link href="/jobs" class="mt-4 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">Browse jobs</Link>
                             </td>
                         </tr>
                     </tbody>

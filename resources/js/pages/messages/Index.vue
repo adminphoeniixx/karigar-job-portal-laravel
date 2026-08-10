@@ -114,7 +114,7 @@ watch(() => props.active?.id, scrollToBottom);
                         class="flex w-full items-start gap-3 border-b px-4 py-3 text-left transition hover:bg-muted/60"
                         :class="active?.id === c.id ? 'bg-orange-500/10' : ''"
                     >
-                        <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 text-sm font-bold text-white">
+                        <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">
                             {{ c.counterpart.initial }}
                         </span>
                         <span class="min-w-0 flex-1">
@@ -153,7 +153,7 @@ watch(() => props.active?.id, scrollToBottom);
                     <Link href="/messages" class="rounded-lg p-1.5 transition hover:bg-muted md:hidden">
                         <ArrowLeft class="size-4" />
                     </Link>
-                    <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 text-sm font-bold text-white">
+                    <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">
                         {{ active.counterpart.initial }}
                     </span>
                     <div class="min-w-0">

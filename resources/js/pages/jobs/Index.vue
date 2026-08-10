@@ -78,7 +78,7 @@ const destroy = (id: number) => {
             <template #action>
                 <Link
                     href="/employer/jobs/create"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
                 >
                     <Plus class="size-4" /> {{ $t('jobs.postJob') }}
                 </Link>

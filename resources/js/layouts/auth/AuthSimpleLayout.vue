@@ -3,7 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import { BadgeCheck, MapPin, Zap } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import BrandWordmark from '@/components/BrandWordmark.vue';
 import { home } from '@/routes';
 
 const props = defineProps<{
@@ -25,44 +25,47 @@ const highlights = [
 </script>
 
 <template>
-    <div class="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background p-6 md:p-10">
-        <!-- Ambient tints (matches the landing page theme) -->
-        <div class="pointer-events-none absolute inset-0">
-            <div class="absolute left-1/2 top-[-15%] h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-orange-500/10 blur-[140px]"></div>
-            <div class="absolute bottom-[-15%] right-[-8%] h-[360px] w-[360px] rounded-full bg-rose-400/10 blur-[120px]"></div>
-        </div>
-        <div class="pointer-events-none absolute inset-0 bg-grid opacity-[0.5] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]"></div>
+    <!-- Editorial split: the form on paper, a full-bleed karigar portrait beside
+         it. Same language as the public landing and job pages. -->
+    <div class="theme-paper grid min-h-svh bg-background text-foreground antialiased lg:grid-cols-[1fr_1.1fr]">
+        <div class="bg-noise relative flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16">
+            <div class="mx-auto w-full max-w-sm">
+                <Link :href="home()" class="text-[18px]">
+                    <BrandWordmark />
+                </Link>
 
-        <div class="relative w-full max-w-md">
-            <!-- Logo -->
-            <Link :href="home()" class="mb-6 flex items-center justify-center gap-2.5 text-xl font-bold">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/30">
-                    <AppLogoIcon class="size-[22px]" />
-                </span>
-                Super Karigar
-            </Link>
-
-            <!-- Centered card -->
-            <div class="rounded-3xl border bg-card p-6 shadow-premium md:p-8">
-                <div class="mb-8 space-y-2 text-center">
-                    <h1 class="text-2xl font-bold tracking-tight">{{ heading }}</h1>
-                    <p class="text-sm text-muted-foreground">{{ subheading }}</p>
+                <div class="mt-14">
+                    <div class="flex items-center gap-3 text-primary">
+                        <span class="h-px w-8 bg-primary"></span>
+                        <span class="label-rule">{{ $t('landing.badge') }}</span>
+                    </div>
+                    <h1 class="mt-5 text-4xl font-bold leading-[1.05] tracking-[-0.035em]">{{ heading }}</h1>
+                    <p class="mt-3 text-sm leading-relaxed text-muted-foreground">{{ subheading }}</p>
                 </div>
-                <slot />
-            </div>
 
-            <!-- Trust badges -->
-            <div class="mt-6 flex items-center justify-center gap-6">
-                <span
-                    v-for="h in highlights"
-                    :key="h.text"
-                    class="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
-                >
-                    <span class="flex size-6 items-center justify-center rounded-full bg-accent text-primary">
-                        <component :is="h.icon" class="size-3.5" />
+                <div class="mt-10">
+                    <slot />
+                </div>
+
+                <div class="mt-12 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-foreground/10 pt-6">
+                    <span v-for="h in highlights" :key="h.text" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <component :is="h.icon" class="size-3.5 text-primary" />
+                        {{ h.text }}
                     </span>
-                    {{ h.text }}
-                </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative hidden lg:block">
+            <img
+                src="/images/landing/weaver.jpg"
+                alt="Indian handloom weaver at her loom in a Kerala weaving factory"
+                class="h-full w-full object-cover"
+            />
+            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#17110c]/85 to-transparent p-12">
+                <p class="max-w-md text-2xl font-bold leading-snug tracking-tight text-background">
+                    {{ $t('landing.heroTitle') }} <span class="italic text-primary-foreground/90">{{ $t('landing.heroAccent') }}</span>
+                </p>
             </div>
         </div>
     </div>

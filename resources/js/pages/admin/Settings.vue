@@ -185,7 +185,7 @@ const save = () => {
 
             <div class="mt-5 flex justify-end border-t pt-4">
                 <button
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
                     @click="save"
                 >
                     <Check class="size-4" /> Save

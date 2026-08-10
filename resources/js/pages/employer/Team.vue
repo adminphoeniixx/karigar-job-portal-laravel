@@ -102,7 +102,7 @@ const remove = (member: Member) => {
                 <button
                     type="submit"
                     :disabled="form.processing || form.phone.length !== 10"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
                     <Plus class="size-4" /> {{ $t('team.addBtn') }}
                 </button>
@@ -117,7 +117,7 @@ const remove = (member: Member) => {
             <div v-if="members.length" class="divide-y">
                 <div v-for="m in members" :key="m.id" class="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
                     <div class="flex min-w-0 items-center gap-3">
-                        <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 text-sm font-bold text-white">
+                        <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">
                             {{ m.name.charAt(0).toUpperCase() }}
                         </span>
                         <div class="min-w-0">

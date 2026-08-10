@@ -290,6 +290,7 @@ export default {
         saveAmount: 'ఆదా',
     },
     resume: {
+        applyHint: 'తప్పనిసరి కాదు, కానీ employer దీన్ని చూస్తారు, match score కూడా దీన్ని చదువుతుంది. PDF, 4 MB వరకు.',
         title: 'రెజ్యూమ్',
         subtitle: 'PDF రెజ్యూమ్ జతచేయండి — కొత్త దరఖాస్తులు దీనితో సరిపోల్చబడతాయి.',
         upload: 'రెజ్యూమ్ అప్‌లోడ్ చేయండి (PDF)',

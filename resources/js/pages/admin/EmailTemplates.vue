@@ -140,7 +140,7 @@ const insertPlaceholder = (t: Template, ph: string) => {
                     <button
                         type="button"
                         :disabled="saving === t.id"
-                        class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
                         @click="save(t)"
                     >
                         <Check class="size-4" /> Save changes

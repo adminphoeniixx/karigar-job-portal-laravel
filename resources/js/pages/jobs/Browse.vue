@@ -3,8 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ArrowUpRight, MapPin, Search, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
+import PublicNav from '@/components/PublicNav.vue';
 import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
 
@@ -81,55 +80,44 @@ const wage = (j: Job) => {
     return `₹${range}${j.wage_type ? ' / ' + j.wage_type : ''}`;
 };
 
+// Ruled fields, matching the landing's search: a bottom border, no box.
 const inputClass =
-    'w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-orange-400/50 focus:bg-white/[0.06]';
-const selectClass = inputClass + ' [&>option]:bg-[#141a33]';
+    'w-full border-b border-foreground/20 bg-transparent py-2 text-sm outline-none transition placeholder:text-muted-foreground/70 focus:border-primary';
+const selectClass = inputClass;
 </script>
 
 <template>
     <Head :title="t('jobs.browseTitle')" />
 
-    <div class="dark relative min-h-screen overflow-hidden bg-[#0a0e21] text-slate-200 antialiased">
-        <div class="pointer-events-none absolute inset-0 -z-10">
-            <div class="absolute left-1/2 top-[-10%] h-[420px] w-[680px] -translate-x-1/2 rounded-full bg-orange-600/20 blur-[140px]"></div>
-            <div class="absolute right-[-5%] top-[25%] h-[320px] w-[320px] rounded-full bg-rose-600/15 blur-[120px]"></div>
-        </div>
+    <div class="theme-paper bg-noise min-h-screen bg-background text-foreground antialiased">
+        <PublicNav>
+            <Link href="/jobs" class="link-underline">{{ t('nav.browseJobs') }}</Link>
+            <Link href="/worker/register" class="link-underline">{{ t('landing.forWorkers') }}</Link>
+            <Link href="/employer/register" class="link-underline">{{ t('landing.forEmployers') }}</Link>
+        </PublicNav>
 
-        <!-- Nav -->
-        <header class="sticky top-0 z-30 border-b border-white/5 bg-[#0a0e21]/70 backdrop-blur-xl">
-            <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
-                <Link href="/" class="flex items-center gap-2.5 text-lg font-bold text-white">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/40">
-                        <AppLogoIcon class="size-5" />
-                    </span>
-                    Super Karigar
-                </Link>
-                <div class="flex items-center gap-2">
-                    <LanguageSwitcher />
-                    <Link href="/login" class="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10">
-                        {{ t('common.login') }}
-                    </Link>
-                </div>
+        <main class="mx-auto max-w-[88rem] px-6 py-16 lg:px-10">
+            <div class="flex items-center gap-3 text-primary">
+                <span class="h-px w-10 bg-primary"></span>
+                <span class="label-rule">{{ t('nav.browseJobs') }}</span>
             </div>
-        </header>
+            <h1 class="display-lg mt-5 max-w-xl">{{ t('jobs.browseTitle') }}</h1>
+            <p class="mt-4 max-w-lg text-muted-foreground">{{ t('jobs.browseSubtitle') }}</p>
 
-        <main class="mx-auto max-w-5xl px-5 py-10">
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">{{ t('jobs.browseTitle') }}</h1>
-                <p class="mt-2 text-slate-400">{{ t('jobs.browseSubtitle') }}</p>
-            </div>
-
-            <!-- Filters -->
-            <div class="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur">
-                <div class="mb-3 flex items-center gap-2 text-sm font-semibold text-orange-300">
-                    <SlidersHorizontal class="size-4" /> {{ t('common.filter') }}
+            <!-- Filters: a ruled row, no card -->
+            <div class="mt-12 border-t border-foreground/15 pt-6">
+                <div class="flex items-center justify-between">
+                    <div class="label-rule inline-flex items-center gap-2 text-muted-foreground">
+                        <SlidersHorizontal class="size-3.5" /> {{ t('common.filter') }}
+                    </div>
+                    <button v-if="hasFilters" class="link-underline inline-flex items-center gap-1 text-xs font-medium text-muted-foreground" @click="clearAll">
+                        <X class="size-3.5" /> {{ t('common.clear') }}
+                    </button>
                 </div>
-                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                    <div class="lg:col-span-2">
-                        <div class="relative">
-                            <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" :class="searching && 'animate-pulse text-orange-400'" />
-                            <input v-model="filters.q" :placeholder="t('jobs.filters.search')" :class="inputClass" class="!pl-9" />
-                        </div>
+                <div class="mt-4 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-5">
+                    <div class="relative lg:col-span-1">
+                        <Search class="absolute left-0 top-2.5 size-4 text-muted-foreground" :class="searching && 'animate-pulse text-primary'" />
+                        <input v-model="filters.q" :placeholder="t('jobs.filters.search')" :class="inputClass" class="!pl-6" />
                     </div>
                     <select v-model="filters.category" :class="selectClass">
                         <option value="">{{ t('jobs.filters.category') }}</option>
@@ -148,50 +136,46 @@ const selectClass = inputClass + ' [&>option]:bg-[#141a33]';
                         <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
                     </select>
                 </div>
-                <div v-if="hasFilters" class="mt-3 flex justify-end">
-                    <button class="inline-flex items-center gap-1 text-xs font-medium text-slate-400 transition hover:text-white" @click="clearAll">
-                        <X class="size-3.5" /> Clear
-                    </button>
-                </div>
             </div>
 
-            <!-- Results -->
-            <div v-if="jobs.data.length" class="grid gap-4 sm:grid-cols-2">
+            <!-- Results: a listings index, one ruled row per job -->
+            <div v-if="jobs.data.length" class="mt-12 border-t border-foreground/15">
                 <Link
                     v-for="job in jobs.data"
                     :key="job.id"
                     :href="`/jobs/${job.id}`"
-                    class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition duration-300 hover:-translate-y-1 hover:border-orange-400/40 hover:bg-white/[0.05]"
+                    class="group grid grid-cols-1 items-baseline gap-x-6 gap-y-2 border-b border-foreground/10 py-7 transition hover:bg-foreground/[0.03] md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
                 >
-                    <div class="flex items-center justify-between">
-                        <span v-if="job.category" class="rounded-full border border-orange-400/20 bg-orange-500/10 px-2.5 py-0.5 text-xs font-semibold text-orange-300">{{ job.category }}</span>
-                        <span v-else></span>
-                        <ArrowUpRight class="size-4 text-slate-600 transition group-hover:text-orange-400" />
+                    <div>
+                        <h3 class="text-xl font-bold tracking-tight">
+                            <span class="link-underline">{{ job.title }}</span>
+                        </h3>
+                        <p class="mt-1.5 text-[13px] text-muted-foreground">{{ t('jobs.by') }} {{ job.employer.name }}</p>
                     </div>
-                    <h3 class="mt-3 text-lg font-bold leading-snug text-white">{{ job.title }}</h3>
-                    <p class="mt-1 inline-flex items-center gap-1 text-xs text-slate-500">
+                    <div class="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
                         <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || t('jobs.locationNA') }}
-                    </p>
-                    <div class="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-sm">
-                        <span class="font-bold text-rose-300">{{ wage(job) }}</span>
-                        <span class="text-xs text-slate-500">{{ t('jobs.by') }} {{ job.employer.name }}</span>
+                    </div>
+                    <div class="text-sm font-semibold">{{ wage(job) }}</div>
+                    <div class="flex items-center gap-4">
+                        <span v-if="job.category" class="label-rule hidden text-muted-foreground lg:block">{{ job.category }}</span>
+                        <ArrowUpRight class="size-5 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
                     </div>
                 </Link>
             </div>
 
-            <div v-else class="rounded-2xl border border-dashed border-white/10 p-16 text-center text-slate-500">
+            <div v-else class="mt-12 border-y border-foreground/15 py-20 text-center text-muted-foreground">
                 {{ t('jobs.noJobs') }}
             </div>
 
             <!-- Pagination -->
-            <div v-if="jobs.links.length > 3" class="mt-8 flex flex-wrap justify-center gap-1">
+            <div v-if="jobs.links.length > 3" class="mt-10 flex flex-wrap justify-center gap-1">
                 <Link
                     v-for="(link, i) in jobs.links"
                     :key="i"
                     :href="link.url ?? ''"
                     :class="[
-                        'min-w-9 rounded-lg border border-white/10 px-3 py-1.5 text-center text-sm transition',
-                        link.active ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white' : 'text-slate-400 hover:bg-white/5',
+                        'min-w-9 rounded-sm px-3 py-1.5 text-center text-sm transition',
+                        link.active ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
                         !link.url ? 'pointer-events-none opacity-40' : '',
                     ]"
                     v-html="link.label"

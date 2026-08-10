@@ -2,9 +2,10 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, IndianRupee, MapPin, Phone, Sun, UserPlus, Users, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import BrandWordmark from '@/components/BrandWordmark.vue';
 import JobMap from '@/components/JobMap.vue';
-import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
+import PublicNav from '@/components/PublicNav.vue';
+import ResumeUpload, { type Resume } from '@/components/ResumeUpload.vue';
 
 interface Job {
     id: number;
@@ -34,6 +35,7 @@ const props = defineProps<{
     canApply: boolean;
     application: { status: string; created_at: string } | null;
     isSaved: boolean;
+    resume: Resume | null;
 }>();
 
 const page = usePage();
@@ -43,10 +45,10 @@ const registerHref = computed(() => `/worker/register?redirect=/jobs/${props.job
 const loginHref = computed(() => `/worker/login?redirect=/jobs/${props.job.id}`);
 
 const statusStyles: Record<string, string> = {
-    pending: 'border-amber-400/30 bg-amber-500/10 text-amber-300',
-    accepted: 'border-orange-400/30 bg-orange-500/10 text-orange-300',
-    rejected: 'border-rose-400/30 bg-rose-500/10 text-rose-300',
-    withdrawn: 'border-white/15 bg-white/5 text-slate-300',
+    pending: 'border-amber-500/30 bg-amber-500/10 text-amber-700',
+    accepted: 'border-primary/30 bg-accent text-accent-foreground',
+    rejected: 'border-rose-500/30 bg-rose-500/10 text-rose-700',
+    withdrawn: 'border-foreground/15 bg-secondary text-muted-foreground',
 };
 
 const wage = computed(() => {
@@ -79,203 +81,183 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
 <template>
     <Head :title="job.title" />
 
-    <div class="dark relative min-h-screen overflow-hidden bg-[#0a0e21] text-slate-200 antialiased">
-        <!-- Ambient glows -->
-        <div class="pointer-events-none absolute inset-0 -z-10">
-            <div class="absolute left-1/2 top-[-10%] h-[460px] w-[720px] -translate-x-1/2 rounded-full bg-orange-600/20 blur-[140px]"></div>
-            <div class="absolute right-[-5%] top-[25%] h-[320px] w-[320px] rounded-full bg-rose-600/15 blur-[120px]"></div>
-        </div>
+    <div class="theme-paper bg-noise min-h-screen bg-background text-foreground antialiased">
+        <PublicNav>
+            <Link href="/jobs" class="link-underline">{{ $t('nav.browseJobs') }}</Link>
+            <Link href="/worker/register" class="link-underline">{{ $t('landing.forWorkers') }}</Link>
+            <Link href="/employer/register" class="link-underline">{{ $t('landing.forEmployers') }}</Link>
+        </PublicNav>
 
-        <!-- Nav -->
-        <header class="sticky top-0 z-30 border-b border-white/5 bg-[#0a0e21]/70 backdrop-blur-xl">
-            <div class="mx-auto flex max-w-3xl items-center justify-between px-5 py-3.5">
-                <Link href="/jobs" class="flex items-center gap-2.5 text-base font-bold text-white">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/40">
-                        <AppLogoIcon class="size-[18px]" />
-                    </span>
-                    Super Karigar
-                </Link>
-                <div class="flex items-center gap-2">
-                    <LanguageSwitcher />
-                    <Link v-if="!isAuthed" :href="loginHref" class="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10">
-                        Login
-                    </Link>
-                    <Link v-else href="/dashboard" class="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10">
-                        Dashboard
-                    </Link>
-                </div>
-            </div>
-        </header>
-
-        <main class="mx-auto max-w-3xl px-5 py-10">
-            <Link href="/jobs" class="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 transition hover:text-orange-300">
-                <ArrowLeft class="size-4" /> All jobs
+        <main class="mx-auto max-w-[64rem] px-6 py-14 lg:px-10">
+            <Link href="/jobs" class="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                <ArrowLeft class="size-4" /> {{ $t('jobs.backToJobs') }}
             </Link>
 
-            <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur sm:p-8">
-                <div class="flex items-start justify-between gap-4">
-                    <span v-if="job.category" class="inline-flex items-center rounded-full border border-orange-400/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300">
-                        {{ job.category }}
-                    </span>
+            <!-- Masthead -->
+            <div class="mt-8 border-b border-foreground/15 pb-8">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="label-rule text-primary">{{ job.category || $t('jobs.browseTitle') }}</div>
                     <button
                         v-if="isAuthed"
-                        class="inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition"
-                        :class="isSaved ? 'border-orange-400/30 bg-orange-500/15 text-orange-300' : 'border-white/15 bg-white/5 text-white hover:bg-white/10'"
+                        class="inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-xs font-semibold transition"
+                        :class="isSaved ? 'border-primary/40 bg-accent text-accent-foreground' : 'border-foreground/20 hover:bg-foreground/5'"
                         @click="toggleSave"
                     >
-                        <Bookmark class="size-3.5" :fill="isSaved ? 'currentColor' : 'none'" /> {{ isSaved ? 'Saved' : 'Save' }}
+                        <Bookmark class="size-3.5" :fill="isSaved ? 'currentColor' : 'none'" /> {{ isSaved ? $t('jobs.savedJob') : $t('jobs.saveJob') }}
                     </button>
                 </div>
 
-                <h1 class="mt-4 text-3xl font-bold tracking-tight text-white">{{ job.title }}</h1>
-                <p class="mt-2 inline-flex items-center gap-1.5 text-sm text-slate-400">
-                    <MapPin class="size-4" /> {{ [job.city, job.state].filter(Boolean).join(', ') || 'Location N/A' }}
-                    <span class="text-slate-600">·</span> by {{ job.employer.name }}
+                <h1 class="display-lg mt-5 max-w-3xl">{{ job.title }}</h1>
+                <p class="mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                    <MapPin class="size-4" /> {{ [job.city, job.state].filter(Boolean).join(', ') || $t('jobs.locationNA') }}
+                    <span class="text-foreground/25">·</span> {{ $t('jobs.by') }} {{ job.employer.name }}
                 </p>
+            </div>
 
-                <div class="mt-6 grid gap-3 sm:grid-cols-2">
-                    <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                        <span class="flex size-10 items-center justify-center rounded-xl bg-orange-500/15 text-orange-300"><IndianRupee class="size-5" /></span>
-                        <div>
-                            <div class="text-xs text-slate-500">Wage</div>
-                            <div class="font-semibold text-white">{{ wage }}</div>
+            <!-- Key facts as a ruled row -->
+            <div class="grid grid-cols-2 divide-x divide-foreground/10 border-b border-foreground/10 sm:grid-cols-4">
+                <div class="py-7 pr-6">
+                    <div class="label-rule text-muted-foreground">{{ $t('jobs.wage') }}</div>
+                    <div class="mt-2 text-2xl font-bold tracking-tight">{{ wage }}</div>
+                </div>
+                <div class="py-7 pl-6 pr-6">
+                    <div class="label-rule text-muted-foreground">{{ $t('jobs.vacancies') }}</div>
+                    <div class="mt-2 text-2xl font-bold tracking-tight">{{ job.vacancies }}</div>
+                </div>
+                <div class="py-7 pl-6 pr-6">
+                    <div class="label-rule text-muted-foreground">{{ $t('jobs.interested') }}</div>
+                    <div class="mt-2 text-sm font-semibold">
+                        <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1.5 text-amber-700"><Wallet class="size-4" /> ₹{{ job.worker_fee_amount }}</span>
+                        <span v-else class="inline-flex items-center gap-1.5 text-primary"><BadgeCheck class="size-4" /> {{ $t('jobs.noFee') }}</span>
+                    </div>
+                </div>
+                <div class="py-7 pl-6">
+                    <div class="label-rule text-muted-foreground">{{ $t('jobForm.shift') }}</div>
+                    <div class="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold">
+                        <Sun class="size-4 text-primary" /> {{ job.shift ? shiftLabel[job.shift] : '—' }}
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="job.skills?.length" class="flex flex-wrap gap-2 border-b border-foreground/10 py-6">
+                <span v-for="s in job.skills" :key="s" class="rounded-sm bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">{{ s }}</span>
+            </div>
+
+            <div v-if="job.perks?.length" class="flex flex-wrap gap-2 border-b border-foreground/10 py-6">
+                <span v-for="perk in job.perks" :key="perk" class="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <Gift class="size-3.5 text-primary" /> {{ perk }}
+                </span>
+            </div>
+
+            <div class="grid gap-12 py-10 lg:grid-cols-[1.4fr_1fr]">
+                <div>
+                    <h2 class="label-rule inline-flex items-center gap-2 text-primary"><Briefcase class="size-3.5" /> {{ $t('jobs.description') }}</h2>
+                    <p class="mt-5 whitespace-pre-line leading-relaxed text-foreground/85">{{ job.description }}</p>
+
+                    <div v-if="job.latitude && job.longitude" class="mt-10">
+                        <h2 class="label-rule inline-flex items-center gap-2 text-primary"><MapPin class="size-3.5" /> {{ $t('jobs.jobLocation') }}</h2>
+                        <div class="mt-5 overflow-hidden rounded-sm">
+                            <JobMap :lat="Number(job.latitude)" :lng="Number(job.longitude)" height="300px" />
                         </div>
                     </div>
-                    <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                        <span class="flex size-10 items-center justify-center rounded-xl bg-rose-500/15 text-rose-300"><Users class="size-5" /></span>
-                        <div>
-                            <div class="text-xs text-slate-500">Vacancies</div>
-                            <div class="font-semibold text-white">{{ job.vacancies }}</div>
-                        </div>
-                    </div>
                 </div>
 
-                <div v-if="job.skills?.length" class="mt-6 flex flex-wrap gap-2">
-                    <span v-for="s in job.skills" :key="s" class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">{{ s }}</span>
-                </div>
-
-                <div class="mt-6 flex flex-wrap items-center gap-2 border-t border-white/5 pt-6">
-                    <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300"><Wallet class="size-3.5" /> Joining fee: ₹{{ job.worker_fee_amount }}</span>
-                    <span v-else class="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"><BadgeCheck class="size-3.5" /> No fee to join</span>
-                    <span v-if="job.shift" class="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300"><Sun class="size-3.5" /> {{ shiftLabel[job.shift] }}</span>
-                    <span v-for="perk in job.perks ?? []" :key="perk" class="inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"><Gift class="size-3" /> {{ perk }}</span>
-                </div>
-
-                <div v-if="job.latitude && job.longitude" class="mt-6 border-t border-white/5 pt-6">
-                    <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-orange-300"><MapPin class="size-4" /> Job location</h2>
-                    <JobMap :lat="Number(job.latitude)" :lng="Number(job.longitude)" height="280px" />
-                </div>
-
-                <div class="mt-6 border-t border-white/5 pt-6">
-                    <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-orange-300"><Briefcase class="size-4" /> Job Description</h2>
-                    <p class="whitespace-pre-line text-sm leading-relaxed text-slate-300">{{ job.description }}</p>
-                </div>
-
-                <!-- Apply zone -->
-                <div class="mt-8 border-t border-white/5 pt-6">
-                    <!-- Direct call (number is public on this job) -->
-                    <div v-if="canCall" class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-5">
-                        <div>
-                            <h3 class="text-base font-bold text-white">Call the employer directly</h3>
-                            <p class="mt-0.5 text-sm text-slate-400">{{ applyAllowed ? 'Prefer to talk? Call now — or apply below.' : 'This employer hires over the phone for this job.' }}</p>
-                        </div>
-                        <a
-                            :href="`tel:${job.contact_phone}`"
-                            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-700 active:scale-95"
-                        >
-                            <Phone class="size-4" /> Call now · {{ job.contact_phone }}
+                <!-- Apply rail -->
+                <aside class="lg:border-l lg:border-foreground/10 lg:pl-10">
+                    <div v-if="canCall" class="border-b border-foreground/10 pb-7">
+                        <h3 class="text-base font-bold tracking-tight">{{ $t('jobs.callNow') }}</h3>
+                        <p class="mt-1.5 text-sm text-muted-foreground">{{ applyAllowed ? $t('jobs.interested') : $t('jobs.directCall') }}</p>
+                        <a :href="`tel:${job.contact_phone}`" class="mt-4 inline-flex items-center gap-2 rounded-sm bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-primary">
+                            <Phone class="size-4" /> {{ job.contact_phone }}
                         </a>
                     </div>
 
-                    <!-- GUEST: sign up / login to apply -->
-                    <div v-if="!isAuthed && applyAllowed" class="rounded-2xl border border-orange-400/20 bg-orange-500/[0.06] p-5">
-                        <h3 class="text-base font-bold text-white">Interested in this job?</h3>
-                        <p class="mt-1 text-sm text-slate-400">Create a free worker account to apply and track your application status.</p>
-                        <div class="mt-4 flex flex-wrap gap-3">
-                            <Link :href="registerHref" class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95">
-                                <UserPlus class="size-4" /> Sign up to apply
+                    <!-- GUEST -->
+                    <div v-if="!isAuthed && applyAllowed" class="pt-7">
+                        <h3 class="text-base font-bold tracking-tight">{{ $t('jobs.interested') }}</h3>
+                        <p class="mt-1.5 text-sm text-muted-foreground">{{ $t('landing.forWorkersDesc') }}</p>
+                        <div class="mt-5 flex flex-col gap-3">
+                            <Link :href="registerHref" class="inline-flex items-center justify-center gap-1.5 rounded-sm bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:bg-foreground">
+                                <UserPlus class="size-4" /> {{ $t('landing.joinFree') }}
                             </Link>
-                            <Link :href="loginHref" class="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
-                                I already have an account
-                            </Link>
+                            <Link :href="loginHref" class="link-underline text-center text-sm font-semibold">{{ $t('jobs.loginToApply') }}</Link>
                         </div>
                     </div>
 
-                    <!-- WORKER, already applied: show status -->
-                    <div v-else-if="application" class="rounded-2xl border p-5" :class="statusStyles[application.status] ?? statusStyles.withdrawn">
-                        <div class="flex items-center gap-2 text-sm font-bold">
-                            <Check class="size-4" /> Application submitted
-                        </div>
+                    <!-- Already applied -->
+                    <div v-else-if="application" class="mt-7 rounded-sm border p-5" :class="statusStyles[application.status] ?? statusStyles.withdrawn">
+                        <div class="flex items-center gap-2 text-sm font-bold"><Check class="size-4" /> {{ $t('jobs.applied') }}</div>
                         <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                            <span class="inline-flex items-center gap-1.5 capitalize"><Clock class="size-3.5" /> Status: <b>{{ application.status }}</b></span>
-                            <span class="text-xs opacity-70">Applied {{ application.created_at }}</span>
+                            <span class="inline-flex items-center gap-1.5 capitalize"><Clock class="size-3.5" /> {{ $t(`status.${application.status}`) }}</span>
+                            <span class="text-xs opacity-70">{{ application.created_at }}</span>
                         </div>
-                        <Link href="/worker/applications" class="mt-3 inline-flex items-center gap-1 text-sm font-semibold underline-offset-2 hover:underline">
-                            Track all my applications <ArrowRight class="size-3.5" />
+                        <Link href="/worker/applications" class="link-underline mt-3 inline-flex items-center gap-1 text-sm font-semibold">
+                            {{ $t('jobs.trackApplications') }} <ArrowRight class="size-3.5" />
                         </Link>
                     </div>
 
-                    <!-- NON-WORKER authed (employer/admin) -->
-                    <p v-else-if="isAuthed && !canApply" class="text-sm text-slate-400">You're signed in as a non-worker account, so you can't apply. Log in with a worker account to apply.</p>
+                    <!-- Non-worker -->
+                    <p v-else-if="isAuthed && !canApply" class="pt-7 text-sm text-muted-foreground">{{ $t('jobs.loginToApply') }}</p>
 
-                    <!-- WORKER, not applied: apply form -->
-                    <div v-else-if="isAuthed && applyAllowed">
+                    <!-- Worker, not applied -->
+                    <div v-else-if="isAuthed && applyAllowed" class="pt-7">
                         <button
                             v-if="!showForm"
-                            class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
+                            class="inline-flex w-full items-center justify-center gap-1.5 rounded-sm bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground transition hover:bg-foreground"
                             @click="showForm = true"
                         >
-                            Apply now <ArrowRight class="size-4" />
+                            {{ $t('jobs.applyNow') }} <ArrowRight class="size-4" />
                         </button>
 
-                        <form v-else class="space-y-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5" @submit.prevent="submitApply">
+                        <form v-else class="space-y-5" @submit.prevent="submitApply">
                             <div>
-                                <label class="mb-1.5 block text-xs font-medium text-slate-400">Cover note (optional)</label>
+                                <label class="label-rule block text-muted-foreground">{{ $t('jobs.coverNote') }}</label>
                                 <textarea
                                     v-model="form.cover_note"
                                     rows="4"
-                                    placeholder="Tell the employer why you're a good fit…"
-                                    class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-orange-400/40 focus:outline-none"
+                                    :placeholder="$t('jobs.coverNotePlaceholder')"
+                                    class="mt-2 w-full border-b border-foreground/20 bg-transparent py-2 text-sm outline-none transition placeholder:text-muted-foreground/70 focus:border-primary"
                                 ></textarea>
-                                <p v-if="form.errors.cover_note" class="mt-1 text-xs text-rose-400">{{ form.errors.cover_note }}</p>
+                                <p v-if="form.errors.cover_note" class="mt-1 text-xs text-rose-600">{{ form.errors.cover_note }}</p>
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-medium text-slate-400">Expected wage (₹, optional)</label>
+                                <label class="label-rule block text-muted-foreground">{{ $t('jobs.expectedWage') }}</label>
                                 <input
                                     v-model="form.expected_wage"
                                     type="number"
                                     min="0"
-                                    class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-orange-400/40 focus:outline-none"
+                                    class="mt-2 w-full border-b border-foreground/20 bg-transparent py-2 text-sm outline-none transition focus:border-primary"
                                 />
-                                <p v-if="form.errors.expected_wage" class="mt-1 text-xs text-rose-400">{{ form.errors.expected_wage }}</p>
+                                <p v-if="form.errors.expected_wage" class="mt-1 text-xs text-rose-600">{{ form.errors.expected_wage }}</p>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button type="submit" :disabled="form.processing" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-60">
-                                    Submit application
+                            <div>
+                                <label class="label-rule block text-muted-foreground">{{ $t('resume.title') }}</label>
+                                <div class="mt-2"><ResumeUpload :resume="resume" compact /></div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button type="submit" :disabled="form.processing" class="rounded-sm bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:bg-foreground disabled:opacity-60">
+                                    {{ $t('common.submit') }}
                                 </button>
-                                <button type="button" class="rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/5" @click="showForm = false">
-                                    Cancel
+                                <button type="button" class="link-underline text-sm font-semibold" @click="showForm = false">
+                                    {{ $t('common.cancel') }}
                                 </button>
                             </div>
                         </form>
                     </div>
-                </div>
+                </aside>
             </div>
         </main>
 
         <!-- Footer -->
-        <footer class="border-t border-white/5">
-            <div class="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-5 py-8 text-sm text-slate-500">
-                <div class="flex items-center gap-2 font-bold text-white">
-                    <span class="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-rose-600 text-white">
-                        <AppLogoIcon class="size-4" />
-                    </span>
-                    Super Karigar
+        <footer class="bg-foreground text-background/70">
+            <div class="mx-auto flex max-w-[88rem] flex-wrap items-center justify-between gap-4 px-6 py-10 text-sm lg:px-10">
+                <div class="text-[18px] text-background">
+                    <BrandWordmark tone="plain" />
                 </div>
-                <div class="flex gap-5">
-                    <Link href="/jobs" class="transition hover:text-white">Browse jobs</Link>
-                    <Link href="/worker/register" class="transition hover:text-white">Join as worker</Link>
-                    <Link href="/employer/register" class="transition hover:text-white">Post a job</Link>
+                <div class="flex flex-wrap gap-6">
+                    <Link href="/jobs" class="transition hover:text-background">{{ $t('nav.browseJobs') }}</Link>
+                    <Link href="/worker/register" class="transition hover:text-background">{{ $t('landing.joinAsWorker') }}</Link>
+                    <Link href="/employer/register" class="transition hover:text-background">{{ $t('nav.postJob') }}</Link>
                 </div>
             </div>
         </footer>

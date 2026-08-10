@@ -1,15 +1,9 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="sk" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F97316"/>
-      <stop offset="1" stop-color="#E11D48"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="14" fill="url(#sk)"/>
-  <g transform="translate(8 8) scale(2)" fill="#fff">
-    <path d="M12 3.2c1.7 0 2.7 1.1 2.7 2.9v8.6H9.3V6.1c0-1.8 1-2.9 2.7-2.9Z"/>
-    <path d="M8.1 7.5v7.2H4.4A8 8 0 0 1 8.1 7.5Z"/>
-    <path d="M15.9 7.5v7.2h3.7a8 8 0 0 0-3.7-7.2Z"/>
-    <rect x="2" y="15.9" width="20" height="2.9" rx="1.45"/>
-  </g>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="12" fill="#BF3A16"/>
+  <text
+    x="32" y="33"
+    text-anchor="middle" dominant-baseline="central"
+    font-family="Outfit, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    font-size="42" font-weight="700" letter-spacing="-1"
+    fill="#F5F0E8">S</text>
 </svg>

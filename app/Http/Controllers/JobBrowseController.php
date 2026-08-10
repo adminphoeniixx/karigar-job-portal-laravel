@@ -44,6 +44,8 @@ class JobBrowseController extends Controller
                 'created_at' => $application->created_at?->diffForHumans(),
             ] : null,
             'isSaved' => $user ? $user->savedJobs()->where('job_listing_id', $job->id)->exists() : false,
+            // Same as the in-app job page: the apply panel offers the resume.
+            'resume' => $isWorker ? $user->workerProfile?->resumeSummary() : null,
         ]);
     }
 

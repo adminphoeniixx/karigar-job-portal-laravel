@@ -38,7 +38,7 @@ const printInvoice = () => window.print();
                 <ArrowLeft class="size-4" /> Back to subscription
             </Link>
             <button
-                class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:opacity-90"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:opacity-90"
                 @click="printInvoice"
             >
                 <Printer class="size-4" /> Print / Save PDF
@@ -51,7 +51,7 @@ const printInvoice = () => window.print();
             <div class="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
                 <div>
                     <div class="flex items-center gap-2 text-xl font-bold">
-                        <span class="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white">K</span>
+                        <span class="flex size-9 items-center justify-center rounded-xl bg-primary text-white">K</span>
                         {{ seller.name }}
                     </div>
                     <p v-if="seller.address" class="mt-2 max-w-xs text-xs text-muted-foreground">{{ seller.address }}</p>

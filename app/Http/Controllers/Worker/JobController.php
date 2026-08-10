@@ -47,6 +47,9 @@ class JobController extends Controller
                 'tracking_steps' => $application->trackingSteps(),
             ] : null,
             'isSaved' => $user->savedJobs()->where('job_listing_id', $job->id)->exists(),
+            // Offered right inside the apply panel: applying is when a worker
+            // cares that the employer's AI will read their resume.
+            'resume' => $user->workerProfile?->resumeSummary(),
         ]);
     }
 }

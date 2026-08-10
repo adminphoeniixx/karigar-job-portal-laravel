@@ -290,6 +290,7 @@ export default {
         saveAmount: 'Save',
     },
     resume: {
+        applyHint: 'Optional, but employers see it and the match score reads it. PDF, up to 4 MB.',
         title: 'Resume',
         subtitle: 'Attach a PDF resume — new applications are matched against it.',
         upload: 'Upload resume (PDF)',

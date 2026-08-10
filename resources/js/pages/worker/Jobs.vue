@@ -178,7 +178,7 @@ const fmtDate = (iso: string | null): string =>
                 :href="link.url ?? ''"
                 :class="[
                     'min-w-9 rounded-lg border px-3 py-1.5 text-center text-sm transition',
-                    link.active ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white' : 'text-muted-foreground hover:bg-muted',
+                    link.active ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted',
                     !link.url ? 'pointer-events-none opacity-40' : '',
                 ]"
                 v-html="link.label"

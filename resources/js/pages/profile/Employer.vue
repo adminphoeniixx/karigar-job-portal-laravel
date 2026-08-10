@@ -127,7 +127,7 @@ const submit = () =>
             <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
                 <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                     <div class="relative">
-                        <div class="flex size-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 to-orange-600 text-3xl font-bold text-white shadow-lg shadow-rose-500/25">
+                        <div class="flex size-24 items-center justify-center overflow-hidden rounded-2xl bg-primary text-3xl font-bold text-white shadow-lg shadow-rose-500/25">
                             <img v-if="preview" :src="preview" alt="Logo" class="size-full object-cover" />
                             <span v-else>{{ initial }}</span>
                         </div>
@@ -226,7 +226,7 @@ const submit = () =>
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
                     {{ $t('common.saveChanges') }}
                 </button>

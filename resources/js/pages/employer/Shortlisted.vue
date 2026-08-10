@@ -51,7 +51,7 @@ const remove = (id: number) => {
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 text-sm font-bold text-white">
+                            <span class="flex size-10 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">
                                 {{ a.worker.name.charAt(0).toUpperCase() }}
                             </span>
                             <div>

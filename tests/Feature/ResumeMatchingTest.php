@@ -217,6 +217,40 @@ it('gives the worker profile page a resume summary and keeps the parsed text out
             ->etc());
 });
 
+it('offers the resume inside the apply panel on both job pages', function () {
+    Storage::fake(ResumeStore::DISK);
+
+    // Before uploading, the panel still renders — it just has nothing to show.
+    $this->actingAs($this->worker)->get("/worker/jobs/{$this->job->id}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('resume', null)->etc());
+
+    app(ResumeStore::class)->put($this->worker->workerProfile, resumeFixture('plumber-strong-match.pdf'));
+
+    $this->actingAs($this->worker)->get("/worker/jobs/{$this->job->id}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('resume.name', 'plumber-strong-match.pdf')->etc());
+
+    $this->actingAs($this->worker)->get("/jobs/{$this->job->id}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('resume.name', 'plumber-strong-match.pdf')->etc());
+});
+
+it('keeps the resume off the public job page for anyone who cannot apply', function () {
+    Storage::fake(ResumeStore::DISK);
+    app(ResumeStore::class)->put($this->worker->workerProfile, resumeFixture('plumber-strong-match.pdf'));
+
+    // Guest.
+    $this->get("/jobs/{$this->job->id}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('resume', null)->etc());
+
+    // Employer browsing their own listing.
+    $this->actingAs($this->employer)->get("/jobs/{$this->job->id}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('resume', null)->etc());
+});
+
 it('lets a worker open their own resume, and 404s before they upload one', function () {
     Storage::fake(ResumeStore::DISK);
 

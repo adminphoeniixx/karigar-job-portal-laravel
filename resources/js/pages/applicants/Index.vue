@@ -298,7 +298,7 @@ const submitReview = () => {
                     <template v-if="a.status === 'accepted'">
                         <button
                             v-if="!a.escrow || a.escrow.status === 'pending'"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                             @click="fund(a)"
                         >
                             <IndianRupee class="size-3.5" /> {{ a.escrow?.status === 'pending' ? 'Complete payment' : 'Fund payment' }}
@@ -356,7 +356,7 @@ const submitReview = () => {
             <p v-if="reviewForm.errors.rating" class="mt-1 text-xs text-rose-500">{{ reviewForm.errors.rating }}</p>
             <div class="mt-4 flex justify-end gap-2">
                 <button class="rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted" @click="reviewFor = null">Cancel</button>
-                <button :disabled="reviewForm.processing" class="rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" @click="submitReview">Submit</button>
+                <button :disabled="reviewForm.processing" class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" @click="submitReview">Submit</button>
             </div>
         </div>
     </div>

@@ -57,7 +57,7 @@ const reject = (id: number) => {
                 :key="s"
                 class="rounded-full px-4 py-1.5 text-sm font-medium capitalize transition"
                 :class="isActive(s, filterStatus)
-                    ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white shadow-md shadow-orange-600/25'
+                    ? 'bg-primary text-white shadow-md shadow-orange-600/25'
                     : 'border bg-card text-muted-foreground hover:bg-muted'"
                 @click="filterBy(s)"
             >
@@ -82,7 +82,7 @@ const reject = (id: number) => {
                         <tr v-for="row in documents.data" :key="row.id" class="border-t transition hover:bg-muted/30">
                             <td class="px-5 py-3.5">
                                 <div class="flex items-center gap-3">
-                                    <span class="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-rose-600 text-sm font-bold text-white">
+                                    <span class="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
                                         {{ row.user.name.charAt(0).toUpperCase() }}
                                     </span>
                                     <div>

@@ -70,17 +70,17 @@ defineOptions({
     layout: { breadcrumbs: [{ title: 'Dashboard', href: dashboard() }] },
 });
 
-// Tile accent colors (cycled across the stat tiles).
-const tileColors = ['#f24711', '#2bc155', '#4a6cf7', '#c544d8'];
+// Tile accent colors (cycled across the stat tiles), warm brand ramp.
+const tileColors = ['#bf3a16', '#8a6a2f', '#4f6b4a', '#a3502b'];
 
 // Activity overview chart — real data from the backend, one series per stage.
 const ranges = ['Daily', 'Weekly', 'Monthly'] as const;
 const rangeLabel: Record<string, string> = { Daily: 'dashboard.daily', Weekly: 'dashboard.weekly', Monthly: 'dashboard.monthly' };
 const activeRange = ref<(typeof ranges)[number]>('Monthly');
 const legend = [
-    { label: 'dashboard.applications', color: '#2bc155' },
-    { label: 'dashboard.inProgress', color: '#4a6cf7' },
-    { label: 'dashboard.closedSeries', color: '#ff4a55' },
+    { label: 'dashboard.applications', color: '#4f6b4a' },
+    { label: 'dashboard.inProgress', color: '#c88a2e' },
+    { label: 'dashboard.closedSeries', color: '#bf3a16' },
 ];
 
 const CW = 720;
@@ -125,7 +125,7 @@ const axisTicks = computed(() => {
 const numeric = computed(() => props.stats.map((s) => Number(String(s.value).replace(/[^\d.]/g, '')) || 0));
 const total = computed(() => numeric.value.reduce((a, b) => a + b, 0));
 const maxStat = computed(() => Math.max(1, ...numeric.value));
-const donutColors = ['#4a6cf7', '#c544d8', '#f24711', '#2bc155'];
+const donutColors = ['#bf3a16', '#c88a2e', '#4f6b4a', '#8a5a3c'];
 const donutSegments = computed(() => {
     if (total.value === 0) return [];
     let offset = 25;
@@ -283,7 +283,7 @@ const profileHref = computed(
             <!-- Profile card -->
             <div class="rounded-2xl border bg-card p-6 shadow-sm">
                 <div class="flex items-center gap-4">
-                    <span class="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 text-2xl font-bold text-white">
+                    <span class="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-white">
                         {{ greeting.charAt(0).toUpperCase() }}
                     </span>
                     <div class="min-w-0">

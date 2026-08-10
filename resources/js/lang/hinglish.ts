@@ -290,6 +290,7 @@ export default {
         saveAmount: 'Bachat',
     },
     resume: {
+        applyHint: 'Zaroori nahi, par employer ise dekhte hain aur match score bhi isi se banta hai. PDF, 4 MB tak.',
         title: 'Resume',
         subtitle: 'PDF resume lagayein — nayi applications isi se match hongi.',
         upload: 'Resume upload karein (PDF)',

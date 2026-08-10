@@ -15,6 +15,12 @@ export default defineConfig({
                 bunny('Outfit', {
                     weights: [400, 500, 600, 700],
                 }),
+                // Devanagari half of the wordmark ("Super कारीगर"). Mukta is
+                // drawn to sit next to a Latin sans at the same x-height, so
+                // the two words read as one. Self-hosted like Outfit.
+                bunny('Mukta', {
+                    weights: [600, 700],
+                }),
             ],
         }),
         // This app is a client-rendered SPA (app.ts mounts with createApp and

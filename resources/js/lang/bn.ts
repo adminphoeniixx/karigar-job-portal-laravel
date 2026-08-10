@@ -290,6 +290,7 @@ export default {
         saveAmount: 'সাশ্রয়',
     },
     resume: {
+        applyHint: 'বাধ্যতামূলক নয়, তবে employer এটি দেখেন এবং match score এটি পড়ে। PDF, 4 MB পর্যন্ত।',
         title: 'রেজিউমে',
         subtitle: 'PDF রেজিউমে যুক্ত করুন — নতুন আবেদন এর সঙ্গে মেলানো হবে।',
         upload: 'রেজিউমে আপলোড করুন (PDF)',

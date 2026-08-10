@@ -53,7 +53,7 @@ const remove = (c: Category) => {
             <button
                 type="submit"
                 :disabled="form.processing"
-                class="inline-flex h-[42px] shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
+                class="inline-flex h-[42px] shrink-0 items-center gap-1.5 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
             >
                 <Plus class="size-4" /> Add
             </button>

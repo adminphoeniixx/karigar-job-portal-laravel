@@ -290,6 +290,7 @@ export default {
         saveAmount: 'சேமிப்பு',
     },
     resume: {
+        applyHint: 'கட்டாயம் இல்லை, ஆனால் employer இதைப் பார்ப்பார், match score-ம் இதைப் படிக்கும். PDF, 4 MB வரை.',
         title: 'ரெஸ்யூம்',
         subtitle: 'PDF ரெஸ்யூம் இணைக்கவும் — புதிய விண்ணப்பங்கள் இதனுடன் பொருத்தப்படும்.',
         upload: 'ரெஸ்யூம் பதிவேற்று (PDF)',

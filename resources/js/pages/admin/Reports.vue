@@ -135,15 +135,15 @@ const maxCategory = computed(() => Math.max(1, ...props.topCategories.map((c) =>
             <div class="flex flex-wrap items-center justify-between gap-2">
                 <h2 class="text-sm font-semibold">Monthly trend</h2>
                 <div class="flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                    <span class="inline-flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-[#f24711]"></span> Jobs</span>
-                    <span class="inline-flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-[#4a6cf7]"></span> Signups</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-[#bf3a16]"></span> Jobs</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-[#c88a2e]"></span> Signups</span>
                 </div>
             </div>
             <div class="mt-6 flex h-40 items-end gap-3">
                 <div v-for="m in monthly" :key="m.label" class="group flex flex-1 flex-col items-center justify-end gap-1">
                     <div class="flex w-full items-end justify-center gap-1" style="height: 128px">
-                        <div class="w-1/3 rounded-t bg-[#f24711]/80 transition group-hover:bg-[#f24711]" :style="{ height: Math.max(3, (m.jobs / maxMonthly) * 100) + '%' }" :title="`${m.jobs} jobs`"></div>
-                        <div class="w-1/3 rounded-t bg-[#4a6cf7]/80 transition group-hover:bg-[#4a6cf7]" :style="{ height: Math.max(3, ((m.workers + m.employers) / maxMonthly) * 100) + '%' }" :title="`${m.workers + m.employers} signups`"></div>
+                        <div class="w-1/3 rounded-t bg-[#bf3a16]/80 transition group-hover:bg-[#bf3a16]" :style="{ height: Math.max(3, (m.jobs / maxMonthly) * 100) + '%' }" :title="`${m.jobs} jobs`"></div>
+                        <div class="w-1/3 rounded-t bg-[#c88a2e]/80 transition group-hover:bg-[#c88a2e]" :style="{ height: Math.max(3, ((m.workers + m.employers) / maxMonthly) * 100) + '%' }" :title="`${m.workers + m.employers} signups`"></div>
                     </div>
                     <span class="text-[10px] text-muted-foreground">{{ m.label }}</span>
                 </div>
@@ -162,7 +162,7 @@ const maxCategory = computed(() => Math.max(1, ...props.topCategories.map((c) =>
                             <span class="tabular-nums text-muted-foreground">{{ c.total }}</span>
                         </div>
                         <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
-                            <div class="h-full rounded-full bg-[#f24711]" :style="{ width: (c.total / maxCity) * 100 + '%' }"></div>
+                            <div class="h-full rounded-full bg-[#bf3a16]" :style="{ width: (c.total / maxCity) * 100 + '%' }"></div>
                         </div>
                     </div>
                     <p v-if="!topCities.length" class="py-6 text-center text-sm text-muted-foreground">No data in this range.</p>
@@ -177,7 +177,7 @@ const maxCategory = computed(() => Math.max(1, ...props.topCategories.map((c) =>
                             <span class="tabular-nums text-muted-foreground">{{ c.total }}</span>
                         </div>
                         <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
-                            <div class="h-full rounded-full bg-[#4a6cf7]" :style="{ width: (c.total / maxCategory) * 100 + '%' }"></div>
+                            <div class="h-full rounded-full bg-[#c88a2e]" :style="{ width: (c.total / maxCategory) * 100 + '%' }"></div>
                         </div>
                     </div>
                     <p v-if="!topCategories.length" class="py-6 text-center text-sm text-muted-foreground">No data in this range.</p>

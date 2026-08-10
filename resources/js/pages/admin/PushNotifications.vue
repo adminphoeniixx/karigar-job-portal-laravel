@@ -215,7 +215,7 @@ const formatDate = (iso: string | null) =>
                 <button
                     type="submit"
                     :disabled="!canSubmit || form.processing"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
                     <Send class="size-4" /> {{ form.processing ? 'Sending…' : 'Send push' }}
                 </button>
