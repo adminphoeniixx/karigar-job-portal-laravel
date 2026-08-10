@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import { BadgeCheck, MapPin, Zap } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { home } from '@/routes';
 
 const props = defineProps<{
@@ -35,8 +36,10 @@ const highlights = [
         <div class="relative w-full max-w-md">
             <!-- Logo -->
             <Link :href="home()" class="mb-6 flex items-center justify-center gap-2.5 text-xl font-bold">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/30">K</span>
-                Karigar
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/30">
+                    <AppLogoIcon class="size-[22px]" />
+                </span>
+                Super Karigar
             </Link>
 
             <!-- Centered card -->

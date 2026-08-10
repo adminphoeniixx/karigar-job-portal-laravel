@@ -38,7 +38,7 @@ async function openCheckout() {
         order_id: props.orderId,
         amount: props.amount,
         currency: props.currency,
-        name: 'Karigar',
+        name: 'Super Karigar',
         description: `Payment for ${props.workerName}`,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: (response: any) => {

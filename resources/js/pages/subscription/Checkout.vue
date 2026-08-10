@@ -39,7 +39,7 @@ async function openCheckout() {
     const rzp = new RazorpayCtor({
         key: props.razorpayKey,
         subscription_id: props.subscriptionId,
-        name: 'Karigar',
+        name: 'Super Karigar',
         description: `${props.plan.name} plan`,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: (response: any) => {

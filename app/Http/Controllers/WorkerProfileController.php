@@ -20,6 +20,9 @@ class WorkerProfileController extends Controller
             'profile' => $profile,
             // Hide the phone-OTP placeholder so the field reads as "not set yet".
             'email' => str_ends_with((string) $email, '@phone.karigar') ? null : $email,
+            // Resume lives on its own routes (own upload form), so it travels
+            // as its own prop rather than as part of the profile payload.
+            'resume' => $profile->resumeSummary(),
         ]);
     }
 

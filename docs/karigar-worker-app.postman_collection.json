@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Karigar — Worker App API (v1)",
-    "description": "Token-based (Sanctum) JSON API for the Karigar worker mobile app.\n\nQuick start:\n1. Set the `base_url` collection variable (default http://localhost:8000).\n2. Run **Auth → Send OTP**, then check storage/logs for the dev OTP.\n3. Run **Auth → Verify OTP** — it auto-saves the returned token into the `token` variable, so every other request is authenticated.\n\nFull reference: docs/worker-app-api.md",
+    "name": "Super Karigar — Worker App API (v1)",
+    "description": "Token-based (Sanctum) JSON API for the Super Karigar worker mobile app.\n\nQuick start:\n1. Set the `base_url` collection variable (default http://localhost:8000).\n2. Run **Auth → Send OTP**, then check storage/logs for the dev OTP.\n3. Run **Auth → Verify OTP** — it auto-saves the returned token into the `token` variable, so every other request is authenticated.\n\nFull reference: docs/worker-app-api.md",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

@@ -85,7 +85,7 @@ class PayoutService
             'purpose' => 'payout',
             'queue_if_low_balance' => true,
             'reference_id' => 'escrow_'.$escrow->id,
-            'narration' => 'Karigar job payout',
+            'narration' => 'Super Karigar job payout',
         ]);
 
         return $payout['id'];

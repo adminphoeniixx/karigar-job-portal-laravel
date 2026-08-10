@@ -1,4 +1,4 @@
-# Karigar **Employer app** — what's new
+# Super Karigar **Employer app** — what's new
 
 Everything the **employer** app needs to integrate since the last handover.
 Nothing here concerns the worker app.

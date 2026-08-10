@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, BadgeCheck, BriefcaseBusiness, Gift, IndianRupee, MapPin, Phone, Settings2, Sun, Wallet } from '@lucide/vue';
+import { ArrowLeft, BadgeCheck, BriefcaseBusiness, Gift, IndianRupee, MapPin, Phone, Settings2, Sparkles, Sun, Wallet } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -121,6 +121,56 @@ watch([() => form.city, () => form.state], ([city, state]) => {
     }, 600);
 });
 
+// ── AI description drafts ───────────────────────────────────────────
+// The employer types a title, then lands in the description box — that is the
+// moment to offer drafts, so the fetch fires on focus rather than on a click
+// they have to discover. One fetch per title; the server caches the rest.
+const suggestions = ref<string[]>([]);
+const suggesting = ref(false);
+const suggestError = ref(false);
+const suggestedFor = ref('');
+
+const canSuggest = computed(() => form.title.trim().length >= 3);
+
+const fetchSuggestions = async () => {
+    const title = form.title.trim();
+    if (!canSuggest.value || suggesting.value || suggestedFor.value === title) return;
+
+    suggesting.value = true;
+    suggestError.value = false;
+    try {
+        const params = new URLSearchParams({ title });
+        if (form.category) params.set('category', form.category);
+        if (form.city) params.set('city', form.city);
+        if (form.state) params.set('state', form.state);
+        form.skills.forEach((s) => params.append('skills[]', s));
+
+        const res = await fetch(`/employer/jobs/suggest-description?${params}`, {
+            headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) throw new Error(String(res.status));
+
+        const data = await res.json();
+        suggestions.value = data.suggestions ?? [];
+        suggestedFor.value = title;
+    } catch {
+        // Drafting is a convenience — a failure must never block posting.
+        suggestError.value = true;
+    } finally {
+        suggesting.value = false;
+    }
+};
+
+// Only volunteer drafts into an empty box; never over an employer's own words.
+const onDescriptionFocus = () => {
+    if (!form.description.trim()) fetchSuggestions();
+};
+
+const useSuggestion = (text: string) => {
+    form.description = text;
+    suggestions.value = [];
+};
+
 const selectClass =
     'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 const textareaClass =
@@ -169,8 +219,43 @@ const submit = () => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="description">{{ $t('jobs.description') }}</Label>
-                        <textarea id="description" v-model="form.description" rows="5" required :class="textareaClass" placeholder="Describe the work, requirements and timing…" />
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <Label for="description">{{ $t('jobs.description') }}</Label>
+                            <button
+                                type="button"
+                                :disabled="!canSuggest || suggesting"
+                                class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+                                @click="fetchSuggestions"
+                            >
+                                <Sparkles class="size-3.5 text-orange-500" />
+                                {{ suggesting ? $t('jobForm.aiWriting') : $t('jobForm.aiSuggest') }}
+                            </button>
+                        </div>
+                        <textarea
+                            id="description"
+                            v-model="form.description"
+                            rows="5"
+                            required
+                            :class="textareaClass"
+                            placeholder="Describe the work, requirements and timing…"
+                            @focus="onDescriptionFocus"
+                        />
+
+                        <!-- AI drafts: tap one to drop it in, then edit freely -->
+                        <p v-if="suggesting" class="text-xs text-muted-foreground">{{ $t('jobForm.aiWritingHint') }}</p>
+                        <p v-else-if="suggestError" class="text-xs text-muted-foreground">{{ $t('jobForm.aiFailed') }}</p>
+                        <div v-else-if="suggestions.length" class="grid gap-2">
+                            <p class="text-xs text-muted-foreground">{{ $t('jobForm.aiPick') }}</p>
+                            <button
+                                v-for="(s, i) in suggestions"
+                                :key="i"
+                                type="button"
+                                class="rounded-xl border border-dashed bg-muted/30 p-3 text-left text-sm text-muted-foreground transition hover:border-orange-500/50 hover:bg-muted/60 hover:text-foreground"
+                                @click="useSuggestion(s)"
+                            >
+                                {{ s }}
+                            </button>
+                        </div>
                         <InputError :message="form.errors.description" />
                     </div>
 

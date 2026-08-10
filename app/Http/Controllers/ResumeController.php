@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ResumeUploadRequest;
 use App\Models\JobApplication;
+use App\Models\WorkerProfile;
 use App\Services\ResumeStore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,13 +46,30 @@ class ResumeController extends Controller
     }
 
     /**
+     * Let the worker open the resume they uploaded, so they can check the file
+     * on record is the one they meant to send.
+     */
+    public function show(Request $request): StreamedResponse
+    {
+        return $this->stream($request->user()->workerProfile);
+    }
+
+    /**
      * Stream a worker's resume to an employer who has their application.
      */
     public function download(Request $request, JobApplication $application): StreamedResponse
     {
         $this->authorize('view', $application->job);
 
-        $profile = $application->worker?->workerProfile;
+        return $this->stream($application->worker?->workerProfile);
+    }
+
+    /**
+     * Send the profile's resume file, 404-ing when there is nothing to send.
+     * Authorisation is the caller's job.
+     */
+    private function stream(?WorkerProfile $profile): StreamedResponse
+    {
         abort_if($profile?->resume_path === null, 404);
         abort_unless(Storage::disk(ResumeStore::DISK)->exists($profile->resume_path), 404);
 

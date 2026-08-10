@@ -112,7 +112,7 @@ class PhoneOtpController extends Controller
         return redirect($role === 'worker' ? '/worker/profile' : '/employer/profile')
             ->with('toast', [
                 'type' => 'success',
-                'message' => __('Welcome to Karigar! Complete your profile to get started.'),
+                'message' => __('Welcome to Super Karigar! Complete your profile to get started.'),
             ]);
     }
 }

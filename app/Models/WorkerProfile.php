@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\BunnyCdn;
+use App\Services\ResumeParser;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -44,6 +45,12 @@ class WorkerProfile extends Model
     /** @var list<string> */
     protected $appends = ['avatar_url'];
 
+    // The stored resume text runs to 8k characters and the path points at a
+    // private disk — neither belongs in a serialized profile. Use
+    // {@see resumeSummary()} for the parts a UI may show.
+    /** @var list<string> */
+    protected $hidden = ['resume_path', 'resume_text'];
+
     protected function casts(): array
     {
         return [
@@ -65,6 +72,30 @@ class WorkerProfile extends Model
         return Attribute::get(
             fn (): ?string => BunnyCdn::url($this->avatar_path),
         );
+    }
+
+    /**
+     * The uploaded resume as a UI can describe it — filename, when it landed,
+     * and how much text the matcher actually read out of it. Null when the
+     * worker has not uploaded one. Shared by the web page and the app API.
+     *
+     * @return array{name: string|null, uploaded_at: string|null, uploaded_ago: string|null, characters: int, max_characters: int}|null
+     */
+    public function resumeSummary(): ?array
+    {
+        if ($this->resume_path === null) {
+            return null;
+        }
+
+        return [
+            'name' => $this->resume_name,
+            'uploaded_at' => $this->resume_uploaded_at?->toIso8601String(),
+            'uploaded_ago' => $this->resume_uploaded_at?->diffForHumans(),
+            // Length of the text the matcher will actually read, so the worker
+            // can be reassured their resume was parsed.
+            'characters' => mb_strlen((string) $this->resume_text),
+            'max_characters' => ResumeParser::MAX_CHARS,
+        ];
     }
 
     /**

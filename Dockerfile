@@ -8,8 +8,8 @@ FROM composer:${COMPOSER_VERSION} AS vendor
 
 FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php${PHP_VERSION} AS base
 
-LABEL org.opencontainers.image.title="Karigar"
-LABEL org.opencontainers.image.description="Production-ready Dockerfile for the Karigar marketplace (Laravel Octane / FrankenPHP)"
+LABEL org.opencontainers.image.title="Super Karigar"
+LABEL org.opencontainers.image.description="Production-ready Dockerfile for the Super Karigar marketplace (Laravel Octane / FrankenPHP)"
 
 ARG WWWUSER=1000
 ARG WWWGROUP=1000
@@ -38,7 +38,7 @@ SHELL ["/bin/bash", "-eou", "pipefail", "-c"]
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime \
     && echo ${TZ} > /etc/timezone
 
-# System dependencies + PHP extensions needed by Karigar.
+# System dependencies + PHP extensions needed by Super Karigar.
 RUN apt-get update; \
     apt-get upgrade -yqq; \
     apt-get install -yqq --no-install-recommends --show-progress \

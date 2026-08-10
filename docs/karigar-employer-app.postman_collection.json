@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Karigar — Employer App API (v1)",
-    "description": "Token-based (Sanctum) JSON API for the Karigar employer mobile app.\n\nQuick start:\n1. Set the `base_url` collection variable (default http://localhost:8000).\n2. Run **Auth → Send OTP**, then check storage/logs for the dev OTP.\n3. Run **Auth → Verify OTP (employer)** — it auto-saves the returned token into `token`, so every other request is authenticated.\n4. **Jobs → Create job** auto-saves the new `job_id`; **Team → Add member** auto-saves `member_id`.\n\nAll `employer/*` routes require the employer role and are scoped to the employer account (owner + team).\n\nFull reference: docs/employer-app-api.md",
+    "name": "Super Karigar — Employer App API (v1)",
+    "description": "Token-based (Sanctum) JSON API for the Super Karigar employer mobile app.\n\nQuick start:\n1. Set the `base_url` collection variable (default http://localhost:8000).\n2. Run **Auth → Send OTP**, then check storage/logs for the dev OTP.\n3. Run **Auth → Verify OTP (employer)** — it auto-saves the returned token into `token`, so every other request is authenticated.\n4. **Jobs → Create job** auto-saves the new `job_id`; **Team → Add member** auto-saves `member_id`.\n\nAll `employer/*` routes require the employer role and are scoped to the employer account (owner + team).\n\nFull reference: docs/employer-app-api.md",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

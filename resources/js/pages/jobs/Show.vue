@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, IndianRupee, MapPin, Phone, Sun, UserPlus, Users, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import JobMap from '@/components/JobMap.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 
@@ -89,8 +90,10 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
         <header class="sticky top-0 z-30 border-b border-white/5 bg-[#0a0e21]/70 backdrop-blur-xl">
             <div class="mx-auto flex max-w-3xl items-center justify-between px-5 py-3.5">
                 <Link href="/jobs" class="flex items-center gap-2.5 text-base font-bold text-white">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/40">K</span>
-                    Karigar
+                    <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/40">
+                        <AppLogoIcon class="size-[18px]" />
+                    </span>
+                    Super Karigar
                 </Link>
                 <div class="flex items-center gap-2">
                     <LanguageSwitcher />
@@ -264,8 +267,10 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
         <footer class="border-t border-white/5">
             <div class="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-5 py-8 text-sm text-slate-500">
                 <div class="flex items-center gap-2 font-bold text-white">
-                    <span class="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-rose-600 text-white">K</span>
-                    Karigar
+                    <span class="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-rose-600 text-white">
+                        <AppLogoIcon class="size-4" />
+                    </span>
+                    Super Karigar
                 </div>
                 <div class="flex gap-5">
                     <Link href="/jobs" class="transition hover:text-white">Browse jobs</Link>

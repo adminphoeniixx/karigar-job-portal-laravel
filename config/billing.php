@@ -20,7 +20,7 @@ return [
     */
 
     'seller' => [
-        'name' => env('INVOICE_SELLER_NAME', config('app.name', 'Karigar')),
+        'name' => env('INVOICE_SELLER_NAME', config('app.name', 'Super Karigar')),
         'address' => env('INVOICE_SELLER_ADDRESS', ''),
         'gstin' => env('INVOICE_SELLER_GSTIN', ''),
         'email' => env('INVOICE_SELLER_EMAIL', ''),

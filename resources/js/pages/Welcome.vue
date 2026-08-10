@@ -21,6 +21,7 @@ import {
     Zap,
 } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 
 interface Job {
@@ -101,7 +102,7 @@ const wage = (j: Job) => {
 </script>
 
 <template>
-    <Head title="Karigar — Skilled work, simplified" />
+    <Head title="Super Karigar — Skilled work, simplified" />
 
     <!--
       Landing photos (public/images/landing/) — Wikimedia Commons:
@@ -123,8 +124,10 @@ const wage = (j: Job) => {
         <header class="sticky top-0 z-30 border-b bg-card/80 backdrop-blur-xl">
             <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
                 <Link href="/" class="flex items-center gap-2.5 text-lg font-bold">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/30">K</span>
-                    Karigar
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/30">
+                        <AppLogoIcon class="size-5" />
+                    </span>
+                    Super Karigar
                 </Link>
                 <nav class="hidden items-center gap-1 text-sm font-medium text-muted-foreground md:flex">
                     <a href="#features" class="rounded-lg px-3 py-1.5 transition hover:text-foreground">Features</a>
@@ -394,8 +397,10 @@ const wage = (j: Job) => {
             <div class="mx-auto grid max-w-6xl gap-8 px-5 py-12 sm:grid-cols-4">
                 <div>
                     <div class="flex items-center gap-2 text-lg font-bold text-white">
-                        <span class="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-rose-600 text-white">K</span>
-                        Karigar
+                        <span class="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-rose-600 text-white">
+                            <AppLogoIcon class="size-[18px]" />
+                        </span>
+                        Super Karigar
                     </div>
                     <p class="mt-3 text-sm text-slate-400">Skilled work, simplified.</p>
                 </div>
@@ -421,7 +426,7 @@ const wage = (j: Job) => {
                 </div>
             </div>
             <div class="border-t border-white/10 py-5 text-center text-xs text-slate-500">
-                © {{ new Date().getFullYear() }} Karigar. All rights reserved.
+                © {{ new Date().getFullYear() }} Super Karigar. All rights reserved.
             </div>
         </footer>
     </div>

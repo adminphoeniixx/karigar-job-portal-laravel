@@ -1,4 +1,4 @@
-# Karigar — Employer App API (v1)
+# Super Karigar — Employer App API (v1)
 
 Token-based JSON API for the **employer** mobile app. Same stack as the worker
 API — **Laravel Sanctum** personal access tokens issued after mobile-OTP

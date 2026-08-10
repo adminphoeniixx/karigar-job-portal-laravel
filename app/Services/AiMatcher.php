@@ -4,22 +4,16 @@ namespace App\Services;
 
 use App\Models\JobListing;
 use App\Models\User;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
  * Scores a job applicant against a job's requirements using an LLM.
  *
- * Provider-agnostic: any OpenAI-compatible chat-completions endpoint works
- * (DigitalOcean Serverless Inference, Groq, OpenAI, local Ollama, …) via the
- * 'digitalocean' / 'openai-compatible' provider, and Anthropic's native
- * Messages API via 'anthropic'. Swap providers by editing config/services.php
- * ('ai' block) or the AI_* env vars — no code change.
- *
- * When no API key is configured the service falls back to a deterministic
- * skill-overlap heuristic, so local/dev and tests work without a key (same
- * pattern as {@see Msg91Service}).
+ * The provider is whatever {@see AiClient} is pointed at (config/services.php,
+ * 'ai' block). When no API key is configured the service falls back to a
+ * deterministic skill-overlap heuristic, so local/dev and tests work without a
+ * key (same pattern as {@see Msg91Service}).
  *
  * @phpstan-type Score array{score:int, recommendation:string, summary:string, matched_skills:list<string>, red_flags:list<string>}
  */
@@ -27,9 +21,11 @@ class AiMatcher
 {
     private const RECOMMENDATIONS = ['strong_match', 'good_match', 'maybe', 'weak'];
 
+    public function __construct(private AiClient $ai) {}
+
     public function configured(): bool
     {
-        return (bool) config('services.ai.key');
+        return $this->ai->configured();
     }
 
     /**
@@ -48,9 +44,13 @@ class AiMatcher
         }
 
         try {
-            $raw = config('services.ai.provider') === 'anthropic'
-                ? $this->callAnthropic($jobText, $candidateText)
-                : $this->callOpenAiCompatible($jobText, $candidateText);
+            $raw = $this->ai->chat(
+                $this->systemPrompt(),
+                $this->userPrompt($jobText, $candidateText),
+                maxTokens: 400,
+                temperature: 0.2,
+                json: true,
+            );
 
             return $this->normalize($raw, $job, $worker);
         } catch (Throwable $e) {
@@ -58,51 +58,6 @@ class AiMatcher
 
             return $this->heuristic($job, $worker);
         }
-    }
-
-    /**
-     * OpenAI-compatible chat completion (DigitalOcean, Groq, OpenAI, Ollama…).
-     */
-    private function callOpenAiCompatible(string $jobText, string $candidateText): string
-    {
-        $response = Http::timeout((int) config('services.ai.timeout', 45))
-            ->withToken((string) config('services.ai.key'))
-            ->acceptJson()
-            ->post(rtrim((string) config('services.ai.base_url'), '/').'/chat/completions', [
-                'model' => config('services.ai.model'),
-                'temperature' => 0.2,
-                'max_tokens' => 400,
-                'response_format' => ['type' => 'json_object'],
-                'messages' => [
-                    ['role' => 'system', 'content' => $this->systemPrompt()],
-                    ['role' => 'user', 'content' => $this->userPrompt($jobText, $candidateText)],
-                ],
-            ])->throw();
-
-        return (string) data_get($response->json(), 'choices.0.message.content', '');
-    }
-
-    /**
-     * Anthropic native Messages API (used when AI_PROVIDER=anthropic).
-     */
-    private function callAnthropic(string $jobText, string $candidateText): string
-    {
-        $response = Http::timeout((int) config('services.ai.timeout', 45))
-            ->withHeaders([
-                'x-api-key' => (string) config('services.ai.key'),
-                'anthropic-version' => '2023-06-01',
-            ])
-            ->acceptJson()
-            ->post(rtrim((string) config('services.ai.base_url', 'https://api.anthropic.com/v1'), '/').'/messages', [
-                'model' => config('services.ai.model', 'claude-haiku-4-5'),
-                'max_tokens' => 400,
-                'system' => $this->systemPrompt(),
-                'messages' => [
-                    ['role' => 'user', 'content' => $this->userPrompt($jobText, $candidateText)],
-                ],
-            ])->throw();
-
-        return (string) data_get($response->json(), 'content.0.text', '');
     }
 
     private function systemPrompt(): string

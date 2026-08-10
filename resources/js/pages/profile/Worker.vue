@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import { Camera, IndianRupee, MapPin, UserRound } from '@lucide/vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import { Camera, FileText, IndianRupee, MapPin, Trash2, Upload, UserRound } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import InputError from '@/components/InputError.vue';
 import JobMap from '@/components/JobMap.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -28,13 +29,22 @@ interface WorkerProfile {
     avatar_url: string | null;
 }
 
-const props = defineProps<{ profile: WorkerProfile; email: string | null }>();
+interface Resume {
+    name: string | null;
+    uploaded_ago: string | null;
+    characters: number;
+    max_characters: number;
+}
+
+const props = defineProps<{ profile: WorkerProfile; email: string | null; resume: Resume | null }>();
 
 defineOptions({
     layout: {
         breadcrumbs: [{ title: 'My Profile', href: '/worker/profile' }],
     },
 });
+
+const { t } = useI18n();
 
 const preview = ref<string | null>(props.profile.avatar_url);
 
@@ -126,6 +136,27 @@ watch([() => form.city, () => form.state], ([city, state]) => {
 // File uploads don't survive a real PATCH, so spoof it over POST.
 const submit = () => {
     form.transform((data) => ({ ...data, _method: 'patch' })).post('/worker/profile', { preserveScroll: true });
+};
+
+// ── Resume (its own routes, so its own form — it saves on pick) ──────
+const resumeForm = useForm<{ resume: File | null }>({ resume: null });
+
+const onResume = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) return;
+    resumeForm.resume = file;
+    resumeForm.post('/worker/resume', {
+        preserveScroll: true,
+        // Let the same file be picked again after a failed upload.
+        onFinish: () => (input.value = ''),
+    });
+};
+
+const removeResume = () => {
+    if (window.confirm(t('resume.confirmRemove'))) {
+        router.delete('/worker/resume', { preserveScroll: true });
+    }
 };
 </script>
 
@@ -265,5 +296,57 @@ const submit = () => {
                 </button>
             </div>
         </form>
+
+        <!-- Resume — saves on its own, independent of the form above -->
+        <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+            <h2 class="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                <FileText class="size-4 text-orange-500" /> {{ $t('resume.title') }}
+            </h2>
+            <p class="mt-1 text-xs text-muted-foreground">{{ $t('resume.subtitle') }}</p>
+
+            <!-- Uploaded -->
+            <div v-if="resume" class="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">
+                <FileText class="size-5 shrink-0 text-orange-600" />
+                <div class="min-w-0 flex-1">
+                    <a
+                        :href="'/worker/resume'"
+                        target="_blank"
+                        class="block truncate text-sm font-medium underline-offset-2 hover:underline"
+                    >{{ resume.name }}</a>
+                    <p class="text-xs text-muted-foreground">
+                        <span v-if="resume.uploaded_ago">{{ $t('resume.uploadedAgo', { when: resume.uploaded_ago }) }} · </span>
+                        {{ $t('resume.parsed', { count: resume.characters }) }}
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition hover:bg-muted" :class="{ 'pointer-events-none opacity-50': resumeForm.processing }">
+                        <Upload class="size-3.5" />
+                        {{ resumeForm.processing ? $t('resume.uploading') : $t('resume.replace') }}
+                        <input type="file" accept="application/pdf,.pdf" class="hidden" @change="onResume" />
+                    </label>
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10"
+                        @click="removeResume"
+                    >
+                        <Trash2 class="size-3.5" /> {{ $t('common.remove') }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empty -->
+            <label
+                v-else
+                class="mt-4 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed bg-muted/30 px-4 py-6 text-center transition hover:border-orange-500/50 hover:bg-muted/50"
+                :class="{ 'pointer-events-none opacity-50': resumeForm.processing }"
+            >
+                <Upload class="size-5 text-orange-500" />
+                <span class="text-xs font-medium">{{ resumeForm.processing ? $t('resume.uploading') : $t('resume.upload') }}</span>
+                <input type="file" accept="application/pdf,.pdf" class="hidden" @change="onResume" />
+            </label>
+
+            <p class="mt-2 text-xs text-muted-foreground">{{ $t('resume.hint') }}</p>
+            <InputError :message="resumeForm.errors.resume" />
+        </section>
     </div>
 </template>

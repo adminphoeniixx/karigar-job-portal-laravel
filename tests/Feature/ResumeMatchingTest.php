@@ -15,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -196,6 +197,128 @@ it('lets the employer download an applicant resume but nobody else', function ()
     $this->actingAs($other)
         ->get("/employer/applications/{$application->id}/resume")
         ->assertForbidden();
+});
+
+// ---------------------------------------------------------------- web pages
+
+it('gives the worker profile page a resume summary and keeps the parsed text out of it', function () {
+    Storage::fake(ResumeStore::DISK);
+    app(ResumeStore::class)->put($this->worker->workerProfile, resumeFixture('plumber-strong-match.pdf'));
+
+    $this->actingAs($this->worker)->get('/worker/profile')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('resume.name', 'plumber-strong-match.pdf')
+            ->where('resume.max_characters', ResumeParser::MAX_CHARS)
+            ->where('resume.characters', fn (int $chars) => $chars > 0)
+            // The 8k of extracted text has no business in a page payload.
+            ->missing('profile.resume_text')
+            ->missing('profile.resume_path')
+            ->etc());
+});
+
+it('lets a worker open their own resume, and 404s before they upload one', function () {
+    Storage::fake(ResumeStore::DISK);
+
+    $this->actingAs($this->worker)->get('/worker/resume')->assertNotFound();
+
+    app(ResumeStore::class)->put($this->worker->workerProfile, resumeFixture('plumber-strong-match.pdf'));
+
+    $this->actingAs($this->worker)->get('/worker/resume')->assertOk();
+});
+
+it('shows the employer every applicant score and resume, best match first', function () {
+    Storage::fake(ResumeStore::DISK);
+    app(ResumeStore::class)->put($this->worker->workerProfile, resumeFixture('plumber-strong-match.pdf'));
+
+    $other = User::factory()->create(['role' => UserRole::Worker->value]);
+    $other->workerProfile()->create(['city' => 'Jaipur', 'skills' => []]);
+
+    // The strong applicant applied first, so date order alone would bury them.
+    $strong = JobApplication::create([
+        'job_listing_id' => $this->job->id,
+        'worker_id' => $this->worker->id,
+        'status' => ApplicationStatus::Pending,
+        'ai_score' => 91,
+        'ai_recommendation' => 'strong_match',
+        'ai_summary' => 'Experienced plumber',
+        'ai_matched_skills' => ['Plumbing'],
+        'ai_red_flags' => [],
+        'ai_scored_at' => now(),
+    ]);
+    $strong->forceFill(['created_at' => now()->subDays(2)])->save();
+
+    JobApplication::create([
+        'job_listing_id' => $this->job->id,
+        'worker_id' => $other->id,
+        'status' => ApplicationStatus::Pending,
+        'ai_score' => 12,
+        'ai_recommendation' => 'weak',
+        'ai_summary' => 'Wrong trade',
+        'ai_matched_skills' => [],
+        'ai_red_flags' => ['Wrong trade'],
+        'ai_scored_at' => now(),
+    ]);
+
+    $this->actingAs($this->employer)->get("/employer/jobs/{$this->job->id}/applicants")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('sort', 'best_match')
+            ->where('applications.0.ai.score', 91)
+            ->where('applications.0.ai.red_flags', [])
+            ->where('applications.0.resume.name', 'plumber-strong-match.pdf')
+            ->where('applications.1.ai.score', 12)
+            ->where('applications.1.ai.red_flags', ['Wrong trade'])
+            ->where('applications.1.resume', null)
+            ->etc());
+
+    $this->actingAs($this->employer)->get("/employer/jobs/{$this->job->id}/applicants?sort=recent")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('sort', 'recent')
+            ->where('applications.0.ai.score', 12)
+            ->etc());
+});
+
+it('queues only the unscored applicants when the employer runs AI scoring', function () {
+    Queue::fake();
+
+    $scored = JobApplication::create([
+        'job_listing_id' => $this->job->id,
+        'worker_id' => $this->worker->id,
+        'status' => ApplicationStatus::Pending,
+        'ai_score' => 91,
+        'ai_scored_at' => now(),
+    ]);
+
+    $unscored = User::factory()->create(['role' => UserRole::Worker->value]);
+    JobApplication::create([
+        'job_listing_id' => $this->job->id,
+        'worker_id' => $unscored->id,
+        'status' => ApplicationStatus::Pending,
+    ]);
+
+    $this->actingAs($this->employer)->post("/employer/jobs/{$this->job->id}/rescore")->assertRedirect();
+
+    Queue::assertPushed(ScoreApplication::class, 1);
+
+    // force=1 re-runs everyone, so the two here land on top of the one above.
+    $this->actingAs($this->employer)->post("/employer/jobs/{$this->job->id}/rescore", ['force' => true]);
+
+    Queue::assertPushed(ScoreApplication::class, 3);
+
+    expect($scored->fresh()->ai_score)->toBe(91);
+});
+
+it('does not let another employer rescore a job that is not theirs', function () {
+    Queue::fake();
+
+    $other = User::factory()->create(['role' => UserRole::Employer->value]);
+    $other->employerProfile()->create(['company_name' => 'Somebody Else']);
+
+    $this->actingAs($other)->post("/employer/jobs/{$this->job->id}/rescore")->assertForbidden();
+
+    Queue::assertNothingPushed();
 });
 
 // ---------------------------------------------------------------- matcher

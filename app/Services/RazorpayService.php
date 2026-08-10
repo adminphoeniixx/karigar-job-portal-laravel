@@ -42,7 +42,7 @@ class RazorpayService
                 'name' => $plan->name,
                 'amount' => (int) round($plan->price * 100), // paise
                 'currency' => $plan->currency ?? 'INR',
-                'description' => "Karigar {$plan->name} subscription",
+                'description' => "Super Karigar {$plan->name} subscription",
             ],
         ]);
 

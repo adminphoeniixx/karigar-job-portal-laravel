@@ -3,6 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ArrowUpRight, MapPin, Search, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
@@ -98,8 +99,10 @@ const selectClass = inputClass + ' [&>option]:bg-[#141a33]';
         <header class="sticky top-0 z-30 border-b border-white/5 bg-[#0a0e21]/70 backdrop-blur-xl">
             <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-3.5">
                 <Link href="/" class="flex items-center gap-2.5 text-lg font-bold text-white">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/40">K</span>
-                    Karigar
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/40">
+                        <AppLogoIcon class="size-5" />
+                    </span>
+                    Super Karigar
                 </Link>
                 <div class="flex items-center gap-2">
                     <LanguageSwitcher />

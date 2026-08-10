@@ -37,6 +37,8 @@ use App\Http\Controllers\SavedJobController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\Worker\JobController as WorkerJobController;
 use App\Http\Controllers\WorkerProfileController;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -119,6 +121,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('jobs/{job}/save', [SavedJobController::class, 'toggle'])->name('saved.toggle');
 
         // Resume: the AI matcher reads it when scoring new applications.
+        Route::get('worker/resume', [ResumeController::class, 'show'])->name('worker.resume.show');
         Route::post('worker/resume', [ResumeController::class, 'store'])->name('worker.resume.store');
         Route::delete('worker/resume', [ResumeController::class, 'destroy'])->name('worker.resume.destroy');
     });
@@ -131,6 +134,12 @@ Route::middleware(['auth'])->group(function () {
             Route::get('employer/jobs/create', [JobListingController::class, 'create'])->name('jobs.create');
             Route::post('employer/jobs', [JobListingController::class, 'store'])->name('jobs.store');
         });
+        // AI description drafts for the job form (create + edit). Throttled
+        // because every call reaches the LLM the first time it is asked.
+        Route::get('employer/jobs/suggest-description', [JobListingController::class, 'suggestDescription'])
+            ->middleware('throttle:20,1')
+            ->name('jobs.suggestDescription');
+
         Route::get('employer/jobs/{job}/edit', [JobListingController::class, 'edit'])->name('jobs.edit');
         Route::patch('employer/jobs/{job}', [JobListingController::class, 'update'])->name('jobs.update');
         Route::delete('employer/jobs/{job}', [JobListingController::class, 'destroy'])->name('jobs.destroy');
@@ -138,6 +147,7 @@ Route::middleware(['auth'])->group(function () {
         // Applicants for a job
         Route::get('employer/jobs/{job}/applicants', [ApplicantController::class, 'index'])->name('applicants.index');
         Route::get('employer/applications/{application}/resume', [ResumeController::class, 'download'])->name('applicants.resume');
+        Route::post('employer/jobs/{job}/rescore', [ApplicantController::class, 'rescore'])->name('applicants.rescore');
         Route::patch('employer/applications/{application}', [ApplicantController::class, 'updateStatus'])->name('applicants.status');
         Route::post('employer/applications/{application}/unlock', [ApplicantController::class, 'unlockContact'])->name('applicants.unlock');
 

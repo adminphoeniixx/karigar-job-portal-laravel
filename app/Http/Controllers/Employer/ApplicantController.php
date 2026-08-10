@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employer;
 
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
+use App\Jobs\ScoreApplication;
 use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Notifications\ApplicationStatusNotification;
@@ -23,8 +24,14 @@ class ApplicantController extends Controller
     {
         $this->authorize('view', $job);
 
+        // Best match first by default — the whole point of AI scoring is that
+        // the employer does not have to read every application. Unscored
+        // applicants fall to the bottom rather than to the top.
+        $sort = $request->string('sort')->toString() === 'recent' ? 'recent' : 'best_match';
+
         $applications = $job->applications()
             ->with('worker:id,name,email', 'worker.workerProfile', 'escrow')
+            ->when($sort === 'best_match', fn ($q) => $q->orderByRaw('ai_score DESC NULLS LAST'))
             ->latest()
             ->get()
             ->map(fn (JobApplication $a) => [
@@ -36,6 +43,19 @@ class ApplicantController extends Controller
                 'shortlisted' => $a->shortlisted_at !== null,
                 'created_at' => $a->created_at?->diffForHumans(),
                 'tracking_steps' => $a->trackingSteps(),
+                // AI match scoring — null until the ScoreApplication job ran.
+                'ai' => $a->ai_scored_at !== null ? [
+                    'score' => $a->ai_score,
+                    'recommendation' => $a->ai_recommendation,
+                    'summary' => $a->ai_summary,
+                    'matched_skills' => $a->ai_matched_skills ?? [],
+                    'red_flags' => $a->ai_red_flags ?? [],
+                ] : null,
+                // The PDF itself is private; only its name travels in the page.
+                'resume' => $a->worker?->workerProfile?->resume_path !== null ? [
+                    'name' => $a->worker->workerProfile->resume_name,
+                    'uploaded_at' => $a->worker->workerProfile->resume_uploaded_at?->diffForHumans(),
+                ] : null,
                 'escrow' => $a->escrow ? [
                     'id' => $a->escrow->id,
                     'status' => $a->escrow->status->value,
@@ -60,10 +80,34 @@ class ApplicantController extends Controller
         return Inertia::render('applicants/Index', [
             'job' => $job->only('id', 'title'),
             'applications' => $applications,
+            'sort' => $sort,
             'contactUnlocks' => [
                 'used' => $this->unlocksUsed($request),
                 'limit' => $request->user()->employerAccount()->activeSubscription()?->plan->contactUnlockLimit() ?? 0,
             ],
+        ]);
+    }
+
+    /**
+     * (Re)run AI scoring for this job's applicants. Only unscored ones are
+     * queued unless the employer asks for a full re-run — mirrors the app's
+     * {@see \App\Http\Controllers\Api\Employer\ApplicantController::rescore()}.
+     */
+    public function rescore(Request $request, JobListing $job): RedirectResponse
+    {
+        $this->authorize('update', $job);
+
+        $ids = $job->applications()
+            ->when(! $request->boolean('force'), fn ($q) => $q->whereNull('ai_scored_at'))
+            ->pluck('id');
+
+        foreach ($ids as $id) {
+            ScoreApplication::dispatch((int) $id);
+        }
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => trans_choice(':count applicant queued for AI scoring.|:count applicants queued for AI scoring.', $ids->count(), ['count' => $ids->count()]),
         ]);
     }
 

@@ -1,4 +1,4 @@
-# Karigar — Worker App API (v1)
+# Super Karigar — Worker App API (v1)
 
 Token-based JSON API for the worker mobile app. Auth is via **Laravel Sanctum**
 personal access tokens (issued after mobile-OTP verification). The web app keeps

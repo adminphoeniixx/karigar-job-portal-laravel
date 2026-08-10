@@ -7,11 +7,14 @@ use App\Http\Requests\JobListingRequest;
 use App\Models\JobListing;
 use App\Models\User;
 use App\Notifications\NewJobNotification;
+use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
 use App\Support\TemplatedMailer;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -56,6 +59,43 @@ class JobListingController extends Controller
             'defaultPhone' => $request->user()->employerProfile?->phone,
             // Show a "your first post is free" hint when this applies.
             'freePostAvailable' => JobPostingGate::evaluate($account)['consumesFreePost'],
+        ]);
+    }
+
+    /**
+     * AI-drafted descriptions for the title the employer has typed, fetched by
+     * the job form when they reach the description box. Read-only from the
+     * app's side — nothing is saved until they post the job, so this is open to
+     * any employer (the edit form uses it too) and rate-limited on the route
+     * rather than gated on the posting quota.
+     */
+    public function suggestDescription(Request $request, JobDescriptionWriter $writer): JsonResponse
+    {
+        // Validated by hand: the app only renders JSON errors under /api/* (see
+        // bootstrap/app.php), and this endpoint is read by fetch(), not Inertia.
+        $validator = Validator::make($request->all(), [
+            'title' => ['required', 'string', 'min:3', 'max:150'],
+            'category' => ['nullable', 'string', 'max:80'],
+            'skills' => ['nullable', 'array', 'max:20'],
+            'skills.*' => ['string', 'max:60'],
+            'city' => ['nullable', 'string', 'max:80'],
+            'state' => ['nullable', 'string', 'max:80'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+
+        return response()->json([
+            'suggestions' => $writer->suggest(
+                $data['title'],
+                $data['category'] ?? null,
+                array_values($data['skills'] ?? []),
+                $data['city'] ?? null,
+                $data['state'] ?? null,
+            ),
         ]);
     }
 

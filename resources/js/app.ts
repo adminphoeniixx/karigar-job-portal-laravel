@@ -7,7 +7,7 @@ import AuthLayout from '@/layouts/AuthLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Karigar';
+const appName = import.meta.env.VITE_APP_NAME || 'Super Karigar';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

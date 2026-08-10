@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, ChevronDown, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, Send, Star, Unlock, Users, X } from '@lucide/vue';
-import { ref } from 'vue';
+import { Check, ChevronDown, FileText, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, Send, Sparkles, Star, TriangleAlert, Unlock, Users, X } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import PageHeader from '@/components/PageHeader.vue';
 
 interface TrackStep { key: string; state: string; at: string | null; result: string | null }
+
+interface AiMatch {
+    score: number | null;
+    recommendation: string | null;
+    summary: string | null;
+    matched_skills: string[];
+    red_flags: string[];
+}
 
 interface Applicant {
     id: number;
@@ -16,6 +24,8 @@ interface Applicant {
     shortlisted: boolean;
     created_at: string;
     tracking_steps: TrackStep[];
+    ai: AiMatch | null;
+    resume: { name: string | null; uploaded_at: string | null } | null;
     escrow: { id: number; status: string; status_label: string; amount: string; payout_amount: string } | null;
     worker: {
         id: number;
@@ -33,6 +43,7 @@ interface Applicant {
 const props = defineProps<{
     job: { id: number; title: string };
     applications: Applicant[];
+    sort: 'best_match' | 'recent';
     contactUnlocks: { used: number; limit: number };
 }>();
 
@@ -61,6 +72,30 @@ const message = (a: Applicant) => {
 const toggleShortlist = (id: number) => {
     router.post(`/employer/applications/${id}/shortlist`, {}, { preserveScroll: true });
 };
+
+// ── AI match ────────────────────────────────────────────────────────
+const scoreTone = (score: number | null) =>
+    score === null
+        ? 'bg-muted text-muted-foreground ring-border'
+        : score >= 80
+          ? 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300'
+          : score >= 60
+            ? 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-300'
+            : score >= 40
+              ? 'bg-muted text-muted-foreground ring-border'
+              : 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300';
+
+const setSort = (sort: 'best_match' | 'recent') => {
+    router.get(`/employer/jobs/${props.job.id}/applicants`, { sort }, { preserveScroll: true, preserveState: true });
+};
+
+// Queues scoring for applicants that never got a score (e.g. they applied
+// before AI matching was switched on). Scores land once the queue runs.
+const rescore = () => {
+    router.post(`/employer/jobs/${props.job.id}/rescore`, {}, { preserveScroll: true });
+};
+
+const unscored = computed(() => props.applications.filter((a) => a.ai === null).length);
 
 const expanded = ref<Set<number>>(new Set());
 const toggleTrack = (id: number) => {
@@ -122,6 +157,28 @@ const submitReview = () => {
             </template>
         </PageHeader>
 
+        <!-- Sort + AI scoring -->
+        <div v-if="applications.length" class="flex flex-wrap items-center gap-2">
+            <div class="inline-flex rounded-xl border bg-card p-1">
+                <button
+                    v-for="opt in (['best_match', 'recent'] as const)"
+                    :key="opt"
+                    class="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                    :class="sort === opt ? 'bg-orange-500/10 text-orange-600 dark:text-orange-300' : 'text-muted-foreground hover:text-foreground'"
+                    @click="setSort(opt)"
+                >
+                    {{ opt === 'best_match' ? $t('applicants.sortBestMatch') : $t('applicants.sortRecent') }}
+                </button>
+            </div>
+            <button
+                v-if="unscored"
+                class="inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                @click="rescore"
+            >
+                <Sparkles class="size-3.5 text-orange-500" /> {{ $t('applicants.scoreUnscored', { count: unscored }) }}
+            </button>
+        </div>
+
         <div v-if="applications.length" class="grid gap-4">
             <div v-for="a in applications" :key="a.id" class="rounded-2xl border bg-card p-5 shadow-sm">
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -152,6 +209,28 @@ const submitReview = () => {
                 <div v-if="a.worker.skills.length" class="mt-3 flex flex-wrap gap-1.5">
                     <span v-for="s in a.worker.skills" :key="s" class="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">{{ s }}</span>
                 </div>
+
+                <!-- AI match -->
+                <div v-if="a.ai" class="mt-3 rounded-xl border bg-muted/30 p-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset" :class="scoreTone(a.ai.score)">
+                            <Sparkles class="size-3" /> {{ a.ai.score }}/100
+                        </span>
+                        <span v-if="a.ai.recommendation" class="text-xs font-semibold text-muted-foreground">
+                            {{ $t(`applicants.ai.${a.ai.recommendation}`) }}
+                        </span>
+                    </div>
+                    <p v-if="a.ai.summary" class="mt-2 text-sm text-muted-foreground">{{ a.ai.summary }}</p>
+                    <div v-if="a.ai.matched_skills.length" class="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span class="text-xs text-muted-foreground">{{ $t('applicants.ai.matched') }}:</span>
+                        <span v-for="s in a.ai.matched_skills" :key="s" class="rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-300">{{ s }}</span>
+                    </div>
+                    <div v-if="a.ai.red_flags.length" class="mt-2 flex flex-wrap items-center gap-1.5">
+                        <TriangleAlert class="size-3.5 text-rose-500" />
+                        <span v-for="f in a.ai.red_flags" :key="f" class="rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-600 dark:text-rose-300">{{ f }}</span>
+                    </div>
+                </div>
+                <p v-else class="mt-3 text-xs text-muted-foreground">{{ $t('applicants.ai.notScored') }}</p>
 
                 <p v-if="a.cover_note" class="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">{{ a.cover_note }}</p>
                 <p v-if="a.expected_wage" class="mt-2 text-sm"><span class="text-muted-foreground">{{ $t('applicants.expectedWage') }}:</span> <span class="font-medium">₹{{ a.expected_wage }}</span></p>
@@ -190,6 +269,15 @@ const submitReview = () => {
                     >
                         <MessageSquare class="size-3.5" /> {{ $t('applicants.message') }}
                     </button>
+                    <a
+                        v-if="a.resume"
+                        :href="`/employer/applications/${a.id}/resume`"
+                        target="_blank"
+                        :title="a.resume.name ?? ''"
+                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    >
+                        <FileText class="size-3.5" /> {{ $t('applicants.resume') }}
+                    </a>
                     <template v-if="a.status === 'pending'">
                         <button class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700" @click="setStatus(a.id, 'accepted')">
                             <Check class="size-3.5" /> {{ $t('applicants.accept') }}

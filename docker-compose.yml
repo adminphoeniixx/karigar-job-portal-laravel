@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         APP_ENV: production
-    image: karigar:latest
+    image: superkarigar:latest
     ports:
       - "8080:7979"
     environment:
@@ -14,7 +14,7 @@ services:
       RUNNING_MIGRATIONS_AND_SEEDERS: "true"
       WITH_SCHEDULER: "true"
       # App
-      APP_NAME: Karigar
+      APP_NAME: Super Karigar
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY}

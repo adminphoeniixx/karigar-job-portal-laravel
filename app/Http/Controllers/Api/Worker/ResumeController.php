@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Worker;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ResumeUploadRequest;
-use App\Services\ResumeParser;
 use App\Services\ResumeStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +19,7 @@ class ResumeController extends Controller
     public function show(Request $request): JsonResponse
     {
         return response()->json([
-            'resume' => $this->payload($request),
+            'resume' => $request->user()->workerProfile?->resumeSummary(),
         ]);
     }
 
@@ -37,7 +36,7 @@ class ResumeController extends Controller
 
         return response()->json([
             'message' => __('Resume uploaded — new applications will be matched against it.'),
-            'resume' => $this->payload($request),
+            'resume' => $profile->resumeSummary(),
         ], 201);
     }
 
@@ -49,27 +48,5 @@ class ResumeController extends Controller
             'message' => __('Resume removed.'),
             'resume' => null,
         ]);
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function payload(Request $request): ?array
-    {
-        $profile = $request->user()->workerProfile;
-
-        if ($profile?->resume_path === null) {
-            return null;
-        }
-
-        return [
-            'name' => $profile->resume_name,
-            'uploaded_at' => $profile->resume_uploaded_at?->toIso8601String(),
-            'uploaded_ago' => $profile->resume_uploaded_at?->diffForHumans(),
-            // Length of the text the matcher will actually read, so the app can
-            // reassure the worker their resume was parsed.
-            'characters' => mb_strlen((string) $profile->resume_text),
-            'max_characters' => ResumeParser::MAX_CHARS,
-        ];
     }
 }

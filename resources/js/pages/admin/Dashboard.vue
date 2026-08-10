@@ -156,7 +156,7 @@ const timeAgo = (iso: string) => {
     <Head title="Admin Overview" />
 
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 md:p-6">
-        <PageHeader :icon="Gauge" title="Platform Overview" description="Live health of the Karigar marketplace" />
+        <PageHeader :icon="Gauge" title="Platform Overview" description="Live health of the Super Karigar marketplace" />
 
         <!-- Primary KPI tiles -->
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
