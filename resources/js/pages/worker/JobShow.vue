@@ -18,6 +18,7 @@ interface Job {
     wage_min: string | null;
     wage_max: string | null;
     wage_type: string | null;
+    address: string | null;
     city: string | null;
     state: string | null;
     latitude: string | null;
@@ -149,6 +150,7 @@ const fmtDate = (iso: string | null): string =>
 
                     <div v-if="job.latitude && job.longitude" class="mt-5 border-t pt-5">
                         <h2 class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-orange-600 dark:text-orange-300"><MapPin class="size-4" /> {{ $t('jobs.jobLocation') }}</h2>
+                        <p v-if="job.address" class="mb-3 text-sm text-muted-foreground">{{ [job.address, job.city, job.state].filter(Boolean).join(', ') }}</p>
                         <JobMap :lat="Number(job.latitude)" :lng="Number(job.longitude)" height="280px" />
                         <a
                             :href="`https://www.google.com/maps?q=${job.latitude},${job.longitude}`"

@@ -121,6 +121,9 @@ export default {
         callApply: 'Call + Apply',
     },
     jobForm: {
+        address: 'Address',
+        addressPlaceholder: 'Shop / building, street, area…',
+        addressHint: 'The exact spot workers travel to. The map pin follows what you type here.',
         aiSuggest: 'Suggest with AI',
         aiWriting: 'Writing…',
         aiWritingHint: 'Reading your job title and drafting a description…',

@@ -5,24 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Super Karigar — Worker App</title>
 <style>
-  /* ===== Brand tokens (from web app: red-orange #F4470F, Outfit font) ===== */
+  /* ===== Brand tokens (from web app: red-orange #BF3A16, Outfit font) ===== */
   :root{
-    --brand-50:#fff3ee; --brand-100:#ffe3d8; --brand-200:#ffc5b0; --brand-300:#ffa183;
-    --brand-400:#ff7448; --brand-500:#fb5a21; --brand-600:#f24711; --brand-700:#c93a06;
-    --primary:#f4470f;
-    --bg:#f6f7f9; --card:#ffffff; --line:#e9ebef; --line2:#f0f1f4;
-    --fg:#16181d; --muted:#6b7280; --muted2:#9aa1ad;
-    --amber-bg:#fff7ed; --amber-fg:#b45309;
-    --green-bg:#ecfdf5; --green-fg:#047857;
-    --rose-bg:#fff1f2; --rose-fg:#e11d48;
-    --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px rgba(16,24,40,.06);
-    --radius:16px;
+    /* Paper & Ink — same palette as the web app (resources/css/app.css). */
+    --brand-50:#fdf3ee; --brand-100:#fae2d6; --brand-200:#f4c3ad; --brand-300:#ec9c7d;
+    --brand-400:#e06c48; --brand-500:#cf4c24; --brand-600:#bf3a16; --brand-700:#9e2f12;
+    --primary:#bf3a16;
+    --bg:#f4efe7; --card:#fbf8f3; --line:#e3dbd0; --line2:#ece5da;
+    --fg:#1e1712; --muted:#6b5f55; --muted2:#9c8d80;
+    --amber-bg:#fdf3e3; --amber-fg:#9a6413;
+    --green-bg:#eef4ec; --green-fg:#3f5c3a;
+    --rose-bg:#fdeceb; --rose-fg:#b3261e;
+    --shadow:0 1px 2px rgba(30,23,18,.05),0 8px 24px rgba(30,23,18,.07);
+    --radius:14px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
   body{
     font-family:"Outfit",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-    background:linear-gradient(135deg,#2a2d34,#14151a);
+    background:linear-gradient(135deg,#2a231d,#14100c);
     color:var(--fg);min-height:100vh;display:flex;align-items:center;justify-content:center;
     padding:24px 12px;font-weight:400;
   }
@@ -138,12 +139,12 @@
 
   /* Map placeholder */
   .map{height:150px;border-radius:14px;background:
-    linear-gradient(rgba(244,71,15,.05),rgba(244,71,15,.05)),
-    repeating-linear-gradient(0deg,#e8eef0 0 1px,transparent 1px 26px),
-    repeating-linear-gradient(90deg,#e8eef0 0 1px,transparent 1px 26px),#f2f5f6;
+    linear-gradient(rgba(191,58,22,.05),rgba(191,58,22,.05)),
+    repeating-linear-gradient(0deg,#e6ded2 0 1px,transparent 1px 26px),
+    repeating-linear-gradient(90deg,#e6ded2 0 1px,transparent 1px 26px),#f1ece2;
     border:1px solid var(--line);position:relative;overflow:hidden}
   .map::after{content:"";position:absolute;top:50%;left:50%;width:18px;height:18px;transform:translate(-50%,-100%);
-    background:var(--primary);border-radius:50% 50% 50% 0;rotate:-45deg;box-shadow:0 6px 12px rgba(244,71,15,.4)}
+    background:var(--primary);border-radius:50% 50% 50% 0;rotate:-45deg;box-shadow:0 6px 12px rgba(191,58,22,.4)}
 
   /* Stat */
   .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -174,7 +175,7 @@
   .stars svg.on{fill:#fbbf24;stroke:#fbbf24}
 
   /* Toast */
-  .toast{position:absolute;left:16px;right:16px;bottom:100px;background:#16181d;color:#fff;padding:13px 16px;border-radius:14px;
+  .toast{position:absolute;left:16px;right:16px;bottom:100px;background:#1e1712;color:#f4efe7;padding:13px 16px;border-radius:14px;
     font-size:14px;font-weight:600;z-index:90;display:flex;align-items:center;gap:9px;
     opacity:0;visibility:hidden;transform:translateY(24px);pointer-events:none;
     transition:opacity .28s ease,transform .28s ease,visibility .28s;box-shadow:0 10px 30px rgba(0,0,0,.3)}
@@ -228,7 +229,7 @@
           <div class="feat"><div class="ib"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></div>KYC-verified employers</div>
           <div class="feat"><div class="ib"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Direct payout to UPI</div>
           <button class="btn" style="background:#fff;color:var(--primary);margin-top:18px" onclick="go('s-otp')">Get Started</button>
-          <p style="text-align:center;font-size:12.5px;margin-top:14px;opacity:.85">For workers · Employer? <b>karigar.in</b></p>
+          <p style="text-align:center;font-size:12.5px;margin-top:14px;opacity:.85">For workers · Employer? <b>superkarigar.com</b></p>
         </div>
       </div>
     </section>
@@ -420,7 +421,7 @@
             <div class="v">3</div><div class="l">Applications</div>
           </div>
           <div class="card stat">
-            <div class="ib" style="background:#eef2ff"><svg class="ic ic-lg" style="stroke:#4f46e5" viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 8v4l3 2"/></svg></div>
+            <div class="ib" style="background:var(--brand-50)"><svg class="ic ic-lg" style="stroke:var(--primary)" viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 8v4l3 2"/></svg></div>
             <div class="v" style="font-size:19px;margin-top:9px">70%</div><div class="l">Profile complete</div>
           </div>
         </div>
@@ -1142,7 +1143,7 @@ function renderSaved(){
 }
 
 /* ============================ NOTIFICATIONS ============================ */
-const NOTI_ICON = {accepted:'#047857',shortlist:'#4f46e5',job:'var(--primary)',kyc:'#b45309',review:'#fbbf24'};
+const NOTI_ICON = {accepted:'#3f5c3a',shortlist:'#7a6326',job:'var(--primary)',kyc:'#9a6413',review:'#c88a2e'};
 function renderNotis(){
   document.getElementById('notiList').innerHTML = NOTIS.map(n=>`
     <div class="noti ${n.read?'read':'unread'}" onclick="this.classList.remove('unread');this.classList.add('read');updateBadge(-1)">

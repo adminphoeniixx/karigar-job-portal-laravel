@@ -16,6 +16,7 @@ interface Job {
     wage_min: string | null;
     wage_max: string | null;
     wage_type: string | null;
+    address: string | null;
     city: string | null;
     state: string | null;
     latitude: string | null;
@@ -154,9 +155,10 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     <h2 class="label-rule inline-flex items-center gap-2 text-primary"><Briefcase class="size-3.5" /> {{ $t('jobs.description') }}</h2>
                     <p class="mt-5 whitespace-pre-line leading-relaxed text-foreground/85">{{ job.description }}</p>
 
-                    <div v-if="job.latitude && job.longitude" class="mt-10">
+                    <div v-if="job.latitude && job.longitude || job.address" class="mt-10">
                         <h2 class="label-rule inline-flex items-center gap-2 text-primary"><MapPin class="size-3.5" /> {{ $t('jobs.jobLocation') }}</h2>
-                        <div class="mt-5 overflow-hidden rounded-sm">
+                        <p v-if="job.address" class="mt-4 text-sm leading-relaxed">{{ [job.address, job.city, job.state].filter(Boolean).join(', ') }}</p>
+                        <div v-if="job.latitude && job.longitude" class="mt-5 overflow-hidden rounded-sm">
                             <JobMap :lat="Number(job.latitude)" :lng="Number(job.longitude)" height="300px" />
                         </div>
                     </div>

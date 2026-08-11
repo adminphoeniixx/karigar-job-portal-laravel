@@ -121,6 +121,9 @@ export default {
         callApply: 'அழைப்பு + விண்ணப்பம்',
     },
     jobForm: {
+        address: 'முகவரி',
+        addressPlaceholder: 'கடை / கட்டிடம், தெரு, பகுதி…',
+        addressHint: 'தொழிலாளர் வர வேண்டிய இடம். இங்கே எழுதியவுடன் map pin அங்கே செல்லும்.',
         aiSuggest: 'AI மூலம் பரிந்துரை',
         aiWriting: 'எழுதுகிறோம்…',
         aiWritingHint: 'உங்கள் job title-லிருந்து description தயாராகிறது…',

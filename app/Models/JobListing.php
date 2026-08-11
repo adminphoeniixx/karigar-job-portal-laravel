@@ -45,7 +45,7 @@ class JobListing extends Model
     protected $fillable = [
         'title', 'description', 'category', 'skills',
         'wage_min', 'wage_max', 'wage_type',
-        'city', 'state', 'latitude', 'longitude',
+        'address', 'city', 'state', 'latitude', 'longitude',
         'vacancies', 'experience_min', 'status', 'expires_at',
         'contact_mode', 'contact_phone', 'shift', 'perks',
         'requires_worker_fee', 'worker_fee_amount',

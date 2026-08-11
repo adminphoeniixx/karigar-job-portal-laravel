@@ -121,6 +121,9 @@ export default {
         callApply: 'कॉल + आवेदन',
     },
     jobForm: {
+        address: 'पता',
+        addressPlaceholder: 'दुकान / बिल्डिंग, गली, इलाका…',
+        addressHint: 'जहाँ कारीगर को पहुँचना है. यहाँ लिखते ही map का pin वहीं चला जाएगा.',
         aiSuggest: 'AI से सुझाव लें',
         aiWriting: 'लिख रहे हैं…',
         aiWritingHint: 'आपके job title से description तैयार किया जा रहा है…',

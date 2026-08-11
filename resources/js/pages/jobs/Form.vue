@@ -20,6 +20,7 @@ interface Job {
     wage_min: string | null;
     wage_max: string | null;
     wage_type: string | null;
+    address: string | null;
     city: string | null;
     state: string | null;
     latitude: string | null;
@@ -54,6 +55,7 @@ const form = useForm({
     wage_min: props.job?.wage_min ?? '',
     wage_max: props.job?.wage_max ?? '',
     wage_type: props.job?.wage_type ?? '',
+    address: props.job?.address ?? '',
     city: props.job?.city ?? '',
     state: props.job?.state ?? '',
     latitude: props.job?.latitude ?? '',
@@ -98,17 +100,26 @@ const setPoint = (lat: number, lng: number) => {
     form.longitude = String(lng);
 };
 
-// When the employer picks a city, centre the pin there via OpenStreetMap's
-// free geocoder so they only need to fine-tune it.
+// Move the pin to whatever the employer has told us so far, via OpenStreetMap's
+// free geocoder. A typed address is the precise answer; city + state alone only
+// ever lands on the city centre, so it is the fallback. Either way the employer
+// can still drag the pin.
 let geoTimer: ReturnType<typeof setTimeout> | undefined;
-watch([() => form.city, () => form.state], ([city, state]) => {
+const geocode = () => {
+    const { address, city, state } = form;
     if (!city || !state) return;
+
     clearTimeout(geoTimer);
     geoTimer = setTimeout(async () => {
         locating.value = true;
         try {
-            const q = new URLSearchParams({ format: 'json', limit: '1', country: 'India', state, city });
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?${q}`, {
+            // A free-text `q` handles a street address; the structured form is
+            // more reliable when we only have the city.
+            const params: Record<string, string> = address.trim()
+                ? { format: 'json', limit: '1', q: [address, city, state, 'India'].join(', ') }
+                : { format: 'json', limit: '1', country: 'India', state, city };
+
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?${new URLSearchParams(params)}`, {
                 headers: { Accept: 'application/json' },
             });
             const hits = await res.json();
@@ -118,7 +129,13 @@ watch([() => form.city, () => form.state], ([city, state]) => {
         } finally {
             locating.value = false;
         }
-    }, 600);
+    }, 700);
+};
+
+watch([() => form.city, () => form.state], geocode);
+// Typing an address re-locates the pin once the line looks complete.
+watch(() => form.address, (val) => {
+    if (val.trim().length === 0 || val.trim().length >= 4) geocode();
 });
 
 // ── AI description drafts ───────────────────────────────────────────
@@ -328,6 +345,13 @@ const submit = () => {
                         </select>
                         <InputError :message="form.errors.city" />
                     </div>
+                </div>
+
+                <div class="mt-4 grid gap-2">
+                    <Label for="address">{{ $t('jobForm.address') }}</Label>
+                    <Input id="address" v-model="form.address" :placeholder="$t('jobForm.addressPlaceholder')" />
+                    <p class="text-xs text-muted-foreground">{{ $t('jobForm.addressHint') }}</p>
+                    <InputError :message="form.errors.address" />
                 </div>
 
                 <div class="mt-4 grid gap-2">

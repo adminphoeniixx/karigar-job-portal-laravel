@@ -43,6 +43,7 @@ class JobListingRequest extends FormRequest
             'wage_min' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
             'wage_max' => ['nullable', 'numeric', 'min:0', 'max:10000000', 'gte:wage_min'],
             'wage_type' => ['nullable', 'string', 'in:hourly,daily,monthly'],
+            'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
