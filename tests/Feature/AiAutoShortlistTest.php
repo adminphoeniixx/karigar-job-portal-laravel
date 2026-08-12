@@ -136,6 +136,7 @@ it('lets an admin switch auto-shortlist on and set the threshold', function () {
         'ai_auto_shortlist_threshold' => 65,
         'ai_auto_reject_enabled' => false,
         'ai_auto_reject_below' => 30,
+        'ai_screening_call_enabled' => false,
     ])->assertRedirect();
 
     expect(Setting::bool(ScoreApplication::ENABLED_KEY))->toBeTrue()

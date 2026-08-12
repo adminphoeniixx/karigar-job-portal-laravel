@@ -32,6 +32,7 @@ class WorkerProfileUpdateRequest extends FormRequest
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'available' => ['boolean'],
+            'screening_calls_opted_out' => ['boolean'],
             'payout_upi' => ['nullable', 'string', 'max:100', 'regex:/^[\w.\-]{2,}@[a-zA-Z]{2,}$/'],
             'avatar' => ['nullable', 'image', 'max:2048'],
         ];

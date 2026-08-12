@@ -503,6 +503,7 @@ it('lets an admin set the reject floor but not above the weak ceiling', function
         'ai_auto_shortlist_enabled' => false,
         'ai_auto_shortlist_threshold' => 80,
         'ai_auto_reject_enabled' => true,
+        'ai_screening_call_enabled' => false,
     ];
 
     $this->actingAs($admin)

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\ScoreApplication;
 use App\Models\Setting;
+use App\Services\Screening\ScreeningService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,6 +29,7 @@ class SettingController extends Controller
                     ScoreApplication::REJECT_BELOW_KEY,
                     ScoreApplication::DEFAULT_REJECT_BELOW,
                 ),
+                'ai_screening_call_enabled' => Setting::bool(ScreeningService::ENABLED_KEY, false),
             ],
         ]);
     }
@@ -45,6 +47,7 @@ class SettingController extends Controller
             // Capped at 40 (the model's "weak" ceiling) so auto-reject can never
             // be widened into applicants the model considered a plausible match.
             'ai_auto_reject_below' => ['required', 'integer', 'min:5', 'max:40'],
+            'ai_screening_call_enabled' => ['required', 'boolean'],
         ]);
 
         Setting::set('first_post_free_enabled', $data['first_post_free_enabled'] ? '1' : '0');
@@ -53,6 +56,7 @@ class SettingController extends Controller
         Setting::set(ScoreApplication::THRESHOLD_KEY, (string) $data['ai_auto_shortlist_threshold']);
         Setting::set(ScoreApplication::REJECT_ENABLED_KEY, $data['ai_auto_reject_enabled'] ? '1' : '0');
         Setting::set(ScoreApplication::REJECT_BELOW_KEY, (string) $data['ai_auto_reject_below']);
+        Setting::set(ScreeningService::ENABLED_KEY, $data['ai_screening_call_enabled'] ? '1' : '0');
 
         return back()->with('toast', ['type' => 'success', 'message' => __('Settings updated.')]);
     }

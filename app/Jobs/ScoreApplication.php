@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\ShortlistedNotification;
 use App\Services\AiMatcher;
+use App\Services\Screening\ScreeningService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -90,6 +91,13 @@ class ScoreApplication implements ShouldQueue
 
         $application->update(['shortlisted_at' => now()]);
         $application->worker->notify(new ShortlistedNotification($application));
+
+        // Ring the worker to ask if they are still interested and when they
+        // could interview. Admin-controlled and separately off by default —
+        // auto-shortlisting is reversible, an unwanted robocall is not.
+        if (app(ScreeningService::class)->autoEnabled()) {
+            PlaceScreeningCall::dispatch($application->id);
+        }
 
         return true;
     }

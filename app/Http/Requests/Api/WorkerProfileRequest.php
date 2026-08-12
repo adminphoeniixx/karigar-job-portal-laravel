@@ -43,6 +43,9 @@ class WorkerProfileRequest extends FormRequest
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'travel_radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
             'available' => ['boolean'],
+            // Opt out of automated screening calls. Never inferred — only the
+            // worker sets it.
+            'screening_calls_opted_out' => ['boolean'],
             'payout_upi' => ['nullable', 'string', 'max:100', 'regex:/^[\w.\-]{2,}@[a-zA-Z]{2,}$/'],
         ];
     }

@@ -39,6 +39,7 @@ class WorkerProfile extends Model
         'phone', 'gender', 'skills', 'experience_years', 'education', 'spoken_languages',
         'bio', 'expected_wage', 'wage_type', 'avatar_path', 'city', 'state',
         'latitude', 'longitude', 'travel_radius_km', 'available',
+        'screening_calls_opted_out',
         'payout_upi', 'razorpayx_fund_account_id',
     ];
 
@@ -57,6 +58,7 @@ class WorkerProfile extends Model
             'skills' => 'array',
             'spoken_languages' => 'array',
             'available' => 'boolean',
+            'screening_calls_opted_out' => 'boolean',
             'expected_wage' => 'decimal:2',
             'resume_uploaded_at' => 'datetime',
         ];

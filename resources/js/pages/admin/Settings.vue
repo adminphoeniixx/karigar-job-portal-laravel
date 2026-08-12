@@ -8,7 +8,8 @@ type SettingKey =
     | 'first_post_free_enabled'
     | 'kyc_verification_enabled'
     | 'ai_auto_shortlist_enabled'
-    | 'ai_auto_reject_enabled';
+    | 'ai_auto_reject_enabled'
+    | 'ai_screening_call_enabled';
 
 const props = defineProps<{
     settings: Record<SettingKey, boolean> & {
@@ -26,6 +27,7 @@ const form = reactive({
     ai_auto_shortlist_threshold: props.settings.ai_auto_shortlist_threshold,
     ai_auto_reject_enabled: props.settings.ai_auto_reject_enabled,
     ai_auto_reject_below: props.settings.ai_auto_reject_below,
+    ai_screening_call_enabled: props.settings.ai_screening_call_enabled,
 });
 
 const toggles: { key: SettingKey; title: string; description: string }[] = [
@@ -63,6 +65,16 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'Only untouched applications are affected — never one the employer has already shortlisted, ' +
             'interviewed or decided. Leave this off unless you trust the scores: a wrong auto-reject ' +
             'costs a real worker a real job.',
+    },
+    {
+        key: 'ai_screening_call_enabled',
+        title: 'AI screening calls',
+        description:
+            'When on, an auto-shortlisted applicant is rung on their phone by an AI agent that asks ' +
+            'whether they are still interested and when they could interview. The agent only proposes ' +
+            'a slot — the employer confirms it before anything is booked. Needs auto-shortlist on and a ' +
+            'configured voice provider; without both, nothing is dialled. Workers who opted out are ' +
+            'never called.',
     },
 ];
 

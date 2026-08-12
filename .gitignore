@@ -27,3 +27,8 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Python agent service
+__pycache__/
+*.pyc
+services/*/.venv/

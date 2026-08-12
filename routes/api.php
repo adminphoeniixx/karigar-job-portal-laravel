@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\Auth\OtpAuthController;
+use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\Employer\ApplicantController as EmployerApplicantController;
@@ -11,11 +12,13 @@ use App\Http\Controllers\Api\Employer\JobController as EmployerJobController;
 use App\Http\Controllers\Api\Employer\KycController as EmployerKycController;
 use App\Http\Controllers\Api\Employer\ProfileController as EmployerProfileController;
 use App\Http\Controllers\Api\Employer\ReviewController as EmployerReviewController;
+use App\Http\Controllers\Api\Employer\ScreeningController;
 use App\Http\Controllers\Api\Employer\TeamController as EmployerTeamController;
 use App\Http\Controllers\Api\Employer\WorkerDirectoryController;
 use App\Http\Controllers\Api\LocaleController;
 use App\Http\Controllers\Api\PreferenceController;
 use App\Http\Controllers\Api\ReferenceController;
+use App\Http\Controllers\Api\ScreeningWebhookController;
 use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\Worker\ApplicationController;
 use App\Http\Controllers\Api\Worker\DashboardController;
@@ -46,6 +49,11 @@ Route::prefix('v1')->group(function () {
             ->middleware('throttle:10,1')->name('api.otp.verify');
     });
 
+    // ---- Public: voice provider callback for automated screening calls ----
+    // Guarded by a shared secret, not a session — the provider has none.
+    Route::post('webhooks/screening-call', ScreeningWebhookController::class)
+        ->name('api.webhooks.screening');
+
     // ---- Public: reference data (dropdowns / chips) ----
     Route::prefix('reference')->group(function () {
         Route::get('/', [ReferenceController::class, 'index'])->name('api.reference');
@@ -74,6 +82,16 @@ Route::prefix('v1')->group(function () {
         Route::get('conversations/{conversation}', [ChatController::class, 'show'])->name('api.conversations.show');
         Route::post('conversations/{conversation}/messages', [ChatController::class, 'send'])->name('api.conversations.send');
         Route::post('conversations/{conversation}/read', [ChatController::class, 'read'])->name('api.conversations.read');
+
+        // In-app voice calls (both roles). Numbers are never exchanged — each
+        // side joins a single-use audio channel with a short-lived token.
+        Route::get('calls', [CallController::class, 'index'])->name('api.calls');
+        Route::post('calls', [CallController::class, 'initiate'])
+            ->middleware('throttle:20,1')->name('api.calls.initiate');
+        Route::post('calls/{call}/answer', [CallController::class, 'answer'])->name('api.calls.answer');
+        Route::post('calls/{call}/reject', [CallController::class, 'reject'])->name('api.calls.reject');
+        Route::post('calls/{call}/end', [CallController::class, 'end'])->name('api.calls.end');
+        Route::post('calls/{call}/refresh', [CallController::class, 'refresh'])->name('api.calls.refresh');
 
         // Push notification device tokens (any authenticated user)
         Route::post('device-tokens', [DeviceTokenController::class, 'store'])->name('api.device-tokens.store');
@@ -152,6 +170,12 @@ Route::prefix('v1')->group(function () {
             Route::post('employer/applicants/{application}/shortlist', [EmployerApplicantController::class, 'toggleShortlist'])->name('api.employer.applicants.shortlist');
             Route::post('employer/applicants/{application}/unlock', [EmployerApplicantController::class, 'unlockContact'])->name('api.employer.applicants.unlock');
             Route::post('employer/applicants/{application}/interview', [EmployerApplicantController::class, 'scheduleInterview'])->name('api.employer.applicants.interview');
+
+            // Automated AI screening calls — ring the applicant, ask if they
+            // are still interested, collect an interview time to confirm.
+            Route::get('employer/applicants/{application}/screening-calls', [ScreeningController::class, 'index'])->name('api.employer.screening.index');
+            Route::post('employer/applicants/{application}/screening-calls', [ScreeningController::class, 'store'])->name('api.employer.screening.store');
+            Route::post('employer/screening-calls/{call}/confirm', [ScreeningController::class, 'confirm'])->name('api.employer.screening.confirm');
             Route::delete('employer/applicants/{application}/interview', [EmployerApplicantController::class, 'cancelInterview'])->name('api.employer.applicants.interview.cancel');
             Route::post('employer/jobs/{job}/rescore', [EmployerApplicantController::class, 'rescore'])->name('api.employer.applicants.rescore');
 

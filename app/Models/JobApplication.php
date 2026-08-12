@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ApplicationStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
@@ -148,5 +149,16 @@ class JobApplication extends Model
     public function escrow(): HasOne
     {
         return $this->hasOne(Escrow::class);
+    }
+
+    /**
+     * Automated screening calls placed to the worker about this application,
+     * including the attempts nobody picked up.
+     *
+     * @return HasMany<ScreeningCall, $this>
+     */
+    public function screeningCalls(): HasMany
+    {
+        return $this->hasMany(ScreeningCall::class);
     }
 }
