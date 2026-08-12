@@ -18,6 +18,9 @@ createInertiaApp({
             // Public, guest-accessible job pages render standalone (no app sidebar).
             case name === 'jobs/Browse':
             case name === 'jobs/Show':
+            // Legal pages carry their own nav and footer, and are read by people
+            // who have not signed up yet.
+            case name === 'Privacy':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;

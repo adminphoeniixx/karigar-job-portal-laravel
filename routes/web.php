@@ -30,6 +30,7 @@ use App\Http\Controllers\KycController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\RazorpayWebhookController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\ReviewController;
@@ -42,6 +43,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+
+// Legal. Public and unauthenticated on purpose — someone deciding whether to
+// sign up must be able to read this first.
+Route::get('privacy', PrivacyController::class)->name('privacy');
 
 // Public job browsing
 Route::get('jobs', [JobBrowseController::class, 'index'])->name('jobs.browse');

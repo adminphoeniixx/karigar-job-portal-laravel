@@ -329,6 +329,8 @@ export default {
         bioPlaceholder: 'Tell employers about yourself…',
         availableForWork: 'Available for work',
         availableHint: 'Show your profile to employers looking to hire.',
+        screeningCalls: 'Allow screening calls',
+        screeningCallsHint: 'Let our automated assistant call you about jobs you have applied for. Turn this off and we will never ring you.',
         payoutUpi: 'Payout UPI ID',
         payoutHint: 'Where your job payments are sent when an employer releases escrow.',
         locationOnMap: 'Location on map',

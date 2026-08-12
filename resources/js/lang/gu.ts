@@ -329,6 +329,8 @@ export default {
         bioPlaceholder: 'માલિકોને તમારા વિશે જણાવો…',
         availableForWork: 'કામ માટે ઉપલબ્ધ',
         availableHint: 'તમારી પ્રોફાઇલ માલિકોને બતાવો.',
+        screeningCalls: 'સ્ક્રીનિંગ કૉલની મંજૂરી આપો',
+        screeningCallsHint: 'તમે જે નોકરીઓ માટે અરજી કરી છે તેના વિશે અમારો સ્વયંસંચાલિત સહાયક તમને કૉલ કરી શકે છે. બંધ કરશો તો અમે ક્યારેય કૉલ નહીં કરીએ.',
         payoutUpi: 'પેઆઉટ UPI ID',
         payoutHint: 'માલિક ચુકવણી છોડે ત્યારે પૈસા અહીં આવશે.',
         locationOnMap: 'નકશા પર સ્થળ',

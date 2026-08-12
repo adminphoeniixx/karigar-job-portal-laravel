@@ -39,9 +39,13 @@ return [
         'authkey' => env('MSG91_AUTHKEY'),
         'template_id' => env('MSG91_TEMPLATE_ID'),
 
-        // App-testing login bypass. When BOTH are set, this one number skips
-        // the SMS entirely and logs in with the fixed OTP. Leave blank to
-        // disable — it is an auth bypass, not a feature.
+        // App-testing login bypass. When BOTH are set, these numbers skip the
+        // SMS entirely and log in with the fixed OTP. Leave blank to disable —
+        // it is an auth bypass, not a feature.
+        //
+        // Comma-separate to cover more than one, so the worker and employer
+        // apps can each have a test login:
+        //   AUTH_TEST_PHONE=9000000001,9000000002
         'test_phone' => env('AUTH_TEST_PHONE'),
         'test_otp' => env('AUTH_TEST_OTP'),
     ],

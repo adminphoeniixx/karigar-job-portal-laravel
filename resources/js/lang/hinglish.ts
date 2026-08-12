@@ -329,6 +329,8 @@ export default {
         bioPlaceholder: 'Employers ko apne baare mein batayein…',
         availableForWork: 'Kaam ke liye available',
         availableHint: 'Apni profile employers ko dikhayein.',
+        screeningCalls: 'Screening call allow karein',
+        screeningCallsHint: 'Jin jobs ke liye apply kiya hai unke baare mein hamara automated assistant call kar sakta hai. Band kar denge to kabhi call nahi aayegi.',
         payoutUpi: 'Payout UPI ID',
         payoutHint: 'Employer ke payment release karne par paisa yahan aayega.',
         locationOnMap: 'Map par location',

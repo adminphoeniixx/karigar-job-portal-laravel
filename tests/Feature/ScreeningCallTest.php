@@ -373,6 +373,52 @@ function placeCall(): ScreeningCall
     return ScreeningCall::latest('id')->sole();
 }
 
+it('never calls a worker who opted out', function () {
+    $this->worker->workerProfile->update(['screening_calls_opted_out' => true]);
+
+    runPlaceCall();
+
+    expect(ScreeningCall::count())->toBe(0)
+        ->and(app(ScreeningService::class)->blocker($this->application))->toBe('worker_opted_out');
+});
+
+it('keeps the opt-out across a new application', function () {
+    // The refusal lives on the profile, not the application, so applying to
+    // something else must not quietly re-enable calls.
+    $this->worker->workerProfile->update(['screening_calls_opted_out' => true]);
+
+    $another = $this->employer->jobListings()->create([
+        'title' => 'Second plumbing job',
+        'description' => 'Site work',
+        'category' => 'Plumbing',
+        'skills' => ['Plumbing'],
+        'city' => 'Chennai',
+        'state' => 'Tamil Nadu',
+        'vacancies' => 1,
+        'contact_mode' => 'apply',
+        'requires_worker_fee' => false,
+        'status' => JobStatus::Active,
+    ]);
+
+    $this->application = JobApplication::create([
+        'job_listing_id' => $another->id,
+        'worker_id' => $this->worker->id,
+        'status' => ApplicationStatus::Pending,
+    ]);
+
+    runPlaceCall();
+
+    expect(ScreeningCall::count())->toBe(0);
+});
+
+it('lets a worker switch screening calls off from their profile', function () {
+    $this->actingAs($this->worker)
+        ->patch('/worker/profile', ['screening_calls_opted_out' => true])
+        ->assertRedirect();
+
+    expect($this->worker->workerProfile->refresh()->screening_calls_opted_out)->toBeTrue();
+});
+
 function runPlaceCall(?int $attempt = null): void
 {
     (new PlaceScreeningCall(test()->application->id, $attempt ?? 1))

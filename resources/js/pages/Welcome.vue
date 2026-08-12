@@ -469,12 +469,14 @@ const wage = (j: Job) => {
                     <div class="label-rule text-background/50">Company</div>
                     <div class="mt-4 space-y-2.5 text-sm">
                         <a href="#how" class="block transition hover:text-background">How it works</a>
+                        <Link href="/privacy" class="block transition hover:text-background">Privacy policy</Link>
                         <Link href="/admin/login" class="block transition hover:text-background">Admin</Link>
                     </div>
                 </div>
             </div>
             <div class="mx-auto flex max-w-[88rem] flex-wrap items-center justify-between gap-3 border-t border-background/15 px-6 py-6 text-xs lg:px-10">
                 <span>© {{ new Date().getFullYear() }} Super Karigar. All rights reserved.</span>
+                <Link href="/privacy" class="transition hover:text-background">Privacy</Link>
                 <span class="inline-flex items-center gap-2"><Languages class="size-3.5" /> 8 languages</span>
             </div>
         </footer>

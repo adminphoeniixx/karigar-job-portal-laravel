@@ -14,10 +14,11 @@ use Throwable;
  * environments (no MSG91 keys) can still complete the flow — the OTP is
  * written to the log instead of being SMSed.
  *
- * One number can be exempted from all of that for app testing: set both
- * AUTH_TEST_PHONE and AUTH_TEST_OTP and that number logs in with the fixed OTP
- * without any SMS. It is a deliberate auth bypass — leave the values blank
- * unless a test login is actually needed.
+ * Numbers can be exempted from all of that for app testing: set both
+ * AUTH_TEST_PHONE (one number, or several comma-separated) and AUTH_TEST_OTP,
+ * and those numbers log in with the fixed OTP without any SMS. It is a
+ * deliberate auth bypass — leave the values blank unless a test login is
+ * actually needed.
  */
 class Msg91Service
 {
@@ -129,14 +130,38 @@ class Msg91Service
     }
 
     /**
-     * The app-testing number, if one is configured. Both env values must be
+     * Whether this is one of the app-testing numbers. Both env values must be
      * set, so the bypass stays off unless it is switched on deliberately.
+     *
+     * AUTH_TEST_PHONE may list several numbers, comma-separated — the worker
+     * and employer apps each need their own test login.
      */
     private function isTestPhone(string $phone): bool
     {
-        $testPhone = (string) config('services.msg91.test_phone');
         $testOtp = (string) config('services.msg91.test_otp');
 
-        return $testPhone !== '' && $testOtp !== '' && hash_equals($testPhone, $phone);
+        if ($testOtp === '') {
+            return false;
+        }
+
+        foreach ($this->testPhones() as $candidate) {
+            if (hash_equals($candidate, $phone)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function testPhones(): array
+    {
+        $configured = explode(',', (string) config('services.msg91.test_phone'));
+
+        // A stray comma or trailing space must not exempt the empty string —
+        // that would turn the bypass into "every number logs in".
+        return array_values(array_filter(array_map('trim', $configured), fn (string $p): bool => $p !== ''));
     }
 }

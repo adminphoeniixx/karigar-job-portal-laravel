@@ -25,6 +25,7 @@ interface WorkerProfile {
     latitude: string | null;
     longitude: string | null;
     available: boolean;
+    screening_calls_opted_out: boolean;
     payout_upi: string | null;
     avatar_url: string | null;
 }
@@ -52,6 +53,7 @@ const form = useForm<{
     latitude: number | string;
     longitude: number | string;
     available: boolean;
+    screening_calls_opted_out: boolean;
     payout_upi: string;
     avatar: File | null;
 }>({
@@ -67,6 +69,7 @@ const form = useForm<{
     latitude: props.profile.latitude ?? '',
     longitude: props.profile.longitude ?? '',
     available: props.profile.available ?? true,
+    screening_calls_opted_out: props.profile.screening_calls_opted_out ?? false,
     payout_upi: props.profile.payout_upi ?? '',
     avatar: null,
 });
@@ -212,6 +215,20 @@ const submit = () => {
                     <span>
                         <span class="text-sm font-medium">{{ $t('profile.availableForWork') }}</span>
                         <span class="block text-xs text-muted-foreground">{{ $t('profile.availableHint') }}</span>
+                    </span>
+                </label>
+
+                <!-- Phrased as consent, not as a refusal: the checkbox reads
+                     "allow", so leaving it ticked is the worker agreeing. -->
+                <label class="mt-3 flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
+                    <Checkbox
+                        id="screening_calls"
+                        :model-value="!form.screening_calls_opted_out"
+                        @update:model-value="(value: boolean | 'indeterminate') => { form.screening_calls_opted_out = value !== true; }"
+                    />
+                    <span>
+                        <span class="text-sm font-medium">{{ $t('profile.screeningCalls') }}</span>
+                        <span class="block text-xs text-muted-foreground">{{ $t('profile.screeningCallsHint') }}</span>
                     </span>
                 </label>
 

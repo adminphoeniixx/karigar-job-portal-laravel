@@ -81,6 +81,34 @@ it('logs the configured test number in with its fixed OTP, without an SMS', func
     expect(User::where('phone', '9000000001')->count())->toBe(1);
 });
 
+it('exempts every number in a comma-separated test list', function () {
+    // The worker and employer apps each need their own test login.
+    config(['services.msg91.test_phone' => '9000000001, 9000000002', 'services.msg91.test_otp' => '1234']);
+
+    $this->post('/worker/otp/verify', ['phone' => '9000000002', 'otp' => '1234'])->assertRedirect();
+    expect(User::where('phone', '9000000002')->sole()->role)->toBe(UserRole::Worker);
+
+    auth()->logout();
+
+    $this->post('/employer/otp/verify', ['phone' => '9000000001', 'otp' => '1234'])->assertRedirect();
+
+    // A number outside the list still goes through the real OTP flow.
+    auth()->logout();
+    $this->post('/worker/otp/verify', ['phone' => '9000000003', 'otp' => '1234'])
+        ->assertSessionHasErrors('otp');
+});
+
+it('does not let a stray comma exempt every number', function () {
+    // '9000000001,' splits to ['9000000001', ''] — an empty candidate would
+    // match nothing sane, but must never match a real number either.
+    config(['services.msg91.test_phone' => '9000000001,', 'services.msg91.test_otp' => '1234']);
+
+    $this->post('/worker/otp/verify', ['phone' => '9876543210', 'otp' => '1234'])
+        ->assertSessionHasErrors('otp');
+
+    expect(User::where('phone', '9876543210')->count())->toBe(0);
+});
+
 it('leaves normal OTP login alone when the test number is not configured', function () {
     config(['services.msg91.test_phone' => null, 'services.msg91.test_otp' => null]);
 
