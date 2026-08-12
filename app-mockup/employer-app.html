@@ -875,6 +875,8 @@
         <div class="listrow"><div class="ib"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="g"><div class="t">Team members</div><div class="tiny muted">Add recruiters to your account</div></div><span class="tiny muted">→</span></div>
         <div class="listrow"><div class="ib"><svg class="ic ic-lg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div><div class="g"><div class="t">Terms &amp; Privacy</div></div><span class="tiny muted">→</span></div>
         <div class="listrow"><div class="ib"><svg class="ic ic-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div><div class="g"><div class="t">Help &amp; Support</div></div><span class="tiny muted">→</span></div>
+        <!-- App stores require this to be reachable in-app, not only on the website. -->
+        <div class="listrow" onclick="openSheet('sheet-delete-account')"><div class="ib"><svg class="ic ic-lg" style="stroke:var(--rose-fg)" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div><div class="g"><div class="t" style="color:var(--rose-fg)">Delete account</div><div class="tiny muted">Permanently remove your account and data</div></div><span class="tiny muted">→</span></div>
 
         <div class="pad" style="margin-top:14px">
           <button class="btn btn-outline" style="color:var(--rose-fg);border-color:var(--rose-bg)" onclick="logout()">
@@ -1083,6 +1085,22 @@
       <h3>Choose language</h3>
       <p class="tiny muted" style="margin:0 0 14px">Pick your preferred app language · English, हिन्दी, தமிழ் &amp; more</p>
       <div id="langOpts"></div>
+    </div>
+  </div>
+
+  <!-- Delete account sheet. Two steps on purpose: nothing is deleted without an
+       explicit confirmation, and the copy matches /delete-account on the site. -->
+  <div class="sheet-wrap" id="sheet-delete-account">
+    <div class="sheet-bg" onclick="closeSheet('sheet-delete-account')"></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <h3>Delete your account?</h3>
+      <p class="tiny muted" style="margin:0 0 14px">This cannot be undone. Your company profile, posted jobs, applicants and messages are removed permanently.</p>
+      <div class="card" style="padding:12px;background:var(--rose-bg);border-color:var(--rose-bg);margin-bottom:14px">
+        <div class="tiny" style="color:var(--rose-fg)">Unused credits and active subscriptions are not refunded. Invoices are kept as long as tax law requires.</div>
+      </div>
+      <button class="btn btn-outline" style="color:var(--rose-fg);border-color:var(--rose-bg);margin-bottom:10px" onclick="closeSheet('sheet-delete-account');logout();toast('Account deleted')">Yes, delete my account</button>
+      <button class="btn btn-outline" onclick="closeSheet('sheet-delete-account')">Keep my account</button>
     </div>
   </div>
 

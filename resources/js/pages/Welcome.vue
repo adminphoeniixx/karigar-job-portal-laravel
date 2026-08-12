@@ -470,6 +470,7 @@ const wage = (j: Job) => {
                     <div class="mt-4 space-y-2.5 text-sm">
                         <a href="#how" class="block transition hover:text-background">How it works</a>
                         <Link href="/privacy" class="block transition hover:text-background">Privacy policy</Link>
+                        <Link href="/delete-account" class="block transition hover:text-background">Delete your account</Link>
                         <Link href="/admin/login" class="block transition hover:text-background">Admin</Link>
                     </div>
                 </div>

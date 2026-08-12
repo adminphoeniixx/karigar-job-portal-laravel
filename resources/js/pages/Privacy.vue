@@ -277,7 +277,11 @@ const sections = computed(() => [
                     <li>Edit or clear your profile, résumé and location from your profile page.</li>
                     <li>Turn screening calls off in your profile settings.</li>
                     <li>Turn notifications off on your device.</li>
-                    <li>Close your account from your account settings.</li>
+                    <li>
+                        Close your account from your account settings —
+                        <Link href="/delete-account" class="link-underline text-primary">how to delete your account</Link>
+                        walks through it step by step.
+                    </li>
                 </ul>
                 <p>
                     For anything else, write to us at the address below. We will respond within the

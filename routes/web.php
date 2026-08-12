@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\PhoneOtpController;
 use App\Http\Controllers\Auth\RoleAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeleteAccountController;
 use App\Http\Controllers\Employer\ApplicantController;
 use App\Http\Controllers\Employer\EscrowController;
 use App\Http\Controllers\Employer\TeamController;
@@ -47,6 +48,10 @@ Route::get('/', HomeController::class)->name('home');
 // Legal. Public and unauthenticated on purpose — someone deciding whether to
 // sign up must be able to read this first.
 Route::get('privacy', PrivacyController::class)->name('privacy');
+
+// App-store requirement: a deletion route reachable without signing in, for
+// someone who has lost access to the number their account is tied to.
+Route::get('delete-account', DeleteAccountController::class)->name('delete-account');
 
 // Public job browsing
 Route::get('jobs', [JobBrowseController::class, 'index'])->name('jobs.browse');

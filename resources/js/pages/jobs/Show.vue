@@ -261,6 +261,7 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     <Link href="/worker/register" class="transition hover:text-background">{{ $t('landing.joinAsWorker') }}</Link>
                     <Link href="/employer/register" class="transition hover:text-background">{{ $t('nav.postJob') }}</Link>
                     <Link href="/privacy" class="transition hover:text-background">Privacy</Link>
+                    <Link href="/delete-account" class="transition hover:text-background">Delete account</Link>
                 </div>
             </div>
         </footer>
