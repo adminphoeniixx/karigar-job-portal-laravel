@@ -39,7 +39,7 @@ class ScreeningCallCompleted extends Notification
                 'type' => 'screening.completed',
                 'screening_call_id' => $this->call->id,
                 'application_id' => $this->call->job_application_id,
-                'url' => '/employer/applicants',
+                'url' => $this->url(),
             ],
         );
     }
@@ -60,8 +60,19 @@ class ScreeningCallCompleted extends Notification
             'awaiting_confirmation' => $this->call->awaitingConfirmation(),
             'summary' => $this->call->summary,
             'message' => $this->line(),
-            'url' => '/employer/applicants',
+            'url' => $this->url(),
         ];
+    }
+
+    /**
+     * Straight to the applicants list for the job this call was about — that
+     * is where the proposed slot is confirmed.
+     */
+    private function url(): string
+    {
+        $jobId = $this->call->application?->job_listing_id;
+
+        return $jobId !== null ? "/employer/jobs/{$jobId}/applicants" : '/employer/jobs';
     }
 
     private function line(): string

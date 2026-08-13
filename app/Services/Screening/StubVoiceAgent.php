@@ -56,7 +56,11 @@ class StubVoiceAgent implements VoiceAgent
             providerCallId: (string) ($payload['call_id'] ?? ''),
             status: $status,
             outcome: $outcome,
-            proposedInterviewAt: $slot !== null ? Carbon::parse((string) $slot) : null,
+            // The agent reports IST. Parsing without the zone would read it as
+            // UTC and book the slot five and a half hours early.
+            proposedInterviewAt: $slot !== null
+                ? Carbon::parse((string) $slot, config('screening.window.timezone', 'Asia/Kolkata'))
+                : null,
             proposedMode: $payload['proposed_mode'] ?? null,
             summary: $payload['summary'] ?? null,
             transcript: $payload['transcript'] ?? null,

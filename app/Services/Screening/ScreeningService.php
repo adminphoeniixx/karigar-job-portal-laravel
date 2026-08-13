@@ -10,8 +10,10 @@ use App\Models\ScreeningCall;
 use App\Models\Setting;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ScreeningCallCompleted;
+use App\Support\ReferenceData;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -81,9 +83,17 @@ class ScreeningService
             return 'worker_opted_out';
         }
 
-        $live = $application->screeningCalls()
-            ->whereIn('status', [ScreeningCallStatus::Queued, ScreeningCallStatus::Dialing, ScreeningCallStatus::InProgress])
-            ->exists();
+        // Read from the loaded relation when there is one: the applicants list
+        // asks this for every row, and two exists() queries each adds up.
+        $calls = $application->relationLoaded('screeningCalls')
+            ? $application->screeningCalls
+            : $application->screeningCalls()->get();
+
+        $live = $calls->contains(fn (ScreeningCall $call) => in_array(
+            $call->status,
+            [ScreeningCallStatus::Queued, ScreeningCallStatus::Dialing, ScreeningCallStatus::InProgress],
+            true,
+        ));
 
         if ($live) {
             return 'call_in_progress';
@@ -91,15 +101,30 @@ class ScreeningService
 
         // One conversation is enough; a worker who already told us no does not
         // get rung again.
-        $spoken = $application->screeningCalls()
-            ->where('status', ScreeningCallStatus::Completed)
-            ->exists();
-
-        if ($spoken) {
+        if ($calls->contains(fn (ScreeningCall $call) => $call->status === ScreeningCallStatus::Completed)) {
             return 'already_screened';
         }
 
         return null;
+    }
+
+    /**
+     * Human wording for a blocker, for the screens that have to explain why
+     * the button is greyed out.
+     */
+    public static function blockerLabel(string $blocker): string
+    {
+        return match ($blocker) {
+            'provider_not_configured' => __('Calling is not switched on yet.'),
+            'no_caller_id' => __('No calling number is configured yet.'),
+            'application_closed' => __('This application is closed.'),
+            'interview_already_scheduled' => __('An interview is already booked.'),
+            'no_phone_number' => __('This worker has no phone number on file.'),
+            'worker_opted_out' => __('This worker has opted out of automated calls.'),
+            'call_in_progress' => __('A call is already on its way.'),
+            'already_screened' => __('This worker has already been screened.'),
+            default => __('This applicant cannot be called right now.'),
+        };
     }
 
     /**
@@ -177,7 +202,7 @@ class ScreeningService
             'outcome' => $result->outcome,
             // A slot in the past is a mis-transcription, not a booking.
             'proposed_interview_at' => $slot?->isFuture() ? $slot : null,
-            'proposed_mode' => $result->proposedMode,
+            'proposed_mode' => $this->normaliseMode($result->proposedMode),
             'summary' => $result->summary,
             'transcript' => $result->transcript,
             'duration_seconds' => $result->durationSeconds,
@@ -235,6 +260,25 @@ class ScreeningService
     }
 
     /**
+     * The interview mode as the rest of the app spells it. A model asked for
+     * "one of site, phone, video" still says "in_person" now and then, and
+     * that string would land on the application and render as nothing.
+     */
+    private function normaliseMode(?string $mode): ?string
+    {
+        $mode = Str::snake(strtolower(trim((string) $mode)));
+
+        $mode = match ($mode) {
+            'in_person', 'inperson', 'onsite', 'on_site', 'office', 'visit' => 'site',
+            'call', 'telephone' => 'phone',
+            'video_call', 'online' => 'video',
+            default => $mode,
+        };
+
+        return in_array($mode, ReferenceData::INTERVIEW_MODES, true) ? $mode : null;
+    }
+
+    /**
      * Queue another attempt after a no-answer, up to the configured limit.
      */
     private function scheduleRetry(ScreeningCall $call): void
@@ -270,14 +314,39 @@ class ScreeningService
     }
 
     /**
-     * The number to dial: the worker's profile phone, else their login phone.
+     * The number to dial: the worker's profile phone, else their login phone,
+     * in E.164 — SIP will not dial anything else.
      */
     private function phoneFor(JobApplication $application): ?string
     {
         $worker = $application->worker;
 
-        $phone = $worker?->workerProfile?->phone ?: $worker?->phone;
+        return self::toE164($worker?->workerProfile?->phone ?: $worker?->phone);
+    }
 
-        return filled($phone) ? (string) $phone : null;
+    /**
+     * Phones are stored the way people type them — ten bare digits, usually.
+     * SIP needs +91XXXXXXXXXX, and a number this cannot make sense of returns
+     * null so the call is refused rather than dialled at something wrong.
+     */
+    public static function toE164(?string $phone): ?string
+    {
+        $phone = preg_replace('/[^\d+]/', '', (string) $phone) ?? '';
+        $code = (string) config('screening.country_code', '+91');
+        $bare = ltrim($code, '+');
+
+        // Already international.
+        if (str_starts_with($phone, '+')) {
+            return strlen($phone) >= 11 ? $phone : null;
+        }
+
+        $digits = ltrim($phone, '0');
+
+        return match (true) {
+            strlen($digits) === 10 => $code.$digits,
+            // 919876500011 — country code typed without the plus.
+            str_starts_with($digits, $bare) && strlen($digits) === strlen($bare) + 10 => '+'.$digits,
+            default => null,
+        };
     }
 }

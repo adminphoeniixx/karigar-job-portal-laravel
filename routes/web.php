@@ -19,6 +19,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeleteAccountController;
 use App\Http\Controllers\Employer\ApplicantController;
 use App\Http\Controllers\Employer\EscrowController;
+use App\Http\Controllers\Employer\ScreeningController;
 use App\Http\Controllers\Employer\TeamController;
 use App\Http\Controllers\Employer\WorkerDirectoryController;
 use App\Http\Controllers\EmployerProfileController;
@@ -160,6 +161,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('employer/jobs/{job}/rescore', [ApplicantController::class, 'rescore'])->name('applicants.rescore');
         Route::patch('employer/applications/{application}', [ApplicantController::class, 'updateStatus'])->name('applicants.status');
         Route::post('employer/applications/{application}/unlock', [ApplicantController::class, 'unlockContact'])->name('applicants.unlock');
+
+        // Automated AI screening calls — ring the applicant, then confirm the
+        // interview slot they offered.
+        Route::post('employer/applications/{application}/screening-call', [ScreeningController::class, 'store'])->name('screening.store');
+        Route::post('employer/screening-calls/{call}/confirm', [ScreeningController::class, 'confirm'])->name('screening.confirm');
 
         // Shortlist
         Route::get('employer/shortlisted', [ApplicantController::class, 'shortlisted'])->name('applicants.shortlisted');

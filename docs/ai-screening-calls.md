@@ -61,9 +61,18 @@ registration. Changing carrier is a trunk id, not a code change.
 One number for the whole platform, not one per employer. The employer's name
 cannot appear on a phone screen; it is spoken in the greeting instead.
 
-**Before the Indian number arrives**, LiveKit's free tier includes one US
-number, which is enough to exercise the entire pipeline against your own phone.
-Everything except the caller ID behaves exactly as production will.
+**Do not buy the number from LiveKit.** LiveKit Phone Numbers are *inbound
+only* — "support for outbound calls is coming soon" — and US only, so one
+cannot place a screening call. The dashboard sells them anyway and the outbound
+trunk form then asks for a carrier address, which is the giveaway. Whatever
+number the trunk dials from has to come from a SIP provider: Twilio, Telnyx,
+Plivo, Wavix, or an Indian carrier for production.
+
+**Before the Indian number arrives**, any provider's number is enough to
+exercise the whole pipeline against your own phone. Everything except the
+caller ID behaves exactly as production will. Check the provider's
+international permissions if the test number is not Indian — calling +91 is
+usually off by default.
 
 ### 2. Truecaller Business
 
@@ -122,7 +131,7 @@ Expected body:
   "status": "completed | no_answer | busy | failed",
   "outcome": "interested | not_interested | callback_later | already_placed | unclear",
   "proposed_interview_at": "2026-08-14T11:00:00+05:30",
-  "proposed_mode": "phone | video | in_person",
+  "proposed_mode": "site | phone | video",
   "summary": "Two sentences for the employer.",
   "transcript": "...",
   "duration_seconds": 74
@@ -131,6 +140,33 @@ Expected body:
 
 A slot in the past is treated as a mis-transcription and dropped. A repeat
 callback for a call already finished is ignored, so provider retries are safe.
+
+## Testing without a phone line
+
+Every carrier wants money or a KYC review before it will let you dial out, and
+that wait says nothing about whether the script works. A rehearsal runs the
+real script against your own microphone instead:
+
+```bash
+php artisan screening:rehearse <application-id>
+
+cd services/screening-agent
+SCREENING_TEST_SCRIPT=rehearsal.json python agent.py console
+```
+
+The command builds the script the way a real call would — same greeting, same
+language from the worker's profile, same extraction schema — creates a real
+`screening_calls` row, and writes the agent's job metadata to a file. Because
+the file carries no `dial` block, the agent skips SIP entirely and talks to
+whoever is already in the room, which in console mode is you.
+
+Hang up and the result posts to the webhook exactly as a real call's would, so
+the outcome and the proposed slot appear on the employer's applicants page.
+
+What this proves: the greeting, the conversation, the language, the extraction,
+the webhook, and the employer's confirmation flow. What it cannot prove: that a
+phone rings, that a no-answer retries, and how the voice sounds after a mobile
+network has squeezed it. Those need a carrier.
 
 ## Swapping the provider
 
@@ -193,6 +229,21 @@ the call is dropped rather than dialled at the wrong hour.
 
 `confirm` accepts optional `interview_at` and `mode` so the employer can move
 the slot the worker suggested rather than accepting it as-is.
+
+The web app has the same two actions on the applicants screen:
+
+| Method | Route |
+| --- | --- |
+| `POST` | `/employer/applications/{application}/screening-call` |
+| `POST` | `/employer/screening-calls/{call}/confirm` |
+
+Each applicant card carries a `screening` block — the latest call, its outcome
+and summary, and whether another call is allowed. It is `null` when no provider
+is configured, so the button never appears on an install that cannot dial.
+
+`proposed_mode` is normalised onto the app's own vocabulary (`site`, `phone`,
+`video`) before it is stored — a model told to answer "site" still says
+"in_person" now and then, and that string would reach the applicant's record.
 
 ## Known gaps
 

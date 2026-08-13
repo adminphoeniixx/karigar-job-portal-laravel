@@ -47,12 +47,45 @@ TTS_MODEL = os.getenv("SCREENING_TTS", "cartesia/sonic-3")
 LLM_MODEL = os.getenv("SCREENING_LLM", "openai/gpt-4o-mini")
 
 
+def load_metadata(ctx: JobContext) -> dict[str, Any]:
+    """
+    The script for this call. Normally it arrives as job metadata from Laravel.
+
+    In rehearsal it comes from a file instead (`php artisan screening:rehearse`
+    writes it), which is what makes it possible to test the script, the voice
+    and the extraction with no carrier and no phone line — the one part of this
+    feature that cannot be bought on a free trial.
+    """
+    raw = ctx.job.metadata if ctx.job else None
+
+    if raw:
+        return json.loads(raw)
+
+    path = os.getenv("SCREENING_TEST_SCRIPT")
+
+    if not path:
+        raise RuntimeError(
+            "No job metadata and no SCREENING_TEST_SCRIPT set. "
+            "Run `php artisan screening:rehearse <application-id>` first."
+        )
+
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
 async def entrypoint(ctx: JobContext) -> None:
-    meta: dict[str, Any] = json.loads(ctx.job.metadata or "{}")
-    dial = meta["dial"]
-    call_id = meta["room"]
+    meta: dict[str, Any] = load_metadata(ctx)
+    # No dial block means nobody is being rung: we are in console mode or an
+    # inbound call, and whoever is in the room is who we talk to.
+    dial = meta.get("dial")
+    call_id = meta.get("room")
 
     await ctx.connect()
+
+    if dial is None:
+        logger.info("rehearsal mode — no phone line, talking to whoever is here")
+        await converse(ctx, meta, call_id)
+        return
 
     # Dial from here rather than from Laravel so the agent is already in the
     # room when the worker answers. Dialling first would let them pick up to
@@ -93,6 +126,15 @@ async def entrypoint(ctx: JobContext) -> None:
 
     logger.info("worker answered", extra={"call_id": call_id, "participant": participant.identity})
 
+    await converse(ctx, meta, call_id)
+
+
+async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -> None:
+    """
+    The conversation itself, once there is someone on the other end — a worker
+    who answered the phone, or you in console mode. Identical either way, which
+    is the whole point: a rehearsal exercises the real script.
+    """
     session = AgentSession(stt=STT_MODEL, llm=LLM_MODEL, tts=TTS_MODEL)
 
     await session.start(
@@ -108,7 +150,13 @@ async def entrypoint(ctx: JobContext) -> None:
     # agent to end the conversation once it has what it came for.
     disconnected = asyncio.Event()
     ctx.room.on("participant_disconnected", lambda _: disconnected.set())
-    await disconnected.wait()
+
+    try:
+        await disconnected.wait()
+    except asyncio.CancelledError:
+        # Ctrl+C in console mode. Still report — the transcript up to here is
+        # exactly what we wanted to look at.
+        pass
 
     await report(call_id, **await extract(session, meta))
 
@@ -169,12 +217,18 @@ def _strip_fence(text: str) -> str:
     return cleaned.strip()
 
 
-async def report(call_id: str, **fields: Any) -> None:
+async def report(call_id: str | None, **fields: Any) -> None:
     """
     Hand the result to Laravel. Fire and forget is not good enough — if this
     POST is lost the call row stays stuck in 'dialing' forever, so it retries.
     """
     payload = {"call_id": call_id, **{k: v for k, v in fields.items() if v is not None}}
+
+    # A rehearsal with no call row behind it: print what would have been sent
+    # rather than posting a result Laravel cannot match to anything.
+    if not call_id:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
 
     async with aiohttp.ClientSession() as http:
         for attempt in range(3):

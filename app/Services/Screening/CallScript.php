@@ -91,7 +91,7 @@ class CallScript
         return [
             'outcome' => 'One of: interested, not_interested, callback_later, already_placed, unclear.',
             'proposed_interview_at' => 'The date and time the worker offered, as ISO 8601 in Asia/Kolkata. Null if they gave none.',
-            'proposed_mode' => 'One of: phone, video, in_person. Null if not discussed.',
+            'proposed_mode' => 'One of: site (they come to the workplace), phone, video. Null if not discussed.',
             'summary' => 'Two sentences in English on what the worker said, for the employer to read.',
         ];
     }

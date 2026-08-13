@@ -27,6 +27,12 @@ return [
 
     'brand' => env('SCREENING_BRAND', 'Super Karigar'),
 
+    /*
+    | Workers give ten bare digits; SIP dials E.164 only. This is what gets
+    | put in front of a ten-digit number before it is dialled.
+    */
+    'country_code' => env('SCREENING_COUNTRY_CODE', '+91'),
+
     // Provider voice id. One voice everywhere, so workers start recognising it.
     'voice' => env('SCREENING_VOICE', 'anushka'),
 

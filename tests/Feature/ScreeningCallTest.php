@@ -168,7 +168,8 @@ it('records an interested worker\'s slot without booking it', function () {
 
     expect($call->outcome)->toBe(ScreeningOutcome::Interested)
         ->and($call->proposed_interview_at->format('Y-m-d H:i'))->toBe($slot->format('Y-m-d H:i'))
-        ->and($call->proposed_mode)->toBe('in_person')
+        // The agent said "in_person"; the app only knows "site".
+        ->and($call->proposed_mode)->toBe('site')
         ->and($call->duration_seconds)->toBe(74)
         ->and($call->awaitingConfirmation())->toBeTrue()
         // The agent proposes; it never books.
@@ -199,7 +200,7 @@ it('books the interview when the employer confirms', function () {
     $application = $this->application->refresh();
 
     expect($application->interview_at->format('Y-m-d H:i'))->toBe($slot->format('Y-m-d H:i'))
-        ->and($application->interview_mode)->toBe('in_person')
+        ->and($application->interview_mode)->toBe('site')
         ->and($application->shortlisted_at)->not->toBeNull();
 
     Notification::assertSentTo($this->worker, InterviewScheduledNotification::class);
@@ -417,6 +418,117 @@ it('lets a worker switch screening calls off from their profile', function () {
         ->assertRedirect();
 
     expect($this->worker->workerProfile->refresh()->screening_calls_opted_out)->toBeTrue();
+});
+
+it('dials in E.164, whatever the worker typed', function () {
+    expect(ScreeningService::toE164('9876500011'))->toBe('+919876500011')
+        ->and(ScreeningService::toE164('098765 00011'))->toBe('+919876500011')
+        ->and(ScreeningService::toE164('+91 98765-00011'))->toBe('+919876500011')
+        ->and(ScreeningService::toE164('919876500011'))->toBe('+919876500011')
+        ->and(ScreeningService::toE164('+12675092030'))->toBe('+12675092030')
+        // Too short to be a phone number — refuse rather than dial something.
+        ->and(ScreeningService::toE164('12345'))->toBeNull()
+        ->and(ScreeningService::toE164(null))->toBeNull();
+});
+
+it('will not call a worker whose number makes no sense', function () {
+    $this->worker->workerProfile->update(['phone' => '12345']);
+    $this->worker->update(['phone' => '12345']);
+
+    runPlaceCall();
+
+    expect(ScreeningCall::count())->toBe(0);
+});
+
+// ── The web app (Inertia), which mirrors the mobile API ─────────────
+
+it('shows the call and the proposed slot on the applicants page', function () {
+    $call = placeCall();
+    $slot = now()->addDays(2)->setTime(11, 0);
+
+    postWebhook([
+        'call_id' => $call->provider_call_id,
+        'status' => 'completed',
+        'outcome' => 'interested',
+        'proposed_interview_at' => $slot->toIso8601String(),
+        'proposed_mode' => 'in_person',
+        'summary' => 'Available Thursday morning.',
+    ])->assertOk();
+
+    $this->actingAs($this->employer)
+        ->get("/employer/jobs/{$this->job->id}/applicants")
+        ->assertInertia(fn ($page) => $page
+            ->where('applications.0.screening.call.outcome', 'interested')
+            ->where('applications.0.screening.call.awaiting_confirmation', true)
+            ->where('applications.0.screening.call.proposed_mode', 'site')
+            // Already screened, so no second call is offered.
+            ->where('applications.0.screening.can_call', false)
+        );
+});
+
+it('lets an employer queue a call from the web applicants page', function () {
+    Queue::fake();
+
+    $this->actingAs($this->employer)
+        ->post("/employer/applications/{$this->application->id}/screening-call")
+        ->assertRedirect();
+
+    Queue::assertPushed(PlaceScreeningCall::class);
+});
+
+it('books the interview when the employer confirms on the web', function () {
+    $call = placeCall();
+    $moved = now()->addDays(3)->setTime(16, 30);
+
+    postWebhook([
+        'call_id' => $call->provider_call_id,
+        'status' => 'completed',
+        'outcome' => 'interested',
+        'proposed_interview_at' => now()->addDays(2)->setTime(11, 0)->toIso8601String(),
+    ])->assertOk();
+
+    $this->actingAs($this->employer)
+        ->post("/employer/screening-calls/{$call->id}/confirm", [
+            'interview_at' => $moved->toIso8601String(),
+            'mode' => 'video',
+        ])
+        ->assertRedirect();
+
+    $application = $this->application->refresh();
+
+    expect($application->interview_at->format('Y-m-d H:i'))->toBe($moved->format('Y-m-d H:i'))
+        ->and($application->interview_mode)->toBe('video')
+        ->and($call->refresh()->employer_confirmed)->toBeTrue();
+
+    Notification::assertSentTo($this->worker, InterviewScheduledNotification::class);
+});
+
+it('keeps another employer off the web confirm route', function () {
+    $call = placeCall();
+
+    postWebhook([
+        'call_id' => $call->provider_call_id,
+        'status' => 'completed',
+        'outcome' => 'interested',
+        'proposed_interview_at' => now()->addDays(2)->setTime(11, 0)->toIso8601String(),
+    ])->assertOk();
+
+    $other = User::factory()->create(['role' => UserRole::Employer->value]);
+    $other->employerProfile()->create(['company_name' => 'Rival Builders']);
+
+    $this->actingAs($other)
+        ->post("/employer/screening-calls/{$call->id}/confirm")
+        ->assertForbidden();
+
+    expect($this->application->refresh()->interview_at)->toBeNull();
+});
+
+it('hides screening entirely when no caller id is configured', function () {
+    config(['screening.from_number' => null]);
+
+    $this->actingAs($this->employer)
+        ->get("/employer/jobs/{$this->job->id}/applicants")
+        ->assertInertia(fn ($page) => $page->where('applications.0.screening', null));
 });
 
 function runPlaceCall(?int $attempt = null): void

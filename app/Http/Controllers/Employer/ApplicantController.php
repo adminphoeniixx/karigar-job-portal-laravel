@@ -9,6 +9,7 @@ use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\ShortlistedNotification;
+use App\Services\Screening\ScreeningService;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class ApplicantController extends Controller
     /**
      * Applicants for one of the employer's jobs.
      */
-    public function index(Request $request, JobListing $job): Response
+    public function index(Request $request, JobListing $job, ScreeningService $screening): Response
     {
         $this->authorize('view', $job);
 
@@ -30,7 +31,7 @@ class ApplicantController extends Controller
         $sort = $request->string('sort')->toString() === 'recent' ? 'recent' : 'best_match';
 
         $applications = $job->applications()
-            ->with('worker:id,name,email', 'worker.workerProfile', 'escrow')
+            ->with('worker:id,name,email', 'worker.workerProfile', 'escrow', 'screeningCalls')
             ->when($sort === 'best_match', fn ($q) => $q->orderByRaw('ai_score DESC NULLS LAST'))
             ->latest()
             ->get()
@@ -55,6 +56,13 @@ class ApplicantController extends Controller
                 'resume' => $a->worker?->workerProfile?->resume_path !== null ? [
                     'name' => $a->worker->workerProfile->resume_name,
                     'uploaded_at' => $a->worker->workerProfile->resume_uploaded_at?->diffForHumans(),
+                ] : null,
+                // Automated screening call: the latest one and whether another
+                // is allowed. Absent entirely when calling is not switched on.
+                'screening' => $this->screeningPayload($a, $screening),
+                'interview' => $a->interview_at !== null ? [
+                    'at' => $a->interview_at->format('d M Y, g:i A'),
+                    'mode' => $a->interview_mode,
                 ] : null,
                 'escrow' => $a->escrow ? [
                     'id' => $a->escrow->id,
@@ -86,6 +94,45 @@ class ApplicantController extends Controller
                 'limit' => $request->user()->employerAccount()->activeSubscription()?->plan->contactUnlockLimit() ?? 0,
             ],
         ]);
+    }
+
+    /**
+     * What the applicants page shows about automated screening calls for one
+     * applicant: the latest call, and whether the employer may place another.
+     *
+     * Null while the provider has no credentials — there is no point offering
+     * a button that can only ever say "not configured".
+     *
+     * @return array<string, mixed>|null
+     */
+    private function screeningPayload(JobApplication $application, ScreeningService $screening): ?array
+    {
+        $blocker = $screening->blocker($application);
+
+        if (in_array($blocker, ['provider_not_configured', 'no_caller_id'], true)) {
+            return null;
+        }
+
+        $call = $application->screeningCalls->sortByDesc('id')->first();
+
+        return [
+            'can_call' => $blocker === null,
+            'blocked_because' => $blocker !== null ? ScreeningService::blockerLabel($blocker) : null,
+            'call' => $call === null ? null : [
+                'id' => $call->id,
+                'status' => $call->status->value,
+                'status_label' => $call->status->label(),
+                'outcome' => $call->outcome?->value,
+                'outcome_label' => $call->outcome?->label(),
+                'summary' => $call->summary,
+                'attempt' => $call->attempt,
+                'proposed_interview_at' => $call->proposed_interview_at?->format('Y-m-d\TH:i'),
+                'proposed_interview_label' => $call->proposed_interview_at?->format('d M Y, g:i A'),
+                'proposed_mode' => $call->proposed_mode,
+                'awaiting_confirmation' => $call->awaitingConfirmation(),
+                'created_ago' => $call->created_at?->diffForHumans(),
+            ],
+        ];
     }
 
     /**

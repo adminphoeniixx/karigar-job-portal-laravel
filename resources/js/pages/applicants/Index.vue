@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, ChevronDown, FileText, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, Send, Sparkles, Star, TriangleAlert, Unlock, Users, X } from '@lucide/vue';
+import { CalendarClock, Check, ChevronDown, FileText, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, PhoneCall, Send, Sparkles, Star, TriangleAlert, Unlock, Users, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -15,6 +15,27 @@ interface AiMatch {
     red_flags: string[];
 }
 
+interface ScreeningCall {
+    id: number;
+    status: string;
+    status_label: string;
+    outcome: string | null;
+    outcome_label: string | null;
+    summary: string | null;
+    attempt: number;
+    proposed_interview_at: string | null;
+    proposed_interview_label: string | null;
+    proposed_mode: string | null;
+    awaiting_confirmation: boolean;
+    created_ago: string | null;
+}
+
+interface Screening {
+    can_call: boolean;
+    blocked_because: string | null;
+    call: ScreeningCall | null;
+}
+
 interface Applicant {
     id: number;
     status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
@@ -26,6 +47,8 @@ interface Applicant {
     tracking_steps: TrackStep[];
     ai: AiMatch | null;
     resume: { name: string | null; uploaded_at: string | null } | null;
+    screening: Screening | null;
+    interview: { at: string; mode: string | null } | null;
     escrow: { id: number; status: string; status_label: string; amount: string; payout_amount: string } | null;
     worker: {
         id: number;
@@ -123,6 +146,48 @@ const escrowBadge: Record<string, string> = {
     released: 'bg-orange-500/10 text-orange-600 dark:text-orange-300',
     refunded: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
     disputed: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+};
+
+// ── AI screening call ───────────────────────────────────────────────
+// The platform rings the worker and asks if they are still interested and
+// when they could come in. The agent only proposes a slot — the employer
+// confirms it here before it lands on the application.
+const calling = ref<Set<number>>(new Set());
+
+const placeCall = (a: Applicant) => {
+    calling.value.add(a.id);
+    router.post(`/employer/applications/${a.id}/screening-call`, {}, {
+        preserveScroll: true,
+        onFinish: () => calling.value.delete(a.id),
+    });
+};
+
+const screeningTone: Record<string, string> = {
+    interested: 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300',
+    not_interested: 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300',
+    callback_later: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-300',
+    already_placed: 'bg-muted text-muted-foreground ring-border',
+    unclear: 'bg-muted text-muted-foreground ring-border',
+};
+
+// Confirm-interview modal: pre-filled with what the worker offered, editable
+// because the employer may not be free then.
+const confirmFor = ref<ScreeningCall | null>(null);
+const confirmForm = useForm({ interview_at: '', mode: 'site' });
+
+const openConfirm = (call: ScreeningCall) => {
+    confirmFor.value = call;
+    confirmForm.clearErrors();
+    confirmForm.interview_at = call.proposed_interview_at ?? '';
+    confirmForm.mode = call.proposed_mode ?? 'site';
+};
+
+const submitConfirm = () => {
+    if (confirmFor.value === null) return;
+    confirmForm.post(`/employer/screening-calls/${confirmFor.value.id}/confirm`, {
+        preserveScroll: true,
+        onSuccess: () => (confirmFor.value = null),
+    });
 };
 
 // Review modal state
@@ -232,6 +297,47 @@ const submitReview = () => {
                 </div>
                 <p v-else class="mt-3 text-xs text-muted-foreground">{{ $t('applicants.ai.notScored') }}</p>
 
+                <!-- AI screening call -->
+                <div v-if="a.screening?.call" class="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold">
+                            <PhoneCall class="size-3.5 text-orange-600" /> {{ $t('applicants.screening.title') }}
+                        </span>
+                        <span
+                            v-if="a.screening.call.outcome"
+                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset"
+                            :class="screeningTone[a.screening.call.outcome] ?? 'bg-muted text-muted-foreground ring-border'"
+                        >
+                            {{ a.screening.call.outcome_label }}
+                        </span>
+                        <span v-else class="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">{{ a.screening.call.status_label }}</span>
+                        <span class="text-xs text-muted-foreground">{{ a.screening.call.created_ago }}</span>
+                    </div>
+                    <p v-if="a.screening.call.summary" class="mt-2 text-sm text-muted-foreground">{{ a.screening.call.summary }}</p>
+
+                    <!-- The slot the worker offered, waiting on the employer -->
+                    <div v-if="a.screening.call.awaiting_confirmation" class="mt-3 flex flex-wrap items-center gap-2 border-t border-orange-500/20 pt-3">
+                        <span class="inline-flex items-center gap-1.5 text-sm">
+                            <CalendarClock class="size-4 text-orange-600" />
+                            <span class="text-muted-foreground">{{ $t('applicants.screening.proposed') }}:</span>
+                            <span class="font-semibold">{{ a.screening.call.proposed_interview_label }}</span>
+                        </span>
+                        <button
+                            class="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700"
+                            @click="openConfirm(a.screening.call)"
+                        >
+                            <Check class="size-3.5" /> {{ $t('applicants.screening.confirm') }}
+                        </button>
+                    </div>
+                </div>
+
+                <p v-if="a.interview" class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-muted/50 px-3 py-2 text-sm">
+                    <CalendarClock class="size-4 text-orange-600" />
+                    <span class="text-muted-foreground">{{ $t('applicants.screening.booked') }}:</span>
+                    <span class="font-semibold">{{ a.interview.at }}</span>
+                    <span v-if="a.interview.mode" class="text-muted-foreground">· {{ $t(`applicants.screening.modes.${a.interview.mode}`) }}</span>
+                </p>
+
                 <p v-if="a.cover_note" class="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">{{ a.cover_note }}</p>
                 <p v-if="a.expected_wage" class="mt-2 text-sm"><span class="text-muted-foreground">{{ $t('applicants.expectedWage') }}:</span> <span class="font-medium">₹{{ a.expected_wage }}</span></p>
 
@@ -268,6 +374,16 @@ const submitReview = () => {
                         @click="message(a)"
                     >
                         <MessageSquare class="size-3.5" /> {{ $t('applicants.message') }}
+                    </button>
+                    <button
+                        v-if="a.screening"
+                        :disabled="!a.screening.can_call || calling.has(a.id)"
+                        :title="a.screening.blocked_because ?? $t('applicants.screening.hint')"
+                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition enabled:hover:bg-muted enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        @click="placeCall(a)"
+                    >
+                        <PhoneCall class="size-3.5 text-orange-500" />
+                        {{ calling.has(a.id) ? $t('applicants.screening.calling') : $t('applicants.screening.call') }}
                     </button>
                     <a
                         v-if="a.resume"
@@ -340,6 +456,43 @@ const submitReview = () => {
             <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Users class="size-7" /></div>
             <p class="mt-4 font-medium">{{ $t('applicants.empty') }}</p>
             <p class="mt-1 text-sm text-muted-foreground">{{ $t('applicants.emptyHint') }}</p>
+        </div>
+    </div>
+
+    <!-- Confirm the interview the worker proposed on the screening call -->
+    <div v-if="confirmFor !== null" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="confirmFor = null">
+        <div class="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl">
+            <h3 class="text-lg font-semibold">{{ $t('applicants.screening.confirmTitle') }}</h3>
+            <p class="mt-1 text-sm text-muted-foreground">{{ $t('applicants.screening.confirmHint') }}</p>
+
+            <label class="mt-4 block text-xs font-semibold text-muted-foreground">{{ $t('applicants.screening.when') }}</label>
+            <input
+                v-model="confirmForm.interview_at"
+                type="datetime-local"
+                class="mt-1 w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+            />
+            <p v-if="confirmForm.errors.interview_at" class="mt-1 text-xs text-rose-500">{{ confirmForm.errors.interview_at }}</p>
+
+            <label class="mt-4 block text-xs font-semibold text-muted-foreground">{{ $t('applicants.screening.mode') }}</label>
+            <div class="mt-1 inline-flex rounded-xl border bg-card p-1">
+                <button
+                    v-for="m in (['site', 'phone', 'video'] as const)"
+                    :key="m"
+                    type="button"
+                    class="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                    :class="confirmForm.mode === m ? 'bg-orange-500/10 text-orange-600 dark:text-orange-300' : 'text-muted-foreground hover:text-foreground'"
+                    @click="confirmForm.mode = m"
+                >
+                    {{ $t(`applicants.screening.modes.${m}`) }}
+                </button>
+            </div>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button class="rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted" @click="confirmFor = null">{{ $t('common.cancel') }}</button>
+                <button :disabled="confirmForm.processing" class="rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-60" @click="submitConfirm">
+                    {{ $t('applicants.screening.confirm') }}
+                </button>
+            </div>
         </div>
     </div>
 
