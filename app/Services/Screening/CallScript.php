@@ -38,6 +38,24 @@ class CallScript
         'odia' => 'or',
     ];
 
+    /**
+     * The same languages by name. A model told to "speak in hi" answers in
+     * English — the code means nothing to it, while the name does.
+     */
+    private const LANGUAGE_NAMES = [
+        'hi' => 'Hindi',
+        'en' => 'English',
+        'ta' => 'Tamil',
+        'te' => 'Telugu',
+        'mr' => 'Marathi',
+        'bn' => 'Bengali',
+        'gu' => 'Gujarati',
+        'kn' => 'Kannada',
+        'ml' => 'Malayalam',
+        'pa' => 'Punjabi',
+        'or' => 'Odia',
+    ];
+
     public function __construct(
         public readonly string $language,
         public readonly string $greeting,
@@ -119,9 +137,22 @@ class CallScript
         $window = (int) config('screening.slot_window_days', 5);
         $until = Carbon::now(config('screening.window.timezone', 'Asia/Kolkata'))->addDays($window);
 
+        $languageName = self::LANGUAGE_NAMES[$language] ?? 'Hindi';
+
+        // Workers do not speak textbook Hindi and they do not want to be read
+        // to in it either. The greeting is already Roman-script Hinglish; the
+        // rest of the call has to match it or the agent sounds like a news
+        // anchor and the worker stops answering.
+        $register = $language === 'hi'
+            ? "Speak {$languageName} the way it is actually spoken on a worksite — everyday Hinglish, with the common English words (site, interview, time, salary) left in English. Do not use formal or Sanskritised {$languageName}."
+            : "Speak {$languageName} the way it is actually spoken, with the common English words (site, interview, time, salary) left in English.";
+
         return <<<PROMPT
         You are a recruitment assistant calling on behalf of {$brand}, an Indian blue-collar hiring platform.
-        Speak in {$language}. Use short, plain sentences a construction or trade worker will understand.
+        Every single reply must be in {$languageName}. Never answer in English, even if the worker
+        uses English words, and never switch language mid-call.
+        {$register}
+        Use short, plain sentences a construction or trade worker will understand.
         Never use English job-portal jargon. Speak the way a polite local recruiter speaks on the phone.
 
         You are calling {$company} ka shortlisted applicant about this job:

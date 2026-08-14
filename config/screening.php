@@ -33,8 +33,15 @@ return [
     */
     'country_code' => env('SCREENING_COUNTRY_CODE', '+91'),
 
-    // Provider voice id. One voice everywhere, so workers start recognising it.
-    'voice' => env('SCREENING_VOICE', 'anushka'),
+    /*
+    | Provider voice id. One voice everywhere, so workers start recognising it.
+    |
+    | Empty on purpose: the id belongs to whichever TTS provider is configured,
+    | and a name from the wrong provider does not error — it synthesises silence
+    | and the worker hears a dead line. Set it only to an id you have heard read
+    | the greeting aloud.
+    */
+    'voice' => env('SCREENING_VOICE', ''),
 
     'default_language' => env('SCREENING_LANGUAGE', 'hi'),
 

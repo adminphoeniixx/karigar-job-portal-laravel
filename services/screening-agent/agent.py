@@ -26,7 +26,7 @@ from typing import Any
 import aiohttp
 from dotenv import load_dotenv
 from livekit import agents, api
-from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, cli
+from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, cli, inference
 
 load_dotenv()
 
@@ -45,6 +45,12 @@ WEBHOOK_SECRET = os.environ["SCREENING_WEBHOOK_SECRET"]
 STT_MODEL = os.getenv("SCREENING_STT", "deepgram/nova-3")
 TTS_MODEL = os.getenv("SCREENING_TTS", "cartesia/sonic-3")
 LLM_MODEL = os.getenv("SCREENING_LLM", "openai/gpt-4o-mini")
+
+# What to tell the STT it is listening to. Hindi calls are never pure Hindi —
+# "kal subah 10 baje site pe aa jaunga" is one sentence in two languages — so
+# they go to the multilingual model rather than to `hi`, which drops the English
+# words. Everything else passes its own code straight through.
+STT_LANGUAGES = {"hi": "multi", "en": "multi"}
 
 
 def load_metadata(ctx: JobContext) -> dict[str, Any]:
@@ -71,6 +77,38 @@ def load_metadata(ctx: JobContext) -> dict[str, Any]:
 
     with open(path, encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def build_stt(meta: dict[str, Any]) -> inference.STT:
+    """
+    Speech recognition, told which language it is listening to.
+
+    This is not optional decoration. Left at its default the model listens for
+    English, and a worker saying "haan sir, parso subah gyarah baje aa jaunga"
+    comes back as nonsense — which then poisons the LLM's reply and the
+    extraction after it. Deepgram's multilingual code handles the code-switching
+    a karigar actually does (Hindi sentence, English words for time and money).
+    """
+    language = meta.get("language", "hi")
+
+    return inference.STT(model=STT_MODEL, language=STT_LANGUAGES.get(language, language))
+
+
+def build_tts(meta: dict[str, Any]) -> inference.TTS:
+    """
+    The voice, told which language to speak.
+
+    Same trap in reverse: the default voice reads Hindi words with English
+    pronunciation, which is the fastest way to get hung up on. The voice id is
+    provider-specific, so it is only passed when one is actually configured.
+    """
+    voice = str(meta.get("voice") or "").strip()
+
+    return inference.TTS(
+        model=TTS_MODEL,
+        language=meta.get("language", "hi"),
+        **({"voice": voice} if voice else {}),
+    )
 
 
 async def entrypoint(ctx: JobContext) -> None:
@@ -135,7 +173,11 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     who answered the phone, or you in console mode. Identical either way, which
     is the whole point: a rehearsal exercises the real script.
     """
-    session = AgentSession(stt=STT_MODEL, llm=LLM_MODEL, tts=TTS_MODEL)
+    session = AgentSession(
+        stt=build_stt(meta),
+        llm=inference.LLM(model=LLM_MODEL),
+        tts=build_tts(meta),
+    )
 
     await session.start(
         room=ctx.room,
