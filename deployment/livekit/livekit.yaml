@@ -1,0 +1,33 @@
+# Self-hosted LiveKit media server.
+#
+# Keys are NOT here — they come from the LIVEKIT_KEYS environment variable in
+# the compose file, so this file can stay in git.
+
+port: 7880
+bind_addresses:
+  - 0.0.0.0
+
+rtc:
+  tcp_port: 7881
+  # Every concurrent call needs its own UDP port. 200 is far more than the
+  # screening feature will ever use at once, and a narrow range is much easier
+  # to open on a VPS firewall than LiveKit's default 50000-60000.
+  #
+  # Kept *below* the kernel's ephemeral range (`net.ipv4.ip_local_port_range`,
+  # 32768-60999 by default). LiveKit's own default sits inside it, so an
+  # unrelated outgoing socket can already hold a port when the server starts and
+  # the bind fails with "address already in use" — intermittently, which is the
+  # worst way to find out.
+  port_range_start: 20000
+  port_range_end: 20200
+  # The container sees a private IP; participants need the public one.
+  use_external_ip: true
+
+# Required once SIP is in the picture: the SIP service and the media server
+# find each other through Redis, not directly.
+redis:
+  address: redis:6379
+
+logging:
+  level: info
+  json: true

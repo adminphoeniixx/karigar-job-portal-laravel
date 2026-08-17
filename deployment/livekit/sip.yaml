@@ -1,0 +1,23 @@
+# LiveKit's SIP bridge — the piece that turns a room into a phone call.
+#
+# Only needed once an Indian carrier trunk exists. Until then the whole
+# self-hosted stack runs fine without this service.
+
+api_key: ${LIVEKIT_API_KEY}
+api_secret: ${LIVEKIT_API_SECRET}
+ws_url: ws://livekit:7880
+
+redis:
+  address: redis:6379
+
+# The carrier connects here. 5060 is the SIP standard; carriers will ask for
+# this port and the server's public IP to whitelist.
+sip_port: 5060
+# Voice itself flows over these. One call uses two ports.
+rtp_port: 10000-10100
+
+use_external_ip: true
+
+logging:
+  level: info
+  json: true

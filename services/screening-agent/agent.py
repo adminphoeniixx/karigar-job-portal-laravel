@@ -27,6 +27,20 @@ import aiohttp
 from dotenv import load_dotenv
 from livekit import agents, api
 from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, cli, inference
+from livekit.agents import llm as llm_module, stt as stt_module, tts as tts_module
+
+# Imported here, at module level, and not inside the builders where they are
+# actually used: LiveKit registers a plugin the moment it is imported, and it
+# refuses a registration that does not come from the main thread. Importing
+# lazily puts it on the job task instead, and the call dies before the first
+# word with "Plugins must be registered on the main thread".
+#
+# Absent on a LiveKit Cloud deployment, which needs no vendor plugins at all —
+# hence the guard rather than a plain import.
+try:
+    from livekit.plugins import cartesia, deepgram, elevenlabs, inworld, openai, sarvam
+except ImportError:  # pragma: no cover - depends on how the image was built
+    cartesia = deepgram = elevenlabs = inworld = openai = sarvam = None  # type: ignore[assignment]
 
 load_dotenv()
 
@@ -45,6 +59,35 @@ WEBHOOK_SECRET = os.environ["SCREENING_WEBHOOK_SECRET"]
 STT_MODEL = os.getenv("SCREENING_STT", "deepgram/nova-3")
 TTS_MODEL = os.getenv("SCREENING_TTS", "cartesia/sonic-3")
 LLM_MODEL = os.getenv("SCREENING_LLM", "openai/gpt-4o-mini")
+
+# Where speech and the LLM come from:
+#
+#   "inference" — LiveKit's gateway. One account, no vendor keys. Only works on
+#                 LiveKit Cloud: the gateway checks that the room belongs to the
+#                 project and answers a self-hosted job with 401.
+#   "plugins"   — each vendor called directly with our own key. This is what a
+#                 self-hosted deployment must use.
+#
+# The model strings are the same either way ("provider/model"), so switching
+# hosting does not mean rewriting the config.
+SPEECH_BACKEND = os.getenv("SCREENING_SPEECH", "inference")
+
+# Optional LiveKit Cloud project credentials, when they differ from the media
+# server's (only meaningful on the "inference" backend).
+INFERENCE_KEY = os.getenv("LIVEKIT_INFERENCE_API_KEY")
+INFERENCE_SECRET = os.getenv("LIVEKIT_INFERENCE_API_SECRET")
+
+INFERENCE_AUTH: dict[str, str] = (
+    {"api_key": INFERENCE_KEY, "api_secret": INFERENCE_SECRET}
+    if INFERENCE_KEY and INFERENCE_SECRET
+    else {}
+)
+
+# An OpenAI-compatible endpoint for the LLM. The rest of the platform already
+# runs its AI on DigitalOcean's Llama, and that same account works here — one
+# less vendor to sign up with when self-hosting.
+LLM_BASE_URL = os.getenv("SCREENING_LLM_BASE_URL")
+LLM_API_KEY = os.getenv("SCREENING_LLM_API_KEY")
 
 # What to tell the STT it is listening to. Hindi calls are never pure Hindi —
 # "kal subah 10 baje site pe aa jaunga" is one sentence in two languages — so
@@ -79,7 +122,14 @@ def load_metadata(ctx: JobContext) -> dict[str, Any]:
         return json.load(handle)
 
 
-def build_stt(meta: dict[str, Any]) -> inference.STT:
+def split_model(spec: str) -> tuple[str, str]:
+    """"deepgram/nova-3" -> ("deepgram", "nova-3"). No slash means no vendor."""
+    provider, _, model = spec.partition("/")
+
+    return provider, model or provider
+
+
+def build_stt(meta: dict[str, Any]) -> stt_module.STT:
     """
     Speech recognition, told which language it is listening to.
 
@@ -91,23 +141,106 @@ def build_stt(meta: dict[str, Any]) -> inference.STT:
     """
     language = meta.get("language", "hi")
 
-    return inference.STT(model=STT_MODEL, language=STT_LANGUAGES.get(language, language))
+    if SPEECH_BACKEND == "inference":
+        return inference.STT(
+            model=STT_MODEL,
+            language=STT_LANGUAGES.get(language, language),
+            **INFERENCE_AUTH,
+        )
+
+    provider, model = split_model(STT_MODEL)
+
+    if provider == "sarvam" and sarvam is not None:
+        # Sarvam is Indian and wants a full locale, not a bare code. Worth
+        # trying against Deepgram on real worksite audio before going live.
+        return sarvam.STT(model=model, language=f"{language}-IN")
+
+    if provider == "deepgram" and deepgram is not None:
+        return deepgram.STT(model=model, language=STT_LANGUAGES.get(language, language))
+
+    if provider == "inworld" and inworld is not None:
+        # Same account as the TTS, which is the point: one vendor, one key, and
+        # a free tier that covers both. Wants BCP-47, like its TTS does.
+        return inworld.STT(
+            model=STT_MODEL,
+            language=f"{language}-IN" if len(language) == 2 else language,
+        )
+
+    raise RuntimeError(f"No self-hosted STT plugin available for '{provider}'.")
 
 
-def build_tts(meta: dict[str, Any]) -> inference.TTS:
+def build_tts(meta: dict[str, Any]) -> tts_module.TTS:
     """
     The voice, told which language to speak.
 
     Same trap in reverse: the default voice reads Hindi words with English
     pronunciation, which is the fastest way to get hung up on. The voice id is
-    provider-specific, so it is only passed when one is actually configured.
+    provider-specific — Sarvam calls it a speaker, ElevenLabs a voice_id — so it
+    is only passed when one is actually configured, and never across vendors: a
+    name from the wrong provider synthesises silence rather than erroring.
+
+    Language is passed provider-shaped too: Sarvam wants `hi-IN` in its own
+    field, Cartesia a bare `hi`, Inworld a BCP-47 tag.
     """
+    language = meta.get("language", "hi")
     voice = str(meta.get("voice") or "").strip()
 
-    return inference.TTS(
-        model=TTS_MODEL,
-        language=meta.get("language", "hi"),
-        **({"voice": voice} if voice else {}),
+    if SPEECH_BACKEND == "inference":
+        return inference.TTS(
+            model=TTS_MODEL,
+            language=language,
+            **({"voice": voice} if voice else {}),
+            **INFERENCE_AUTH,
+        )
+
+    provider, model = split_model(TTS_MODEL)
+
+    if provider == "sarvam" and sarvam is not None:
+        return sarvam.TTS(
+            model=model,
+            target_language_code=f"{language}-IN",
+            **({"speaker": voice} if voice else {}),
+        )
+
+    if provider == "cartesia" and cartesia is not None:
+        return cartesia.TTS(model=model, language=language, **({"voice": voice} if voice else {}))
+
+    if provider == "elevenlabs" and elevenlabs is not None:
+        return elevenlabs.TTS(model=model, language=language, **({"voice_id": voice} if voice else {}))
+
+    if provider == "inworld" and inworld is not None:
+        # The only vendor whose free tier will clone a voice, so this is the
+        # branch a cloned `SCREENING_VOICE` runs through. Cloned ids are
+        # workspace-scoped and look like "silver-frog-2311__karigar-hindi";
+        # built-in ones are bare names like "Meher".
+        return inworld.TTS(
+            model=model,
+            language=f"{language}-IN" if len(language) == 2 else language,
+            **({"voice": voice} if voice else {}),
+        )
+
+    raise RuntimeError(f"No self-hosted TTS plugin available for '{provider}'.")
+
+
+def build_llm() -> llm_module.LLM:
+    """
+    The brain. On LiveKit Cloud this is the inference gateway; self-hosted it is
+    any OpenAI-compatible endpoint — including the DigitalOcean Llama the rest
+    of the platform's AI already runs on, which is why no new LLM account is
+    needed to leave the cloud.
+    """
+    if SPEECH_BACKEND == "inference":
+        return inference.LLM(model=LLM_MODEL, **INFERENCE_AUTH)
+
+    if openai is None:
+        raise RuntimeError("The openai plugin is required for a self-hosted LLM.")
+
+    _, model = split_model(LLM_MODEL)
+
+    return openai.LLM(
+        model=model,
+        **({"base_url": LLM_BASE_URL} if LLM_BASE_URL else {}),
+        **({"api_key": LLM_API_KEY} if LLM_API_KEY else {}),
     )
 
 
@@ -175,7 +308,7 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     """
     session = AgentSession(
         stt=build_stt(meta),
-        llm=inference.LLM(model=LLM_MODEL),
+        llm=build_llm(),
         tts=build_tts(meta),
     )
 

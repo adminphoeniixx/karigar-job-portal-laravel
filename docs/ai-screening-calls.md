@@ -168,6 +168,54 @@ the webhook, and the employer's confirmation flow. What it cannot prove: that a
 phone rings, that a no-answer retries, and how the voice sounds after a mobile
 network has squeezed it. Those need a carrier.
 
+## Self-hosting LiveKit
+
+We run on LiveKit **Cloud**. Self-hosting works — the stack is in
+`deployment/livekit/` and it has been run end to end, not just written.
+
+**Verified on 2026-08-17.** `docker compose -f
+deployment/livekit/docker-compose.livekit.yml up -d redis livekit`, then the
+agent worker pointed at `ws://localhost:7880`. The server came up, the worker
+registered, a dispatch was accepted, the agent joined the room over **UDP**, and
+Sarvam synthesised the Hindi greeting — no 401 anywhere in the speech path.
+`livekit/livekit-server` and `livekit/sip` are open source and run fine on our
+own VPS next to the app.
+
+**The one thing that does not come with it: LiveKit Inference.** The speech and
+LLM gateway is a separate cloud host (`agent-gateway.livekit.cloud`) and it will
+not serve a job running on someone else's server — the same credentials that
+work from a standalone script come back **401** once the request carries a
+self-hosted room and job id.
+
+That used to be the blocker. It is not any more, because we no longer use
+Inference: `SCREENING_SPEECH=plugins` calls each vendor directly with our own
+key, and the LLM is the DigitalOcean Llama the rest of the app already runs on.
+The same setting works on Cloud and self-hosted, so the two deployments differ
+only in `LIVEKIT_URL`.
+
+One residual 401 is expected and harmless: LiveKit's **cloud turn detector** is
+also gateway-hosted, and the agent logs
+`cloud turn detector failed (401); falling back to local mini model`. The local
+model ships in the image and does the same job.
+
+**The UDP range must sit below the kernel's ephemeral range**
+(`net.ipv4.ip_local_port_range`, 32768-60999 by default). LiveKit's own default
+of 50000-60000 sits *inside* it, so an unrelated outgoing socket can already
+hold a port when the server starts and the bind fails with "address already in
+use" — intermittently, which is the worst way to find out. `livekit.yaml` uses
+20000-20200: below the ephemeral range, and narrow enough that a VPS firewall
+will actually let you open it.
+
+**So the trade is:** save the LiveKit Cloud bill, take on a UDP-capable host,
+TLS on the signalling port, and SIP ports the carrier can reach. No extra vendor
+accounts — we already bring our own speech and LLM keys either way. At today's
+volume the free Cloud tier covers five concurrent calls, so this is still a
+"when we scale" move rather than an urgent one — but it is now a config change,
+not a project.
+
+The phone number is unaffected either way — it comes from an Indian carrier, not
+from LiveKit.
+
 ## Swapping the provider
 
 One file. Implement `App\Services\Screening\VoiceAgent` — `place()` starts the

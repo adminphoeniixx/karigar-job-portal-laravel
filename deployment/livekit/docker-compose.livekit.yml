@@ -1,0 +1,83 @@
+# Self-hosted LiveKit for the AI screening calls.
+#
+# Only worth running instead of LiveKit Cloud when call volume makes the cloud
+# bill hurt, or when the audio must not leave our own infrastructure. Read
+# docs/ai-screening-calls.md#self-hosting first — there is one hard catch:
+# LiveKit *Inference* (the speech and LLM gateway we use today) does not serve a
+# self-hosted server, so this stack only works with our own Deepgram / Cartesia /
+# OpenAI keys.
+#
+#   docker compose -f deployment/livekit/docker-compose.livekit.yml up -d
+#
+# On easypanel, add these as a compose service and open the ports listed below
+# on the VPS firewall — they are UDP, so the HTTP proxy will not do it for you.
+
+services:
+  # State shared between the media server and the SIP bridge.
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save "" --appendonly no
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --config /etc/livekit.yaml
+    environment:
+      # "key: secret" — generate the secret yourself, minimum 32 characters.
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880"          # signalling (websocket) — put TLS in front of this
+      - "7881:7881"          # RTC over TCP, the fallback when UDP is blocked
+      - "20000-20200:20000-20200/udp"  # the actual audio — see livekit.yaml
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Only needed once a carrier trunk exists. Comment it out until then.
+  sip:
+    image: livekit/sip:latest
+    command: --config /etc/sip.yaml
+    environment:
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+    volumes:
+      - ./sip.yaml:/etc/sip.yaml:ro
+    ports:
+      - "5060:5060/udp"                # the carrier signals here
+      - "5060:5060/tcp"
+      - "10000-10100:10000-10100/udp"  # call audio
+    depends_on:
+      - livekit
+    restart: unless-stopped
+
+  # The voice itself. Same image whether LiveKit is self-hosted or cloud — only
+  # LIVEKIT_URL changes.
+  agent:
+    build:
+      context: ../../services/screening-agent
+    environment:
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      LIVEKIT_AGENT_NAME: screening-agent
+      SCREENING_WEBHOOK_URL: ${SCREENING_WEBHOOK_URL}
+      SCREENING_WEBHOOK_SECRET: ${SCREENING_WEBHOOK_SECRET}
+      # Self-hosted has no inference gateway: every vendor is called directly
+      # with our own key.
+      SCREENING_SPEECH: plugins
+      SCREENING_STT: ${SCREENING_STT:-sarvam/saarika:v2.5}
+      SCREENING_TTS: ${SCREENING_TTS:-sarvam/bulbul:v3}
+      SARVAM_API_KEY: ${SARVAM_API_KEY:-}
+      # Deepgram/Cartesia are the alternative pair; set the two models above to
+      # deepgram/nova-3 and cartesia/sonic-3 and fill these in instead.
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      CARTESIA_API_KEY: ${CARTESIA_API_KEY:-}
+      # No new LLM account: this is the DigitalOcean Llama the app already uses.
+      SCREENING_LLM: ${SCREENING_LLM:-openai/llama3.3-70b-instruct}
+      SCREENING_LLM_BASE_URL: ${AI_BASE_URL:-https://inference.do-ai.run/v1}
+      SCREENING_LLM_API_KEY: ${AI_KEY:-}
+    depends_on:
+      - livekit
+    restart: unless-stopped
