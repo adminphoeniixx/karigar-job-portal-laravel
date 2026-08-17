@@ -26,7 +26,15 @@ from typing import Any
 import aiohttp
 from dotenv import load_dotenv
 from livekit import agents, api
-from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, cli, inference
+from livekit.agents import (
+    Agent,
+    AgentSession,
+    JobContext,
+    WorkerOptions,
+    cli,
+    function_tool,
+    inference,
+)
 from livekit.agents import llm as llm_module, stt as stt_module, tts as tts_module
 
 # Imported here, at module level, and not inside the builders where they are
@@ -49,6 +57,16 @@ logger = logging.getLogger("screening-agent")
 # How long to wait for someone to pick up. Beyond this the carrier has almost
 # always given up too, and Laravel will schedule the retry.
 ANSWER_TIMEOUT = float(os.getenv("SCREENING_ANSWER_TIMEOUT", "45"))
+
+# The backstop on a call that will not end by itself. The agent hangs up when it
+# is done, but that depends on the model calling the tool — a worker who never
+# speaks, or a model that keeps finding one more thing to say, would otherwise
+# hold the line open and bill STT, TTS and the LLM for it.
+#
+# Deliberately longer than the two minutes the script aims for, so that a call
+# running slightly over still gets to finish properly instead of being cut
+# mid-sentence. Anything still going at three minutes has gone wrong.
+MAX_CALL_SECONDS = float(os.getenv("SCREENING_MAX_CALL_SECONDS", "180"))
 
 WEBHOOK_URL = os.environ["SCREENING_WEBHOOK_URL"]
 WEBHOOK_SECRET = os.environ["SCREENING_WEBHOOK_SECRET"]
@@ -306,6 +324,24 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     who answered the phone, or you in console mode. Identical either way, which
     is the whole point: a rehearsal exercises the real script.
     """
+    # Set when the agent decides it is done. A prompt cannot hang up a phone —
+    # telling the model in the instructions to "end the call" achieves nothing
+    # on its own — so it gets an actual tool to call, and this is what it sets.
+    finished = asyncio.Event()
+
+    @function_tool
+    async def end_call() -> str:
+        """
+        Hang up the phone. Call this as soon as the call is finished: you have
+        the worker's answer and, if they were interested, a possible interview
+        time; or they are not interested; or they asked to be called back. Say
+        your goodbye first, then call this.
+        """
+        logger.info("agent ended the call", extra={"call_id": call_id})
+        finished.set()
+
+        return "The call is ending."
+
     session = AgentSession(
         stt=build_stt(meta),
         llm=build_llm(),
@@ -314,24 +350,46 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
 
     await session.start(
         room=ctx.room,
-        agent=Agent(instructions=meta["instructions"]),
+        agent=Agent(instructions=meta["instructions"], tools=[end_call]),
     )
 
     # The fixed opening line. Said, not generated, so every worker hears the
     # same disclosure of who is calling and why.
     await session.say(meta["greeting"], allow_interruptions=True)
 
-    # Hold the call open until the far end goes away. The instructions tell the
-    # agent to end the conversation once it has what it came for.
+    # The call ends on whichever comes first: the worker hangs up, the agent
+    # decides it is done, or the backstop fires.
     disconnected = asyncio.Event()
     ctx.room.on("participant_disconnected", lambda _: disconnected.set())
 
+    waits = [asyncio.create_task(disconnected.wait()), asyncio.create_task(finished.wait())]
+
     try:
-        await disconnected.wait()
+        await asyncio.wait_for(
+            asyncio.wait(waits, return_when=asyncio.FIRST_COMPLETED),
+            timeout=MAX_CALL_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "call hit the maximum duration and was cut off",
+            extra={"call_id": call_id, "seconds": MAX_CALL_SECONDS},
+        )
     except asyncio.CancelledError:
         # Ctrl+C in console mode. Still report — the transcript up to here is
         # exactly what we wanted to look at.
         pass
+    finally:
+        for wait in waits:
+            wait.cancel()
+
+    # Let the goodbye actually reach the worker before the line drops. Only
+    # worth waiting on when the agent chose to end: if the worker already hung
+    # up there is nobody left to hear it.
+    if finished.is_set():
+        try:
+            await asyncio.wait_for(session.drain(), timeout=15)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            logger.warning("goodbye did not finish before hangup", extra={"call_id": call_id})
 
     await report(call_id, **await extract(session, meta))
 

@@ -197,6 +197,12 @@ class CallScript
 
         End every call by repeating back the day and time they gave, and saying the employer will confirm
         it — never that you will. The repeat-back is so the slot is captured correctly, not a confirmation.
+
+        Then hang up, using the end_call tool. Nothing else ends the call: if you do not call it, the
+        line stays open and the worker is left listening to silence. Call it as soon as you have what
+        you came for — an interview time, or a clear no, or a request to be called back. Say your
+        goodbye first, then call end_call. Do not keep the call going to be polite, and do not ask
+        further questions once you have the answer.
         PROMPT;
     }
 }
