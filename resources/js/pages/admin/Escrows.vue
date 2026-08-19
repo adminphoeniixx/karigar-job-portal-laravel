@@ -65,7 +65,7 @@ const canRelease = (s: string) => s === 'funded' || s === 'release_requested' ||
     <Head title="Escrows" />
 
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="ShieldCheck" title="Escrow Payments" description="Funds held between employers and workers" />
+        <PageHeader :icon="ShieldCheck" title="Escrow Payments" description="Funds held between employers and karigars" />
 
         <div v-if="!payoutsConfigured" class="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
             <AlertTriangle class="mt-0.5 size-5 shrink-0" />
@@ -82,7 +82,7 @@ const canRelease = (s: string) => s === 'funded' || s === 'release_requested' ||
                 <option value="pending">Awaiting payment</option>
                 <option value="funded">Funds held</option>
                 <option value="release_requested">Release requested</option>
-                <option value="released">Paid to worker</option>
+                <option value="released">Paid to karigar</option>
                 <option value="refunded">Refunded</option>
                 <option value="disputed">Disputed</option>
             </select>

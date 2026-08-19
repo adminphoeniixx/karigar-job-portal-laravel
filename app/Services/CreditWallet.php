@@ -148,7 +148,7 @@ class CreditWallet
             'plan' => $subscription?->plan->name,
             'plan_label' => $subscription
                 ? $subscription->plan->name.' · '.__('renews :date', ['date' => $subscription->ends_at?->format('d M Y') ?? '—'])
-                : __('Free plan · unlock worker numbers'),
+                : __('Free plan · unlock karigar numbers'),
             'directory_quota' => $this->account->contactDatabaseQuota(),
         ];
     }

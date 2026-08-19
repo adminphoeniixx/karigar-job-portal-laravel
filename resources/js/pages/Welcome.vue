@@ -1,29 +1,15 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
-    AirVent,
     ArrowRight,
     ArrowUpRight,
     BadgeCheck,
-    Briefcase,
-    Brush,
-    Car,
-    ChefHat,
-    Cog,
-    Flame,
-    Hammer,
-    HardHat,
     Languages,
+    LayoutGrid,
     MapPin,
-    Scissors,
     Search,
     ShieldCheck,
-    Sparkles,
-    Sprout,
     Star,
-    Users,
-    Wand2,
-    Wrench,
     Zap,
 } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
@@ -83,37 +69,29 @@ onUnmounted(() => {
 });
 
 // Categories come from the admin (shared by HandleInertiaRequests), so the
-// landing list always matches what employers can actually pick. Icons are
-// matched by name; anything the admin adds later falls back to a briefcase.
-const categoryIcons: Record<string, typeof Wrench> = {
-    Plumbing: Wrench,
-    Electrician: Zap,
-    Carpenter: Hammer,
-    Painter: Brush,
-    Welder: Flame,
-    Mason: HardHat,
-    Mechanic: Cog,
-    Cleaning: Sparkles,
-    Gardening: Sprout,
-    Cooking: ChefHat,
-    Driver: Car,
-    'Security Guard': ShieldCheck,
-    'AC & Appliance Repair': AirVent,
-    Tailoring: Scissors,
-    Beautician: Wand2,
-    'Labour / Helper': Users,
-};
+// landing list always matches what employers can actually pick.
+//
+// Each tile is a photo, looked up by slug in public/images/categories/. The
+// slug is derived the same way Laravel's Str::slug does it, so a category the
+// admin adds later only needs a matching <slug>.jpg dropped in that folder —
+// no code change. Anything without a photo falls back to a plain tinted tile
+// rather than a broken image.
+const slugify = (name: string) =>
+    name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
 
 const categories = computed(() =>
-    ((page.props.categories as string[] | undefined) ?? Object.keys(categoryIcons)).map((name) => ({
+    ((page.props.categories as string[] | undefined) ?? []).map((name) => ({
         name,
-        icon: categoryIcons[name] ?? Briefcase,
+        image: `/images/categories/${slugify(name)}.jpg`,
     })),
 );
 
-// The links under the search field are the trades people actually search for —
-// the full list is alphabetical, which would open with "AC & Appliance Repair".
-const popularOrder = ['Plumbing', 'Electrician', 'Carpenter', 'Painter', 'Mechanic'];
+// The links under the search field are the crafts people actually search for —
+// the full list is admin-ordered, which need not lead with the crafts people know.
+const popularOrder = ['Bunai / Knitting', 'Kadhai / Embroidery', 'Pottery / Handmade Pots', 'Tailoring', 'Handmade Jewellery'];
 const popularCategories = computed(() => {
     const names = categories.value.map((c) => c.name);
     const picked = popularOrder.filter((n) => names.includes(n));
@@ -122,22 +100,22 @@ const popularCategories = computed(() => {
 });
 
 const features = [
-    { icon: MapPin, title: 'Hyperlocal matching', desc: 'Find jobs and workers within your radius using precise geo-search.' },
+    { icon: MapPin, title: 'Hyperlocal matching', desc: 'Find jobs and karigars within your radius using precise geo-search.' },
     { icon: ShieldCheck, title: 'KYC verified', desc: 'PAN + Aadhaar verification builds trust on both sides.' },
     { icon: Zap, title: 'Instant search', desc: 'Typesense-powered results in milliseconds.' },
     { icon: Languages, title: 'Your language', desc: 'Hindi, English & Hinglish — switch anytime.' },
 ];
 
 const steps = [
-    { n: '01', title: 'Create your profile', desc: 'Sign up as a worker or employer and complete KYC for trust.' },
-    { n: '02', title: 'Post or find work', desc: 'Employers post jobs; workers search nearby openings by skill & location.' },
+    { n: '01', title: 'Create your profile', desc: 'Sign up as a karigar or employer and complete KYC for trust.' },
+    { n: '02', title: 'Post or find work', desc: 'Employers post jobs; karigars search nearby openings by skill & location.' },
     { n: '03', title: 'Connect & get hired', desc: 'Match with the right people and start working — simple and fast.' },
 ];
 
 const testimonials = [
-    { name: 'Ramesh K.', role: 'Electrician · Jaipur', quote: 'Got 3 jobs right near my home. Creating a profile was so easy.' },
-    { name: 'Sunita Builders', role: 'Employer · Pune', quote: 'Hiring verified workers is effortless now. Brilliant platform.' },
-    { name: 'Amit S.', role: 'Painter · Delhi', quote: 'The location filter only shows nearby work — saves me so much time.' },
+    { name: 'Ramesh K.', role: 'Kadhai / Embroidery · Jaipur', quote: 'Got 3 jobs right near my home. Creating a profile was so easy.' },
+    { name: 'Sunita Builders', role: 'Employer · Pune', quote: 'Hiring verified karigars is effortless now. Brilliant platform.' },
+    { name: 'Amit S.', role: 'Pottery / Handmade Pots · Delhi', quote: 'The location filter only shows nearby work — saves me so much time.' },
 ];
 
 const wage = (j: Job) => {
@@ -154,10 +132,31 @@ const wage = (j: Job) => {
       Landing photos (public/images/landing/) — Wikimedia Commons:
       electrician.jpg  "Male labour working at Building construction site" (CC BY-SA 4.0)
       welder.jpg       "Skilled Carpenter Working on Wood in a Workshop" (CC BY-SA 4.0)
-      painter.jpg      "Fort Kochi - Wall Painters on ropes" (CC BY-SA 4.0)
       plumber.jpg      "Masons plastering the brick walk" (CC BY-SA 4.0)
+      potter.jpg       "Potter shaping clay on a traditional manual potter's wheel in
+                       India 01" by Gannu03 (CC BY-SA 4.0)
       employer.jpg     "Uravu Bamboo Workshop - Workers - 2" by Ingo Mehling (CC BY-SA 4.0)
       weaver.jpg       "Chendamangalam-Weaving factory-WUS-09972" by Rainer Halama (CC BY-SA 4.0)
+
+      Craft tiles (public/images/categories/) — Wikimedia Commons, one per
+      category slug. All CC BY / CC BY-SA / CC0, so each needs its credit kept:
+      weaving          "Rajasthan (6343365517)" by Christopher Michel (CC BY 2.0)
+      kadhai-embroidery "Atelier de broderie à Jodhpur (Rajasthan) (2)" by Ji-Elle (CC BY-SA 4.0)
+      painting-coloring "Dilli Haat Madhubani Mithila Painting Artist" by Pallav.journo (CC BY-SA 4.0)
+      pottery-handmade-pots "Kala Ghoda pottery (Unsplash)" by Shane Albuquerque (CC0)
+      wood-carving     "18th century wooden bas-relief panel from Tamil Nadu … Raja Dinkar
+                       Kelkar Museum, Pune" by Alexkom000 (CC BY 4.0)
+      basket-cane-work "BAMBOO CRAFT PURULIA WEST BENGAL IMG 0256" by IMG1952 (CC BY-SA 4.0)
+      tailoring        "Tailor Ooty Market Nilgiris Aug25" by Timothy A. Gonsalves (CC BY-SA 4.0)
+      decorative-handicrafts "Bell metal handicraft Sarthebari" (CC BY-SA 4.0)
+      clay-work        "Busy Artisan" by ClaraGoswami (CC BY-SA 4.0)
+      traditional-artisan-crafts "Workspace of Bharai Kaam Artisans in Tigariya, Betul,
+                       Madhya Pradesh 024" by Shoot stufz (CC BY-SA 4.0)
+      handmade-jewellery "An array of jewellery being sold at Rishikesh" by McKay Savage (CC BY 2.0)
+      handmade-bags-accessories "India - Varanasi paper bag maker - 0078" by Jorge Royan (CC BY-SA 3.0)
+      bunai-knitting   "參訪棉麻屋工坊 (42865723924)" (CC BY 2.0) — cropped to hands; Commons
+                       has no Indian knitting photo, so this is a stand-in
+      crochet          "Leftie crochet" (CC0) — same caveat as knitting
     -->
 
     <div class="theme-paper bg-noise min-h-screen bg-background text-foreground antialiased">
@@ -168,7 +167,7 @@ const wage = (j: Job) => {
                     <BrandWordmark />
                 </Link>
                 <nav class="hidden items-center gap-8 text-[13px] font-medium text-muted-foreground lg:flex">
-                    <a href="#trades" class="link-underline">Trades</a>
+                    <a href="#trades" class="link-underline">Crafts</a>
                     <a href="#jobs" class="link-underline">Jobs</a>
                     <a href="#how" class="link-underline">How it works</a>
                     <a href="#why" class="link-underline">Why us</a>
@@ -293,28 +292,43 @@ const wage = (j: Job) => {
             </Link>
         </section>
 
-        <!-- Trades: an index, not a tile grid -->
+        <!-- Crafts: an index, not a tile grid -->
         <section id="trades" class="border-b border-foreground/10">
             <div class="mx-auto max-w-[88rem] px-6 py-20 lg:px-10">
                 <div class="flex flex-wrap items-end justify-between gap-6 border-b border-foreground/10 pb-8">
                     <div>
                         <div class="label-rule text-primary">03 / {{ $t('landing.popularCategories') }}</div>
-                        <h2 class="display-lg mt-4 max-w-md">{{ categories.length }} trades, one app.</h2>
+                        <h2 class="display-lg mt-4 max-w-xl">Traditional Skills. Timeless Value.</h2>
                     </div>
                     <Link href="/jobs" class="link-underline inline-flex items-center gap-2 pb-1 text-sm font-semibold">
                         {{ $t('common.viewAll') }} <ArrowRight class="size-4" />
                     </Link>
                 </div>
-                <div class="grid sm:grid-cols-2 lg:grid-cols-4">
-                    <Link
-                        v-for="c in categories"
-                        :key="c.name"
-                        :href="`/jobs?category=${c.name}`"
-                        class="group flex items-center gap-4 border-b border-foreground/10 py-5 pr-4 transition hover:bg-foreground/[0.03] lg:border-r lg:pl-5 lg:[&:nth-child(4n)]:border-r-0"
-                    >
-                        <component :is="c.icon" class="size-5 shrink-0 text-primary" />
-                        <span class="truncate text-[15px] font-medium">{{ c.name }}</span>
-                        <ArrowUpRight class="ml-auto size-4 shrink-0 -translate-x-1 text-muted-foreground opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100" />
+
+                <!-- Photo tiles, five to a row. The label sits under the frame so
+                     the crop stays clean — no text burned over the craft itself. -->
+                <div class="mt-12 grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-5">
+                    <Link v-for="c in categories" :key="c.name" :href="`/jobs?category=${c.name}`" class="group">
+                        <div class="overflow-hidden rounded-sm bg-foreground/[0.06]">
+                            <img
+                                :src="c.image"
+                                :alt="c.name"
+                                loading="lazy"
+                                class="aspect-[33/21] w-full object-cover transition duration-[900ms] group-hover:scale-[1.06]"
+                            />
+                        </div>
+                        <span class="mt-3 block text-center text-[11.5px] font-medium tracking-[0.09em] uppercase transition group-hover:text-primary">
+                            {{ c.name }}
+                        </span>
+                    </Link>
+
+                    <Link href="/jobs" class="group">
+                        <div class="flex aspect-[33/21] w-full items-center justify-center rounded-sm border border-foreground/15 transition group-hover:border-primary/50 group-hover:bg-foreground/[0.03]">
+                            <LayoutGrid class="size-12 stroke-[1.25] text-foreground/40 transition group-hover:text-primary" />
+                        </div>
+                        <span class="mt-3 block text-center text-[11.5px] font-medium tracking-[0.09em] uppercase transition group-hover:text-primary">
+                            View all categories
+                        </span>
                     </Link>
                 </div>
             </div>
@@ -338,7 +352,7 @@ const wage = (j: Job) => {
                         v-for="job in latestJobs"
                         :key="job.id"
                         :href="`/jobs/${job.id}`"
-                        class="group grid grid-cols-1 items-baseline gap-x-6 gap-y-2 border-b border-foreground/10 py-7 transition hover:bg-foreground/[0.03] md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+                        class="group grid grid-cols-1 items-baseline gap-x-6 gap-y-2 border-b border-foreground/10 py-7 transition hover:bg-foreground/[0.03] md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_13rem]"
                     >
                         <div>
                             <h3 class="text-xl font-bold tracking-tight">
@@ -350,9 +364,9 @@ const wage = (j: Job) => {
                             <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || $t('jobs.locationNA') }}
                         </div>
                         <div class="text-sm font-semibold">{{ wage(job) }}</div>
-                        <div class="flex items-center gap-4">
-                            <span v-if="job.category" class="label-rule hidden text-muted-foreground lg:block">{{ job.category }}</span>
-                            <ArrowUpRight class="size-5 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
+                        <div class="flex items-center justify-end gap-4">
+                            <span v-if="job.category" class="label-rule hidden min-w-0 truncate text-right text-muted-foreground lg:block">{{ job.category }}</span>
+                            <ArrowUpRight class="size-5 shrink-0 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
                         </div>
                     </Link>
                 </div>
@@ -382,7 +396,7 @@ const wage = (j: Job) => {
         <section id="why" class="border-b border-foreground/10">
             <div class="mx-auto grid max-w-[88rem] items-stretch lg:grid-cols-2">
                 <div class="relative min-h-[22rem] lg:min-h-full">
-                    <img src="/images/landing/painter.jpg" alt="Indian painters at work on a building in Kochi" loading="lazy" class="h-full w-full object-cover" />
+                    <img src="/images/landing/potter.jpg" alt="Potter shaping a clay pot on a wheel in his workshop" loading="lazy" class="h-full w-full object-cover" />
                 </div>
                 <div class="px-6 py-16 lg:px-14 lg:py-20">
                     <div class="label-rule text-primary">06 / {{ $t('landing.whyKarigar') }}</div>
@@ -455,13 +469,13 @@ const wage = (j: Job) => {
                     <div class="mt-4 space-y-2.5 text-sm">
                         <Link href="/jobs" class="block transition hover:text-background">Browse jobs</Link>
                         <Link href="/employer/register" class="block transition hover:text-background">Post a job</Link>
-                        <a href="#trades" class="block transition hover:text-background">Trades</a>
+                        <a href="#trades" class="block transition hover:text-background">Crafts</a>
                     </div>
                 </div>
                 <div>
                     <div class="label-rule text-background/50">Join</div>
                     <div class="mt-4 space-y-2.5 text-sm">
-                        <Link href="/worker/register" class="block transition hover:text-background">As a worker</Link>
+                        <Link href="/worker/register" class="block transition hover:text-background">As a karigar</Link>
                         <Link href="/employer/register" class="block transition hover:text-background">As an employer</Link>
                     </div>
                 </div>

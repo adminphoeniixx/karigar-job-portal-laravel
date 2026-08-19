@@ -52,7 +52,7 @@ const save = (p: Plan) => {
     <Head title="Plans" />
 
     <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="Layers" title="Plans & Limits" description="Set what each subscription plan grants — including how many worker-database contacts an employer can access." />
+        <PageHeader :icon="Layers" title="Plans & Limits" description="Set what each subscription plan grants — including how many karigar-database contacts an employer can access." />
 
         <div v-for="p in plans" :key="p.id" class="rounded-2xl border bg-card p-5 shadow-sm">
             <div class="flex items-center justify-between border-b pb-3">
@@ -78,7 +78,7 @@ const save = (p: Plan) => {
                     <input v-model.number="drafts[p.id].contact_unlock_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-orange-600 dark:text-orange-400">Worker-database contacts</label>
+                    <label class="mb-1 block text-xs font-medium text-orange-600 dark:text-orange-400">Karigar-database contacts</label>
                     <input v-model.number="drafts[p.id].contact_database_limit" type="number" min="0" class="w-full rounded-xl border border-orange-500/30 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
             </div>

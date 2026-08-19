@@ -42,7 +42,7 @@ const form = useForm({
 });
 
 const audiences = [
-    { value: 'all', label: 'All workers' },
+    { value: 'all', label: 'All karigars' },
     { value: 'worker', label: 'Specific worker' },
     { value: 'city', label: 'By city' },
     { value: 'category', label: 'By category' },
@@ -103,7 +103,7 @@ const formatDate = (iso: string | null) =>
     <Head title="Push Notifications" />
 
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="Bell" title="Push Notifications" description="Send a push notification to workers' phones" />
+        <PageHeader :icon="Bell" title="Push Notifications" description="Send a push notification to karigars' phones" />
 
         <!-- Compose -->
         <form class="flex flex-col gap-4 rounded-2xl border bg-card p-5 shadow-sm" @submit.prevent="submit">
@@ -124,7 +124,7 @@ const formatDate = (iso: string | null) =>
                     v-model="form.body"
                     rows="3"
                     maxlength="500"
-                    placeholder="Write the notification message workers will see…"
+                    placeholder="Write the notification message karigars will see…"
                     class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                 />
                 <p v-if="form.errors.body" class="mt-1 text-xs text-rose-500">{{ form.errors.body }}</p>
@@ -152,7 +152,7 @@ const formatDate = (iso: string | null) =>
 
             <!-- Specific worker -->
             <div v-if="form.audience === 'worker'" class="relative">
-                <label class="mb-1 block text-sm font-medium">Worker</label>
+                <label class="mb-1 block text-sm font-medium">Karigar</label>
                 <input
                     v-model="workerQuery"
                     placeholder="Search by name or phone…"

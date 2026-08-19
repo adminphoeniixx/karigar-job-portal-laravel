@@ -70,7 +70,7 @@ const inr = '₹' + new Intl.NumberFormat('en-IN').format(Math.round(props.amoun
             <Loader2 class="size-8 animate-spin" />
         </span>
         <h1 class="text-xl font-semibold">Securing {{ inr }} for {{ workerName }}…</h1>
-        <p class="max-w-sm text-sm text-muted-foreground">The funds are held safely and only released to the worker once you confirm the job is done. If the payment window doesn’t open, click below.</p>
+        <p class="max-w-sm text-sm text-muted-foreground">The funds are held safely and only released to the karigar once you confirm the job is done. If the payment window doesn’t open, click below.</p>
         <button
             class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
             @click="openCheckout"

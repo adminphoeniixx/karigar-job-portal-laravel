@@ -18,7 +18,7 @@ const props = defineProps<{
 
 const roles = [
     { value: 'worker', label: 'I am a Worker', hint: 'Find jobs near you' },
-    { value: 'employer', label: 'I am an Employer', hint: 'Hire skilled workers' },
+    { value: 'employer', label: 'I am an Employer', hint: 'Hire skilled karigars' },
 ] as const;
 
 const initialRole = computed(() => {

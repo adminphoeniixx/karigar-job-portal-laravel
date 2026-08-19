@@ -43,7 +43,7 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
         key: 'kyc_verification_enabled',
         title: 'KYC verification',
         description:
-            'When on, workers and employers can submit PAN/Aadhaar/GST for verification and ' +
+            'When on, karigars and employers can submit PAN/Aadhaar/GST for verification and ' +
             'approved ones show a verified badge. When off, the feature disappears everywhere — ' +
             'the apps hide their KYC screens, the badge stops showing, and the KYC endpoints ' +
             'return 404. Submitted documents are kept, so turning it back on restores them.',
@@ -55,7 +55,7 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'Every applicant is always scored by the AI and ranked best-match-first — that never ' +
             'changes. This only controls whether a high scorer is shortlisted automatically. ' +
             'When off, shortlisting stays a manual employer action. When on, any applicant ' +
-            'scoring at or above the threshold below is shortlisted and the worker is notified.',
+            'scoring at or above the threshold below is shortlisted and the karigar is notified.',
     },
     {
         key: 'ai_auto_reject_enabled',
@@ -64,7 +64,7 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'When on, an applicant scoring below the floor below is rejected automatically and told so. ' +
             'Only untouched applications are affected — never one the employer has already shortlisted, ' +
             'interviewed or decided. Leave this off unless you trust the scores: a wrong auto-reject ' +
-            'costs a real worker a real job.',
+            'costs a real karigar a real job.',
     },
     {
         key: 'ai_screening_call_enabled',
@@ -73,7 +73,7 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'When on, an auto-shortlisted applicant is rung on their phone by an AI agent that asks ' +
             'whether they are still interested and when they could interview. The agent only proposes ' +
             'a slot — the employer confirms it before anything is booked. Needs auto-shortlist on and a ' +
-            'configured voice provider; without both, nothing is dialled. Workers who opted out are ' +
+            'configured voice provider; without both, nothing is dialled. Karigars who opted out are ' +
             'never called.',
     },
 ];
@@ -84,7 +84,7 @@ const thresholdHint = computed(() => {
     const n = form.ai_auto_shortlist_threshold;
     const bucket = n >= 80 ? 'only "strong match" applicants' : n >= 60 ? '"good match" and above' : '"maybe" and above — a wide net';
 
-    return `Shortlists ${bucket}. Each auto-shortlist notifies the worker, so a lower number means more notifications.`;
+    return `Shortlists ${bucket}. Each auto-shortlist notifies the karigar, so a lower number means more notifications.`;
 });
 
 // Warn when the two bands are set close together — the gap between them is the

@@ -10,10 +10,11 @@ use Illuminate\Support\Str;
  * @property string $name
  * @property string $slug
  * @property bool $is_active
+ * @property int $sort_order
  */
 class Category extends Model
 {
-    protected $fillable = ['name', 'slug', 'is_active'];
+    protected $fillable = ['name', 'slug', 'is_active', 'sort_order'];
 
     protected function casts(): array
     {
@@ -36,6 +37,11 @@ class Category extends Model
      */
     public static function activeNames(): array
     {
-        return static::query()->where('is_active', true)->orderBy('name')->pluck('name')->all();
+        return static::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
     }
 }

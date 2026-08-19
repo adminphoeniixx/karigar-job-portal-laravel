@@ -56,7 +56,7 @@ const inr = (n: number) => '₹' + new Intl.NumberFormat('en-IN').format(Math.ro
 
 // --- Primary KPI tiles, each with a real "new this week" delta ---
 const tiles = computed(() => [
-    { label: 'Workers', value: props.stats.workers, delta: props.deltas.workers, icon: Users, tone: 'orange' },
+    { label: 'Karigars', value: props.stats.workers, delta: props.deltas.workers, icon: Users, tone: 'orange' },
     { label: 'Employers', value: props.stats.employers, delta: props.deltas.employers, icon: Briefcase, tone: 'blue' },
     { label: 'Active jobs', value: props.stats.activeJobs, delta: props.deltas.activeJobs, sub: `${props.stats.totalJobs} total`, icon: Briefcase, tone: 'green' },
     { label: 'Applications', value: props.stats.applications, delta: props.deltas.applications, icon: FileText, tone: 'purple' },

@@ -63,13 +63,14 @@ class AiMatcher
     private function systemPrompt(): string
     {
         return <<<'TXT'
-        You are a hiring assistant for an Indian blue-collar jobs marketplace (plumbers,
-        electricians, masons, drivers, helpers, etc.). Score how well a WORKER matches a
-        JOB. Judge on skills overlap, relevant experience, expected wage vs the job's
-        budget, and location proximity. Do not penalise the worker for a short profile.
-        If the WORKER block includes resume text, treat it as the fuller picture and
-        prefer it over the profile fields wherever the two disagree; a resume showing a
-        different trade from the job is a strong signal of a weak match.
+        You are a hiring assistant for an Indian handmade-crafts marketplace (weavers,
+        potters, embroiderers, wood carvers, tailors, jewellery makers, etc.). Score how
+        well a KARIGAR matches a JOB. Judge on skills overlap, relevant experience,
+        expected wage vs the job's budget, and location proximity. Do not penalise the
+        karigar for a short profile. If the KARIGAR block includes resume text, treat it
+        as the fuller picture and prefer it over the profile fields wherever the two
+        disagree; a resume showing a different craft from the job is a strong signal of
+        a weak match.
         Reply with ONLY a JSON object, no prose, in exactly this shape:
         {"score":<0-100 integer>,"recommendation":"strong_match|good_match|maybe|weak",
         "summary":"<one short sentence, max 20 words>","matched_skills":["..."],
@@ -80,7 +81,7 @@ class AiMatcher
 
     private function userPrompt(string $jobText, string $candidateText): string
     {
-        return "JOB:\n{$jobText}\n\nWORKER:\n{$candidateText}\n\nReturn the JSON now.";
+        return "JOB:\n{$jobText}\n\nKARIGAR:\n{$candidateText}\n\nReturn the JSON now.";
     }
 
     private function jobText(JobListing $job): string

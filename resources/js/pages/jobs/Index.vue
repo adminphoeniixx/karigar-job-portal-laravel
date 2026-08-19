@@ -138,7 +138,7 @@ const destroy = (id: number) => {
                                     <span
                                         v-if="job.contact_mode !== 'apply'"
                                         class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-300"
-                                        :title="job.contact_mode === 'call' ? 'Workers call you directly' : 'Workers can call or apply'"
+                                        :title="job.contact_mode === 'call' ? 'Karigars call you directly' : 'Karigars can call or apply'"
                                     >
                                         <Phone class="size-2.5" /> {{ job.contact_mode === 'call' ? $t('myJobs.directCall') : $t('myJobs.callApply') }}
                                     </span>

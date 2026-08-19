@@ -91,7 +91,7 @@ const sections = computed(() => [
                 <h2 id="in-the-app">Delete it in the app</h2>
                 <p>
                     This is the quickest route, and the only one that needs nothing from us. It
-                    works the same way in the worker app and the employer app.
+                    works the same way in the karigar app and the employer app.
                 </p>
                 <ol>
                     <li>Open the app and sign in, if you are not already.</li>
@@ -136,7 +136,7 @@ const sections = computed(() => [
                         </a>
                     </p>
                     <p class="mt-3 mb-0 text-sm text-muted-foreground">
-                        Tell us the mobile number the account uses, and whether it is a worker or an
+                        Tell us the mobile number the account uses, and whether it is a karigar or an
                         employer account.
                     </p>
                 </div>
@@ -212,7 +212,7 @@ const sections = computed(() => [
                     </li>
                     <li>
                         <strong>Tell the people you were working with.</strong> Employers you have
-                        applied to, or workers you have hired, lose the thread with you the moment
+                        applied to, or karigars you have hired, lose the thread with you the moment
                         the account goes.
                     </li>
                     <li>

@@ -69,7 +69,7 @@ const go = (url: string | null) => url && router.get(url, {}, { preserveState: t
     <Head title="Karigars" />
 
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="HardHat" title="Karigars" description="All worker accounts with skill & location filters" />
+        <PageHeader :icon="HardHat" title="Karigars" description="All karigar accounts with skill & location filters" />
 
         <!-- Filters -->
         <div class="flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-sm">

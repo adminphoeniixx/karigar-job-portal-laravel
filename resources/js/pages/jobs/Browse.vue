@@ -144,7 +144,7 @@ const selectClass = inputClass;
                     v-for="job in jobs.data"
                     :key="job.id"
                     :href="`/jobs/${job.id}`"
-                    class="group grid grid-cols-1 items-baseline gap-x-6 gap-y-2 border-b border-foreground/10 py-7 transition hover:bg-foreground/[0.03] md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+                    class="group grid grid-cols-1 items-baseline gap-x-6 gap-y-2 border-b border-foreground/10 py-7 transition hover:bg-foreground/[0.03] md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_13rem]"
                 >
                     <div>
                         <h3 class="text-xl font-bold tracking-tight">
@@ -156,9 +156,9 @@ const selectClass = inputClass;
                         <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || t('jobs.locationNA') }}
                     </div>
                     <div class="text-sm font-semibold">{{ wage(job) }}</div>
-                    <div class="flex items-center gap-4">
-                        <span v-if="job.category" class="label-rule hidden text-muted-foreground lg:block">{{ job.category }}</span>
-                        <ArrowUpRight class="size-5 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
+                    <div class="flex items-center justify-end gap-4">
+                        <span v-if="job.category" class="label-rule hidden min-w-0 truncate text-right text-muted-foreground lg:block">{{ job.category }}</span>
+                        <ArrowUpRight class="size-5 shrink-0 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
                     </div>
                 </Link>
             </div>

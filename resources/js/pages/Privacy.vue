@@ -33,7 +33,7 @@ const sections = computed(() => [
     <Head title="Privacy policy — Super Karigar">
         <meta
             name="description"
-            content="What Super Karigar collects from workers and employers, why, who else sees it, and how to have it deleted."
+            content="What Super Karigar collects from karigars and employers, why, who else sees it, and how to have it deleted."
         />
     </Head>
 
@@ -54,7 +54,7 @@ const sections = computed(() => [
                     Privacy policy
                 </h1>
                 <p class="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-                    Super Karigar connects skilled workers with people who need them. Doing that
+                    Super Karigar connects skilled karigars with people who need them. Doing that
                     means holding some genuinely personal things — your phone number, where you
                     work, sometimes an identity document. This page says exactly what we hold,
                     why, and how to make us delete it.
@@ -111,7 +111,7 @@ const sections = computed(() => [
                     </li>
                 </ul>
 
-                <h3>If you are a worker</h3>
+                <h3>If you are a karigar</h3>
                 <ul>
                     <li>
                         <strong>Your trade profile</strong> — skills, years of experience,
@@ -153,7 +153,7 @@ const sections = computed(() => [
                 <h3>What you create by using the platform</h3>
                 <ul>
                     <li>Applications you send, and their status.</li>
-                    <li>Messages between workers and employers.</li>
+                    <li>Messages between karigars and employers.</li>
                     <li>Reviews you leave or receive.</li>
                     <li>Recordings and transcripts of screening calls — see below.</li>
                 </ul>
@@ -161,7 +161,7 @@ const sections = computed(() => [
                 <h2 id="why">Why we use it</h2>
                 <p>We use your information to do the things you came here for, and little else:</p>
                 <ul>
-                    <li>To show you jobs worth your time, and to show employers workers worth theirs.</li>
+                    <li>To show you jobs worth your time, and to show employers karigars worth theirs.</li>
                     <li>To let you sign in, apply, message, and get paid.</li>
                     <li>To tell you when something happens — an application moves, a message arrives, an interview is set.</li>
                     <li>To keep the platform honest: stopping fraud, spam, fake listings and abuse.</li>
@@ -217,7 +217,7 @@ const sections = computed(() => [
                     Your public profile — trade, skills, experience, city, photo — is visible to
                     employers searching for workers. <strong>Your phone number is not.</strong> An
                     employer only gets your contact details when you apply to their job, or when
-                    they spend credits to unlock your profile. Workers see an employer's company
+                    they spend credits to unlock your profile. Karigars see an employer's company
                     details and the jobs they post.
                 </p>
 
