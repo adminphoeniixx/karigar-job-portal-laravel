@@ -76,6 +76,13 @@ const tileDefs = computed(() => [
     { label: 'GST collected', value: inr(props.tiles.gst), icon: ReceiptText, tone: 'bg-amber-500/10 text-amber-600 dark:text-amber-300' },
 ]);
 
+const exports = [
+    { type: 'jobs', label: 'jobs' },
+    { type: 'workers', label: 'karigars' },
+    { type: 'employers', label: 'employers' },
+    { type: 'revenue', label: 'revenue' },
+];
+
 const maxMonthly = computed(() => Math.max(1, ...props.monthly.map((m) => Math.max(m.jobs, m.workers + m.employers))));
 const maxCity = computed(() => Math.max(1, ...props.topCities.map((c) => c.total)));
 const maxCategory = computed(() => Math.max(1, ...props.topCategories.map((c) => c.total)));
@@ -112,9 +119,11 @@ const maxCategory = computed(() => Math.max(1, ...props.topCategories.map((c) =>
                 </select>
             </div>
             <div class="ml-auto flex items-center gap-2">
-                <a v-for="t in ['jobs', 'workers', 'employers', 'revenue']" :key="t" :href="exportUrl(t)"
+                <!-- `type` is the backend's export slug and must stay "workers";
+                     only the label follows the karigar wording. -->
+                <a v-for="t in exports" :key="t.type" :href="exportUrl(t.type)"
                     class="inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold capitalize text-muted-foreground transition hover:bg-muted hover:text-foreground">
-                    <Download class="size-3.5" /> {{ t }} CSV
+                    <Download class="size-3.5" /> {{ t.label }} CSV
                 </a>
             </div>
         </div>

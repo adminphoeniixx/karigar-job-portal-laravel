@@ -133,8 +133,9 @@ const wage = (j: Job) => {
       electrician.jpg  "Male labour working at Building construction site" (CC BY-SA 4.0)
       welder.jpg       "Skilled Carpenter Working on Wood in a Workshop" (CC BY-SA 4.0)
       plumber.jpg      "Masons plastering the brick walk" (CC BY-SA 4.0)
-      potter.jpg       "Potter shaping clay on a traditional manual potter's wheel in
-                       India 01" by Gannu03 (CC BY-SA 4.0)
+      artisan.jpg      "Standing Before His Own Creation" (Kumartuli idol maker,
+                       CC BY-SA 4.0) — exported portrait on purpose: the why-section
+                       band is a tall half-column, and a landscape crop loses the man
       employer.jpg     "Uravu Bamboo Workshop - Workers - 2" by Ingo Mehling (CC BY-SA 4.0)
       weaver.jpg       "Chendamangalam-Weaving factory-WUS-09972" by Rainer Halama (CC BY-SA 4.0)
 
@@ -396,7 +397,7 @@ const wage = (j: Job) => {
         <section id="why" class="border-b border-foreground/10">
             <div class="mx-auto grid max-w-[88rem] items-stretch lg:grid-cols-2">
                 <div class="relative min-h-[22rem] lg:min-h-full">
-                    <img src="/images/landing/potter.jpg" alt="Potter shaping a clay pot on a wheel in his workshop" loading="lazy" class="h-full w-full object-cover" />
+                    <img src="/images/landing/artisan.jpg" alt="Idol maker standing beside the giant clay Ganesh he is sculpting" loading="lazy" class="h-full w-full object-cover" />
                 </div>
                 <div class="px-6 py-16 lg:px-14 lg:py-20">
                     <div class="label-rule text-primary">06 / {{ $t('landing.whyKarigar') }}</div>
