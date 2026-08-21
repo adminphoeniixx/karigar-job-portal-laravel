@@ -21,11 +21,13 @@ import asyncio
 import json
 import logging
 import os
+from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import aiohttp
 from dotenv import load_dotenv
-from livekit import agents, api
+from livekit import api
 from livekit.agents import (
     Agent,
     AgentSession,
@@ -112,6 +114,10 @@ LLM_API_KEY = os.getenv("SCREENING_LLM_API_KEY")
 # they go to the multilingual model rather than to `hi`, which drops the English
 # words. Everything else passes its own code straight through.
 STT_LANGUAGES = {"hi": "multi", "en": "multi"}
+
+# The clock the worker is speaking against, and the one Laravel parses the
+# extracted slot in. Both ends must agree or the interview lands hours out.
+SCREENING_TIMEZONE = os.getenv("SCREENING_TIMEZONE", "Asia/Kolkata")
 
 
 def load_metadata(ctx: JobContext) -> dict[str, Any]:
@@ -413,22 +419,45 @@ async def extract(session: AgentSession, meta: dict[str, Any]) -> dict[str, Any]
 
     schema = json.dumps(meta["extraction_schema"], ensure_ascii=False)
 
+    # Today's date, or the slot is unusable. Workers answer in relative time —
+    # "kal subah", "parso", "Monday ko" — and a model with no idea what day it
+    # is turns that into a guess. Laravel drops a slot in the past, so a wrong
+    # guess silently costs the employer the interview time the worker gave.
+    today = datetime.now(ZoneInfo(SCREENING_TIMEZONE))
+
     prompt = (
         "Read this screening call transcript and return ONLY a JSON object "
         f"matching this schema:\n{schema}\n\n"
+        f"Right now it is {today:%A, %d %B %Y, %H:%M} IST. Resolve anything the "
+        "worker said relative to that — kal, parso, agle Monday — into a real "
+        "date.\n"
         "Times must be IST in 'YYYY-MM-DD HH:MM:SS' form. Use null for anything "
         "the worker did not actually say — never guess a time.\n\n"
         f"Transcript:\n{transcript}"
     )
 
+    # Built the 1.x way on purpose. `ChatContext().append(...)` and awaiting
+    # `chat()` for a `.content` are the 0.x API: on livekit-agents 1.x the
+    # first raises AttributeError and the second returns a stream, so every
+    # extraction died in the `except` below and every call landed in the
+    # database as a transcript with no outcome and no slot.
+    chat_ctx = llm_module.ChatContext.empty()
+    chat_ctx.add_message(role="user", content=prompt)
+
     try:
-        answer = await session.llm.chat(chat_ctx=agents.llm.ChatContext().append(text=prompt))
-        fields = json.loads(_strip_fence(answer.content))
+        answer = await session.llm.chat(chat_ctx=chat_ctx).collect()
+        fields = json.loads(_strip_fence(answer.text))
     except Exception:
         # A call that happened but could not be parsed is still a completed
         # call — the employer can read the transcript and decide themselves.
+        # It is flagged, though: a silent fallback here is what hid the API
+        # mismatch above for weeks of live calls.
         logger.exception("extraction failed", extra={"call_id": meta["room"]})
-        return {"status": "completed", "transcript": transcript}
+        return {
+            "status": "completed",
+            "transcript": transcript,
+            "failure_reason": "extraction_failed",
+        }
 
     return {
         "status": "completed",

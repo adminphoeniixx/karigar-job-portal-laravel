@@ -261,6 +261,56 @@ it('tells the employer when the worker is not interested', function () {
     Notification::assertSentTo($this->employer, ScreeningCallCompleted::class);
 });
 
+it('rejects the application when the worker says no on the call', function () {
+    $call = placeCall();
+
+    postWebhook([
+        'call_id' => $call->provider_call_id,
+        'status' => 'completed',
+        'outcome' => 'not_interested',
+    ])->assertOk();
+
+    expect($this->application->refresh()->status)->toBe(ApplicationStatus::Rejected)
+        ->and($this->application->status_changed_at)->not->toBeNull();
+});
+
+it('rejects the application when the worker already has work', function () {
+    $call = placeCall();
+
+    postWebhook([
+        'call_id' => $call->provider_call_id,
+        'status' => 'completed',
+        'outcome' => 'already_placed',
+    ])->assertOk();
+
+    expect($this->application->refresh()->status)->toBe(ApplicationStatus::Rejected);
+});
+
+it('leaves the application alone when the answer was not a clear no', function (string $outcome) {
+    $call = placeCall();
+
+    postWebhook([
+        'call_id' => $call->provider_call_id,
+        'status' => 'completed',
+        'outcome' => $outcome,
+    ])->assertOk();
+
+    expect($this->application->refresh()->status)->toBe(ApplicationStatus::Pending);
+})->with(['interested', 'callback_later', 'unclear']);
+
+it('does not overrule a decision the employer already made', function () {
+    $call = placeCall();
+    $this->application->update(['status' => ApplicationStatus::Accepted, 'status_changed_at' => now()]);
+
+    postWebhook([
+        'call_id' => $call->provider_call_id,
+        'status' => 'completed',
+        'outcome' => 'not_interested',
+    ])->assertOk();
+
+    expect($this->application->refresh()->status)->toBe(ApplicationStatus::Accepted);
+});
+
 it('refuses to confirm a call with no slot on it', function () {
     $call = placeCall();
 

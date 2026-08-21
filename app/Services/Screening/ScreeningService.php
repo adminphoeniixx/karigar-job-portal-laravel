@@ -178,7 +178,9 @@ class ScreeningService
      * offered a slot, ask the employer to confirm it.
      *
      * Deliberately does NOT touch the application's interview fields. The
-     * agent collects a preference; only {@see confirm()} books anything.
+     * agent collects a preference; only {@see confirm()} books anything. The
+     * one thing it does decide by itself is the opposite case: a worker who
+     * said no closes the application — see {@see closeIfDeclined()}.
      */
     public function apply(ScreeningResult $result): ?ScreeningCall
     {
@@ -218,12 +220,51 @@ class ScreeningService
             return $call;
         }
 
+        // A worker who turned the job down on the call closes the application
+        // then and there, in the same webhook that records the outcome.
+        $this->closeIfDeclined($call);
+
         // Tell the employer how it went — including a flat "not interested",
         // which saves them chasing the applicant themselves.
         $employer = $call->application?->job?->employer;
         $employer?->notify(new ScreeningCallCompleted($call));
 
         return $call;
+    }
+
+    /**
+     * Reject the application when the worker ruled themselves out on the call.
+     *
+     * Mirrors the manual reject — same status, same timestamp — so the worker's
+     * tracker and the employer's tabs read exactly as they always do. It runs
+     * on the call's own webhook, not on a later sweep: an applicant who has
+     * already said no should never sit in the employer's pending queue.
+     *
+     * No rejection notification goes to the worker. They are the one who said
+     * no thirty seconds ago; pushing "your application was rejected" at them
+     * reads as a punishment for answering honestly. The employer still hears
+     * about it through {@see ScreeningCallCompleted}.
+     */
+    private function closeIfDeclined(ScreeningCall $call): void
+    {
+        if ($call->outcome?->closesApplication() !== true) {
+            return;
+        }
+
+        $application = $call->application;
+
+        // Never overrule a decision the employer has already made, and never
+        // reject someone who is booked in for an interview regardless.
+        if ($application === null
+            || $application->status !== ApplicationStatus::Pending
+            || $application->interview_at !== null) {
+            return;
+        }
+
+        $application->update([
+            'status' => ApplicationStatus::Rejected,
+            'status_changed_at' => now(),
+        ]);
     }
 
     /**

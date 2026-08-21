@@ -33,4 +33,16 @@ enum ScreeningOutcome: string
     {
         return $this === self::Interested;
     }
+
+    /**
+     * The worker ruled themselves out on the call, so the application is over
+     * and is rejected on the spot. Deliberately only the two answers that are
+     * unambiguous: "call me back later" and "unclear" leave the application
+     * exactly where it was, because a mis-heard sentence must never cost a
+     * worker a job they still want.
+     */
+    public function closesApplication(): bool
+    {
+        return $this === self::NotInterested || $this === self::AlreadyPlaced;
+    }
 }
