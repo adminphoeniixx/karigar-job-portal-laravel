@@ -4,7 +4,9 @@ namespace App\Notifications;
 
 use App\Models\JobListing;
 use App\Notifications\Channels\FcmChannel;
+use App\Notifications\Channels\TemplatedMailChannel;
 use App\Notifications\Messages\FcmMessage;
+use App\Notifications\Messages\TemplatedMailMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -19,7 +21,7 @@ class NewJobNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', FcmChannel::class];
+        return ['database', FcmChannel::class, TemplatedMailChannel::class];
     }
 
     /**
@@ -38,6 +40,18 @@ class NewJobNotification extends Notification
                 'url' => "/worker/jobs/{$this->job->id}",
             ],
         );
+    }
+
+    public function toTemplatedMail(object $notifiable): TemplatedMailMessage
+    {
+        return TemplatedMailMessage::create('job_posted_match', [
+            'worker_name' => $notifiable->name ?? '',
+            'employer_name' => $this->job->employer?->name ?? '',
+            'job_title' => $this->job->title,
+            'job_location' => collect([$this->job->city, $this->job->state])->filter()->join(', '),
+            'job_category' => $this->job->category ?? '',
+            'action_url' => url("/worker/jobs/{$this->job->id}"),
+        ]);
     }
 
     /**

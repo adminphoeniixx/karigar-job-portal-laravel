@@ -37,8 +37,21 @@ class TemplatedMailer
         $rendered = $template->render($data);
 
         try {
-            Mail::to($email)->send(new TemplatedMail($rendered['subject'], $rendered['body']));
+            // Queued, not sent inline. Brevo is a network hop away and this
+            // runs inside requests a person is waiting on — applying to a job,
+            // shortlisting, accepting. A slow relay used to be a slow response,
+            // and a relay that hung was a request that hung with it.
+            //
+            // Safe because the app container runs its own workers: the queue
+            // program in deployment/octane/FrankenPHP/supervisord.frankenphp.conf
+            // starts two `queue:work --queue=default` processes unconditionally.
+            // If that ever stops being true, mail stops silently — nothing here
+            // will tell you.
+            Mail::to($email)->queue(new TemplatedMail($rendered['subject'], $rendered['body']));
         } catch (Throwable $e) {
+            // Now catches a queue that will not accept the job, rather than a
+            // relay that will not accept the mail. The delivery failure itself
+            // surfaces in failed_jobs after its retries.
             report($e);
         }
     }

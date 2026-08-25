@@ -4,7 +4,9 @@ namespace App\Notifications;
 
 use App\Models\ScreeningCall;
 use App\Notifications\Channels\FcmChannel;
+use App\Notifications\Channels\TemplatedMailChannel;
 use App\Notifications\Messages\FcmMessage;
+use App\Notifications\Messages\TemplatedMailMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -27,7 +29,7 @@ class ScreeningCallCompleted extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', FcmChannel::class];
+        return ['database', FcmChannel::class, TemplatedMailChannel::class];
     }
 
     public function toFcm(object $notifiable): FcmMessage
@@ -42,6 +44,24 @@ class ScreeningCallCompleted extends Notification
                 'url' => $this->url(),
             ],
         );
+    }
+
+    public function toTemplatedMail(object $notifiable): TemplatedMailMessage
+    {
+        return TemplatedMailMessage::create('screening_call_completed', [
+            'employer_name' => $notifiable->name ?? '',
+            'worker_name' => $this->call->worker->name,
+            'job_title' => $this->call->application?->job?->title ?? '',
+            'outcome' => $this->call->outcome?->label() ?? __('No clear answer'),
+            'summary' => $this->call->summary ?: __('No summary was captured for this call.'),
+            // Only set when the worker actually offered a time. Templates
+            // cannot branch, so the no-slot case needs words of its own rather
+            // than a blank row in the table.
+            'proposed_interview_at' => $this->call->awaitingConfirmation()
+                ? ($this->call->proposed_interview_at?->format('l, d M Y, g:i A') ?? __('None given'))
+                : __('None given'),
+            'action_url' => url($this->url()),
+        ]);
     }
 
     /**

@@ -1,12 +1,12 @@
 <?php
 
 use App\Enums\DiscountType;
+use App\Enums\JobStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use App\Mail\TemplatedMail;
 use App\Models\Coupon;
 use App\Models\EmailTemplate;
-use App\Models\JobListing;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
@@ -187,11 +187,11 @@ it('sends an active template but skips an inactive one', function () {
 
     EmailTemplate::create(['key' => 'welcome', 'name' => 'W', 'subject' => 'Hi {{ name }}', 'body_html' => 'x', 'is_active' => true]);
     TemplatedMailer::send('welcome', 'a@b.com', ['name' => 'Ram']);
-    Mail::assertSent(TemplatedMail::class, 1);
+    Mail::assertQueued(TemplatedMail::class, 1);
 
     EmailTemplate::create(['key' => 'paused', 'name' => 'P', 'subject' => 's', 'body_html' => 'x', 'is_active' => false]);
     TemplatedMailer::send('paused', 'a@b.com', []);
-    Mail::assertSent(TemplatedMail::class, 1); // still just the one
+    Mail::assertQueued(TemplatedMail::class, 1); // still just the one
 });
 
 it('emails the employer and worker when a worker applies', function () {
@@ -202,14 +202,14 @@ it('emails the employer and worker when a worker applies', function () {
 
     $job = $this->employer->jobListings()->create([
         'title' => 'Wiring', 'description' => 'x', 'category' => 'Electrician',
-        'status' => \App\Enums\JobStatus::Active->value, 'vacancies' => 1, 'city' => 'Jaipur', 'state' => 'Rajasthan',
+        'status' => JobStatus::Active->value, 'vacancies' => 1, 'city' => 'Jaipur', 'state' => 'Rajasthan',
     ]);
 
     $this->actingAs($this->worker)
         ->post("/jobs/{$job->id}/apply", ['cover_note' => 'Available'])
         ->assertRedirect();
 
-    Mail::assertSent(TemplatedMail::class, 2);
+    Mail::assertQueued(TemplatedMail::class, 2);
 });
 
 it('lets an admin edit an email template', function () {

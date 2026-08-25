@@ -50,7 +50,7 @@ it('lets an employer shortlist an applicant, notifying and emailing the worker',
     expect($this->application->fresh()->shortlisted_at)->not->toBeNull();
 
     Notification::assertSentTo($this->worker, ShortlistedNotification::class);
-    Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo($this->worker->email));
+    Mail::assertQueued(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo($this->worker->email));
 });
 
 it('toggles the shortlist off without emailing again', function () {
@@ -65,7 +65,7 @@ it('toggles the shortlist off without emailing again', function () {
 
     expect($this->application->fresh()->shortlisted_at)->toBeNull();
     Notification::assertNothingSent();
-    Mail::assertNothingSent();
+    Mail::assertNothingQueued();
 });
 
 it('blocks other employers from shortlisting', function () {

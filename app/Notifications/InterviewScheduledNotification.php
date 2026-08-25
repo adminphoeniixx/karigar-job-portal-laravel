@@ -4,7 +4,9 @@ namespace App\Notifications;
 
 use App\Models\JobApplication;
 use App\Notifications\Channels\FcmChannel;
+use App\Notifications\Channels\TemplatedMailChannel;
 use App\Notifications\Messages\FcmMessage;
+use App\Notifications\Messages\TemplatedMailMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -19,7 +21,7 @@ class InterviewScheduledNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', FcmChannel::class];
+        return ['database', FcmChannel::class, TemplatedMailChannel::class];
     }
 
     public function toFcm(object $notifiable): FcmMessage
@@ -33,6 +35,38 @@ class InterviewScheduledNotification extends Notification
                 'url' => '/worker/applications',
             ],
         );
+    }
+
+    public function toTemplatedMail(object $notifiable): TemplatedMailMessage
+    {
+        $job = $this->application->job;
+
+        return TemplatedMailMessage::create('interview_scheduled', [
+            'worker_name' => $this->application->worker->name,
+            'employer_name' => $job->employer?->name ?? '',
+            'job_title' => $job->title,
+            'job_location' => trim(implode(', ', array_filter([$job->city, $job->state]))),
+            // Spelled out in full, unlike the push, which only has room for
+            // "12 Sep, 4:00 PM". An interview time read off an email hours
+            // later needs the weekday and the year to be unambiguous.
+            'interview_at' => $this->application->interview_at?->format('l, d M Y, g:i A') ?? '—',
+            'interview_mode' => $this->modeLabel(),
+            'action_url' => url('/worker/applications'),
+        ]);
+    }
+
+    /**
+     * The three modes the rest of the app uses. Shown to the worker as the
+     * thing they have to *do*, not as the enum value.
+     */
+    private function modeLabel(): string
+    {
+        return match ($this->application->interview_mode) {
+            'site' => __('In person, at the worksite'),
+            'phone' => __('Over the phone'),
+            'video' => __('Video call'),
+            default => __('The employer will confirm how'),
+        };
     }
 
     /**

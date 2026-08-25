@@ -4,7 +4,9 @@ namespace App\Notifications;
 
 use App\Models\JobListing;
 use App\Notifications\Channels\FcmChannel;
+use App\Notifications\Channels\TemplatedMailChannel;
 use App\Notifications\Messages\FcmMessage;
+use App\Notifications\Messages\TemplatedMailMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -22,7 +24,7 @@ class JobInviteNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', FcmChannel::class];
+        return ['database', FcmChannel::class, TemplatedMailChannel::class];
     }
 
     public function toFcm(object $notifiable): FcmMessage
@@ -36,6 +38,22 @@ class JobInviteNotification extends Notification
                 'url' => "/jobs/{$this->job->id}",
             ],
         );
+    }
+
+    public function toTemplatedMail(object $notifiable): TemplatedMailMessage
+    {
+        return TemplatedMailMessage::create('job_invite', [
+            'worker_name' => $notifiable->name ?? '',
+            'employer_name' => $this->job->employer?->name ?? __('An employer'),
+            'job_title' => $this->job->title,
+            'job_location' => trim(implode(', ', array_filter([$this->job->city, $this->job->state]))),
+            // The employer's own words, when they wrote any. Templates are
+            // plain {{ placeholder }} substitution with no conditionals, so an
+            // empty value would render an empty quote block — hence a sentence
+            // rather than ''.
+            'note' => $this->note ?: __('They did not leave a message, but they picked you out themselves.'),
+            'action_url' => url("/jobs/{$this->job->id}"),
+        ]);
     }
 
     /**
