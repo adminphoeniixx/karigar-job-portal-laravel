@@ -255,6 +255,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Push notifications — manual broadcasts to workers
     Route::get('push-notifications', [AdminPushNotificationController::class, 'index'])->name('push-notifications.index');
     Route::get('push-notifications/workers', [AdminPushNotificationController::class, 'searchWorkers'])->name('push-notifications.workers');
+    Route::post('push-notifications/suggest', [AdminPushNotificationController::class, 'suggest'])->name('push-notifications.suggest');
     Route::post('push-notifications', [AdminPushNotificationController::class, 'store'])->name('push-notifications.store');
 
     // App-wide settings (feature toggles)

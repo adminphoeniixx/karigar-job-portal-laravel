@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { Bell, Check, Send, Users } from '@lucide/vue';
+import { Bell, Check, Send, Sparkles, Users, Wand2 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -75,6 +75,83 @@ const pickWorker = (w: WorkerHit) => {
     workerResults.value = [];
 };
 
+// --- AI draft panel ---
+// Copy only; nothing here sends anything. The admin picks a draft, it lands in
+// the title/body fields above, and the normal compose flow takes over — which
+// is why this does not touch `form` until they choose one.
+interface Variation {
+    title: string;
+    body: string;
+}
+
+const idea = ref('');
+const draftLanguage = ref<'hinglish' | 'hindi' | 'english'>('hinglish');
+const draftCount = ref(5);
+const drafts = ref<Variation[]>([]);
+const drafting = ref(false);
+const draftError = ref('');
+const usedDraft = ref<number | null>(null);
+
+const languages = [
+    { value: 'hinglish', label: 'Hinglish' },
+    { value: 'hindi', label: 'हिंदी' },
+    { value: 'english', label: 'English' },
+] as const;
+
+const generateDrafts = async () => {
+    if (!idea.value.trim() || drafting.value) return;
+
+    drafting.value = true;
+    draftError.value = '';
+    drafts.value = [];
+    usedDraft.value = null;
+
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+        const res = await fetch('/admin/push-notifications/suggest', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': token,
+            },
+            body: JSON.stringify({
+                idea: idea.value,
+                count: draftCount.value,
+                language: draftLanguage.value,
+            }),
+        });
+
+        if (!res.ok) {
+            // 422 comes back as { errors: { idea: [...] } } — the controller
+            // hand-builds it, because web routes do not render JSON validation
+            // errors. Anything else is the provider having a bad day, which the
+            // writer has already logged server-side.
+            const payload = await res.json().catch(() => null);
+            const firstError = payload?.errors ? Object.values(payload.errors).flat()[0] : null;
+            throw new Error((firstError as string) ?? `Could not draft copy (${res.status}).`);
+        }
+
+        drafts.value = (await res.json()).variations ?? [];
+
+        if (drafts.value.length === 0) {
+            draftError.value = 'Nothing came back. Try rewording the idea.';
+        }
+    } catch (e) {
+        draftError.value = e instanceof Error ? e.message : 'Could not draft copy.';
+    } finally {
+        drafting.value = false;
+    }
+};
+
+const useDraft = (draft: Variation, index: number) => {
+    form.title = draft.title;
+    form.body = draft.body;
+    usedDraft.value = index;
+};
+
 const canSubmit = computed(() => {
     if (!form.title.trim() || !form.body.trim()) return false;
     if (form.audience === 'worker') return !!form.worker_id;
@@ -104,6 +181,95 @@ const formatDate = (iso: string | null) =>
 
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
         <PageHeader :icon="Bell" title="Push Notifications" description="Send a push notification to karigars' phones" />
+
+        <!-- Draft with AI -->
+        <section class="flex flex-col gap-4 rounded-2xl border bg-card p-5 shadow-sm">
+            <div class="flex items-center gap-2">
+                <Sparkles class="size-4 text-orange-500" />
+                <h2 class="text-sm font-semibold">Draft with AI</h2>
+                <span class="text-xs text-muted-foreground">optional</span>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-medium">What is the notification about?</label>
+                <textarea
+                    v-model="idea"
+                    rows="2"
+                    maxlength="500"
+                    placeholder="e.g. new plumbing jobs in Jaipur this week"
+                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                    @keydown.ctrl.enter="generateDrafts"
+                />
+            </div>
+
+            <div class="flex flex-wrap items-end gap-4">
+                <div>
+                    <label class="mb-1.5 block text-xs font-medium text-muted-foreground">Language</label>
+                    <div class="flex gap-2">
+                        <button
+                            v-for="l in languages"
+                            :key="l.value"
+                            type="button"
+                            class="rounded-lg border px-3 py-1.5 text-xs font-medium transition"
+                            :class="draftLanguage === l.value
+                                ? 'border-orange-500 bg-orange-500/10 text-orange-600 dark:text-orange-300'
+                                : 'border-border text-muted-foreground hover:bg-muted'"
+                            @click="draftLanguage = l.value"
+                        >
+                            {{ l.label }}
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="mb-1.5 block text-xs font-medium text-muted-foreground">How many</label>
+                    <input
+                        v-model.number="draftCount"
+                        type="number"
+                        min="1"
+                        max="20"
+                        class="w-20 rounded-lg border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                    />
+                </div>
+
+                <button
+                    type="button"
+                    :disabled="!idea.trim() || drafting"
+                    class="ml-auto inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    @click="generateDrafts"
+                >
+                    <Wand2 class="size-4" />
+                    {{ drafting ? 'Writing…' : 'Generate' }}
+                </button>
+            </div>
+
+            <p v-if="draftError" class="text-xs text-rose-500">{{ draftError }}</p>
+
+            <!-- Drafts. Clicking one fills the compose form below; nothing sends. -->
+            <ul v-if="drafts.length" class="flex flex-col gap-2">
+                <li
+                    v-for="(d, i) in drafts"
+                    :key="i"
+                    class="flex items-start gap-3 rounded-xl border p-3 transition"
+                    :class="usedDraft === i ? 'border-orange-500 bg-orange-500/5' : 'border-border hover:bg-muted/50'"
+                >
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-semibold">{{ d.title }}</p>
+                        <p class="mt-0.5 text-sm text-muted-foreground">{{ d.body }}</p>
+                    </div>
+                    <button
+                        type="button"
+                        class="shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition"
+                        :class="usedDraft === i
+                            ? 'border-orange-500 text-orange-600 dark:text-orange-300'
+                            : 'border-border hover:bg-muted'"
+                        @click="useDraft(d, i)"
+                    >
+                        {{ usedDraft === i ? 'Used' : 'Use this' }}
+                    </button>
+                </li>
+            </ul>
+        </section>
 
         <!-- Compose -->
         <form class="flex flex-col gap-4 rounded-2xl border bg-card p-5 shadow-sm" @submit.prevent="submit">

@@ -9,11 +9,13 @@ use App\Models\DeviceToken;
 use App\Models\PushCampaign;
 use App\Models\User;
 use App\Models\WorkerProfile;
+use App\Services\PushMessageWriter;
 use App\Support\PushSender;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -69,6 +71,39 @@ class PushNotificationController extends Controller
             ]);
 
         return response()->json(['workers' => $workers]);
+    }
+
+    /**
+     * Draft notification copy from a one-line idea.
+     *
+     * Returns JSON rather than an Inertia response because nothing on the page
+     * navigates: the admin stays in the compose form and picks a draft, which
+     * fills the title and body fields in place.
+     */
+    public function suggest(Request $request, PushMessageWriter $writer): JsonResponse
+    {
+        // Validated by hand: the app only renders JSON errors under /api/* (see
+        // bootstrap/app.php), and this endpoint is read by fetch(), not Inertia.
+        // $request->validate() here would throw instead of answering 422.
+        $validator = Validator::make($request->all(), [
+            'idea' => ['required', 'string', 'max:500'],
+            'count' => ['nullable', 'integer', 'min:1', 'max:'.PushMessageWriter::MAX_COUNT],
+            'language' => ['nullable', 'in:hinglish,hindi,english'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+
+        return response()->json([
+            'variations' => $writer->suggest(
+                $data['idea'],
+                (int) ($data['count'] ?? PushMessageWriter::COUNT),
+                $data['language'] ?? 'hinglish',
+            ),
+        ]);
     }
 
     /**
