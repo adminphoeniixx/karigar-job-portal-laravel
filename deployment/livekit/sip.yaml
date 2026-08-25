@@ -2,6 +2,12 @@
 #
 # Only needed once an Indian carrier trunk exists. Until then the whole
 # self-hosted stack runs fine without this service.
+#
+# The numbers below are Exotel's, not LiveKit's defaults. Their vSIP trunk
+# signals over SIP/TCP on 5070 and expects RTP in 10000-40000, and it
+# authenticates this server by IP — there is no username or password to get
+# wrong, which is also why the server's public IP must not change once Exotel
+# has whitelisted it.
 
 api_key: ${LIVEKIT_API_KEY}
 api_secret: ${LIVEKIT_API_SECRET}
@@ -10,11 +16,11 @@ ws_url: ws://livekit:7880
 redis:
   address: redis:6379
 
-# The carrier connects here. 5060 is the SIP standard; carriers will ask for
-# this port and the server's public IP to whitelist.
-sip_port: 5060
+# The carrier connects here. Exotel asks for this port and the server's public
+# IP to whitelist; 5060 is the SIP standard but their vSIP uses 5070 over TCP.
+sip_port: 5070
 # Voice itself flows over these. One call uses two ports.
-rtp_port: 10000-10100
+rtp_port: 10000-40000
 
 use_external_ip: true
 

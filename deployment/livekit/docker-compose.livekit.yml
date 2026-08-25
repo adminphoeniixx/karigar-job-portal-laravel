@@ -1,11 +1,12 @@
 # Self-hosted LiveKit for the AI screening calls.
 #
-# Only worth running instead of LiveKit Cloud when call volume makes the cloud
-# bill hurt, or when the audio must not leave our own infrastructure. Read
-# docs/ai-screening-calls.md#self-hosting first — there is one hard catch:
-# LiveKit *Inference* (the speech and LLM gateway we use today) does not serve a
-# self-hosted server, so this stack only works with our own Deepgram / Cartesia /
-# OpenAI keys.
+# This is now the deployment, not an alternative to LiveKit Cloud. The carrier
+# decides it: Exotel's SIP trunk authenticates by IP only — no username/password
+# — and LiveKit Cloud has no static IP to give it. This server does.
+#
+# Read docs/ai-screening-calls.md#self-hosting first. The catch that shaped the
+# config below: LiveKit *Inference* does not serve a self-hosted server (it 401s
+# on a self-hosted room id), so every vendor is called with our own key.
 #
 #   docker compose -f deployment/livekit/docker-compose.livekit.yml up -d
 #
@@ -35,7 +36,9 @@ services:
       - redis
     restart: unless-stopped
 
-  # Only needed once a carrier trunk exists. Comment it out until then.
+  # The phone line. Ports here are Exotel's, not LiveKit's defaults: their vSIP
+  # trunk signals over SIP/TCP on 5070 and sends media on RTP 10000-40000. A
+  # different carrier will want different ones — change sip.yaml to match.
   sip:
     image: livekit/sip:latest
     command: --config /etc/sip.yaml
@@ -45,9 +48,8 @@ services:
     volumes:
       - ./sip.yaml:/etc/sip.yaml:ro
     ports:
-      - "5060:5060/udp"                # the carrier signals here
-      - "5060:5060/tcp"
-      - "10000-10100:10000-10100/udp"  # call audio
+      - "5070:5070/tcp"                  # Exotel signals here — TCP, not UDP
+      - "10000-40000:10000-40000/udp"    # call audio
     depends_on:
       - livekit
     restart: unless-stopped
@@ -67,16 +69,23 @@ services:
       # Self-hosted has no inference gateway: every vendor is called directly
       # with our own key.
       SCREENING_SPEECH: plugins
-      SCREENING_STT: ${SCREENING_STT:-sarvam/saarika:v2.5}
-      SCREENING_TTS: ${SCREENING_TTS:-sarvam/bulbul:v3}
+      # Speech in and speech out both on Inworld — one account, one key, and the
+      # cloned Hindi voice the script is tuned for. INWORLD_API_KEY is what
+      # authenticates both; without it the container starts and has no voice.
+      SCREENING_STT: ${SCREENING_STT:-inworld/inworld-stt-1}
+      SCREENING_TTS: ${SCREENING_TTS:-inworld/inworld-tts-1.5-max}
+      INWORLD_API_KEY: ${INWORLD_API_KEY:-}
+      # Sarvam is the A/B on Hindi, and also serves the LLM below.
       SARVAM_API_KEY: ${SARVAM_API_KEY:-}
       # Deepgram/Cartesia are the alternative pair; set the two models above to
       # deepgram/nova-3 and cartesia/sonic-3 and fill these in instead.
       DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
       CARTESIA_API_KEY: ${CARTESIA_API_KEY:-}
-      # No new LLM account: this is the DigitalOcean Llama the app already uses.
-      SCREENING_LLM: ${SCREENING_LLM:-openai/llama3.3-70b-instruct}
-      SCREENING_LLM_BASE_URL: ${AI_BASE_URL:-https://inference.do-ai.run/v1}
+      # Sarvam, on the key above — DigitalOcean's Llama answers 403 now and the
+      # llama3.3 id was retired. The "conversations" variant, not plain
+      # sarvam-105b, which returns its reasoning instead of an answer.
+      SCREENING_LLM: ${SCREENING_LLM:-openai/sarvam-105b-conversations}
+      SCREENING_LLM_BASE_URL: ${AI_BASE_URL:-https://api.sarvam.ai/v1}
       SCREENING_LLM_API_KEY: ${AI_KEY:-}
     depends_on:
       - livekit
