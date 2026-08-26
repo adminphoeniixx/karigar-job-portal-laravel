@@ -27,7 +27,7 @@ class JobResource extends JsonResource
             'wage_min' => $this->wage_min,
             'wage_max' => $this->wage_max,
             'wage_type' => $this->wage_type,
-            'wage_label' => $this->wageLabel(),
+            'wage_label' => $this->resource->wageLabel(),
             'vacancies' => $this->vacancies,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),
@@ -37,19 +37,5 @@ class JobResource extends JsonResource
                 'name' => $this->employer->name,
             ]),
         ];
-    }
-
-    protected function wageLabel(): string
-    {
-        if ($this->wage_min === null && $this->wage_max === null) {
-            return 'Not disclosed';
-        }
-
-        $range = collect([$this->wage_min, $this->wage_max])
-            ->filter()
-            ->map(fn ($w) => (string) (int) $w)
-            ->join('–');
-
-        return '₹'.$range.($this->wage_type ? ' / '.$this->wage_type : '');
     }
 }

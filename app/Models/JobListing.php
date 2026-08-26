@@ -125,6 +125,32 @@ class JobListing extends Model
     }
 
     /**
+     * A ready-to-display wage string, e.g. "₹900 – ₹1,200 / monthly",
+     * "₹900 / monthly", or "Not disclosed" when no wage is set. Kept here so the
+     * web, worker app and employer app all render the wage the same way.
+     */
+    public function wageLabel(): string
+    {
+        $min = $this->wage_min !== null ? (float) $this->wage_min : null;
+        $max = $this->wage_max !== null ? (float) $this->wage_max : null;
+
+        if ($min === null && $max === null) {
+            return __('Not disclosed');
+        }
+
+        $money = fn (float $n): string => '₹'.number_format($n);
+        $suffix = $this->wage_type ? ' / '.$this->wage_type : '';
+
+        if ($min !== null && $max !== null) {
+            $amount = $min === $max ? $money($min) : $money($min).' – '.$money($max);
+        } else {
+            $amount = $money($min ?? $max);
+        }
+
+        return $amount.$suffix;
+    }
+
+    /**
      * @return HasMany<JobInvite, $this>
      */
     public function invites(): HasMany

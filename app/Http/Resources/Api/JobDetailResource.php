@@ -30,6 +30,9 @@ class JobDetailResource extends JsonResource
             'wage_min' => $this->wage_min,
             'wage_max' => $this->wage_max,
             'wage_type' => $this->wage_type,
+            // Pre-formatted so every client renders the same string without
+            // re-deriving it from min/max/type. "Not disclosed" when unset.
+            'wage_label' => $this->resource->wageLabel(),
             'address' => $this->address,
             'city' => $this->city,
             'state' => $this->state,
