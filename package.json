@@ -35,6 +35,7 @@
         "vue-tsc": "^2.2.4"
     },
     "dependencies": {
+        "@anthropic-ai/claude-code": "^2.1.197",
         "@inertiajs/vite": "^3.0.0",
         "@inertiajs/vue3": "^3.0.0",
         "@laravel/passkeys": "^0.2.0",

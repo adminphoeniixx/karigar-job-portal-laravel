@@ -185,6 +185,12 @@ def build_stt(meta: dict[str, Any]) -> stt_module.STT:
     if provider == "inworld" and inworld is not None:
         # Same account as the TTS, which is the point: one vendor, one key, and
         # a free tier that covers both. Wants BCP-47, like its TTS does.
+        # STT_MODEL whole, not the split id — the odd one out on purpose.
+        # Inworld's STT takes a routed name whose first segment is the vendor
+        # ("inworld/inworld-stt-1", "assemblyai/...", "soniox/..."), so the
+        # prefix this file strips everywhere else is part of the id here. Its
+        # TTS, one branch down, does want the bare name. Send "inworld-stt-1"
+        # and the socket opens, then closes on the first audio chunk.
         return inworld.STT(
             model=STT_MODEL,
             language=f"{language}-IN" if len(language) == 2 else language,
