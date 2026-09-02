@@ -8,9 +8,11 @@ use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\Employer\ApplicantController as EmployerApplicantController;
 use App\Http\Controllers\Api\Employer\BillingController;
 use App\Http\Controllers\Api\Employer\DashboardController as EmployerDashboardController;
+use App\Http\Controllers\Api\Employer\InvoiceController as EmployerInvoiceController;
 use App\Http\Controllers\Api\Employer\JobController as EmployerJobController;
 use App\Http\Controllers\Api\Employer\KycController as EmployerKycController;
 use App\Http\Controllers\Api\Employer\ProfileController as EmployerProfileController;
+use App\Http\Controllers\Api\Employer\ResumeController as EmployerResumeController;
 use App\Http\Controllers\Api\Employer\ReviewController as EmployerReviewController;
 use App\Http\Controllers\Api\Employer\ScreeningController;
 use App\Http\Controllers\Api\Employer\TeamController as EmployerTeamController;
@@ -153,6 +155,10 @@ Route::prefix('v1')->group(function () {
             // Jobs
             Route::get('employer/jobs', [EmployerJobController::class, 'index'])->name('api.employer.jobs');
             Route::post('employer/jobs', [EmployerJobController::class, 'store'])->name('api.employer.jobs.store');
+            // AI description drafts for the Post Job form. Declared before the
+            // {job} route so the literal path is not swallowed by it.
+            Route::get('employer/jobs/suggest-description', [EmployerJobController::class, 'suggestDescription'])
+                ->middleware('throttle:20,1')->name('api.employer.jobs.suggestDescription');
             Route::get('employer/jobs/{job}', [EmployerJobController::class, 'show'])->name('api.employer.jobs.show');
             Route::match(['put', 'patch'], 'employer/jobs/{job}', [EmployerJobController::class, 'update'])->name('api.employer.jobs.update');
             Route::post('employer/jobs/{job}/close', [EmployerJobController::class, 'close'])->name('api.employer.jobs.close');
@@ -164,8 +170,12 @@ Route::prefix('v1')->group(function () {
             Route::post('employer/jobs/{job}/invite', [EmployerJobController::class, 'invite'])->name('api.employer.jobs.invite');
 
             // Applicants
+            // Shortlist across every job (the app's own screen); the per-job
+            // tab is the applicants list with stage=shortlisted.
+            Route::get('employer/shortlisted', [EmployerApplicantController::class, 'shortlisted'])->name('api.employer.shortlisted');
             Route::get('employer/jobs/{job}/applicants', [EmployerApplicantController::class, 'index'])->name('api.employer.applicants');
             Route::get('employer/applicants/{application}', [EmployerApplicantController::class, 'show'])->name('api.employer.applicants.show');
+            Route::get('employer/applicants/{application}/resume', [EmployerResumeController::class, 'download'])->name('api.employer.applicants.resume');
             Route::patch('employer/applicants/{application}/status', [EmployerApplicantController::class, 'updateStatus'])->name('api.employer.applicants.status');
             Route::post('employer/applicants/{application}/shortlist', [EmployerApplicantController::class, 'toggleShortlist'])->name('api.employer.applicants.shortlist');
             Route::post('employer/applicants/{application}/unlock', [EmployerApplicantController::class, 'unlockContact'])->name('api.employer.applicants.unlock');
@@ -197,6 +207,7 @@ Route::prefix('v1')->group(function () {
             Route::get('employer/plans', [BillingController::class, 'index'])->name('api.employer.plans');
             Route::post('employer/plans/callback', [BillingController::class, 'callback'])->name('api.employer.plans.callback');
             Route::post('employer/plans/{plan}/subscribe', [BillingController::class, 'subscribe'])->name('api.employer.plans.subscribe');
+            Route::get('employer/invoices/{subscription}', [EmployerInvoiceController::class, 'show'])->name('api.employer.invoices.show');
             Route::post('employer/credits/top-up', [BillingController::class, 'topUp'])->name('api.employer.credits.topup');
             Route::post('employer/credits/callback', [BillingController::class, 'topUpCallback'])->name('api.employer.credits.callback');
 

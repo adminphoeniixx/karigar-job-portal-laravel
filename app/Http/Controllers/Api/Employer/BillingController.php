@@ -74,7 +74,10 @@ class BillingController extends Controller
                     'plan' => $s->plan->name,
                     'total' => (float) $s->total_amount,
                     'date' => $s->invoiced_at?->format('d M Y'),
-                    'url' => route('subscription.invoice', $s),
+                    // Invoice data the app renders itself; `web_url` is the
+                    // printable session page, for opening in a browser.
+                    'url' => route('api.employer.invoices.show', $s),
+                    'web_url' => route('subscription.invoice', $s),
                 ]),
             'payment' => [
                 'configured' => $razorpay->configured(),

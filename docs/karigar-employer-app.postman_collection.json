@@ -78,6 +78,16 @@
     {
       "key": "fcm_token",
       "value": "paste-a-device-token-here"
+    },
+    {
+      "key": "call_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "subscription_id",
+      "value": "1",
+      "type": "string"
     }
   ],
   "item": [
@@ -590,6 +600,50 @@
           }
         },
         {
+          "name": "Suggest description (AI)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/suggest-description?title=Plumber for apartment project&category=Plumbing&city=Chennai&state=Tamil Nadu",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "suggest-description"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "Plumber for apartment project"
+                },
+                {
+                  "key": "category",
+                  "value": "Plumbing"
+                },
+                {
+                  "key": "city",
+                  "value": "Chennai"
+                },
+                {
+                  "key": "state",
+                  "value": "Tamil Nadu"
+                }
+              ]
+            },
+            "description": "AI drafts for the Post Job description box. `title` is required (3-150 chars); `category`, `city`, `state` and `skills[]` are optional and only sharpen the draft. Returns `{ \"suggestions\": [...] }` - normally two, but exactly one template-built draft when no AI key is configured, so render whatever length comes back. Throttled to 20/min; the same wording is cached for a day."
+          }
+        },
+        {
           "name": "Get job",
           "request": {
             "method": "GET",
@@ -829,6 +883,31 @@
               ]
             },
             "description": "Paginated + a `counts` block for the segmented tabs."
+          }
+        },
+        {
+          "name": "Shortlisted (all jobs)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/shortlisted",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "shortlisted"
+              ]
+            },
+            "description": "Everyone shortlisted across all of the employer's jobs - the app's standalone Shortlisted screen. Paginated 20/page, most recently shortlisted first, each row carrying its `job`. The per-job tab is the applicants list with `stage=shortlisted`."
           }
         },
         {
@@ -1110,18 +1189,115 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/employer/applications/{{application_id}}/resume",
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/resume",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "employer",
-                "applications",
+                "applicants",
                 "{{application_id}}",
                 "resume"
               ]
             },
-            "description": "Streams the applicant's resume PDF. This is a **web** route (no `/api/v1` prefix) and is the same URL returned as `ApplicantResource.resume.download_url`. Authorised per application: only the employer account that received it may fetch the file. 404 when the worker has no resume."
+            "description": "Streams the applicant's resume PDF, token-authenticated - send the same Bearer header as every other call, so the app can preview or save the file in place. This is the URL returned as `ApplicantResource.resume.download_url`. 403 when the application is not on one of your jobs; 404 when the worker has no resume."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Screening Calls",
+      "description": "The platform rings the applicant, asks whether they are still interested and collects an interview time to offer. The agent never books anything - the employer confirms the slot.",
+      "item": [
+        {
+          "name": "Calls for an applicant",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/screening-calls",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "screening-calls"
+              ]
+            },
+            "description": "Calls placed for this applicant, newest first, plus `can_call` / `blocked_because`. Drive the \"Call & schedule\" button off `can_call`; when false show `blocked_because` as the disabled reason (`provider_not_configured`, `no_caller_id`, `application_closed`, `interview_already_scheduled`, `no_phone_number`, `worker_opted_out`, `call_in_progress`, `already_screened`). Pass `?with_transcript=1` on the detail screen to include transcripts."
+          }
+        },
+        {
+          "name": "Place a screening call",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/screening-calls",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "screening-calls"
+              ]
+            },
+            "description": "Queues the call. No body. 202 with `calling_at` - calls only go out inside the permitted daytime window, so one queued at night is held until morning; compare `calling_at` to now to choose between \"Calling now...\" and \"Queued for ...\". 422 with a `code` from the blocker list when the applicant cannot be called. The result arrives by push - re-fetch the list, there is no websocket."
+          }
+        },
+        {
+          "name": "Confirm the interview slot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"interview_at\": \"2026-08-06T11:00:00+05:30\",\n  \"mode\": \"site\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/screening-calls/{{call_id}}/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "screening-calls",
+                "{{call_id}}",
+                "confirm"
+              ]
+            },
+            "description": "Books the time the worker offered and notifies them. Send an empty body to accept the proposed slot as-is; send `interview_at` (future) only to move it, and `mode` from the interview modes in GET /reference. 422 `{ \"code\": \"no_proposed_slot\" }` when the call produced no time to confirm."
           }
         }
       ]
@@ -1908,6 +2084,32 @@
               "mode": "raw",
               "raw": "{\n  \"razorpay_payment_id\": \"pay_xxx\",\n  \"razorpay_order_id\": \"order_xxx\",\n  \"razorpay_signature\": \"xxx\"\n}"
             }
+          }
+        },
+        {
+          "name": "Invoice (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/invoices/{{subscription_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "invoices",
+                "{{subscription_id}}"
+              ]
+            },
+            "description": "The tax invoice as data, so the app lays it out natively instead of opening the session-authenticated web page. Ids come from `invoices[].id` on the plans call. 403 for another account's invoice, 404 before the subscription is paid. Team members read the owner's invoices."
           }
         }
       ]

@@ -9,7 +9,7 @@ Postman: `docs/karigar-employer-app.postman_collection.json`
 Base URL `{{base_url}}/api/v1`. Auth unchanged — Sanctum bearer token from OTP
 verify, sent as `Authorization: Bearer <token>`. 🔒 = auth required.
 
-**New endpoints for this app: 18.** Plus new fields on responses you already
+**New endpoints for this app: 25.** Plus new fields on responses you already
 parse, and two behaviour changes that need handling even though no endpoint
 changed.
 
@@ -26,17 +26,19 @@ noticeably better, and you can show/download the actual document.
 ```jsonc
 "resume": { "name": "suresh-plumber.pdf",
             "uploaded_at": "2026-07-30T05:20:11+00:00",
-            "download_url": "https://…/employer/applications/14/resume" }
+            "download_url": "https://…/api/v1/employer/applicants/14/resume" }
 ```
 
-About `download_url`:
+`GET /employer/applicants/{application}/resume` 🔒 — this is what `download_url`
+points at. About it:
 
-- It is a **web** URL — no `/api/v1` prefix. It streams the PDF.
+- **Token-authenticated**, like every other call: send the usual
+  `Authorization: Bearer` header and you get the PDF back
+  (`Content-Disposition: attachment` with the worker's original filename), so
+  you can preview or save it in-app. No webview or session cookie needed.
 - Authorised **per application**: only the employer account that received this
   application can open it. Another employer gets `403`.
-- Open it in a webview carrying the session, or fetch it with the bearer token.
-  **Do not treat it as a public link** — it isn't one, and it won't work outside
-  an authorised context.
+- **Not a public link** — it will not open outside an authorised request.
 - `404` if the worker has since removed their resume, so handle that rather than
   assuming the URL stays good.
 
@@ -290,9 +292,137 @@ overwrite anything this app did.
 
 ---
 
-## 10. Integration checklist
+## 10. AI screening calls 🔒 — new screen
 
-- [ ] Applicant card: `resume` chip + authorised download, `null` and `404` handled
+The biggest new thing, and there is **no screen for it in the mockup** — please
+design one with us. The platform rings the applicant on a real phone line, asks
+in their language whether they are still interested, and collects an interview
+time to offer. The agent never books anything: **the employer confirms the
+slot**, because the agent has no idea what the employer's week looks like.
+
+Three endpoints, all on an applicant you already have:
+
+```
+GET  /employer/applicants/{application}/screening-calls
+POST /employer/applicants/{application}/screening-calls      → 202
+POST /employer/screening-calls/{call}/confirm
+```
+
+**The list** returns the calls plus the button state:
+
+```jsonc
+{ "calls": [ { ...ScreeningCallResource } ],
+  "can_call": false, "blocked_because": "already_screened" }
+```
+
+Drive the "Call & schedule" button off `can_call` — do not compute it yourself.
+When it is `false`, `blocked_because` is one of `provider_not_configured`,
+`no_caller_id`, `application_closed`, `interview_already_scheduled`,
+`no_phone_number`, `worker_opted_out`, `call_in_progress`, `already_screened`.
+Show it as the disabled reason (wording is in `docs/employer-app-api.md` §6b).
+
+**Placing a call** takes no body and returns `202` with `calling_at`. Calls only
+go out inside the permitted daytime window, so one queued at night is **held
+until morning** — compare `calling_at` to now and show either "Calling now…" or
+"Queued for 9:00 AM". `422` with a `code` from the list above when it is blocked.
+
+The call itself runs in the background. The app learns the result from the push
+notification and by re-fetching the list — **there is no websocket**, so do not
+sit in a polling loop; refresh on screen open and on push.
+
+**A finished call** carries what the worker said:
+
+```jsonc
+{ "id": 7, "status": "completed", "outcome": "interested",
+  "summary": "Suresh is interested and can come Thursday morning.",
+  "proposed_interview_at": "2026-08-06T10:00:00+05:30",
+  "proposed_interview_label": "06 Aug 2026, 10:00 AM",
+  "proposed_mode": "site", "awaiting_confirmation": true,
+  "duration_seconds": 74, "created_ago": "20 minutes ago" }
+```
+
+`awaiting_confirmation: true` is the call to action — show a "Confirm interview"
+button. `POST .../confirm` with an **empty body** accepts the slot as proposed;
+send `interview_at` only to move it, and `mode` from `interview_modes` in
+`GET /reference`. On success the interview is booked and the worker notified,
+and you get the updated `applicant` back — so the applicant jumps to the
+`interview` stage (§4) without a second fetch. `422 { "code":
+"no_proposed_slot" }` when the call produced no time to confirm (the worker said
+no, or never answered).
+
+`transcript` is only included when you pass `?with_transcript=1`. It is long —
+ask for it on the call-detail screen only, never in the list.
+
+The worker's phone number is **not** in any of these payloads. The platform
+placed the call; the number stays behind the contact-unlock paywall.
+
+---
+
+## 11. AI job-description drafts 🔒
+
+`GET /employer/jobs/suggest-description?title=…&category=…&city=…&state=…&skills[]=…`
+
+A "Suggest with AI" button on the Post Job screen, so the employer is not
+staring at an empty textarea — the web has had this for a while and the app
+should match.
+
+```jsonc
+{ "suggestions": [ "We need an experienced plumber…", "Looking for a skilled plumber…" ] }
+```
+
+- `title` is required (3–150 chars). Everything else is optional and only
+  sharpens the draft — send whatever the form has so far.
+- Normally **two** drafts come back; show them as pickable cards and let the
+  employer edit after choosing.
+- With no AI key configured (or the provider down) you get **one**
+  template-built draft instead. Always render whatever length the array is —
+  do not index `[1]` blindly.
+- Throttled to 20/min, and the same wording returns cached drafts for a day, so
+  a repeat tap is cheap but not a fresh idea.
+
+---
+
+## 12. Shortlisted across all jobs 🔒
+
+`GET /employer/shortlisted` — paginated 20/page, most recently shortlisted
+first, each row carrying its `job`.
+
+The web has a standalone Shortlisted screen and the app should too: employers
+think in terms of "people I liked", not "people I liked on job #12". Rows are
+plain `ApplicantResource`, so the applicant card component is reusable as-is.
+
+The per-job tab is unchanged — that is still the applicants list with
+`stage=shortlisted`.
+
+---
+
+## 13. Invoices 🔒
+
+`GET /employer/invoices/{subscription}` returns the tax invoice **as data**, so
+the app lays it out natively (and can print or share from there):
+
+```jsonc
+{ "invoice": { "number": "KRG-2026-00001", "date": "28 Jul 2026",
+               "plan": { "name": "Starter", "interval": "monthly", "price": 399 },
+               "coupon_code": "FIRST20", "discount": 100, "subtotal": 399,
+               "gst_percent": 18, "gst_amount": 71.82, "total": 470.82,
+               "period": { "from": "28 Jul 2026", "to": "28 Aug 2026" },
+               "payment_ref": "sub_xxx" },
+  "seller": { "name", "address", "gstin", "email" },
+  "buyer":  { "name", "address", "gstin", "email", "phone" } }
+```
+
+Ids come from `invoices[].id` on `GET /employer/plans`, where each row now
+carries **two** links: `url` (this JSON endpoint — use it) and `web_url` (the
+printable web page, for an "open in browser" fallback). `403` for another
+account's invoice, `404` before the subscription is paid. Team members read the
+**owner's** invoices, matching the rest of billing.
+
+---
+
+## 14. Integration checklist
+
+- [ ] Applicant card: `resume` chip + **token-auth** download, `null` and `404` handled
 - [ ] Applicant list: AI badge, **`ai: null` handled**, `sort=best_match` default
 - [ ] Pipeline: **five** stages, `stage=interview` filter, updated `counts`
 - [ ] Interview: schedule / reschedule / cancel sheet
@@ -306,11 +436,16 @@ overwrite anything this app did.
 - [ ] Login & security: device list + sign-out-device
 - [ ] Job card: `views`, `boost` badge, `share_url`
 - [ ] Registration wizard: `hiring_as`, `industry`, `company_size`, `hiring_categories`
+- [ ] Screening calls: new screen, `can_call` / `blocked_because`, `calling_at`
+      window copy, confirm-slot sheet, refresh on push (**no polling loop**)
+- [ ] Post Job: "Suggest with AI" — handle a **1-item** suggestions array
+- [ ] Shortlisted screen across all jobs (`GET /employer/shortlisted`)
+- [ ] Invoice screen rendered from JSON; `web_url` only as a fallback
 - [ ] Don't cache applicant stage/status — the backend can change them
 
 ---
 
-## 11. Gotchas that have cost us time before
+## 15. Gotchas that have cost us time before
 
 - **OTP is 4 digits**, not 6. The mockups draw six boxes; the backend issues four.
 - Send `Accept: application/json` on **every** call. Without it a validation

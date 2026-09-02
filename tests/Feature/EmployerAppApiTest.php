@@ -5,12 +5,16 @@ use App\Enums\JobStatus;
 use App\Enums\UserRole;
 use App\Models\Conversation;
 use App\Models\JobApplication;
+use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\JobInviteNotification;
 use App\Notifications\NewMessageNotification;
+use App\Services\ResumeStore;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -297,4 +301,152 @@ it('exposes the new reference lists to the app', function () {
         ->assertJsonPath('hiring_as.0', 'business')
         ->assertJsonPath('interview_modes.0', 'site')
         ->assertJsonFragment(['flexible']);
+});
+
+it('drafts a job description for the post-job screen', function () {
+    // With no AI key the writer falls back to a template — still a draft the
+    // app can drop into the textarea.
+    config(['services.ai.key' => null]);
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson('/api/v1/employer/jobs/suggest-description?'.http_build_query([
+            'title' => 'Plumber for apartment project',
+            'category' => 'Plumbing',
+            'city' => 'Chennai',
+        ]))
+        ->assertOk()
+        ->assertJsonCount(1, 'suggestions');
+});
+
+it('does not mistake the suggest-description path for a job id', function () {
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson('/api/v1/employer/jobs/suggest-description?title=ab')
+        ->assertStatus(422);
+});
+
+it('streams an applicant resume to the employer holding the application', function () {
+    Storage::fake(ResumeStore::DISK);
+
+    // resume_* are guarded on the model — ResumeStore force-fills them.
+    $this->worker->workerProfile->forceFill([
+        'resume_path' => 'resumes/sample.pdf',
+        'resume_name' => 'suresh-plumber.pdf',
+        'resume_uploaded_at' => now(),
+    ])->save();
+    Storage::disk(ResumeStore::DISK)->put('resumes/sample.pdf', "%PDF-1.4\n%%EOF\n");
+
+    $application = applyToJob();
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->get("/api/v1/employer/applicants/{$application->id}/resume")
+        ->assertOk()
+        ->assertDownload('suresh-plumber.pdf');
+
+    // The payload points at this token-auth route, not the web session one.
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson("/api/v1/employer/applicants/{$application->id}")
+        ->assertOk()
+        ->assertJsonPath('data.resume.download_url', route('api.employer.applicants.resume', $application->id));
+});
+
+it('keeps another employer away from an applicant resume', function () {
+    $other = User::factory()->create(['role' => UserRole::Employer->value]);
+    $application = applyToJob();
+
+    $this->actingAs($other, 'sanctum')
+        ->get("/api/v1/employer/applicants/{$application->id}/resume")
+        ->assertForbidden();
+});
+
+it('404s the resume download when the worker has not uploaded one', function () {
+    $application = applyToJob();
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->get("/api/v1/employer/applicants/{$application->id}/resume")
+        ->assertNotFound();
+});
+
+it('lists everyone shortlisted across all of the employer jobs', function () {
+    $application = applyToJob();
+
+    $secondJob = $this->employer->jobListings()->create([
+        'title' => 'Mason for boundary wall',
+        'description' => 'Site work',
+        'city' => 'Chennai',
+        'state' => 'Tamil Nadu',
+        'vacancies' => 1,
+        'contact_mode' => 'apply',
+        'requires_worker_fee' => false,
+        'status' => JobStatus::Active,
+    ]);
+    $secondApplication = JobApplication::create([
+        'job_listing_id' => $secondJob->id,
+        'worker_id' => $this->worker->id,
+        'status' => ApplicationStatus::Pending,
+        'shortlisted_at' => now(),
+    ]);
+
+    // Only the shortlisted one shows up, and it carries its job.
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson('/api/v1/employer/shortlisted')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $secondApplication->id)
+        ->assertJsonPath('data.0.job.title', 'Mason for boundary wall');
+
+    $application->update(['shortlisted_at' => now()->addMinute()]);
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson('/api/v1/employer/shortlisted')
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.id', $application->id);
+});
+
+it('returns an invoice as data the app can render', function () {
+    $plan = Plan::create([
+        'name' => 'Starter', 'slug' => 'starter', 'price' => 399,
+        'currency' => 'INR', 'interval' => 'monthly', 'is_active' => true,
+    ]);
+    $subscription = Subscription::create([
+        'employer_id' => $this->employer->id,
+        'plan_id' => $plan->id,
+        'status' => 'active',
+        'subtotal_amount' => 399, 'gst_percent' => 18, 'gst_amount' => 71.82,
+        'total_amount' => 470.82,
+        'invoice_number' => 'KRG-2026-00001', 'invoiced_at' => now(),
+        'starts_at' => now(), 'ends_at' => now()->addMonth(),
+    ]);
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson("/api/v1/employer/invoices/{$subscription->id}")
+        ->assertOk()
+        ->assertJsonPath('invoice.number', 'KRG-2026-00001')
+        ->assertJsonPath('invoice.total', 470.82)
+        ->assertJsonPath('invoice.plan.name', 'Starter')
+        ->assertJsonPath('buyer.name', 'Sri Sai Constructions');
+
+    // And it is listed on the plans screen pointing at this endpoint.
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson('/api/v1/employer/plans')
+        ->assertOk()
+        ->assertJsonPath('invoices.0.url', route('api.employer.invoices.show', $subscription));
+});
+
+it('keeps another employer out of an invoice', function () {
+    $other = User::factory()->create(['role' => UserRole::Employer->value]);
+    $plan = Plan::create([
+        'name' => 'Starter', 'slug' => 'starter-2', 'price' => 399,
+        'currency' => 'INR', 'interval' => 'monthly', 'is_active' => true,
+    ]);
+    $subscription = Subscription::create([
+        'employer_id' => $this->employer->id,
+        'plan_id' => $plan->id,
+        'status' => 'active',
+        'invoice_number' => 'KRG-2026-00002', 'invoiced_at' => now(),
+    ]);
+
+    $this->actingAs($other, 'sanctum')
+        ->getJson("/api/v1/employer/invoices/{$subscription->id}")
+        ->assertForbidden();
 });

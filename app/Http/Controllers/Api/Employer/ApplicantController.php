@@ -55,6 +55,23 @@ class ApplicantController extends Controller
     }
 
     /**
+     * Everyone the employer has shortlisted, across all of their jobs — the
+     * app's standalone "Shortlisted" screen. The per-job tab is
+     * {@see index()} with stage=shortlisted; this one is not scoped to a job,
+     * and keeps hired/rejected people out of the way.
+     */
+    public function shortlisted(Request $request): AnonymousResourceCollection
+    {
+        $applications = JobApplication::whereNotNull('shortlisted_at')
+            ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->employerAccount()->id))
+            ->with(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title,city,state')
+            ->orderByDesc('shortlisted_at')
+            ->paginate(20);
+
+        return ApplicantResource::collection($applications);
+    }
+
+    /**
      * A single applicant's full profile for the employer.
      */
     public function show(JobApplication $application): ApplicantResource

@@ -14,6 +14,7 @@ use App\Models\WorkerProfile;
 use App\Notifications\JobInviteNotification;
 use App\Notifications\NewJobNotification;
 use App\Services\CreditWallet;
+use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
@@ -285,6 +286,33 @@ class JobController extends Controller
      * Email the employer a confirmation that their job is live. Uses the
      * admin-editable "job_posted" template; no-ops if it is missing/inactive.
      */
+    /**
+     * AI-drafted descriptions for the Post Job screen, so the employer is not
+     * staring at a blank box. Mirrors the web jobs.suggestDescription route;
+     * with no AI key configured the writer falls back to a template draft.
+     */
+    public function suggestDescription(Request $request, JobDescriptionWriter $writer): JsonResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'min:3', 'max:150'],
+            'category' => ['nullable', 'string', 'max:80'],
+            'skills' => ['nullable', 'array', 'max:20'],
+            'skills.*' => ['string', 'max:60'],
+            'city' => ['nullable', 'string', 'max:80'],
+            'state' => ['nullable', 'string', 'max:80'],
+        ]);
+
+        return response()->json([
+            'suggestions' => $writer->suggest(
+                $data['title'],
+                $data['category'] ?? null,
+                array_values($data['skills'] ?? []),
+                $data['city'] ?? null,
+                $data['state'] ?? null,
+            ),
+        ]);
+    }
+
     private function sendPostedEmail(JobListing $job, User $account): void
     {
         TemplatedMailer::send('job_posted', $account->email, [

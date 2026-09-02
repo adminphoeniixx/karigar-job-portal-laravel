@@ -200,6 +200,21 @@ not parse multipart bodies on PUT/PATCH. Images go to BunnyCDN.
 ### `GET /employer/jobs?status=draft|active|closed&q=<search>`
 Paginated (15/page), newest first — the My Jobs tabs. `q` matches the title.
 
+### `GET /employer/jobs/suggest-description`
+AI drafts for the Post Job screen's description box, so the employer is not
+staring at an empty textarea. Throttled to 20/min.
+```
+?title=Plumber for apartment project&category=Plumbing&city=Chennai&state=Tamil Nadu&skills[]=Pipe Fitting
+```
+```json
+{ "suggestions": [ "We need an experienced plumber…", "Looking for a skilled plumber…" ] }
+```
+`title` is required (3–150 chars); everything else is optional and only sharpens
+the draft. Normally two suggestions come back — show them as pickable cards and
+let the employer edit after choosing. With no AI key configured (or the provider
+down) you get **one** template-built draft instead, so always render whatever
+length the array is. Same wording returns cached drafts for a day.
+
 ### `GET /employer/jobs/{job}` → `{ "data": EmployerJobResource }`
 
 ### `POST /employer/jobs`
@@ -315,6 +330,15 @@ unscored applicants last); `recent` is newest first.
 }
 ```
 
+### `GET /employer/shortlisted`
+Everyone shortlisted across **all** of the employer's jobs — the app's own
+Shortlisted screen, not scoped to one job. Paginated (20/page), most recently
+shortlisted first, each row carrying its `job`.
+```json
+{ "data": [ { ...ApplicantResource } ], "links": {...}, "meta": {...} }
+```
+(The per-job tab is the applicants list with `stage=shortlisted`.)
+
 ### `GET /employer/applicants/{application}` → `{ "data": ApplicantResource }`
 
 ### `PATCH /employer/applicants/{application}/status`
@@ -370,15 +394,18 @@ When the worker has uploaded one, `ApplicantResource.resume` carries it:
 ```json
 "resume": { "name": "suresh-plumber.pdf",
             "uploaded_at": "2026-07-30T05:20:11+00:00",
-            "download_url": "https://…/employer/applications/14/resume" }
+            "download_url": "https://…/api/v1/employer/applicants/14/resume" }
 ```
 `null` when the worker has no resume. The resume's text feeds the AI score, so
 an applicant with a resume is scored on it rather than on their profile alone.
 
-⚠️ `download_url` is the **web** (session-authenticated) route — a Bearer token
-will not open it. In the app, show the filename and upload date from this
-object; a token-auth download endpoint is still to be added if in-app preview
-is needed.
+### `GET /employer/applicants/{application}/resume`
+Streams the PDF (`application/pdf`, `Content-Disposition: attachment` with the
+worker's original filename). **Token-authenticated** — send the same
+`Authorization: Bearer` header as every other call, so the app can preview or
+save the file in-place rather than kicking the user out to a browser.
+`403` when the application is not on one of your jobs; `404` when the worker has
+no resume on record. This is the URL `resume.download_url` already points at.
 
 ### AI scoring, shortlisting and rejection
 Scoring always runs and always drives `sort=best_match` — nothing gates it. What
@@ -393,6 +420,81 @@ score also *acts*:
 Auto-reject only ever touches an untouched application — still `pending`, never
 shortlisted, no interview booked — so an employer decision is never overwritten.
 When both gates could fire on the same applicant, shortlisting wins.
+
+---
+
+## 6b. AI screening calls 🔒
+The platform rings the applicant on a real phone line, asks in their language
+whether they are still interested, and collects an interview time to offer. The
+agent never books anything — **the employer confirms the slot**, because the
+agent has no idea what the employer's week looks like.
+
+**ScreeningCallResource**
+```json
+{
+  "id": 7, "application_id": 14, "attempt": 1, "language": "hi",
+  "status": "completed", "status_label": "Completed",
+  "outcome": "interested", "outcome_label": "Interested",
+  "summary": "Suresh is interested and can come Thursday morning.",
+  "proposed_interview_at": "2026-08-06T10:00:00+05:30",
+  "proposed_interview_label": "06 Aug 2026, 10:00 AM",
+  "proposed_mode": "site", "employer_confirmed": false,
+  "awaiting_confirmation": true, "duration_seconds": 74,
+  "failure_reason": null, "created_at": "...", "created_ago": "20 minutes ago",
+  "transcript": [...]
+}
+```
+`status` ∈ `queued | dialing | in_progress | completed | no_answer | busy |
+failed | cancelled`; `outcome` ∈ `interested | not_interested | callback_later |
+already_placed | unclear` (`null` until the call completes). `transcript` is
+only included when you pass `?with_transcript=1` — it is long, so ask for it on
+the call-detail screen only. The worker's phone number is deliberately **not**
+in this payload; it stays behind the contact-unlock paywall.
+
+### `GET /employer/applicants/{application}/screening-calls`
+```json
+{ "calls": [ { ...ScreeningCallResource } ],
+  "can_call": false, "blocked_because": "already_screened" }
+```
+Drive the "Call & schedule" button off `can_call`. When it is `false`,
+`blocked_because` says why — show it as the disabled reason:
+
+| code | meaning |
+| --- | --- |
+| `provider_not_configured` | Calling is not switched on yet. |
+| `no_caller_id` | No calling number is configured yet. |
+| `application_closed` | The application is rejected or withdrawn. |
+| `interview_already_scheduled` | An interview is already booked. |
+| `no_phone_number` | This worker has no phone number on file. |
+| `worker_opted_out` | The worker opted out of automated calls (TRAI). |
+| `call_in_progress` | A call is already on its way. |
+| `already_screened` | This worker has already been screened. |
+
+### `POST /employer/applicants/{application}/screening-calls`
+No body. → `202`
+```json
+{ "message": "Call queued for 06 Aug, 9:00 AM.", "calling_at": "2026-08-06T09:00:00+05:30" }
+```
+Calls are only placed inside the permitted daytime window — one queued at night
+is held until morning, and `calling_at` is that time (compare it to now to
+decide between "Calling now…" and "Queued for …"). `422 { "code": <blocker> }`
+with one of the codes above when the applicant cannot be called.
+
+The call runs in the background; the app learns the result from the push
+notification and by re-fetching this list. There is no websocket.
+
+### `POST /employer/screening-calls/{call}/confirm`
+Books the interview the worker offered and notifies them.
+```json
+// body — both optional; omit to accept the slot exactly as proposed
+{ "interview_at": "2026-08-06T11:00:00+05:30", "mode": "site" }
+{ "message": "Interview confirmed — the worker has been notified.",
+  "applicant": { ...ApplicantResource }, "call": { ...ScreeningCallResource } }
+```
+Send `interview_at` only to **move** the slot (must be in the future); `mode` is
+one of the interview modes from `GET /reference`. `422 { "code":
+"no_proposed_slot" }` when the call produced no time to confirm — e.g. the
+worker said no, or never answered.
 
 ---
 
@@ -602,8 +704,27 @@ Unlocks spend the plan allowance first; boosts always spend purchased credits.
 }
 ```
 `purchasable: false` means the plan has no Razorpay plan id yet — hide or
-disable its buy button. `invoices[].url` is a web (session) PDF link, best
-opened in an external browser.
+disable its buy button. `invoices[].url` is the token-auth JSON endpoint below;
+`invoices[].web_url` is the printable web page, for "open in browser" / share.
+
+### `GET /employer/invoices/{subscription}`
+The tax invoice as data, so the app lays it out natively (and can print or share
+from there) instead of opening a session-authenticated web page.
+```json
+{
+  "invoice": { "number": "KRG-2026-00001", "date": "28 Jul 2026",
+               "plan": { "name": "Starter", "interval": "monthly", "price": 399 },
+               "coupon_code": "FIRST20", "discount": 100, "subtotal": 399,
+               "gst_percent": 18, "gst_amount": 71.82, "total": 470.82,
+               "period": { "from": "28 Jul 2026", "to": "28 Aug 2026" },
+               "payment_ref": "sub_xxx" },
+  "seller": { "name", "address", "gstin", "email" },
+  "buyer": { "name", "address", "gstin", "email", "phone" }
+}
+```
+`403` for another account's invoice, `404` before the subscription is paid (no
+invoice number yet). Team members read the **owner's** invoices, matching the
+rest of billing.
 
 ### `POST /employer/plans/{plan}/subscribe`
 **Owner only** (`403` for team members). Creates the Razorpay subscription; the
@@ -664,15 +785,16 @@ Signed-in devices (Sanctum tokens) for "Login & security".
 | GET | `/reference` · `/reference/cities` · `/reference/job-categories` | 2 |
 | GET | `/employer/dashboard` | 3 |
 | GET/PUT/PATCH/POST | `/employer/profile` · `/employer/profile/logo` | 4 |
-| GET/POST/PATCH/DELETE | `/employer/jobs`, `/employer/jobs/{job}`, `/close`, `/boost`, `/matches`, `/invite` | 5 |
-| GET/PATCH/POST/DELETE | `/employer/jobs/{job}/applicants`, `/employer/applicants/{application}` (+ `/status`, `/shortlist`, `/unlock`, `/interview`), `/employer/jobs/{job}/rescore` | 6 |
+| GET/POST/PATCH/DELETE | `/employer/jobs`, `/employer/jobs/{job}`, `/close`, `/boost`, `/matches`, `/invite`, `/employer/jobs/suggest-description` | 5 |
+| GET/PATCH/POST/DELETE | `/employer/jobs/{job}/applicants`, `/employer/shortlisted`, `/employer/applicants/{application}` (+ `/status`, `/shortlist`, `/unlock`, `/interview`, `/resume`), `/employer/jobs/{job}/rescore` | 6 |
+| GET/POST | `/employer/applicants/{application}/screening-calls` · `/employer/screening-calls/{call}/confirm` | 6b |
 | GET | `/employer/workers` · `/employer/workers/{worker}` | 7 |
 | GET/POST | `/employer/kyc` | 8 |
 | GET/POST | `/notifications` (+ `/{id}/read`, `/read-all`) · `/device-tokens` | 9 |
 | GET/POST | `/employer/reviews` · `/employer/applicants/{application}/review` | 10 |
 | GET/POST/PATCH/DELETE | `/employer/team` · `/employer/team/{member}` | 11 |
 | GET/POST | `/conversations` (+ `/{id}`, `/messages`, `/read`) | 12 |
-| GET/POST | `/employer/plans` (+ `/{plan}/subscribe`, `/callback`) · `/employer/credits/top-up` (+ `/callback`) | 13 |
+| GET/POST | `/employer/plans` (+ `/{plan}/subscribe`, `/callback`) · `/employer/credits/top-up` (+ `/callback`) · `/employer/invoices/{subscription}` | 13 |
 | GET/PUT/PATCH/DELETE | `/preferences` · `/auth/sessions` (+ `/{token}`) | 14 |
 
 Postman collection: `docs/karigar-employer-app.postman_collection.json`.
@@ -682,7 +804,6 @@ Postman collection: `docs/karigar-employer-app.postman_collection.json`.
 ## Not included (no backend yet)
 - **Job "Share" link** — no dedicated endpoint; use `job.share_url` from
   EmployerJobResource (the public web job page).
-- **Token-auth resume download** — see §6; only the web session route exists.
 - **Escrow / worker payouts** — a separate payment surface, unrelated to the
   employer app screens.
 
