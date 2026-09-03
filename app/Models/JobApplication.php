@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ApplicationStatus;
+use App\Http\Controllers\Api\Worker\ReviewController;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -130,6 +131,28 @@ class JobApplication extends Model
     /**
      * @return BelongsTo<JobListing, $this>
      */
+    /**
+     * Has this application's worker already reviewed the job's employer?
+     *
+     * Mirrors the uniqueness rule in {@see ReviewController::store()}
+     * — one review per reviewer→reviewee per job. Prefer the `has_reviewed`
+     * attribute the applications list preloads; this is the fallback for a
+     * single application, where one extra query is fine.
+     */
+    public function workerHasReviewed(): bool
+    {
+        $this->loadMissing('job');
+
+        if ($this->job === null) {
+            return false;
+        }
+
+        return Review::where('reviewer_id', $this->worker_id)
+            ->where('reviewee_id', $this->job->employer_id)
+            ->where('job_listing_id', $this->job_listing_id)
+            ->exists();
+    }
+
     public function job(): BelongsTo
     {
         return $this->belongsTo(JobListing::class, 'job_listing_id');

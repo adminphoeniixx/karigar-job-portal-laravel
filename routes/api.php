@@ -17,11 +17,13 @@ use App\Http\Controllers\Api\Employer\ReviewController as EmployerReviewControll
 use App\Http\Controllers\Api\Employer\ScreeningController;
 use App\Http\Controllers\Api\Employer\TeamController as EmployerTeamController;
 use App\Http\Controllers\Api\Employer\WorkerDirectoryController;
+use App\Http\Controllers\Api\LegalController;
 use App\Http\Controllers\Api\LocaleController;
 use App\Http\Controllers\Api\PreferenceController;
 use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Api\ScreeningWebhookController;
 use App\Http\Controllers\Api\SessionController;
+use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\Worker\ApplicationController;
 use App\Http\Controllers\Api\Worker\DashboardController;
 use App\Http\Controllers\Api\Worker\JobController;
@@ -55,6 +57,13 @@ Route::prefix('v1')->group(function () {
     // Guarded by a shared secret, not a session — the provider has none.
     Route::post('webhooks/screening-call', ScreeningWebhookController::class)
         ->name('api.webhooks.screening');
+
+    // ---- Public: Terms & Privacy and Help & Support ----
+    // Readable without an account: the OTP screen links to the legal documents
+    // before one exists, and someone who cannot sign in still needs help.
+    Route::get('legal', [LegalController::class, 'index'])->name('api.legal');
+    Route::get('legal/{document}', [LegalController::class, 'show'])->name('api.legal.show');
+    Route::get('support', SupportController::class)->name('api.support');
 
     // ---- Public: reference data (dropdowns / chips) ----
     Route::prefix('reference')->group(function () {

@@ -1383,6 +1383,116 @@
           }
         }
       ]
+    },
+    {
+      "name": "Legal & Support (public)",
+      "description": "Terms & Privacy and Help & Support. No token needed - the OTP screen links to the legal documents before an account exists, and someone who cannot sign in still needs help.",
+      "item": [
+        {
+          "name": "Legal documents (index)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/legal",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "legal"
+              ]
+            },
+            "description": "Both documents without their bodies, for the settings row. `web_url` is the same text as a web page for an \"open in browser\" link - it is null for the terms (no web page yet), so handle null. `updated_label` is pre-formatted; `updated_at` is for comparing."
+          }
+        },
+        {
+          "name": "Privacy policy (full)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/legal/privacy",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "legal",
+                "privacy"
+              ]
+            },
+            "description": "The full document as sections of blocks. Exactly three block types: `paragraph` and `heading` carry `text`, `list` carries `items`. `heading` is a sub-heading inside a section - render it smaller than the section title and keep it out of the contents rail (build that from sections[].title / sections[].id). The identity-document section disappears when an admin switches verification off, so build the screen from what you get."
+          }
+        },
+        {
+          "name": "Terms of use (full)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/legal/terms",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "legal",
+                "terms"
+              ]
+            },
+            "description": "Same shape as the privacy policy. Any document key other than `terms` or `privacy` returns 404."
+          }
+        },
+        {
+          "name": "Help & Support",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/support?audience=worker",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "support"
+              ],
+              "query": [
+                {
+                  "key": "audience",
+                  "value": "worker"
+                }
+              ]
+            },
+            "description": "FAQs plus the ways to reach a person. A channel that is not configured is left out entirely - do not render a row for a missing key. `whatsapp` is digits with country code and no \"+\", so the app builds its own wa.me link. Pass `audience` (worker|employer) to get your app's entries plus the shared ones; omit it for all. Anything else returns 422. `id` is stable, so a single answer can be deep-linked."
+          }
+        }
+      ]
     }
   ]
 }

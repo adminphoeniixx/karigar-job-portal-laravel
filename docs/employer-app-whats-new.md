@@ -420,6 +420,62 @@ account's invoice, `404` before the subscription is paid. Team members read the
 
 ---
 
+## 16. Terms & Privacy and Help & Support 🔓 — two new screens
+
+Both settings rows in the mockup are wired up now, and **neither needs a
+token** — the OTP screen links to the legal documents before an account exists.
+
+```
+GET /legal                 → both documents, no bodies (the settings row)
+GET /legal/{document}      → terms | privacy, full body
+GET /support?audience=employer  → FAQs + ways to reach a person
+```
+
+**Legal documents** come back as sections of blocks, so you render them in your
+own type rather than in a webview:
+
+```jsonc
+"sections": [
+  { "id": "what-we-collect", "title": "What we collect", "blocks": [
+      { "type": "heading",   "text": "Everyone" },
+      { "type": "list",      "items": ["Your mobile number…", "Your name…"] },
+      { "type": "paragraph", "text": "We use your information to…" }
+  ] }
+]
+```
+
+- **Exactly three block types.** `paragraph` and `heading` carry `text`, `list`
+  carries `items`. Nothing else will ever appear — three renderers and you are done.
+- `heading` is a sub-heading *inside* a section. Render it smaller than the
+  section title, and keep it out of any contents rail — build that from
+  `sections[].title` + `sections[].id`.
+- **Sections can disappear.** The privacy policy drops its identity-document
+  section when an admin switches verification off. Build the screen from what
+  the response contains, never from a hardcoded list.
+- `web_url` is an "open in browser" link, and is **`null` for the terms** — no
+  web page for them yet. Handle null or you will ship a dead button.
+- English only for now.
+
+**Help & Support:**
+
+```jsonc
+{ "channels": { "email": "…", "whatsapp": "919000000000", "phone": "…",
+                "hours": "Monday to Saturday, 10 AM to 7 PM IST" },
+  "faqs": [ { "id": "otp-not-received", "audience": "all",
+              "question": "…", "answer": "…" } ] }
+```
+
+- **A channel that is not configured is left out of `channels` entirely.** Do
+  not render a row for a key that is not there — that is how we switch a channel
+  on later without an app release.
+- `whatsapp` is digits with the country code and **no `+`**, so you build the
+  `wa.me` link yourself.
+- Pass `audience=employer` to get your app's questions plus the shared ones. Omitting
+  it returns every question including the other app's; anything else → `422`.
+- `id` is stable, so an answer can be deep-linked from elsewhere in the app.
+
+---
+
 ## 14. Integration checklist
 
 - [ ] Applicant card: `resume` chip + **token-auth** download, `null` and `404` handled
@@ -441,6 +497,8 @@ account's invoice, `404` before the subscription is paid. Team members read the
 - [ ] Post Job: "Suggest with AI" — handle a **1-item** suggestions array
 - [ ] Shortlisted screen across all jobs (`GET /employer/shortlisted`)
 - [ ] Invoice screen rendered from JSON; `web_url` only as a fallback
+- [ ] Terms & Privacy + Help & Support screens (3 block types, null `web_url`,
+      missing channel keys, `audience=employer`)
 - [ ] Don't cache applicant stage/status — the backend can change them
 
 ---

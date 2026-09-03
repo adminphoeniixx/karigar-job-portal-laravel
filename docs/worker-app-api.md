@@ -224,6 +224,22 @@ they happen.
 step, `result` is `accepted | rejected | withdrawn | null`. The app maps each
 `key` to a localized label and renders the icon from `state`.
 
+It also carries two booleans that drive the "Rate employer" button, so the app
+never has to work the rule out itself:
+```json
+{ "id": 10, "status": "accepted", "can_review": false, "has_reviewed": true }
+```
+- `has_reviewed` — the worker has already rated this job's employer.
+- `can_review` — show the button. True only when the application is
+  **accepted** and not yet reviewed; `false` on every other status.
+
+Drive the button off `can_review` alone. Posting a review when it is `false`
+is what `POST /applications/{application}/review` rejects — `403` if the
+application is not accepted, `422` "You have already reviewed this person for
+this job." if it is a repeat. Both flags are on the single-application payload
+from `POST /jobs/{job}/apply` too (there they are `false`/`false`, since a new
+application is always pending).
+
 ### `POST /jobs/{job}/apply`
 ```json
 { "cover_note": "Available from tomorrow", "expected_wage": 900 }
@@ -346,6 +362,73 @@ See `docs/employer-app-api.md` §12 for the exact payload shapes.
 - `GET /preferences`, `PUT|PATCH /preferences` — `theme` (`system|light|dark`),
   `job_alerts`, `message_alerts`, `applicant_alerts`
 - `GET /auth/sessions`, `DELETE /auth/sessions/{token}` — signed-in devices
+
+---
+
+## 13. Terms & Privacy and Help & Support (public)
+
+Both settings rows, and neither needs a token — the OTP screen links to the
+legal documents before an account exists, and someone who cannot sign in still
+needs help.
+
+### `GET /legal`
+The two documents without their bodies, for the settings row.
+```json
+{ "documents": [
+  { "key": "terms", "title": "Terms of use", "summary": "The rules for using…",
+    "updated_at": "2026-09-03", "updated_label": "3 September 2026", "web_url": null },
+  { "key": "privacy", "title": "Privacy policy", "summary": "What we hold about you…",
+    "updated_at": "2026-08-12", "updated_label": "12 August 2026",
+    "web_url": "https://superkarigar.com/privacy" }
+] }
+```
+`web_url` is the same text as a web page, for an "open in browser" link — it is
+**`null` for the terms** (no web page yet), so handle null rather than assuming
+a URL. `updated_label` is pre-formatted; `updated_at` is there for comparing.
+
+### `GET /legal/{document}` — `document` is `terms` or `privacy`
+The full document, as sections of blocks the app renders in its own type.
+```json
+{ "document": {
+  "key": "privacy", "title": "Privacy policy",
+  "updated_at": "2026-08-12", "updated_label": "12 August 2026",
+  "summary": "…", "intro": "Super Karigar connects skilled karigars with…",
+  "web_url": "https://superkarigar.com/privacy",
+  "sections": [
+    { "id": "what-we-collect", "title": "What we collect", "blocks": [
+      { "type": "heading", "text": "Everyone" },
+      { "type": "list", "items": ["Your mobile number…", "Your name…"] },
+      { "type": "paragraph", "text": "We use your information to…" }
+    ] }
+  ]
+} }
+```
+**There are exactly three block types** — `paragraph` and `heading` carry
+`text`, `list` carries `items`. Nothing else will ever appear, so a client only
+needs three renderers. `heading` is a sub-heading *inside* a section: render it
+smaller than the section title and keep it out of any contents rail (build that
+from `sections[].title` / `sections[].id`).
+
+`404` for any other document key. The privacy policy's identity-document
+section **disappears** when an admin switches verification off, so build the
+screen from what you get rather than from a fixed list of sections.
+
+Content is English only for now.
+
+### `GET /support?audience=worker|employer`
+```json
+{ "channels": { "email": "support@superkarigar.com", "whatsapp": "919000000000",
+                "phone": "…", "hours": "Monday to Saturday, 10 AM to 7 PM IST" },
+  "faqs": [ { "id": "otp-not-received", "audience": "all",
+              "question": "I did not get my OTP.", "answer": "The code takes a few seconds…" } ] }
+```
+- **A channel that is not configured is left out entirely** — don't render a row
+  for a missing key. `whatsapp` is digits with the country code and no `+`, so
+  the app builds its own `wa.me` link.
+- Pass `audience` to get the entries for your app plus the shared ones; omit it
+  and you get all of them. `audience` on each row is `worker | employer | all`.
+  Anything else → `422`.
+- `id` is stable — safe to deep-link to one answer.
 
 ---
 

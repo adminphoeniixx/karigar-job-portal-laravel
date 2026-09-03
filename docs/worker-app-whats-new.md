@@ -187,6 +187,24 @@ you read them. Both are `null` until the employer acts.
 These are what make the "you have an interview" and "you got the job" states on
 the applications screen real, rather than just a status label.
 
+**Two more, added 2026-09-03** — these drive the "Rate employer" button, so the
+app never has to work the rule out itself:
+
+```jsonc
+{ "id": 10, "status": "accepted", "can_review": false, "has_reviewed": true }
+```
+
+- `has_reviewed` — the worker has already rated this job's employer.
+- `can_review` — **show the button**. True only when the application is
+  `accepted` **and** not yet reviewed; `false` on every other status.
+
+Branch on `can_review` alone — don't reimplement "accepted && not rated", because
+the backend is the one that enforces it: `POST /applications/{application}/review`
+answers `403` when the application is not accepted and `422` "You have already
+reviewed this person for this job." on a repeat. Both flags are on the single
+application returned by `POST /jobs/{job}/apply` too, where they are always
+`false`/`false` (a new application is pending).
+
 ---
 
 ## 6. Behaviour change: an application can move on its own
@@ -212,6 +230,62 @@ you must do:
 
 ---
 
+## 9. Terms & Privacy and Help & Support 🔓 — two new screens
+
+Both settings rows in the mockup are wired up now, and **neither needs a
+token** — the OTP screen links to the legal documents before an account exists.
+
+```
+GET /legal                 → both documents, no bodies (the settings row)
+GET /legal/{document}      → terms | privacy, full body
+GET /support?audience=worker  → FAQs + ways to reach a person
+```
+
+**Legal documents** come back as sections of blocks, so you render them in your
+own type rather than in a webview:
+
+```jsonc
+"sections": [
+  { "id": "what-we-collect", "title": "What we collect", "blocks": [
+      { "type": "heading",   "text": "Everyone" },
+      { "type": "list",      "items": ["Your mobile number…", "Your name…"] },
+      { "type": "paragraph", "text": "We use your information to…" }
+  ] }
+]
+```
+
+- **Exactly three block types.** `paragraph` and `heading` carry `text`, `list`
+  carries `items`. Nothing else will ever appear — three renderers and you are done.
+- `heading` is a sub-heading *inside* a section. Render it smaller than the
+  section title, and keep it out of any contents rail — build that from
+  `sections[].title` + `sections[].id`.
+- **Sections can disappear.** The privacy policy drops its identity-document
+  section when an admin switches verification off. Build the screen from what
+  the response contains, never from a hardcoded list.
+- `web_url` is an "open in browser" link, and is **`null` for the terms** — no
+  web page for them yet. Handle null or you will ship a dead button.
+- English only for now.
+
+**Help & Support:**
+
+```jsonc
+{ "channels": { "email": "…", "whatsapp": "919000000000", "phone": "…",
+                "hours": "Monday to Saturday, 10 AM to 7 PM IST" },
+  "faqs": [ { "id": "otp-not-received", "audience": "all",
+              "question": "…", "answer": "…" } ] }
+```
+
+- **A channel that is not configured is left out of `channels` entirely.** Do
+  not render a row for a key that is not there — that is how we switch a channel
+  on later without an app release.
+- `whatsapp` is digits with the country code and **no `+`**, so you build the
+  `wa.me` link yourself.
+- Pass `audience=worker` to get your app's questions plus the shared ones. Omitting
+  it returns every question including the other app's; anything else → `422`.
+- `id` is stable, so an answer can be deep-linked from elsewhere in the app.
+
+---
+
 ## 7. Integration checklist
 
 - [ ] Resume: upload / replace / remove on the profile screen
@@ -220,6 +294,9 @@ you must do:
 - [ ] Prompt workers without a resume — it measurably changes their score
 - [ ] Chat: thread list, thread view, send, unread badge
 - [ ] Chat: FCM `chat.message` handled; button only where they've applied
+- [ ] Applications: "Rate employer" button driven by `can_review`
+- [ ] Terms & Privacy + Help & Support screens (3 block types, null `web_url`,
+      missing channel keys, `audience=worker`)
 - [ ] Settings: theme + `job_alerts` / `message_alerts`
 - [ ] Login & security: device list + sign-out-device (confirm on current)
 - [ ] Applications: `interview` and `offer` blocks

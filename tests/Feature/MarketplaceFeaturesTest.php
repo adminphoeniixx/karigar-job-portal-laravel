@@ -4,6 +4,7 @@ use App\Enums\ApplicationStatus;
 use App\Enums\JobStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
+use App\Http\Resources\Api\ApplicationResource;
 use App\Models\JobApplication;
 use App\Models\Plan;
 use App\Models\Review;
@@ -256,4 +257,100 @@ it('notifies workers when an employer posts a new active job', function () {
     // Matching worker (Jaipur + Plumbing) gets notified.
     expect($this->worker->fresh()->notifications()->count())->toBe(1)
         ->and($this->worker->fresh()->notifications()->first()->data['type'])->toBe('job.posted');
+});
+
+it('tells the worker app whether an application can still be rated', function () {
+    // Pending: nothing to rate yet.
+    $pending = $this->job->applications()->create([
+        'worker_id' => $this->worker->id,
+        'status' => ApplicationStatus::Pending->value,
+    ]);
+
+    $this->actingAs($this->worker, 'sanctum')
+        ->getJson('/api/v1/worker/applications')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $pending->id)
+        ->assertJsonPath('data.0.has_reviewed', false)
+        ->assertJsonPath('data.0.can_review', false);
+
+    // Accepted and unrated: the app shows the "Rate employer" button.
+    $pending->update(['status' => ApplicationStatus::Accepted->value]);
+
+    $this->actingAs($this->worker, 'sanctum')
+        ->getJson('/api/v1/worker/applications')
+        ->assertOk()
+        ->assertJsonPath('data.0.has_reviewed', false)
+        ->assertJsonPath('data.0.can_review', true);
+
+    // Once rated, the button goes away — the review endpoint would 422 anyway.
+    Review::create([
+        'reviewer_id' => $this->worker->id,
+        'reviewee_id' => $this->employer->id,
+        'job_listing_id' => $this->job->id,
+        'rating' => 5,
+    ]);
+
+    $this->actingAs($this->worker, 'sanctum')
+        ->getJson('/api/v1/worker/applications')
+        ->assertOk()
+        ->assertJsonPath('data.0.has_reviewed', true)
+        ->assertJsonPath('data.0.can_review', false);
+});
+
+it('computes the review flags for a single application too', function () {
+    // The list preloads has_reviewed; a lone application must work without it.
+    $application = $this->job->applications()->create([
+        'worker_id' => $this->worker->id,
+        'status' => ApplicationStatus::Accepted->value,
+    ]);
+
+    $resource = (new ApplicationResource($application->load('job')))
+        ->toArray(request());
+
+    expect($resource['can_review'])->toBeTrue()
+        ->and($resource['has_reviewed'])->toBeFalse();
+
+    Review::create([
+        'reviewer_id' => $this->worker->id,
+        'reviewee_id' => $this->employer->id,
+        'job_listing_id' => $this->job->id,
+        'rating' => 4,
+    ]);
+
+    $resource = (new ApplicationResource($application->fresh()->load('job')))
+        ->toArray(request());
+
+    expect($resource['can_review'])->toBeFalse()
+        ->and($resource['has_reviewed'])->toBeTrue();
+});
+
+it('does not count another job as reviewed on the applications list', function () {
+    $other = $this->employer->jobListings()->create([
+        'title' => 'Electrician needed', 'description' => 'Wiring',
+        'status' => JobStatus::Active->value, 'vacancies' => 1, 'city' => 'Jaipur', 'state' => 'Rajasthan',
+    ]);
+
+    $rated = $this->job->applications()->create([
+        'worker_id' => $this->worker->id, 'status' => ApplicationStatus::Accepted->value,
+    ]);
+    $unrated = $other->applications()->create([
+        'worker_id' => $this->worker->id, 'status' => ApplicationStatus::Accepted->value,
+    ]);
+
+    // Reviewed the first job's employer only — the second must stay ratable.
+    Review::create([
+        'reviewer_id' => $this->worker->id,
+        'reviewee_id' => $this->employer->id,
+        'job_listing_id' => $this->job->id,
+        'rating' => 5,
+    ]);
+
+    $flags = collect($this->actingAs($this->worker, 'sanctum')
+        ->getJson('/api/v1/worker/applications')
+        ->assertOk()
+        ->json('data'))
+        ->pluck('can_review', 'id');
+
+    expect($flags[$rated->id])->toBeFalse()
+        ->and($flags[$unrated->id])->toBeTrue();
 });

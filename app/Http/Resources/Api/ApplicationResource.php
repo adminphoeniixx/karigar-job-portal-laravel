@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Enums\ApplicationStatus;
 use App\Models\JobApplication;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -16,6 +17,12 @@ class ApplicationResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // Preloaded by the applications list so a page costs one query; a
+        // single application falls back to asking for itself.
+        $hasReviewed = $this->resource->getAttribute('has_reviewed') !== null
+            ? (bool) $this->resource->getAttribute('has_reviewed')
+            : $this->workerHasReviewed();
+
         return [
             'id' => $this->id,
             'status' => $this->status->value,
@@ -37,6 +44,10 @@ class ApplicationResource extends JsonResource
                 'start_date' => $this->start_date?->toDateString(),
                 'message' => $this->offer_message,
             ] : null,
+            // Rating the employer: only once the job was accepted, and only
+            // once — the same rule the review endpoint enforces.
+            'has_reviewed' => $hasReviewed,
+            'can_review' => $this->status === ApplicationStatus::Accepted && ! $hasReviewed,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),
             // Parcel-style timeline for the app tracker (see trackingSteps()).

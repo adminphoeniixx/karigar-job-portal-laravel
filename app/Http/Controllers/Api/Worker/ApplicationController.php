@@ -6,8 +6,10 @@ use App\Enums\ApplicationStatus;
 use App\Enums\JobStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\ApplicationResource;
+use App\Jobs\ScoreApplication;
 use App\Models\JobApplication;
 use App\Models\JobListing;
+use App\Models\Review;
 use App\Notifications\NewApplicationNotification;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +33,18 @@ class ApplicationController extends Controller
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->latest()
             ->paginate(15);
+
+        // Which of this page's jobs has the worker already rated? One query
+        // for the page, so `can_review` on each row costs nothing extra.
+        $reviewedJobIds = Review::where('reviewer_id', $request->user()->id)
+            ->whereIn('job_listing_id', $applications->pluck('job_listing_id')->filter())
+            ->pluck('job_listing_id')
+            ->all();
+
+        $applications->each(fn (JobApplication $application) => $application->setAttribute(
+            'has_reviewed',
+            in_array($application->job_listing_id, $reviewedJobIds),
+        ));
 
         return ApplicationResource::collection($applications);
     }
@@ -63,7 +77,7 @@ class ApplicationController extends Controller
             'status' => ApplicationStatus::Pending,
         ]);
 
-        \App\Jobs\ScoreApplication::dispatch($application->id);
+        ScoreApplication::dispatch($application->id);
 
         $job->loadMissing('employer');
         $job->employer->notify(new NewApplicationNotification($application));
