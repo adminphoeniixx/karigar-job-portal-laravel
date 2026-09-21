@@ -44,6 +44,9 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            // The registered entity behind the brand — footers and the privacy
+            // page print it, so every public page gets it without asking.
+            'company' => config('company'),
             'auth' => [
                 'user' => $user,
                 'teamRole' => $user?->isEmployer() ? $user->teamRole() : null,

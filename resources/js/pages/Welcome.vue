@@ -3,17 +3,32 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     ArrowRight,
     ArrowUpRight,
+    Amphora,
+    Axe,
     BadgeCheck,
+    Flower2,
+    Gem,
+    Grid2x2,
+    Landmark,
     Languages,
     LayoutGrid,
     MapPin,
+    Palette,
+    Scissors,
     Search,
+    Shapes,
     ShieldCheck,
+    ShoppingBag,
+    ShoppingBasket,
+    Sparkles,
+    Spool,
     Star,
+    Torus,
     Zap,
 } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import BrandWordmark from '@/components/BrandWordmark.vue';
+import CompanyDetails from '@/components/CompanyDetails.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 
 interface Job {
@@ -71,21 +86,42 @@ onUnmounted(() => {
 // Categories come from the admin (shared by HandleInertiaRequests), so the
 // landing list always matches what employers can actually pick.
 //
-// Each tile is a photo, looked up by slug in public/images/categories/. The
-// slug is derived the same way Laravel's Str::slug does it, so a category the
-// admin adds later only needs a matching <slug>.jpg dropped in that folder —
-// no code change. Anything without a photo falls back to a plain tinted tile
-// rather than a broken image.
+// The section reads as an index: a line-drawn icon and the craft's name, no
+// photography. Photos of a craft in progress said less at tile size than the
+// name did, and they dated the page to whichever fourteen photos we happened
+// to have — a list stays right when the admin adds a fifteenth craft.
+//
+// The icon is looked up by slug, derived the way Laravel's Str::slug does it
+// so the keys below match the category slugs in the database. A craft the
+// admin adds later has no entry here and falls back to the generic mark, so
+// the list never breaks — it just looks generic until an icon is picked.
 const slugify = (name: string) =>
     name
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 
+const craftIcons: Record<string, typeof LayoutGrid> = {
+    'bunai-knitting': Spool,
+    weaving: Grid2x2,
+    'kadhai-embroidery': Flower2,
+    'painting-coloring': Palette,
+    'pottery-handmade-pots': Amphora,
+    'wood-carving': Axe,
+    'basket-cane-work': ShoppingBasket,
+    tailoring: Scissors,
+    'decorative-handicrafts': Sparkles,
+    'clay-work': Shapes,
+    'traditional-artisan-crafts': Landmark,
+    crochet: Torus,
+    'handmade-jewellery': Gem,
+    'handmade-bags-accessories': ShoppingBag,
+};
+
 const categories = computed(() =>
     ((page.props.categories as string[] | undefined) ?? []).map((name) => ({
         name,
-        image: `/images/categories/${slugify(name)}.jpg`,
+        icon: craftIcons[slugify(name)] ?? LayoutGrid,
     })),
 );
 
@@ -139,8 +175,10 @@ const wage = (j: Job) => {
       employer.jpg     "Uravu Bamboo Workshop - Workers - 2" by Ingo Mehling (CC BY-SA 4.0)
       weaver.jpg       "Chendamangalam-Weaving factory-WUS-09972" by Rainer Halama (CC BY-SA 4.0)
 
-      Craft tiles (public/images/categories/) — Wikimedia Commons, one per
-      category slug. All CC BY / CC BY-SA / CC0, so each needs its credit kept:
+      Craft tiles (public/images/categories/) — no longer on this page; the
+      crafts section is an icon index now. The files stay in the repo because
+      they are the only licensed craft photography we have, and the credits
+      below stay with them, so putting one back is a path, not a hunt:
       weaving          "Rajasthan (6343365517)" by Christopher Michel (CC BY 2.0)
       kadhai-embroidery "Atelier de broderie à Jodhpur (Rajasthan) (2)" by Ji-Elle (CC BY-SA 4.0)
       painting-coloring "Dilli Haat Madhubani Mithila Painting Artist" by Pallav.journo (CC BY-SA 4.0)
@@ -306,30 +344,31 @@ const wage = (j: Job) => {
                     </Link>
                 </div>
 
-                <!-- Photo tiles, five to a row. The label sits under the frame so
-                     the crop stays clean — no text burned over the craft itself. -->
-                <div class="mt-12 grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-5">
-                    <Link v-for="c in categories" :key="c.name" :href="`/jobs?category=${c.name}`" class="group">
-                        <div class="overflow-hidden rounded-sm bg-foreground/[0.06]">
-                            <img
-                                :src="c.image"
-                                :alt="c.name"
-                                loading="lazy"
-                                class="aspect-[33/21] w-full object-cover transition duration-[900ms] group-hover:scale-[1.06]"
-                            />
-                        </div>
-                        <span class="mt-3 block text-center text-[11.5px] font-medium tracking-[0.09em] uppercase transition group-hover:text-primary">
+                <!-- An index of names, ruled like a contents page: icon, craft,
+                     and the arrow only on hover so the column stays quiet. -->
+                <div class="mt-10 grid sm:grid-cols-2 sm:gap-x-12 lg:grid-cols-3 lg:gap-x-16">
+                    <Link
+                        v-for="c in categories"
+                        :key="c.name"
+                        :href="`/jobs?category=${c.name}`"
+                        class="group flex items-center gap-4 border-b border-foreground/10 py-4 transition hover:border-primary/40"
+                    >
+                        <component :is="c.icon" class="size-5 shrink-0 stroke-[1.4] text-foreground/45 transition group-hover:text-primary" />
+                        <span class="text-[12.5px] font-medium tracking-[0.08em] uppercase transition group-hover:text-primary">
                             {{ c.name }}
                         </span>
+                        <ArrowUpRight class="ml-auto size-4 shrink-0 text-primary opacity-0 transition group-hover:opacity-100" />
                     </Link>
 
-                    <Link href="/jobs" class="group">
-                        <div class="flex aspect-[33/21] w-full items-center justify-center rounded-sm border border-foreground/15 transition group-hover:border-primary/50 group-hover:bg-foreground/[0.03]">
-                            <LayoutGrid class="size-12 stroke-[1.25] text-foreground/40 transition group-hover:text-primary" />
-                        </div>
-                        <span class="mt-3 block text-center text-[11.5px] font-medium tracking-[0.09em] uppercase transition group-hover:text-primary">
+                    <Link
+                        href="/jobs"
+                        class="group flex items-center gap-4 border-b border-foreground/10 py-4 transition hover:border-primary/40"
+                    >
+                        <LayoutGrid class="size-5 shrink-0 stroke-[1.4] text-foreground/45 transition group-hover:text-primary" />
+                        <span class="text-[12.5px] font-medium tracking-[0.08em] uppercase transition group-hover:text-primary">
                             View all categories
                         </span>
+                        <ArrowUpRight class="ml-auto size-4 shrink-0 text-primary opacity-0 transition group-hover:opacity-100" />
                     </Link>
                 </div>
             </div>
@@ -464,6 +503,9 @@ const wage = (j: Job) => {
                     <p class="mt-4 max-w-xs text-sm leading-relaxed">
                         India's skilled-work marketplace — KYC-verified karigars, hyperlocal jobs, in your language.
                     </p>
+                    <div class="mt-6 max-w-sm border-t border-background/15 pt-5">
+                        <CompanyDetails />
+                    </div>
                 </div>
                 <div>
                     <div class="label-rule text-background/50">Product</div>

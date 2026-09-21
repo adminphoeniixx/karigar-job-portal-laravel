@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import BrandWordmark from '@/components/BrandWordmark.vue';
+import CompanyDetails from '@/components/CompanyDetails.vue';
 import PublicNav from '@/components/PublicNav.vue';
 
 /**
@@ -244,6 +245,9 @@ const sections = computed(() => [
                     <Link href="/privacy" class="transition hover:text-background">Privacy</Link>
                     <Link href="/delete-account" class="text-background">Delete account</Link>
                 </div>
+            </div>
+            <div class="mx-auto max-w-[88rem] border-t border-background/15 px-6 py-6 lg:px-10">
+                <CompanyDetails variant="line" />
             </div>
         </footer>
     </div>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import BrandWordmark from '@/components/BrandWordmark.vue';
+import CompanyDetails from '@/components/CompanyDetails.vue';
 import PublicNav from '@/components/PublicNav.vue';
 
 /**
@@ -17,6 +18,13 @@ const props = defineProps<{
 }>();
 
 /** Everything below is keyed off this, so a rename happens in one place. */
+/**
+ * Who "we" is, in law. A privacy policy has to name the entity that holds the
+ * data, not only the brand it trades under — so the name comes from the same
+ * config the footer and the invoices read.
+ */
+const legalName = computed(() => (usePage().props.company as { legal_name?: string } | undefined)?.legal_name);
+
 const sections = computed(() => [
     { id: 'what-we-collect', title: 'What we collect' },
     { id: 'why', title: 'Why we use it' },
@@ -58,6 +66,11 @@ const sections = computed(() => [
                     means holding some genuinely personal things — your phone number, where you
                     work, sometimes an identity document. This page says exactly what we hold,
                     why, and how to make us delete it.
+                </p>
+                <p class="mt-4 max-w-2xl text-base text-muted-foreground">
+                    Super Karigar is operated by <strong class="font-semibold text-foreground">{{ legalName }}</strong>,
+                    the entity responsible for the data described here. Its full details are at the
+                    <a href="#contact" class="link-underline text-primary">end of this page</a>.
                 </p>
                 <p class="mt-6 text-sm text-muted-foreground">Last updated {{ updatedAt }}</p>
             </div>
@@ -331,6 +344,10 @@ const sections = computed(() => [
                         We acknowledge every request within 72 hours and resolve it within the
                         period the law allows.
                     </p>
+                    <div class="mt-5 border-t border-foreground/15 pt-4 text-muted-foreground">
+                        <div class="label-rule mb-3 text-muted-foreground">Registered entity</div>
+                        <CompanyDetails />
+                    </div>
                 </div>
                 <p>
                     If you are not satisfied with how we have handled a complaint, you may escalate
@@ -349,6 +366,9 @@ const sections = computed(() => [
                     <Link href="/jobs" class="transition hover:text-background">{{ $t('nav.browseJobs') }}</Link>
                     <Link href="/privacy" class="text-background">Privacy</Link>
                 </div>
+            </div>
+            <div class="mx-auto max-w-[88rem] border-t border-background/15 px-6 py-6 lg:px-10">
+                <CompanyDetails variant="line" />
             </div>
         </footer>
     </div>

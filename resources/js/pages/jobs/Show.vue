@@ -3,6 +3,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, IndianRupee, MapPin, Phone, Sun, UserPlus, Users, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import BrandWordmark from '@/components/BrandWordmark.vue';
+import CompanyDetails from '@/components/CompanyDetails.vue';
 import JobMap from '@/components/JobMap.vue';
 import PublicNav from '@/components/PublicNav.vue';
 import ResumeUpload, { type Resume } from '@/components/ResumeUpload.vue';
@@ -263,6 +264,9 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     <Link href="/privacy" class="transition hover:text-background">Privacy</Link>
                     <Link href="/delete-account" class="transition hover:text-background">Delete account</Link>
                 </div>
+            </div>
+            <div class="mx-auto max-w-[88rem] border-t border-background/15 px-6 py-6 lg:px-10">
+                <CompanyDetails variant="line" />
             </div>
         </footer>
     </div>
