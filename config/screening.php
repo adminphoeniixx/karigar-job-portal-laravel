@@ -97,8 +97,10 @@ return [
     | LiveKit supplies the agent runtime, speech services and the SIP bridge.
     | It does NOT supply Indian phone numbers — LiveKit's own numbers are US
     | only — so `sip_trunk_id` points at a trunk we configure against an Indian
-    | carrier (Exotel / Plivo / Ozonetel). That carrier holds the +91 number and
-    | the DLT registration; LiveKit just dials through it.
+    | carrier. That is Plivo: it holds the +91 number and the KYC, and
+    | authenticates the trunk with a username and password rather than by
+    | whitelisting our IP. LiveKit just dials through it. Changing carrier is a
+    | trunk id, not a code change.
     |
     | Two calls place a screening call: dispatch the agent into a room, then
     | dial the worker into that same room. The script travels as dispatch

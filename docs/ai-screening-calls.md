@@ -55,8 +55,23 @@ SIP bridge that reaches a real phone.
 
 What LiveKit does **not** supply is an Indian number. Its own numbers are US
 only, so `LIVEKIT_SIP_TRUNK_ID` points at a trunk configured against an Indian
-carrier — Exotel, Plivo or Ozonetel — which holds the +91 number and the DLT
-registration. Changing carrier is a trunk id, not a code change.
+carrier, which holds the +91 number and the paperwork. Changing carrier is a
+trunk id, not a code change.
+
+**The carrier is Plivo.** It was Exotel first, and the difference that decided
+it is not the number but the authentication: Exotel's vSIP trunk authenticates
+by **IP allowlist only**, so the dialling server's public IP can never change
+and every trunk change is a support ticket. Plivo authenticates with a
+**username and password** — nothing to whitelist — and its KYC clears in about
+a business day against a certificate of incorporation, a GST certificate and an
+INR account, where the Exotel number had been outstanding for weeks. Plivo also
+publishes a first-party LiveKit integration with in-country media routing, and
+bills ₹0.38/min each way on a ₹200/month number with no minimum or contract.
+
+We stay **self-hosted** either way (`deployment/livekit/`). With Plivo we no
+longer have to be — credentials work fine from LiveKit Cloud — but keeping the
+media on our own Indian server is exactly what India's media-anchoring rule
+asks for, and the stack is already running.
 
 One number for the whole platform, not one per employer. The employer's name
 cannot appear on a phone screen; it is spoken in the greeting instead.
@@ -74,18 +89,72 @@ caller ID behaves exactly as production will. Check the provider's
 international permissions if the test number is not Indian — calling +91 is
 usually off by default.
 
+#### Building the Plivo trunk
+
+Three things in the Plivo console, then one command here.
+
+1. **Credential** — a username and password Plivo will check on every outbound
+   call. Their rules: 5-20 alphanumeric characters for the username, 5-20 for
+   the password with at least one of `~!@#$%^&*()_+`.
+2. **Outbound trunk** — created against that credential, with **Secure
+   Trunking** on so signalling runs over TLS. Note the trunk's termination
+   domain: `<trunk_id>.zt.plivo.com`.
+3. **Number** — a +91 number on the account, after KYC. This is what workers
+   see, and it goes in `SCREENING_FROM_NUMBER`.
+
+Then create the matching outbound trunk on our LiveKit server:
+
+```jsonc
+// plivo-trunk.json
+{
+  "trunk": {
+    "name": "Plivo — Super Karigar screening",
+    "address": "<trunk_id>.zt.plivo.com",
+    "numbers": ["+9180xxxxxxx"],
+    "transport": "SIP_TRANSPORT_TLS"
+  }
+}
+```
+
+```bash
+lk sip outbound create plivo-trunk.json \
+  --auth-user "$PLIVO_SIP_USERNAME" \
+  --auth-pass "$PLIVO_SIP_PASSWORD"
+# → SIPTrunkID: ST_xxxxxxxx
+```
+
+That id is `LIVEKIT_SIP_TRUNK_ID`. Point `lk` at our own server, not at Cloud —
+`LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` from the self-hosted
+stack — or the trunk is created on a project that never places our calls.
+
+Nothing on the Plivo side needs our IP. An **inbound** trunk is only needed if
+we ever take calls back on that number; its origination URI would be this
+server's SIP endpoint with `;transport=tcp` appended, which is why
+`deployment/livekit/sip.yaml` still listens on 5060.
+
 ### 2. Truecaller Business
 
 Register that number with Truecaller Business so it shows as *Super Karigar*
 with a verified badge rather than an unknown number. This is the single biggest
 lever on pick-up rate in India.
 
-### 3. DLT registration
+### 3. KYC, DLT and DND
 
-Automated voice calls to Indian numbers fall under TRAI/DLT rules. Registration
-takes weeks — start it before the code is ready, not after. The greeting already
-discloses that the call is automated, and `config/screening.php` restricts
-dialling to daytime hours, but neither substitutes for registration.
+Plivo gates the **number** on KYC, not on DLT: an Indian registered entity, a
+certificate of incorporation, a GST certificate and an INR account. That is
+roughly a business day, and it is the only thing standing between us and a live
+line.
+
+DLT is a separate question and it is about the **calls**, not the number.
+Plivo's own guidance is that DLT registration covers SMS while voice needs KYC,
+but TRAI has been tightening the rules on automated and AI-placed outbound
+calls, and DND scrubbing applies regardless. **Get Plivo's answer in writing**
+for our exact case — outbound AI voice agent, job screening, calling workers who
+applied to the job — before the first real call, and keep the reply.
+
+The greeting already discloses that the call is automated,
+`config/screening.php` restricts dialling to daytime hours, and a worker can opt
+out for good — but none of those substitute for the carrier's written answer.
 
 ### 4. Environment
 
@@ -96,10 +165,10 @@ SCREENING_BRAND="Super Karigar"
 SCREENING_LANGUAGE=hi
 SCREENING_WEBHOOK_SECRET=<long random string>
 
-LIVEKIT_URL=wss://your-project.livekit.cloud
+LIVEKIT_URL=ws://livekit:7880       # our own server, not livekit.cloud
 LIVEKIT_API_KEY=
 LIVEKIT_API_SECRET=
-LIVEKIT_SIP_TRUNK_ID=ST_xxxxxxxx    # trunk against the carrier's number
+LIVEKIT_SIP_TRUNK_ID=ST_xxxxxxxx    # the Plivo outbound trunk
 LIVEKIT_AGENT_NAME=screening-agent  # must match the agent service
 ```
 
@@ -170,8 +239,9 @@ network has squeezed it. Those need a carrier.
 
 ## Self-hosting LiveKit
 
-We run on LiveKit **Cloud**. Self-hosting works — the stack is in
-`deployment/livekit/` and it has been run end to end, not just written.
+Self-hosting **is** the deployment — the stack is in `deployment/livekit/` and
+it has been run end to end, not just written. LiveKit Cloud stays configured as
+a fallback for rehearsals and anything that does not touch the carrier.
 
 **Verified on 2026-08-17.** `docker compose -f
 deployment/livekit/docker-compose.livekit.yml up -d redis livekit`, then the
@@ -206,15 +276,21 @@ use" — intermittently, which is the worst way to find out. `livekit.yaml` uses
 20000-20200: below the ephemeral range, and narrow enough that a VPS firewall
 will actually let you open it.
 
-**So the trade is:** save the LiveKit Cloud bill, take on a UDP-capable host,
-TLS on the signalling port, and SIP ports the carrier can reach. No extra vendor
-accounts — we already bring our own speech and LLM keys either way. At today's
-volume the free Cloud tier covers five concurrent calls, so this is still a
-"when we scale" move rather than an urgent one — but it is now a config change,
-not a project.
+**So the trade is:** save the LiveKit Cloud bill and keep the audio on our own
+Indian box, in exchange for a UDP-capable host, TLS on the signalling port, and
+a firewall that lets the RTP range through. No extra vendor accounts — we bring
+our own speech and LLM keys either way.
 
-The phone number is unaffected either way — it comes from an Indian carrier, not
-from LiveKit.
+**Ports, with Plivo.** Outbound calls dial *out* over TLS, so the carrier never
+has to reach us and nothing needs whitelisting; what has to be open is the RTP
+range that carries the audio back — `10000-20000/udp`, deliberately below the
+kernel's ephemeral range for the same reason `livekit.yaml` is. `5060` is
+listening for an inbound trunk we do not have yet. With Exotel this was the
+other way round: SIP/TCP on 5070 and RTP 10000-40000, both dictated by them, on
+an IP they had whitelisted.
+
+The phone number is unaffected either way — it comes from Plivo, not from
+LiveKit.
 
 ## Swapping the provider
 

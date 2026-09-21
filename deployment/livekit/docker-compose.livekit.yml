@@ -1,8 +1,11 @@
 # Self-hosted LiveKit for the AI screening calls.
 #
-# This is now the deployment, not an alternative to LiveKit Cloud. The carrier
-# decides it: Exotel's SIP trunk authenticates by IP only — no username/password
-# — and LiveKit Cloud has no static IP to give it. This server does.
+# This is the deployment, not an alternative to LiveKit Cloud. It started as
+# the carrier's doing — Exotel's SIP trunk authenticates by IP only, and
+# LiveKit Cloud has no static IP to give it — and it stays our choice now that
+# the carrier is Plivo, which authenticates by username and password and would
+# have run on Cloud just as well. Self-hosted keeps the media on our own
+# server, which is also what India's media-anchoring rule wants.
 #
 # Read docs/ai-screening-calls.md#self-hosting first. The catch that shaped the
 # config below: LiveKit *Inference* does not serve a self-hosted server (it 401s
@@ -36,9 +39,10 @@ services:
       - redis
     restart: unless-stopped
 
-  # The phone line. Ports here are Exotel's, not LiveKit's defaults: their vSIP
-  # trunk signals over SIP/TCP on 5070 and sends media on RTP 10000-40000. A
-  # different carrier will want different ones — change sip.yaml to match.
+  # The phone line. Screening calls only dial out, so this service opens the
+  # connection to Plivo rather than waiting for one: the credentials sit on the
+  # LiveKit outbound trunk and nothing here needs whitelisting. The ports below
+  # are what we listen on — see sip.yaml.
   sip:
     image: livekit/sip:latest
     command: --config /etc/sip.yaml
@@ -48,8 +52,9 @@ services:
     volumes:
       - ./sip.yaml:/etc/sip.yaml:ro
     ports:
-      - "5070:5070/tcp"                  # Exotel signals here — TCP, not UDP
-      - "10000-40000:10000-40000/udp"    # call audio
+      - "5060:5060/tcp"                  # only for inbound calls, which we
+      - "5060:5060/udp"                  # do not take yet — harmless open
+      - "10000-20000:10000-20000/udp"    # call audio, two ports per call
     depends_on:
       - livekit
     restart: unless-stopped
