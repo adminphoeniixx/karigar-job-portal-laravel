@@ -169,12 +169,20 @@ SCREENING_BRAND="Super Karigar"
 SCREENING_LANGUAGE=hi
 SCREENING_WEBHOOK_SECRET=<long random string>
 
-LIVEKIT_URL=ws://livekit:7880       # our own server, not livekit.cloud
+LIVEKIT_URL=ws://127.0.0.1:7880     # our own server, not livekit.cloud
 LIVEKIT_API_KEY=
 LIVEKIT_API_SECRET=
 LIVEKIT_SIP_TRUNK_ID=ST_xxxxxxxx    # the Plivo outbound trunk
 LIVEKIT_AGENT_NAME=screening-agent  # must match the agent service
 ```
+
+**`LIVEKIT_URL` depends on where Laravel itself runs**, and this is the line
+that breaks when the stack is redeployed. The LiveKit stack is on
+`network_mode: host`, so there is no `livekit` service name to resolve any
+more. Laravel on the host reaches it at `ws://127.0.0.1:7880`; Laravel in its
+own container has to use the host's LAN or public IP, because the container's
+own loopback is not the host's. A wrong value here fails at dispatch, before a
+single digit is dialled.
 
 The agent service in `services/screening-agent/` needs the same LiveKit values
 plus the webhook URL and secret. It is a separate process — see its README.
