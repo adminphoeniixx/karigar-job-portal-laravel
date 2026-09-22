@@ -31,7 +31,16 @@ class ApplicantController extends Controller
         $sort = $request->string('sort')->toString() === 'recent' ? 'recent' : 'best_match';
 
         $applications = $job->applications()
-            ->with('worker:id,name,email', 'worker.workerProfile', 'escrow', 'screeningCalls')
+            // `phone` is in the whitelist because a worker's number can live
+            // on either row: the profile if they filled one in, the user row
+            // if they only ever signed in with it. Without it here the user
+            // column came back null, ScreeningService::phoneFor() fell through
+            // to nothing, and every such applicant showed "This worker has no
+            // phone number on file" with the call button greyed out — a number
+            // we hold and the mobile API dials perfectly well. Selecting it
+            // reveals nothing: the payload below still gates contact details
+            // on contact_unlocked.
+            ->with('worker:id,name,email,phone', 'worker.workerProfile', 'escrow', 'screeningCalls')
             ->when($sort === 'best_match', fn ($q) => $q->orderByRaw('ai_score DESC NULLS LAST'))
             ->latest()
             ->get()
@@ -81,7 +90,7 @@ class ApplicantController extends Controller
                     'experience_years' => $a->worker->workerProfile?->experience_years,
                     // Contact details are only revealed once unlocked.
                     'email' => $a->contact_unlocked ? $a->worker->email : null,
-                    'phone' => $a->contact_unlocked ? $a->worker->workerProfile?->phone : null,
+                    'phone' => $a->contact_unlocked ? ($a->worker->workerProfile?->phone ?: $a->worker->phone) : null,
                 ],
             ]);
 
@@ -204,7 +213,7 @@ class ApplicantController extends Controller
     {
         $applications = JobApplication::whereNotNull('shortlisted_at')
             ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->employerAccount()->id))
-            ->with('worker:id,name,email', 'worker.workerProfile', 'job:id,title,city,state')
+            ->with('worker:id,name,email,phone', 'worker.workerProfile', 'job:id,title,city,state')
             ->orderByDesc('shortlisted_at')
             ->get()
             ->map(fn (JobApplication $a) => [
@@ -228,7 +237,7 @@ class ApplicantController extends Controller
                     'state' => $a->worker->workerProfile?->state,
                     'experience_years' => $a->worker->workerProfile?->experience_years,
                     'email' => $a->contact_unlocked ? $a->worker->email : null,
-                    'phone' => $a->contact_unlocked ? $a->worker->workerProfile?->phone : null,
+                    'phone' => $a->contact_unlocked ? ($a->worker->workerProfile?->phone ?: $a->worker->phone) : null,
                 ],
             ]);
 

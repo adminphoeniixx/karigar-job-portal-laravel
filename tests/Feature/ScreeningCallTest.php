@@ -581,6 +581,34 @@ it('hides screening entirely when no caller id is configured', function () {
         ->assertInertia(fn ($page) => $page->where('applications.0.screening', null));
 });
 
+it('offers the call when the number is on the user row and not the profile', function () {
+    // The worker in this file's setup is the common shape: they signed in with
+    // a phone and never filled one into their profile. The applicants page
+    // used to eager-load the worker without the `phone` column, so
+    // phoneFor() saw nothing on either row and the page reported "no phone
+    // number on file" with the button greyed out — for a number the mobile
+    // API dialled without complaint.
+    expect($this->worker->workerProfile->phone)->toBeNull()
+        ->and($this->worker->phone)->toBe('9876500011');
+
+    $this->actingAs($this->employer)
+        ->get("/employer/jobs/{$this->job->id}/applicants")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('applications.0.screening.can_call', true)
+            ->where('applications.0.screening.blocked_because', null));
+});
+
+it('shows the user-row number once the employer pays to unlock the contact', function () {
+    $this->application->update(['contact_unlocked' => true]);
+
+    $this->actingAs($this->employer)
+        ->get("/employer/jobs/{$this->job->id}/applicants")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('applications.0.worker.phone', '9876500011'));
+});
+
 function runPlaceCall(?int $attempt = null): void
 {
     (new PlaceScreeningCall(test()->application->id, $attempt ?? 1))
