@@ -327,50 +327,65 @@ interview booking are all provider-agnostic.
 
 ## When the voice sounds halting
 
-The first complaint off a live call was that the agent spoke in stops and
-starts — a few words, a long gap, a few more. Three separate things can cause
-that, and they are worth ruling out in this order.
+The first complaint off the Plivo line was that the agent spoke in stops and
+starts. What follows is what has been measured and what has not, because the
+first explanation written here was wrong and cost a round of changes.
 
-**Inworld's streaming buffer (this was the one).** The plugin defaults to
-generating audio only once 120 characters have arrived, or 3000 ms have passed,
-whichever comes first. That suits reading a paragraph aloud. `CallScript` asks
-the model for the opposite — "short, plain sentences a construction or trade
-worker will understand" — so a reply like *"Haan ji, theek hai. Kal subah
-gyarah baje?"* never reaches 120 characters and the server sits on it for the
-full three seconds before saying a word. Every turn paid that pause, and a
-longer reply paid it again at each 120-character boundary.
+**It is not the TTS.** The theory was that Inworld's streaming defaults
+(generate once 120 characters have arrived, or 3000 ms have passed) stalled
+every short reply for three seconds, since `CallScript` asks the model for
+short sentences that never fill a 120-character buffer. Measuring it against
+the real API with the real voice and a real reply, over three runs with the
+order alternated:
 
-`agent.py` now passes `buffer_char_threshold=40` and `max_buffer_delay_ms=300`
-(`SCREENING_TTS_BUFFER_CHARS` / `SCREENING_TTS_BUFFER_DELAY_MS`). Going much
-lower is not better: the model then sees too little text at a time and the
-intonation breaks up inside a sentence.
+| buffer setting | first audio (median) | worst gap between frames |
+| --- | --- | --- |
+| plugin defaults, 120 / 3000 | 1.81 s | 0.28 s |
+| lowered to 40 / 300 | 1.84 s | 0.28 s |
 
-**The agent interrupting itself.** A phone line gives us no echo cancellation,
-so our own voice comes back through the worker's handset, and a worksite adds
-noise on top. With the default `min_words: 0` any of that registers as the
-worker cutting in, and the agent stops mid-sentence and starts again — which
-sounds like a bad line, not like politeness. The session now requires two words
-and 0.6 s before it treats speech as an interruption.
+No difference — the spread inside one setting (1.02-1.97 s) is wider than the
+gap between them. The reason is in the plugin: `tts.py` sets
+`autoMode = True` on every context ("Always enable auto_mode since we always
+use SentenceTokenizer"), so the server generates as each complete sentence
+arrives and the buffer thresholds never come into it. A worst gap of 0.28 s is
+not something a person hears as halting. The knobs were removed again rather
+than left behind claiming a fix they do not make.
 
-**Docker's userland proxy on the media path.** `livekit` and `sip` used to
-publish their RTP ranges with `ports:`, which means every audio packet — fifty
-a second, each way, per call — was relayed by a `docker-proxy` process in
-userland instead of going straight to the host NIC. That adds jitter and drops
-packets under load. The whole stack now runs on `network_mode: host`, which is
-LiveKit's own guidance for a single VPS; see the header of
-`docker-compose.livekit.yml` for what that changed and why.
+**Turn handling, which is hardening rather than a diagnosis.** A phone line
+gives us no echo cancellation, so our own voice returns through the worker's
+handset and a worksite adds noise on top. At LiveKit's default `min_words: 0`
+any of that registers as the worker interrupting, and the agent stops
+mid-sentence and starts again — which would sound exactly like a bad line.
+The session now asks for two words and 0.6 s before treating speech as an
+interruption, and runs TTS preemptively so the first frame leaves sooner.
+Both are reasonable for telephony; neither has been confirmed as *the* cause,
+because that needs a recorded call to inspect.
 
-Two things follow from it, and both are the kind that are only noticed on a
-live call:
+**Docker's userland proxy on the media path — the strongest remaining
+candidate.** `livekit` and `sip` used to publish their RTP ranges with
+`ports:`, so every audio packet — fifty a second, each way, per call — was
+relayed by a `docker-proxy` process in userland instead of going straight to
+the host NIC, which adds jitter and drops packets under load. The whole stack
+now runs on `network_mode: host`, which is LiveKit's own guidance for a single
+VPS; see the header of `docker-compose.livekit.yml`.
+
+Two things follow from that, and both are only noticed on a live call:
 
 - **Service names no longer resolve.** There is no per-compose DNS on the host
   network, so `livekit.yaml`, `sip.yaml` and the agent's `LIVEKIT_URL` all
-  point at `127.0.0.1`. Putting a service back on the bridge means putting its
-  address back too.
+  point at `127.0.0.1`. Laravel's `LIVEKIT_URL` is the exception and depends on
+  where Laravel runs — see "Environment" above.
 - **The firewall now applies.** Published ports write their own iptables chain
   and bypass ufw; host networking does not. `7880/tcp`, `7881/tcp`,
-  `20000:20200/udp` and `10000:10200/udp` have to be opened by hand on the VPS.
-  A call that connects and then goes silent is this.
+  `20000:20200/udp` and `10000:10200/udp` have to be opened by hand. A call
+  that connects and then goes silent is this.
+
+**If it is still halting after that**, record one and look at where the silence
+falls. A gap before the agent answers is the LLM round trip (Sarvam, across the
+internet) and is fixed by a faster model or a closer one. A gap *inside* a
+sentence is the media path. The agent cutting itself off mid-word is the
+interruption threshold. These are three different bugs and guessing between
+them is what went wrong the first time.
 
 ## What the agent says
 

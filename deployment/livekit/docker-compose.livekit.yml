@@ -136,12 +136,6 @@ services:
       # authenticates both; without it the container starts and has no voice.
       SCREENING_STT: ${SCREENING_STT:-inworld/inworld-stt-1}
       SCREENING_TTS: ${SCREENING_TTS:-inworld/inworld-tts-1.5-max}
-      # How much text Inworld buffers before it starts speaking. Its defaults
-      # (120 chars / 3000 ms) suit a paragraph, not the short sentences the
-      # call script asks for, and made the agent stall for up to three seconds
-      # before every reply.
-      SCREENING_TTS_BUFFER_CHARS: ${SCREENING_TTS_BUFFER_CHARS:-40}
-      SCREENING_TTS_BUFFER_DELAY_MS: ${SCREENING_TTS_BUFFER_DELAY_MS:-300}
       INWORLD_API_KEY: ${INWORLD_API_KEY:-}
       # Sarvam is the A/B on Hindi, and also serves the LLM below.
       SARVAM_API_KEY: ${SARVAM_API_KEY:-}
