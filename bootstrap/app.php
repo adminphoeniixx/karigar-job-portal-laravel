@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Middleware\EnsureActiveAccount;
+use App\Http\Middleware\EnsureActiveSubscription;
+use App\Http\Middleware\EnsureKycEnabled;
+use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocale;
@@ -17,20 +21,33 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // The app never faces the internet directly: easypanel's proxy
+        // terminates TLS and forwards plain HTTP with X-Forwarded-Proto. Until
+        // this was here Laravel believed the scheme was the one it saw, so
+        // every generated URL came out `http://` on an `https://` page —
+        // including the Vite asset tags. Each of the ~48 assets then had to
+        // bounce through a 301, enough of them came back 503, the JS bundle
+        // never loaded, and Inertia mounted nothing. The whole panel rendered
+        // as a blank cream page with no error in the console.
+        //
+        // `at: '*'` because the proxy's address is assigned by the platform
+        // and changes; nothing can reach the container except through it.
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
             HandleAppearance::class,
             SetLocale::class,
-            \App\Http\Middleware\EnsureActiveAccount::class,
+            EnsureActiveAccount::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\EnsureRole::class,
-            'subscription' => \App\Http\Middleware\EnsureActiveSubscription::class,
-            'kyc.enabled' => \App\Http\Middleware\EnsureKycEnabled::class,
+            'role' => EnsureRole::class,
+            'subscription' => EnsureActiveSubscription::class,
+            'kyc.enabled' => EnsureKycEnabled::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
