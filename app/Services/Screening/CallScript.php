@@ -118,8 +118,15 @@ class CallScript
     {
         $company = $employer->employerProfile?->company_name ?: $employer->name;
 
+        // Devanagari, not the Roman transliteration this used to be. The TTS is
+        // told the language is Hindi, and given Latin letters it has to guess
+        // how to say them — "hoon", "kaam", "sakte" come out with an English
+        // mouth, which is what "pronunciation sahi nahi hai" meant. In
+        // Devanagari it simply reads them. The brand, the company name and the
+        // English words a worker actually uses stay in Latin on purpose: the
+        // register is still worksite Hinglish, only the script changes.
         return trim(sprintf(
-            'Namaste %s. Main %s se automated call kar rahi hoon. %s ne aapka application dekha hai — %s ka kaam, %s me. Kya aap do minute baat kar sakte hain?',
+            'नमस्ते %s। मैं %s से automated call कर रही हूँ। %s ने आपका application देखा है — %s का काम, %s में। क्या आप दो minute बात कर सकते हैं?',
             $worker->name,
             $brand,
             $company,
@@ -143,8 +150,18 @@ class CallScript
         // to in it either. The greeting is already Roman-script Hinglish; the
         // rest of the call has to match it or the agent sounds like a news
         // anchor and the worker stops answering.
+        // The script matters as much as the register, because this text is read
+        // aloud rather than displayed. A Hindi voice given Roman text has to
+        // transliterate before it can speak, and it gets it wrong often enough
+        // to sound foreign. Writing the Hindi in Devanagari removes the guess;
+        // leaving the English words in Latin keeps them sounding English,
+        // which is how a worker says "site" and "interview" anyway.
+        $script = $language === 'hi'
+            ? ' Write your replies in Devanagari script, not in Roman transliteration — क्या आप, not "kya aap". Words that are genuinely English (site, interview, time, salary, confirm, project) stay written in English letters inside the Devanagari sentence.'
+            : '';
+
         $register = $language === 'hi'
-            ? "Speak {$languageName} the way it is actually spoken on a worksite — everyday Hinglish, with the common English words (site, interview, time, salary) left in English. Do not use formal or Sanskritised {$languageName}."
+            ? "Speak {$languageName} the way it is actually spoken on a worksite — everyday Hinglish, with the common English words (site, interview, time, salary) left in English. Do not use formal or Sanskritised {$languageName}.{$script}"
             : "Speak {$languageName} the way it is actually spoken, with the common English words (site, interview, time, salary) left in English.";
 
         // Two rules the model broke in rehearsal when they were stated in the
@@ -152,11 +169,13 @@ class CallScript
         // and "main aapko confirm karungi" (only the employer confirms). Both
         // now come with the sentence to actually say, because a worked example
         // lands where a prohibition does not.
+        // In Devanagari too — the model copies the shape of these, so a Roman
+        // example would quietly undo the script rule above.
         $payExample = $language === 'hi'
-            ? ' For example: "Employer ne '.$wage.' likha hai, final amount employer hi tay karega."'
+            ? ' For example: "Employer ने '.$wage.' लिखा है, final amount employer ही तय करेगा।"'
             : '';
         $confirmExample = $language === 'hi'
-            ? ' For example: "Main employer ko bata deti hoon, wo aapko confirm karenge."'
+            ? ' For example: "मैं employer को बता देती हूँ, वो आपको confirm करेंगे।"'
             : '';
 
         return <<<PROMPT

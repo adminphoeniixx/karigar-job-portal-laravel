@@ -143,7 +143,18 @@ services:
       # Speech in and speech out both on Inworld — one account, one key, and the
       # cloned Hindi voice the script is tuned for. INWORLD_API_KEY is what
       # authenticates both; without it the container starts and has no voice.
-      SCREENING_STT: ${SCREENING_STT:-inworld/inworld-stt-1}
+      # Sarvam, not Inworld, for listening — the one place the two vendors
+      # are not interchangeable. On the same line, to the same question,
+      # Inworld returned "haan disturb hai" for "haan interested hain" and
+      # turned a sentence into "kyunki itihaas wahin sparsh itihaas ke saare
+      # hisse hain"; Sarvam returned "haan ji, kar sakta hoon" and read
+      # "Morning 6 AM" back in English. A wrong transcript is worse than a
+      # slow one: the model answers the words it was given, so an interested
+      # worker was recorded as callback_later and the employer never saw them.
+      #
+      # saaras:v3, because the API now answers saarika:v2.5 with "is sunset,
+      # please migrate". v4 exists but this plugin version does not know it.
+      SCREENING_STT: ${SCREENING_STT:-sarvam/saaras:v3}
       SCREENING_TTS: ${SCREENING_TTS:-inworld/inworld-tts-1.5-max}
       INWORLD_API_KEY: ${INWORLD_API_KEY:-}
       # Sarvam is the A/B on Hindi, and also serves the LLM below.

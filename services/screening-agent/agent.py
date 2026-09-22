@@ -378,10 +378,23 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
             # it further only against a recording, not a hunch.
             "interruption": {"min_words": 3, "min_duration": 0.8},
             # Start synthesising while the turn is still being confirmed, not
-            # after. Sarvam sits on the other side of the internet and the
+            # after. The LLM sits on the other side of the internet and the
             # first audio frame is the one the worker is waiting through in
             # silence; everything after it streams.
             "preemptive_generation": {"enabled": True, "preemptive_tts": True},
+            # Wait longer for the transcript than LiveKit's streaming default
+            # of 0.3s. Sarvam's STT is more accurate than Inworld's on phone
+            # audio and slower with it, and at 0.3s the agent kept committing
+            # the turn before the words arrived — the log says so outright:
+            # "transcript arrives after turn has been committed". The damage
+            # shows up in the transcript as a worker's answer split across two
+            # turns, so "26 tareekh, morning 6 baje" reached the model as a
+            # stray number and then a time, and the slot came out wrong.
+            #
+            # The cost is real: this is silence the worker hears after they
+            # stop talking. 0.7s is about the length of a natural pause, and
+            # max_delay still ends the turn on someone who trails off.
+            "endpointing": {"min_delay": 0.7, "max_delay": 3.0},
         },
     )
 
@@ -428,7 +441,27 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
         except (asyncio.TimeoutError, asyncio.CancelledError):
             logger.warning("goodbye did not finish before hangup", extra={"call_id": call_id})
 
-    await report(call_id, **await extract(session, meta))
+    # Registered rather than awaited here, and that is the difference between
+    # a result and an "extraction_failed".
+    #
+    # The moment the worker hangs up, LiveKit starts shutting the job down and
+    # gives the entrypoint fifteen seconds to return before cancelling it
+    # (ipc/job_proc_lazy_main.py). Reading the transcript back through the LLM
+    # and then POSTing the webhook, with retries, does not reliably fit in
+    # what is left of that budget after draining — and when the cancel lands
+    # mid-request the LLM returns an empty string, which arrives here as a
+    # JSONDecodeError at character 0 and tells you nothing about why.
+    #
+    # Shutdown callbacks run after the room is disconnected and are awaited
+    # together without a per-callback timeout, so this is the one place the
+    # work is allowed to take as long as it takes. Nothing in it needs the
+    # room: the transcript is already in memory and the rest is two HTTP
+    # calls.
+    async def finish() -> None:
+        await report(call_id, **await extract(session, meta))
+
+    ctx.add_shutdown_callback(finish)
+    ctx.shutdown()
 
 
 async def extract(session: AgentSession, meta: dict[str, Any]) -> dict[str, Any]:
@@ -477,13 +510,26 @@ async def extract(session: AgentSession, meta: dict[str, Any]) -> dict[str, Any]
 
     try:
         answer = await session.llm.chat(chat_ctx=chat_ctx).collect()
-        fields = json.loads(_strip_fence(answer.text))
+        raw = answer.text or ""
+        fields = json.loads(_json_object(raw))
     except Exception:
         # A call that happened but could not be parsed is still a completed
         # call — the employer can read the transcript and decide themselves.
         # It is flagged, though: a silent fallback here is what hid the API
         # mismatch above for weeks of live calls.
-        logger.exception("extraction failed", extra={"call_id": meta["room"]})
+        #
+        # `raw` is logged because without it this is undebuggable from the
+        # outside: every failure looked identical in the database
+        # ("extraction_failed") and identical in the log (a JSONDecodeError at
+        # char 0), which says only that the string was not JSON — not whether
+        # the model refused, wrapped it in prose, or returned nothing at all.
+        # The model answers this prompt correctly when asked directly, so the
+        # difference is something about the call that ends around it, and the
+        # text is the only witness.
+        logger.exception(
+            "extraction failed",
+            extra={"call_id": meta["room"], "raw_answer": locals().get("raw", "<no response>")},
+        )
         return {
             "status": "completed",
             "transcript": transcript,
@@ -500,14 +546,27 @@ async def extract(session: AgentSession, meta: dict[str, Any]) -> dict[str, Any]
     }
 
 
-def _strip_fence(text: str) -> str:
-    """Models wrap JSON in ```json fences often enough to handle it here."""
+def _json_object(text: str) -> str:
+    """
+    Dig the JSON object out of whatever the model actually said.
+
+    Asking for "ONLY a JSON object" gets one most of the time and something
+    around one the rest of the time: a ```json fence, a sentence of preamble,
+    or both. None of that is worth losing a call's outcome over — the employer
+    would otherwise get a transcript and no answer.
+
+    Falls back to the outermost braces, which is enough for a flat object and
+    for a nested one, and raises nothing itself: an empty or brace-less string
+    goes to json.loads unchanged so the caller's handler logs what came back.
+    """
     cleaned = text.strip()
 
     if cleaned.startswith("```"):
-        cleaned = cleaned.split("\n", 1)[1].rsplit("```", 1)[0]
+        cleaned = cleaned.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
-    return cleaned.strip()
+    start, end = cleaned.find("{"), cleaned.rfind("}")
+
+    return cleaned[start : end + 1] if 0 <= start < end else cleaned
 
 
 async def report(call_id: str | None, **fields: Any) -> None:
@@ -549,5 +608,12 @@ if __name__ == "__main__":
             # Must match LIVEKIT_AGENT_NAME in Laravel, or dispatches go
             # nowhere and every call silently times out.
             agent_name=os.getenv("LIVEKIT_AGENT_NAME", "screening-agent"),
+            # Room for the shutdown callback above to finish. The default of
+            # ten seconds is the supervisor's patience before it kills the
+            # process, and the extraction plus the webhook's retries can
+            # outlast it on a slow round trip — at which point the call is
+            # over, the transcript is gone, and Laravel still has the row on
+            # "dialing".
+            shutdown_process_timeout=60.0,
         )
     )
