@@ -145,18 +145,29 @@ return [
 
     'redis' => [
 
-        // predis, not Laravel's phpredis default, because phpredis is a C
+        // predis by default, not Laravel's phpredis, because phpredis is a C
         // extension and this app's image does not carry one: `install-php-extensions
         // redis` fails against PECL, which answers "No releases available" for
-        // the package even while advertising 6.3.0 as stable. With the default
-        // left alone, a deploy using the redis queue threw `Class "Redis" not
-        // found` from the *dispatch* — so it surfaced as a 500 on whichever
-        // button the user pressed, not as a failed job, and every queued email,
-        // notification and screening call died at the same point.
+        // the package even while advertising 6.3.0 as stable. predis is pure
+        // PHP, ships with composer, and Horizon supports it.
         //
-        // predis is pure PHP, ships with composer, and Horizon supports it.
-        // Set REDIS_CLIENT=phpredis if the extension is ever available.
-        'client' => env('REDIS_CLIENT', 'predis'),
+        // The extension check is not belt-and-braces. Asking for phpredis when
+        // no extension is installed is never a preference anyone holds — it is
+        // a misconfiguration, and an expensive one: the failure is `Class
+        // "Redis" not found` thrown from the *dispatch*, so it surfaces as a
+        // 500 on whichever button the user pressed rather than as a failed
+        // job, and it takes every queued email, notification, AI scoring run
+        // and screening call with it. Changing the default alone would not
+        // have helped, because REDIS_CLIENT=phpredis was already written into
+        // this deployment's env from .env.example and an explicit value wins.
+        //
+        // So: honour REDIS_CLIENT, unless it names a driver that cannot
+        // possibly work here.
+        'client' => (static function (): string {
+            $client = (string) env('REDIS_CLIENT', 'predis');
+
+            return $client === 'phpredis' && ! extension_loaded('redis') ? 'predis' : $client;
+        })(),
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
