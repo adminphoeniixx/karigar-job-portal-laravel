@@ -360,13 +360,23 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
         turn_handling={
             # A phone line has no echo cancellation on our side: the worker's
             # handset leaks our own voice back to us, and a worksite adds a
-            # compressor, a horn and three other people talking. Left at the
-            # default of zero words, any of that counts as the worker
+            # compressor, a horn and three other people talking. Left at
+            # LiveKit's default of zero words, any of that counts as the worker
             # interrupting, and the agent stops mid-sentence and restarts —
-            # which sounds exactly like a bad connection rather than like
-            # someone being polite. Two words is enough that a real "haan ji"
-            # still cuts in but a cough does not.
-            "interruption": {"min_words": 2, "min_duration": 0.6},
+            # which is what "the voice keeps stopping" turned out to mean.
+            #
+            # Two words was the first attempt and was not enough. A recorded
+            # call shows why: the agent's own turns come back truncated
+            # mid-word in the transcript — "Theek hai," / "Aapka samay suna. Ab
+            # aapko" — cut by the worker saying "haan ji", which is exactly two
+            # words. On a phone call that is not an interruption, it is
+            # backchannel: the noise a person makes to show they are still
+            # listening. Hindi is full of it — haan ji, achha, hmm, theek hai.
+            #
+            # Three words and 0.8s lets those through while a real interruption
+            # ("nahi nahi, main abhi busy hoon") still stops the agent. Raise
+            # it further only against a recording, not a hunch.
+            "interruption": {"min_words": 3, "min_duration": 0.8},
             # Start synthesising while the turn is still being confirmed, not
             # after. Sarvam sits on the other side of the internet and the
             # first audio frame is the one the worker is waiting through in
