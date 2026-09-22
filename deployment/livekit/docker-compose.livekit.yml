@@ -152,11 +152,23 @@ services:
       # deepgram/nova-3 and cartesia/sonic-3 and fill these in instead.
       DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
       CARTESIA_API_KEY: ${CARTESIA_API_KEY:-}
-      # Sarvam, on the key above — DigitalOcean's Llama answers 403 now and the
-      # llama3.3 id was retired. The "conversations" variant, not plain
-      # sarvam-105b, which returns its reasoning instead of an answer.
-      SCREENING_LLM: ${SCREENING_LLM:-openai/sarvam-105b-conversations}
-      SCREENING_LLM_BASE_URL: ${AI_BASE_URL:-https://api.sarvam.ai/v1}
+      # The brain. DigitalOcean's llama-4-maverick, not Sarvam, and the reason
+      # is latency spread rather than quality.
+      #
+      # A voice call cannot wait. Sarvam's 105b-conversations was measured at
+      # ten identical requests three seconds apart: seven answered, three timed
+      # out at twenty seconds, and of the ones that answered the median was
+      # 0.39s but the slowest took 13s. On a phone that is a worker speaking
+      # and then hearing nothing at all, which is exactly how it behaved live.
+      # llama-4-maverick over the same ten: 10/10, median 1.67s, slowest 1.84s.
+      # Slower in the middle, and that does not matter; what matters is that it
+      # always answers and never stalls.
+      #
+      # It also calls tools, which is not optional — the agent hangs up by
+      # calling end_call, and a model that cannot would hold every line open
+      # until the 180s backstop.
+      SCREENING_LLM: ${SCREENING_LLM:-openai/llama-4-maverick}
+      SCREENING_LLM_BASE_URL: ${AI_BASE_URL:-https://inference.do-ai.run/v1}
       SCREENING_LLM_API_KEY: ${AI_KEY:-}
     depends_on:
       - livekit
