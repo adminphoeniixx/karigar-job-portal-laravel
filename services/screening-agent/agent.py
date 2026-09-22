@@ -119,6 +119,24 @@ STT_LANGUAGES = {"hi": "multi", "en": "multi"}
 # extracted slot in. Both ends must agree or the interview lands hours out.
 SCREENING_TIMEZONE = os.getenv("SCREENING_TIMEZONE", "Asia/Kolkata")
 
+# How much text Inworld's streaming TTS holds back before it starts generating
+# audio, and how long it will sit on a buffer that never reaches that size.
+#
+# This is what made the agent speak in stops and starts. The plugin's defaults
+# are 120 characters and 3000 ms, which suit reading a paragraph aloud. The
+# call script deliberately does the opposite — CallScript tells the model to
+# answer in "short, plain sentences" — so a reply like "Haan ji, theek hai.
+# Kal subah gyarah baje?" never reaches 120 characters, and the server waits
+# out the full three seconds before saying a word. Every turn picked up that
+# pause, and a longer reply picked up another one at each 120-character
+# boundary.
+#
+# Low enough that one short sentence is generated the moment it arrives, high
+# enough that the model still sees a whole clause and does not lose its
+# intonation part-way through.
+TTS_BUFFER_CHARS = int(os.getenv("SCREENING_TTS_BUFFER_CHARS", "40"))
+TTS_BUFFER_DELAY_MS = int(os.getenv("SCREENING_TTS_BUFFER_DELAY_MS", "300"))
+
 
 def load_metadata(ctx: JobContext) -> dict[str, Any]:
     """
@@ -246,6 +264,10 @@ def build_tts(meta: dict[str, Any]) -> tts_module.TTS:
         return inworld.TTS(
             model=model,
             language=f"{language}-IN" if len(language) == 2 else language,
+            # See TTS_BUFFER_CHARS: left at the plugin's defaults the voice
+            # stalls for up to three seconds before each short reply.
+            buffer_char_threshold=TTS_BUFFER_CHARS,
+            max_buffer_delay_ms=TTS_BUFFER_DELAY_MS,
             **({"voice": voice} if voice else {}),
         )
 
@@ -358,6 +380,22 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
         stt=build_stt(meta),
         llm=build_llm(),
         tts=build_tts(meta),
+        turn_handling={
+            # A phone line has no echo cancellation on our side: the worker's
+            # handset leaks our own voice back to us, and a worksite adds a
+            # compressor, a horn and three other people talking. Left at the
+            # default of zero words, any of that counts as the worker
+            # interrupting, and the agent stops mid-sentence and restarts —
+            # which sounds exactly like a bad connection rather than like
+            # someone being polite. Two words is enough that a real "haan ji"
+            # still cuts in but a cough does not.
+            "interruption": {"min_words": 2, "min_duration": 0.6},
+            # Start synthesising while the turn is still being confirmed, not
+            # after. Sarvam sits on the other side of the internet and the
+            # first audio frame is the one the worker is waiting through in
+            # silence; everything after it streams.
+            "preemptive_generation": {"enabled": True, "preemptive_tts": True},
+        },
     )
 
     await session.start(

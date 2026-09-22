@@ -100,9 +100,13 @@ Three things in the Plivo console, then one command here.
    Trunking** on so signalling runs over TLS. Note the trunk's termination
    domain: `<trunk_id>.zt.plivo.com`.
 3. **Number** — a +91 number on the account, after KYC. This is what workers
-   see, and it goes in `SCREENING_FROM_NUMBER`.
+   see, and it goes in `SCREENING_FROM_NUMBER`. Ours is **+91 80 3170 3250**,
+   a Bengaluru DID — a landline to the worker, which is exactly why the
+   Truecaller registration below matters.
 
-Then create the matching outbound trunk on our LiveKit server:
+Then create the matching outbound trunk on our LiveKit server. The full
+sequence, from the four values to the first test call, is
+[plivo-go-live.md](plivo-go-live.md):
 
 ```jsonc
 // plivo-trunk.json
@@ -110,7 +114,7 @@ Then create the matching outbound trunk on our LiveKit server:
   "trunk": {
     "name": "Plivo — Super Karigar screening",
     "address": "<trunk_id>.zt.plivo.com",
-    "numbers": ["+9180xxxxxxx"],
+    "numbers": ["+918031703250"],
     "transport": "SIP_TRANSPORT_TLS"
   }
 }
@@ -160,7 +164,7 @@ out for good — but none of those substitute for the carrier's written answer.
 
 ```dotenv
 SCREENING_PROVIDER=livekit          # 'stub' (default) dials nobody
-SCREENING_FROM_NUMBER=+9180xxxxxxx  # the virtual number
+SCREENING_FROM_NUMBER=+918031703250 # the virtual number
 SCREENING_BRAND="Super Karigar"
 SCREENING_LANGUAGE=hi
 SCREENING_WEBHOOK_SECRET=<long random string>
@@ -283,7 +287,7 @@ our own speech and LLM keys either way.
 
 **Ports, with Plivo.** Outbound calls dial *out* over TLS, so the carrier never
 has to reach us and nothing needs whitelisting; what has to be open is the RTP
-range that carries the audio back — `10000-20000/udp`, deliberately below the
+range that carries the audio back — `10000-10200/udp`, deliberately below the
 kernel's ephemeral range for the same reason `livekit.yaml` is. `5060` is
 listening for an inbound trunk we do not have yet. With Exotel this was the
 other way round: SIP/TCP on 5070 and RTP 10000-40000, both dictated by them, on
@@ -312,6 +316,53 @@ reference implementation.
 
 Nothing else changes: `CallScript`, retries, calling hours, the webhook and the
 interview booking are all provider-agnostic.
+
+## When the voice sounds halting
+
+The first complaint off a live call was that the agent spoke in stops and
+starts — a few words, a long gap, a few more. Three separate things can cause
+that, and they are worth ruling out in this order.
+
+**Inworld's streaming buffer (this was the one).** The plugin defaults to
+generating audio only once 120 characters have arrived, or 3000 ms have passed,
+whichever comes first. That suits reading a paragraph aloud. `CallScript` asks
+the model for the opposite — "short, plain sentences a construction or trade
+worker will understand" — so a reply like *"Haan ji, theek hai. Kal subah
+gyarah baje?"* never reaches 120 characters and the server sits on it for the
+full three seconds before saying a word. Every turn paid that pause, and a
+longer reply paid it again at each 120-character boundary.
+
+`agent.py` now passes `buffer_char_threshold=40` and `max_buffer_delay_ms=300`
+(`SCREENING_TTS_BUFFER_CHARS` / `SCREENING_TTS_BUFFER_DELAY_MS`). Going much
+lower is not better: the model then sees too little text at a time and the
+intonation breaks up inside a sentence.
+
+**The agent interrupting itself.** A phone line gives us no echo cancellation,
+so our own voice comes back through the worker's handset, and a worksite adds
+noise on top. With the default `min_words: 0` any of that registers as the
+worker cutting in, and the agent stops mid-sentence and starts again — which
+sounds like a bad line, not like politeness. The session now requires two words
+and 0.6 s before it treats speech as an interruption.
+
+**Docker's userland proxy on the media path.** `livekit` and `sip` used to
+publish their RTP ranges with `ports:`, which means every audio packet — fifty
+a second, each way, per call — was relayed by a `docker-proxy` process in
+userland instead of going straight to the host NIC. That adds jitter and drops
+packets under load. The whole stack now runs on `network_mode: host`, which is
+LiveKit's own guidance for a single VPS; see the header of
+`docker-compose.livekit.yml` for what that changed and why.
+
+Two things follow from it, and both are the kind that are only noticed on a
+live call:
+
+- **Service names no longer resolve.** There is no per-compose DNS on the host
+  network, so `livekit.yaml`, `sip.yaml` and the agent's `LIVEKIT_URL` all
+  point at `127.0.0.1`. Putting a service back on the bridge means putting its
+  address back too.
+- **The firewall now applies.** Published ports write their own iptables chain
+  and bypass ufw; host networking does not. `7880/tcp`, `7881/tcp`,
+  `20000:20200/udp` and `10000:10200/udp` have to be opened by hand on the VPS.
+  A call that connects and then goes silent is this.
 
 ## What the agent says
 

@@ -13,12 +13,21 @@
 # are what *we* listen on — the RTP range carries every call's audio, and
 # sip_port matters only on the day we start accepting inbound calls too.
 
-api_key: ${LIVEKIT_API_KEY}
-api_secret: ${LIVEKIT_API_SECRET}
-ws_url: ws://livekit:7880
+# api_key and api_secret are deliberately absent. They used to be written here
+# as ${LIVEKIT_API_KEY} / ${LIVEKIT_API_SECRET}, but this file is read as plain
+# YAML — nothing expands a shell placeholder in it — so the service
+# authenticated with the literal string "${LIVEKIT_API_KEY}" and every call
+# died at join with `unauthorized: invalid API key: ${LIVEKIT_API_KEY}`, long
+# after the trunk and the dial had worked. The service reads both from its
+# environment, which docker-compose already passes.
+
+# 127.0.0.1, not `livekit`. This service runs on the host network — the audio
+# it carries is what pushed the whole stack off docker's bridge — and there is
+# no per-compose DNS there to resolve a service name with. Same for redis.
+ws_url: ws://127.0.0.1:7880
 
 redis:
-  address: redis:6379
+  address: 127.0.0.1:6379
 
 # The SIP standard port, and LiveKit's own default. Unused while we only dial
 # out; Plivo's origination URI would point here (";transport=tcp") if we ever
@@ -30,7 +39,7 @@ sip_port: 5060
 # 32768-60999 by default) for the same reason livekit.yaml is: a range that
 # overlaps it can find a port already held by an unrelated socket, and the bind
 # fails intermittently with "address already in use".
-rtp_port: 10000-20000
+rtp_port: 10000-10200
 
 use_external_ip: true
 

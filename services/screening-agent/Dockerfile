@@ -14,7 +14,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# The wheels here are large (torch, onnxruntime) and pip's default 15s read
+# timeout gives up on them over a slow link — the build then fails with a
+# ReadTimeoutError that looks like a broken requirement rather than a network
+# blip. Wait longer and retry instead.
+RUN pip install --no-cache-dir --timeout 120 --retries 5 -r requirements.txt
 
 COPY agent.py .
 

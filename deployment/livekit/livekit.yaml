@@ -25,8 +25,12 @@ rtc:
 
 # Required once SIP is in the picture: the SIP service and the media server
 # find each other through Redis, not directly.
+#
+# 127.0.0.1, not `redis`: every service in the compose file runs on the host
+# network so the call audio does not go through docker's userland proxy, and
+# the host network has no per-compose DNS to resolve a service name with.
 redis:
-  address: redis:6379
+  address: 127.0.0.1:6379
 
 logging:
   level: info

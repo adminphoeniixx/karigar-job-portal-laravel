@@ -13,14 +13,63 @@
 #
 #   docker compose -f deployment/livekit/docker-compose.livekit.yml up -d
 #
-# On easypanel, add these as a compose service and open the ports listed below
-# on the VPS firewall — they are UDP, so the HTTP proxy will not do it for you.
+# Every service here runs on `network_mode: host`, which is not the usual
+# default and is worth understanding before changing it back.
+#
+# Docker's normal bridge networking gives each container its own namespace and
+# reaches it through `ports:`, and every published port gets a `docker-proxy`
+# process that copies each packet through userland. For HTTP that is invisible.
+# Call audio is RTP — fifty small UDP packets a second, each way, per call —
+# and relaying those through userland adds jitter and drops, which is what made
+# the screening voice sound like it was breaking up. Host networking puts the
+# media straight on the host NIC, as if the services had been installed with
+# apt, and is what LiveKit recommends for a single VPS.
+#
+# Two consequences, both of which will bite if forgotten:
+#
+#   1. Service names no longer resolve. There is no per-compose DNS on the host
+#      network, so everything below talks to 127.0.0.1 rather than to `redis`
+#      or `livekit`. Changing a service back to bridge networking means
+#      changing those addresses back too — in livekit.yaml and sip.yaml as well
+#      as here.
+#
+#   2. The firewall now applies. Published ports bypass ufw by writing their
+#      own iptables chain; host networking does not, so these must be opened by
+#      hand on the VPS — and the UDP ranges are the ones that actually carry
+#      the audio, so a call that connects and then stays silent means these:
+#
+#        ufw allow 7880/tcp                # signalling — put TLS in front
+#        ufw allow 7881/tcp                # RTC over TCP, the fallback
+#        ufw allow 20000:20200/udp         # LiveKit media
+#        ufw allow 10000:10200/udp         # SIP media, to and from Plivo
+#
+#      Port 5060 stays closed: we only dial out. Open it the day we take
+#      inbound calls.
+#
+# A port already in use on the VPS now collides instead of being quietly
+# remapped — the container fails to start with "address already in use", which
+# is at least loud.
+#
+# On easypanel, add these as a compose service.
 
 services:
-  # State shared between the media server and the SIP bridge.
+  # State shared between the media server and the SIP bridge — and, less
+  # obviously, where LiveKit keeps the SIP trunk. That is durable
+  # configuration, not cache: this used to run with `--save "" --appendonly no`
+  # and every redis restart silently dropped the trunk, after which the agent
+  # failed each call with "requested sip trunk does not exist" until somebody
+  # re-registered it. Appendonly keeps it across a restart.
   redis:
     image: redis:7-alpine
-    command: redis-server --save "" --appendonly no
+    # `--bind 127.0.0.1` is load-bearing on the host network. Redis defaults to
+    # listening on every interface, and with no container namespace around it
+    # that means the VPS's public IP — an open, unauthenticated redis holding
+    # the SIP trunk. Only livekit and sip talk to it, and both are on this same
+    # host, so loopback is all it ever needs.
+    command: redis-server --bind 127.0.0.1 --appendonly yes --appendfsync everysec
+    network_mode: host
+    volumes:
+      - redis-data:/data
     restart: unless-stopped
 
   livekit:
@@ -31,18 +80,22 @@ services:
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml:ro
-    ports:
-      - "7880:7880"          # signalling (websocket) — put TLS in front of this
-      - "7881:7881"          # RTC over TCP, the fallback when UDP is blocked
-      - "20000-20200:20000-20200/udp"  # the actual audio — see livekit.yaml
+    # 7880 signalling, 7881 RTC over TCP, 20000-20200/udp the audio itself.
+    # Not published — see the header: they are opened on the VPS firewall now.
+    network_mode: host
     depends_on:
       - redis
     restart: unless-stopped
 
   # The phone line. Screening calls only dial out, so this service opens the
   # connection to Plivo rather than waiting for one: the credentials sit on the
-  # LiveKit outbound trunk and nothing here needs whitelisting. The ports below
-  # are what we listen on — see sip.yaml.
+  # LiveKit outbound trunk and nothing here needs whitelisting. What it listens
+  # on is in sip.yaml — 5060 for signalling and 10000-10200/udp for the audio.
+  #
+  # This is the service host networking matters most for: every packet of the
+  # worker's voice, and of ours, crosses these RTP ports. The range stays
+  # narrow anyway — 200 ports is 100 concurrent calls, far past what we will
+  # ever place, and the same reasoning livekit.yaml applies to its ICE range.
   sip:
     image: livekit/sip:latest
     command: --config /etc/sip.yaml
@@ -51,21 +104,25 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
     volumes:
       - ./sip.yaml:/etc/sip.yaml:ro
-    ports:
-      - "5060:5060/tcp"                  # only for inbound calls, which we
-      - "5060:5060/udp"                  # do not take yet — harmless open
-      - "10000-20000:10000-20000/udp"    # call audio, two ports per call
+    network_mode: host
     depends_on:
       - livekit
     restart: unless-stopped
 
   # The voice itself. Same image whether LiveKit is self-hosted or cloud — only
   # LIVEKIT_URL changes.
+  #
+  # On the host network too, and not only because `livekit` no longer resolves:
+  # the agent publishes and subscribes real audio tracks, so it sits on the
+  # media path exactly like the SIP bridge does. Left on the bridge it would
+  # reach the media server over docker's NAT, and with `use_external_ip: true`
+  # its own audio can end up taking a trip out to the public IP and back.
   agent:
     build:
       context: ../../services/screening-agent
+    network_mode: host
     environment:
-      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_URL: ws://127.0.0.1:7880
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
       LIVEKIT_AGENT_NAME: screening-agent
@@ -79,6 +136,12 @@ services:
       # authenticates both; without it the container starts and has no voice.
       SCREENING_STT: ${SCREENING_STT:-inworld/inworld-stt-1}
       SCREENING_TTS: ${SCREENING_TTS:-inworld/inworld-tts-1.5-max}
+      # How much text Inworld buffers before it starts speaking. Its defaults
+      # (120 chars / 3000 ms) suit a paragraph, not the short sentences the
+      # call script asks for, and made the agent stall for up to three seconds
+      # before every reply.
+      SCREENING_TTS_BUFFER_CHARS: ${SCREENING_TTS_BUFFER_CHARS:-40}
+      SCREENING_TTS_BUFFER_DELAY_MS: ${SCREENING_TTS_BUFFER_DELAY_MS:-300}
       INWORLD_API_KEY: ${INWORLD_API_KEY:-}
       # Sarvam is the A/B on Hindi, and also serves the LLM below.
       SARVAM_API_KEY: ${SARVAM_API_KEY:-}
@@ -95,3 +158,6 @@ services:
     depends_on:
       - livekit
     restart: unless-stopped
+
+volumes:
+  redis-data:

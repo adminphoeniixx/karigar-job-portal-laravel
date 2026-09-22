@@ -84,7 +84,7 @@ class LiveKitVoiceAgent implements VoiceAgent
             'agent_name' => (string) config('screening.livekit.agent_name', 'screening-agent'),
             'room' => $room,
             'metadata' => $metadata,
-        ]);
+        ], $room);
 
         return $room;
     }
@@ -134,9 +134,9 @@ class LiveKitVoiceAgent implements VoiceAgent
      * @param  array<string, mixed>  $body
      * @return array<string, mixed>
      */
-    private function rpc(string $service, array $body): array
+    private function rpc(string $service, array $body, string $room): array
     {
-        $response = Http::withToken($this->token())
+        $response = Http::withToken($this->token($room))
             ->timeout((int) config('screening.livekit.timeout', 20))
             ->asJson()
             ->post($this->restUrl().'/twirp/livekit.'.$service, $body);
@@ -155,7 +155,7 @@ class LiveKitVoiceAgent implements VoiceAgent
      * project secret — the same shape as any JWT, so it is minted here rather
      * than pulling in a library for twenty lines of base64.
      */
-    private function token(): string
+    private function token(string $room): string
     {
         $now = time();
 
@@ -168,10 +168,18 @@ class LiveKitVoiceAgent implements VoiceAgent
                 'roomCreate' => true,
                 'roomAdmin' => true,
                 'agent' => true,
-                // Required for the SIP endpoints; without it CreateSIPParticipant
-                // returns a permission error rather than dialling.
-                'sip' => ['admin' => true],
+                // roomAdmin is scoped, not global: LiveKit checks it against
+                // the room named here, and a token without this field is
+                // refused with "permissions denied" even though the key and
+                // secret are right.
+                'room' => $room,
             ],
+            // A sibling of `video`, not a field inside it — nested under
+            // `video` the server simply does not see it. Unused by the calls
+            // this class makes today, since the agent is what dials, but a
+            // grant in the wrong place is worse than no grant: it reads as
+            // covered.
+            'sip' => ['admin' => true],
         ];
 
         $segments = [

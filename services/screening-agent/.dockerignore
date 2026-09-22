@@ -1,0 +1,7 @@
+# The build context is sent to the daemon whole, and .gitignore does not apply
+# here — without this the local virtualenv (~600 MB) is uploaded on every build.
+.venv/
+__pycache__/
+*.pyc
+.env
+rehearsal.json
