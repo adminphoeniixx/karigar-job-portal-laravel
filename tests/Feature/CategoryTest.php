@@ -46,7 +46,7 @@ it('forbids a non-admin from managing categories', function () {
 });
 
 it('only exposes active categories via activeNames and busts cache on change', function () {
-    Cache::forget('categories.active');
+    Cache::forget(Category::CACHE_KEY);
     Category::create(['name' => 'Painting', 'is_active' => true]);
     Category::create(['name' => 'Hidden Cat', 'is_active' => false]);
 

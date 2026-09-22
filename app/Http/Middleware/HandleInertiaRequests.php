@@ -6,7 +6,6 @@ use App\Models\Category;
 use App\Models\Setting;
 use App\Support\Chat;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -64,7 +63,7 @@ class HandleInertiaRequests extends Middleware
             // Deferred to render time: share() runs before the controller, and
             // opening a thread marks it read.
             'chatUnread' => fn () => $user ? app(Chat::class)->unreadTotal($user) : 0,
-            'categories' => Cache::rememberForever('categories.active', fn () => Category::activeNames()),
+            'categories' => Category::cachedActiveNames(),
             // Admin-controlled feature flags; the sidebar and dashboard drop
             // their KYC entries when verification is switched off.
             'features' => [

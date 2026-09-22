@@ -7,7 +7,6 @@ use App\Models\Category;
 use App\Support\ReferenceData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * Static/reference data the mobile app needs to build its dropdowns, chips
@@ -71,6 +70,6 @@ class ReferenceController extends Controller
      */
     private function categories(): array
     {
-        return array_values(Cache::rememberForever('categories.active', fn () => Category::activeNames()));
+        return array_values(Category::cachedActiveNames());
     }
 }

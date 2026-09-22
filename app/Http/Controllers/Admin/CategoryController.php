@@ -55,6 +55,6 @@ class CategoryController extends Controller
 
     private function flush(): void
     {
-        Cache::forget('categories.active');
+        Cache::forget(Category::CACHE_KEY);
     }
 }
