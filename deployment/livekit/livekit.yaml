@@ -29,8 +29,12 @@ rtc:
 # 127.0.0.1, not `redis`: every service in the compose file runs on the host
 # network so the call audio does not go through docker's userland proxy, and
 # the host network has no per-compose DNS to resolve a service name with.
+#
+# 6399, not 6379, so this can never be another redis on the box. Connecting to
+# the wrong one loses the SIP trunk and fails every call, without failing
+# loudly anywhere — see the compose file.
 redis:
-  address: 127.0.0.1:6379
+  address: 127.0.0.1:6399
 
 logging:
   level: info

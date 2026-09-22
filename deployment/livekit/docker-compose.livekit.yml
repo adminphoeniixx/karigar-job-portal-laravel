@@ -61,12 +61,21 @@ services:
   # re-registered it. Appendonly keeps it across a restart.
   redis:
     image: redis:7-alpine
-    # `--bind 127.0.0.1` is load-bearing on the host network. Redis defaults to
-    # listening on every interface, and with no container namespace around it
-    # that means the VPS's public IP — an open, unauthenticated redis holding
-    # the SIP trunk. Only livekit and sip talk to it, and both are on this same
-    # host, so loopback is all it ever needs.
-    command: redis-server --bind 127.0.0.1 --appendonly yes --appendfsync everysec
+    # Two flags, both load-bearing on the host network.
+    #
+    # `--bind 127.0.0.1`: redis listens on every interface by default, and with
+    # no container namespace around it that means the VPS's public IP — an
+    # open, unauthenticated redis holding the SIP trunk. Only livekit and sip
+    # talk to it and both are on this host, so loopback is all it needs.
+    #
+    # `--port 6399`: because sharing the host's network means sharing its
+    # ports, and 6379 is the first port anything else on the box will have
+    # taken. When that happens this container cannot bind and restarts in a
+    # loop — but livekit and sip come up fine and quietly connect to whatever
+    # redis *did* win 6379. They then find no SIP trunk there and every call
+    # fails with `dial_failed`, while `docker ps` shows two healthy services
+    # and one restarting. 6399 is ours alone.
+    command: redis-server --bind 127.0.0.1 --port 6399 --appendonly yes --appendfsync everysec
     network_mode: host
     volumes:
       - redis-data:/data

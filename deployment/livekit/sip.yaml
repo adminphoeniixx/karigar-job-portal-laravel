@@ -27,7 +27,7 @@
 ws_url: ws://127.0.0.1:7880
 
 redis:
-  address: 127.0.0.1:6379
+  address: 127.0.0.1:6399
 
 # The SIP standard port, and LiveKit's own default. Unused while we only dial
 # out; Plivo's origination URI would point here (";transport=tcp") if we ever
