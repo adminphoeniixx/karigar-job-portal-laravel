@@ -145,7 +145,18 @@ return [
 
     'redis' => [
 
-        'client' => env('REDIS_CLIENT', 'phpredis'),
+        // predis, not Laravel's phpredis default, because phpredis is a C
+        // extension and this app's image does not carry one: `install-php-extensions
+        // redis` fails against PECL, which answers "No releases available" for
+        // the package even while advertising 6.3.0 as stable. With the default
+        // left alone, a deploy using the redis queue threw `Class "Redis" not
+        // found` from the *dispatch* — so it surfaced as a 500 on whichever
+        // button the user pressed, not as a failed job, and every queued email,
+        // notification and screening call died at the same point.
+        //
+        // predis is pure PHP, ships with composer, and Horizon supports it.
+        // Set REDIS_CLIENT=phpredis if the extension is ever available.
+        'client' => env('REDIS_CLIENT', 'predis'),
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
