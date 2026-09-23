@@ -21,8 +21,9 @@ import asyncio
 import json
 import logging
 import os
+import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 import aiohttp
@@ -329,6 +330,90 @@ async def entrypoint(ctx: JobContext) -> None:
     await converse(ctx, meta, call_id)
 
 
+# The hang-up, written out as text instead of called. llama-4-maverick does
+# this often enough to matter: rather than a tool call it ends its goodbye with
+# "[end_call()]" in the reply itself. That text went straight to the voice —
+# the worker heard "end underscore call" — and since no tool ran, nothing hung
+# up either. Brackets, parentheses and case all vary, so the pattern is loose.
+END_CALL_TEXT = re.compile(r"\[?\s*end_call\s*(\(\s*\))?\s*\]?", re.IGNORECASE)
+
+
+def _held_back(buffer: str) -> int:
+    """
+    How many trailing characters might be the start of an END_CALL_TEXT the
+    next chunk completes. The model streams "[", "end", "_call", "()]" as
+    separate chunks, so a chunk cannot be passed on until it is clear it is not
+    the front half of one.
+    """
+    bracket = buffer.rfind("[")
+
+    if bracket != -1 and "]" not in buffer[bracket:]:
+        return len(buffer) - bracket
+
+    lowered = buffer.lower()
+
+    for size in range(min(len(buffer), len("end_call")), 0, -1):
+        if "end_call".startswith(lowered[-size:]):
+            return size
+
+    return 0
+
+
+class ScreeningAgent(Agent):
+    """
+    The agent, with the model's text scrubbed on its way out.
+
+    Filtered at the LLM node, not the TTS node, so one pass covers the voice,
+    the live transcript and the history the extraction later reads.
+    """
+
+    def __init__(self, *, on_end_call: Callable[[], None], **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._on_end_call = on_end_call
+
+    async def llm_node(self, chat_ctx, tools, model_settings):  # type: ignore[override]
+        buffer = ""
+        ended = False
+
+        def scrub(text: str, final: bool = False) -> str:
+            nonlocal buffer, ended
+
+            # Everything after the marker is the rest of it — "()", "]" in a
+            # later chunk — or chatter after the goodbye. Neither is spoken.
+            if ended:
+                return ""
+
+            buffer += text
+            marker = buffer.lower().find("end_call")
+
+            if marker != -1:
+                ended = True
+                out = END_CALL_TEXT.sub("", buffer[: marker + len("end_call")])
+                buffer = ""
+                logger.info("model wrote end_call as text; hanging up")
+                self._on_end_call()
+
+                return out
+
+            keep = 0 if final else _held_back(buffer)
+            out, buffer = buffer[: len(buffer) - keep], buffer[len(buffer) - keep :]
+
+            return out
+
+        async for chunk in Agent.default.llm_node(self, chat_ctx, tools, model_settings):
+            if isinstance(chunk, str):
+                chunk = scrub(chunk)
+            elif isinstance(chunk, llm_module.ChatChunk) and chunk.delta and chunk.delta.content:
+                chunk.delta.content = scrub(chunk.delta.content)
+
+            yield chunk
+
+        tail = scrub("", final=True)
+
+        if tail:
+            yield tail
+
+
 async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -> None:
     """
     The conversation itself, once there is someone on the other end — a worker
@@ -400,7 +485,9 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
 
     await session.start(
         room=ctx.room,
-        agent=Agent(instructions=meta["instructions"], tools=[end_call]),
+        agent=ScreeningAgent(
+            instructions=meta["instructions"], tools=[end_call], on_end_call=finished.set
+        ),
     )
 
     # The fixed opening line. Said, not generated, so every worker hears the
@@ -436,10 +523,39 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     # worth waiting on when the agent chose to end: if the worker already hung
     # up there is nobody left to hear it.
     if finished.is_set():
+        # The speech playing now, not drain(). By the time end_call lands the
+        # LLM has long finished, but the goodbye is still being spoken — and
+        # a model that recaps the whole call makes that 15–20 seconds, which
+        # drain()'s old 15s ceiling cut off mid-word ("आपने समय दिया, इसके").
+        # 30s is the backstop on a stuck playout, not the expected wait.
+        async def goodbye() -> None:
+            while (speech := session.current_speech) is not None:
+                await speech.wait_for_playout()
+
+                if session.current_speech is speech:
+                    break
+
         try:
-            await asyncio.wait_for(session.drain(), timeout=15)
+            await asyncio.wait_for(goodbye(), timeout=30)
         except (asyncio.TimeoutError, asyncio.CancelledError):
             logger.warning("goodbye did not finish before hangup", extra={"call_id": call_id})
+
+    # Actually hang up. `ctx.shutdown()` below only takes the agent out of the
+    # room; the worker's phone is a SIP participant in its own right and stays
+    # connected to an empty room, listening to silence, until they give up and
+    # hang up themselves — which is what "call cut nahi hoti" was. Deleting the
+    # room disconnects every participant, and for the SIP one that is a BYE to
+    # the carrier. Skipped when the worker already left: nothing to hang up.
+    if not disconnected.is_set():
+        # drain() returns when the last frame leaves us, not when it has
+        # crossed the carrier and the handset's jitter buffer; a beat of
+        # slack keeps "आपका दिन शुभ हो" from losing its last word.
+        await asyncio.sleep(1)
+
+        try:
+            await ctx.api.room.delete_room(api.DeleteRoomRequest(room=ctx.room.name))
+        except Exception:
+            logger.exception("could not hang up the call", extra={"call_id": call_id})
 
     # Registered rather than awaited here, and that is the difference between
     # a result and an "extraction_failed".

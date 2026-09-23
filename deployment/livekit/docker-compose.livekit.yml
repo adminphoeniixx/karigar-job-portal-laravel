@@ -155,7 +155,11 @@ services:
       # saaras:v3, because the API now answers saarika:v2.5 with "is sunset,
       # please migrate". v4 exists but this plugin version does not know it.
       SCREENING_STT: ${SCREENING_STT:-sarvam/saaras:v3}
-      SCREENING_TTS: ${SCREENING_TTS:-inworld/inworld-tts-1.5-max}
+      # Speaking on Sarvam too. Inworld's voice read Hindi with a foreign
+      # mouth — correct words, wrong accent — and workers heard it as not
+      # Indian. bulbul:v3 is trained on Indian speakers and sounds like one.
+      # SCREENING_VOICE must then be a Sarvam speaker, lowercase ("shreya").
+      SCREENING_TTS: ${SCREENING_TTS:-sarvam/bulbul:v3}
       INWORLD_API_KEY: ${INWORLD_API_KEY:-}
       # Sarvam is the A/B on Hindi, and also serves the LLM below.
       SARVAM_API_KEY: ${SARVAM_API_KEY:-}
