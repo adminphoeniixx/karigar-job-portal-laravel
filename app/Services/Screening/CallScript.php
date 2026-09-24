@@ -224,6 +224,10 @@ class CallScript
             ]
             : ['', '', ''];
 
+        $unknownExample = $language === 'hi'
+            ? ' For example, to "job की timing क्या है?": "Timing की जानकारी employer ही देंगे जी।"'
+            : '';
+
         $closeExample = $language === 'hi'
             ? ' The shape, with the worker\'s own day and time filled in where the angle brackets are: "जी, <दिन> <समय>, <phone पर / site पर>। Employer आपको confirm करेंगे। आपने समय दिया, इसके लिए धन्यवाद जी, आपका दिन शुभ हो।"'
             : '';
@@ -246,6 +250,9 @@ class CallScript
         1. Confirm the worker is still interested in this job.{$askInterest}
         2. If yes, find a time they could attend an interview, between now and {$until->format('d M Y')}.{$askSlot}
         3. Ask whether they would prefer the interview by phone or in person.{$askMode}
+           The transcript you read is speech-to-text, and "फ़ोन पे" (on the phone) often comes through as the
+           payments app "PhonePe" or "फोनपे". In this conversation that always means the worker chose phone.
+           Treat it as the answer and move on. Do not ask again.
 
         Rules you must not break:
         - Keep the call under two minutes. Ask one question at a time and wait for the answer.
@@ -263,13 +270,16 @@ class CallScript
         - If the worker sounds confused, repeat the employer's name and the job title once, simply.
         - If the worker says they are busy, offer to call back later and end politely.
         - If the worker is not interested, thank them warmly and end. Do not try to convince them.
-        - If the worker asks something you were not told, say the employer will confirm it, and move on.
+        - Answer only the question the worker actually asked. You know the role, the location and the listed
+          pay, nothing else. Timings, shift, duty hours, overtime, food, stay, travel, start date: you were
+          not told, so say the employer will tell them that, and move on. Never answer a timing question with
+          the pay, or any question with a fact about something else.{$unknownExample}
 
         End every call by repeating back the day and time they gave, and saying the employer will confirm
         it — never that you will. The repeat-back is so the slot is captured correctly, not a confirmation.
         Keep that closing to two short sentences plus the thank-you: the day, time and phone-or-site, then
-        that the employer will confirm, then goodbye. Do not bring up pay or anything else there; mention pay
-        only when the worker asks about it.{$closeExample}
+        that the employer will confirm, then goodbye. Do not bring up pay or anything else there. Never mention pay in the closing, not even to
+        remind them; mention pay only in direct answer to the worker asking about it.{$closeExample}
 
         Then hang up, using the end_call tool. Nothing else ends the call: if you do not call it, the
         line stays open and the worker is left listening to silence. Call it as soon as you have what

@@ -490,14 +490,19 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
         ),
     )
 
+    # The call ends on whichever comes first: the worker hangs up, the agent
+    # decides it is done, or the backstop fires.
+    #
+    # Listening starts before the greeting, not after. A worker who hangs up
+    # while it is still playing (the commonest early hang-up there is) fired
+    # this event before anything was subscribed, so the call sat "open" until
+    # LiveKit cancelled the job, and then tried to hang up a room already gone.
+    disconnected = asyncio.Event()
+    ctx.room.on("participant_disconnected", lambda _: disconnected.set())
+
     # The fixed opening line. Said, not generated, so every worker hears the
     # same disclosure of who is calling and why.
     await session.say(meta["greeting"], allow_interruptions=True)
-
-    # The call ends on whichever comes first: the worker hangs up, the agent
-    # decides it is done, or the backstop fires.
-    disconnected = asyncio.Event()
-    ctx.room.on("participant_disconnected", lambda _: disconnected.set())
 
     waits = [asyncio.create_task(disconnected.wait()), asyncio.create_task(finished.wait())]
 
