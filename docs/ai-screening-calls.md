@@ -1,9 +1,12 @@
 # AI screening calls
 
 After the AI shortlists an applicant, the platform rings the worker on their
-real phone and an agent asks two things: *are you still interested*, and *when
-could you come in*. What comes back is a **proposal** — the employer confirms it
-before anything lands on the applicant's record.
+real phone and the call **is** the first-round interview. The agent checks it
+is speaking to the applicant, asks whether they are still interested, and if
+they are, asks a handful of screening questions: experience, the job's skills,
+whether they are working now, when they can start, whether the location suits
+them, and the pay they expect. Nothing is scheduled on the call. The answers
+come back as a summary the employer reads before deciding what to do next.
 
 The employer never sees the worker's number. The platform places the call from
 its own virtual number; contact details stay behind the unlock paywall.
@@ -23,12 +26,14 @@ ScreeningService::start() → VoiceAgent::place()
    ↓ worker picks up, agent talks
 Provider POSTs to /api/v1/webhooks/screening-call
    ↓
-ScreeningService::apply() → records outcome + proposed slot
+ScreeningService::apply() → records outcome + the answers (summary)
    ↓ notifies employer (ScreeningCallCompleted)
-Employer confirms in the app
-   ↓
-ScreeningService::confirm() → sets interview_at, notifies the worker
+Employer reads the answers and takes it from there
 ```
+
+The slot-proposal path (`proposed_interview_at`, `ScreeningService::confirm()`,
+the confirm modal) is still in the code but the script no longer asks for a
+time, so it stays empty on new calls.
 
 Nothing calls anyone until an admin switches it on. Both flags are off by
 default and are separate on purpose: an auto-shortlist is reversible, an
@@ -156,9 +161,10 @@ calls, and DND scrubbing applies regardless. **Get Plivo's answer in writing**
 for our exact case — outbound AI voice agent, job screening, calling workers who
 applied to the job — before the first real call, and keep the reply.
 
-The greeting already discloses that the call is automated,
-`config/screening.php` restricts dialling to daytime hours, and a worker can opt
-out for good — but none of those substitute for the carrier's written answer.
+The greeting no longer announces that the call is automated (the agent still
+says so honestly if the worker asks), `config/screening.php` restricts dialling
+to daytime hours, and a worker can opt out for good — but none of those
+substitute for the carrier's written answer.
 
 ### 4. Environment
 
@@ -391,7 +397,7 @@ them is what went wrong the first time.
 
 `App\Services\Screening\CallScript` builds three things per call:
 
-- **greeting** — names the employer and discloses the call is automated
+- **greeting** — names Super Karigar and checks it is the applicant on the line
 - **instructions** — the agent's rules for the rest of the conversation
 - **extraction schema** — the fields it must return
 
@@ -445,9 +451,8 @@ is configured, so the button never appears on an install that cannot dial.
 
 ## Known gaps
 
-- The agent collects a preferred time; it cannot see the employer's calendar, so
-  a human always confirms. Letting the agent book directly would need employers
-  to publish availability per job.
+- The screening questions are the same fixed set for every job, filled in from
+  the listing (role, skills, city, wage type). Employers cannot add their own yet.
 - No cost tracking per call.
 - Voicemail detection: an answering machine currently gets talked to.
 - The agent's extraction pass has never run against a real conversation. Listen

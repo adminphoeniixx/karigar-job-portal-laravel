@@ -18,6 +18,7 @@ happens to the answer all live in Laravel, so this file has no policy in it.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -66,10 +67,18 @@ ANSWER_TIMEOUT = float(os.getenv("SCREENING_ANSWER_TIMEOUT", "45"))
 # speaks, or a model that keeps finding one more thing to say, would otherwise
 # hold the line open and bill STT, TTS and the LLM for it.
 #
-# Deliberately longer than the two minutes the script aims for, so that a call
-# running slightly over still gets to finish properly instead of being cut
-# mid-sentence. Anything still going at three minutes has gone wrong.
-MAX_CALL_SECONDS = float(os.getenv("SCREENING_MAX_CALL_SECONDS", "180"))
+# The call is a short interview now — who is this, still interested, six
+# questions, goodbye — which runs about three minutes at a natural speaking
+# pace. The cap sits well above that so a slow talker is not cut off
+# mid-answer; anything still going at five minutes has gone wrong.
+MAX_CALL_SECONDS = float(os.getenv("SCREENING_MAX_CALL_SECONDS", "300"))
+
+# How fast the voice speaks, as Sarvam's multiplier. At its default of 1.0,
+# bulbul:v3 read the Hindi script at 210-230 words a minute, and on a phone
+# line that sounds like every sentence said in one breath. 0.8 measured
+# 155-175, the pace of a person talking, with about half a second of breath
+# at each full stop. Only the Sarvam voice takes it.
+TTS_PACE = float(os.getenv("SCREENING_TTS_PACE", "0.8"))
 
 WEBHOOK_URL = os.environ["SCREENING_WEBHOOK_URL"]
 WEBHOOK_SECRET = os.environ["SCREENING_WEBHOOK_SECRET"]
@@ -229,6 +238,7 @@ def build_tts(meta: dict[str, Any]) -> tts_module.TTS:
         return sarvam.TTS(
             model=model,
             target_language_code=f"{language}-IN",
+            pace=TTS_PACE,
             **({"speaker": voice} if voice else {}),
         )
 
@@ -429,9 +439,9 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     async def end_call() -> str:
         """
         Hang up the phone. Call this as soon as the call is finished: you have
-        the worker's answer and, if they were interested, a possible interview
-        time; or they are not interested; or they asked to be called back. Say
-        your goodbye first, then call this.
+        asked all the screening questions; or they are not interested; or they
+        asked to be called back; or the applicant is not the one on the line.
+        Say your goodbye first, then call this.
         """
         logger.info("agent ended the call", extra={"call_id": call_id})
         finished.set()
@@ -501,10 +511,11 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     ctx.room.on("participant_disconnected", lambda _: disconnected.set())
 
     # The fixed opening line. Said, not generated, so every worker hears the
-    # same disclosure of who is calling and why.
+    # same introduction and the same check that it is the right person.
     await session.say(meta["greeting"], allow_interruptions=True)
 
     waits = [asyncio.create_task(disconnected.wait()), asyncio.create_task(finished.wait())]
+    timed_out = False
 
     try:
         await asyncio.wait_for(
@@ -512,6 +523,7 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
             timeout=MAX_CALL_SECONDS,
         )
     except asyncio.TimeoutError:
+        timed_out = True
         logger.warning(
             "call hit the maximum duration and was cut off",
             extra={"call_id": call_id, "seconds": MAX_CALL_SECONDS},
@@ -525,9 +537,22 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
             wait.cancel()
 
     # Let the goodbye actually reach the worker before the line drops. Only
-    # worth waiting on when the agent chose to end: if the worker already hung
-    # up there is nobody left to hear it.
-    if finished.is_set():
+    # worth waiting on when we are the ones ending the call — the agent chose
+    # to, or the backstop fired: if the worker already hung up there is nobody
+    # left to hear it.
+    if (finished.is_set() or timed_out) and not disconnected.is_set():
+        # Stop listening before waiting. The goodbye used to be as
+        # interruptible as any other reply, so a worker saying "ठीक है, ठीक
+        # है" over it — four words, past the interruption threshold — stopped
+        # it at "आपकी सारी बातें मैंने note कर". The agent had already decided
+        # to end, so a second later the line dropped mid-sentence. With the
+        # input off, nothing said now can cut the goodbye short, or start a
+        # fresh reply after it that the hang-up would then cut instead.
+        try:
+            session.input.set_audio_enabled(False)
+        except Exception:
+            logger.warning("could not stop listening for the goodbye", extra={"call_id": call_id})
+
         # The speech playing now, not drain(). By the time end_call lands the
         # LLM has long finished, but the goodbye is still being spoken — and
         # a model that recaps the whole call makes that 15–20 seconds, which
@@ -535,6 +560,13 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
         # 30s is the backstop on a stuck playout, not the expected wait.
         async def goodbye() -> None:
             while (speech := session.current_speech) is not None:
+                # An interruption detected just before the input went off
+                # would still land on this speech; refusing it here closes
+                # that gap. Raises only if it has already been interrupted,
+                # and then there is nothing left to protect.
+                with contextlib.suppress(RuntimeError):
+                    speech.allow_interruptions = False
+
                 await speech.wait_for_playout()
 
                 if session.current_speech is speech:
@@ -552,10 +584,12 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     # room disconnects every participant, and for the SIP one that is a BYE to
     # the carrier. Skipped when the worker already left: nothing to hang up.
     if not disconnected.is_set():
-        # drain() returns when the last frame leaves us, not when it has
-        # crossed the carrier and the handset's jitter buffer; a beat of
-        # slack keeps "आपका दिन शुभ हो" from losing its last word.
-        await asyncio.sleep(1)
+        # Playout ends when the last frame leaves us, not when it has crossed
+        # the carrier and the handset's jitter buffer, and a mobile network
+        # can hold audio for most of a second. Two seconds of slack keeps the
+        # last word of the goodbye; a moment of silence before the click is
+        # what a person leaves anyway.
+        await asyncio.sleep(2)
 
         try:
             await ctx.api.room.delete_room(api.DeleteRoomRequest(room=ctx.room.name))
@@ -616,8 +650,10 @@ async def extract(session: AgentSession, meta: dict[str, Any]) -> dict[str, Any]
         f"Right now it is {today:%A, %d %B %Y, %H:%M} IST. Resolve anything the "
         "worker said relative to that — kal, parso, agle Monday — into a real "
         "date.\n"
-        "Times must be IST in 'YYYY-MM-DD HH:MM:SS' form. Use null for anything "
-        "the worker did not actually say — never guess a time.\n\n"
+        "Where a field asks for a date and time, give it in IST as "
+        "'YYYY-MM-DD HH:MM:SS'; anywhere else, such as the summary, write dates "
+        "in plain words. Use null for anything the worker did not actually say "
+        "— never guess a time.\n\n"
         f"Transcript:\n{transcript}"
     )
 

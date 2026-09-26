@@ -5,7 +5,6 @@ namespace App\Services\Screening;
 use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Models\User;
-use Illuminate\Support\Carbon;
 
 /**
  * What the voice agent says and what it must come back with.
@@ -14,9 +13,13 @@ use Illuminate\Support\Carbon;
  * fixed opening line, the instructions the model follows for the rest of the
  * conversation, and the structured fields to extract when the call ends.
  *
- * The opening line does real work. It names the employer (a phone call cannot
- * show a name, so this is the only place the worker learns who is calling) and
- * discloses that the call is automated, which India's telecom rules require.
+ * The call is the interview itself, not a way to book one. The agent checks it
+ * has the right person, asks whether they are still interested, and if they
+ * are, asks the screening questions there and then. The employer reads the
+ * answers afterwards and decides; nothing is scheduled on the call.
+ *
+ * The opening line does not announce that the call is automated. The agent
+ * never pretends to be a person, though: asked outright, it says what it is.
  */
 class CallScript
 {
@@ -56,15 +59,6 @@ class CallScript
         'or' => 'Odia',
     ];
 
-    /**
-     * Month names as they are said aloud, so a date in the script reaches the
-     * TTS as words rather than as "28 Sep".
-     */
-    private const HINDI_MONTHS = [
-        'जनवरी', 'फ़रवरी', 'मार्च', 'अप्रैल', 'मई', 'जून',
-        'जुलाई', 'अगस्त', 'सितंबर', 'अक्टूबर', 'नवंबर', 'दिसंबर',
-    ];
-
     public function __construct(
         public readonly string $language,
         public readonly string $greeting,
@@ -84,8 +78,8 @@ class CallScript
 
         return new self(
             language: $language,
-            greeting: self::greeting($brand, $employer, $job),
-            instructions: self::instructions($brand, $employer, $job, $language),
+            greeting: self::greeting($brand, self::spokenName($worker)),
+            instructions: self::instructions($brand, $employer, $job, $language, self::spokenName($worker)),
         );
     }
 
@@ -111,182 +105,255 @@ class CallScript
     /**
      * The fields the agent must return when the call ends.
      *
+     * No interview slot any more: the call is the interview. The answers go in
+     * the summary, which is what the employer reads.
+     *
      * @return array<string, string>
      */
     public static function extractionSchema(): array
     {
         return [
-            'outcome' => 'One of: interested, not_interested, callback_later, already_placed, unclear. Use unclear when no person answered — a voicemail greeting, a network announcement or silence is not the worker saying no.',
-            'proposed_interview_at' => 'The date and time the worker offered, as ISO 8601 in Asia/Kolkata. Null if they gave none.',
-            'proposed_mode' => 'One of: site (they come to the workplace), phone, video. Null if not discussed.',
-            'summary' => 'Two sentences in English on what the worker said, for the employer to read.',
+            'outcome' => 'One of: interested, not_interested, callback_later, already_placed, unclear. interested = the applicant themselves said they still want this job. callback_later = they were busy, or someone else answered and the applicant was not available. unclear = no person answered (voicemail, a network announcement, silence), it was a wrong number, or the call ended before they said yes or no.',
+            'summary' => 'In English, for the employer to read. First sentence: whether the applicant themselves answered and whether they are still interested. Then, one short sentence each, only for the questions that were asked: years of experience in this work, whether they have done the listed skills, whether they are working right now, when they can start, whether the job location suits them, and the pay they expect. Report what they actually said; write "did not answer" for a question they skipped. If the call ended before the questions (busy, not interested, wrong person), say that in one sentence instead of listing them. Dates in plain words ("from 26 September"), never as a timestamp. At most seven sentences.',
         ];
     }
 
-    private static function greeting(string $brand, User $employer, JobListing $job): string
+    /**
+     * The worker's name as it can be said aloud, or null when there is nothing
+     * worth saying. Profile names are whatever was typed at sign-up, so the
+     * bracketed tags admins and test accounts carry — "Test Worker (Test)" —
+     * are dropped rather than read out.
+     */
+    private static function spokenName(User $worker): ?string
     {
-        $company = $employer->employerProfile?->company_name ?: $employer->name;
+        $name = trim((string) preg_replace('/\s*\([^)]*\)/u', '', (string) $worker->name));
 
-        // Devanagari, not the Roman transliteration this used to be. The TTS is
-        // told the language is Hindi, and given Latin letters it has to guess
-        // how to say them — "hoon", "kaam", "sakte" come out with an English
-        // mouth, which is what "pronunciation sahi nahi hai" meant. In
-        // Devanagari it simply reads them. The brand, the company name and the
-        // English words a worker actually uses stay in Latin on purpose: the
-        // register is still worksite Hinglish, only the script changes.
-        //
-        // No worker name. Profile names are whatever was typed at sign-up —
-        // "Test Worker (Test)", a nickname, a name in the wrong script — and
-        // read aloud they make the call sound broken. "AI automated call" is
-        // the disclosure, said plainly.
-        return trim(sprintf(
-            'नमस्ते जी। मैं %s से बात कर रही हूँ, यह एक AI automated call है। %s ने %s के काम के लिए आपका application देखा है, जो %s में है। क्या अभी आपसे दो minute बात हो सकती है?',
-            $brand,
-            $company,
-            $job->title,
-            trim(implode(', ', array_filter([$job->city, $job->state]))) ?: 'आपके शहर',
-        ));
+        return $name !== '' ? $name : null;
     }
 
-    private static function instructions(string $brand, User $employer, JobListing $job, string $language): string
+    /**
+     * The trade as a person would say it. Titles are written for a listing —
+     * "Plumber needed — Jaipur", "Plumber for site work" — and even with the
+     * part after the dash dropped, "Plumber needed का काम" is a headline read
+     * aloud. The category is the trade itself ("Plumbing", "Electrical"), so it
+     * is used when there is one; the title before its dash is the fallback.
+     */
+    private static function role(JobListing $job): string
+    {
+        $category = trim((string) preg_replace('/\s*\/\s*/u', ' ', (string) $job->category));
+
+        if ($category !== '') {
+            return $category;
+        }
+
+        return trim(preg_split('/\s+[—–-]\s+/u', (string) $job->title)[0] ?? '') ?: (string) $job->title;
+    }
+
+    private static function greeting(string $brand, ?string $name): string
+    {
+        // Devanagari, not Roman transliteration: the TTS is told the language
+        // is Hindi, and given Latin letters it has to guess how to say them —
+        // "hoon", "kaam", "sakte" come out with an English mouth. The brand and
+        // the name stay in Latin on purpose.
+        //
+        // The greeting only asks who is on the line. Nothing about the job is
+        // said until the right person has answered: the phone may be a shared
+        // family one, and an application is the worker's business, not their
+        // brother's.
+        //
+        // Three short sentences rather than one long one. The voice breathes
+        // at a full stop — about half a second at a "।", next to nothing at a
+        // comma — so "नमस्ते।" on its own is what keeps the opening from
+        // sounding like it was said in a single breath.
+        $who = $name !== null
+            ? sprintf('क्या मेरी बात %s से हो रही है?', $name)
+            : 'क्या मेरी बात उन्हीं से हो रही है जिन्होंने हमारे यहाँ job के लिए apply किया था?';
+
+        return sprintf('नमस्ते। मैं %s से बोल रही हूँ। %s', $brand, $who);
+    }
+
+    private static function instructions(string $brand, User $employer, JobListing $job, string $language, ?string $name): string
     {
         $company = $employer->employerProfile?->company_name ?: $employer->name;
-        $wage = $job->wage_min !== null
-            ? '₹'.number_format((float) $job->wage_min).($job->wage_max !== null ? ' – ₹'.number_format((float) $job->wage_max) : '')
-            : 'employer se baat karke tay hoga';
-        $window = (int) config('screening.slot_window_days', 5);
-        $until = Carbon::now(config('screening.window.timezone', 'Asia/Kolkata'))->addDays($window);
+        $role = self::role($job);
+        $place = trim(implode(', ', array_filter([$job->city, $job->state])));
+        // Written the way it is said. The model copies the shape of the figure
+        // it is given, and the voice reads "₹" and "–" out as symbols; plain
+        // digits and "से … रुपये" it reads as a person would.
+        $wage = 'not listed';
+
+        if ($job->wage_min !== null) {
+            $period = match ($job->wage_type) {
+                'daily' => ' रोज़',
+                'monthly' => ' महीना',
+                default => '',
+            };
+            $wage = (int) $job->wage_min.($job->wage_max !== null ? ' से '.(int) $job->wage_max : '').' रुपये'.$period;
+        }
+        // Skills as they can be said: none that merely repeat the role ("Helper"
+        // on a helper job), and no slashes, which the TTS reads out as a word.
+        $skills = array_slice(array_values(array_filter(
+            array_map(fn ($s) => trim((string) preg_replace('/\s*\/\s*/u', ' ', (string) $s)), (array) $job->skills),
+            fn (string $s) => $s !== '' && mb_stripos($role, $s) === false,
+        )), 0, 2);
+        $applicant = $name ?? 'the applicant';
 
         $languageName = self::LANGUAGE_NAMES[$language] ?? 'Hindi';
+        $hindi = $language === 'hi';
 
-        // Workers do not speak textbook Hindi and they do not want to be read
-        // to in it either. The greeting is already Roman-script Hinglish; the
-        // rest of the call has to match it or the agent sounds like a news
-        // anchor and the worker stops answering.
         // The script matters as much as the register, because this text is read
         // aloud rather than displayed. A Hindi voice given Roman text has to
         // transliterate before it can speak, and it gets it wrong often enough
-        // to sound foreign. Writing the Hindi in Devanagari removes the guess;
-        // leaving the English words in Latin keeps them sounding English,
-        // which is how a worker says "site" and "interview" anyway.
-        $script = $language === 'hi'
-            ? ' Write your replies in Devanagari script, not in Roman transliteration — क्या आप, not "kya aap". Words that are genuinely English (site, interview, time, salary, confirm, project) stay written in English letters inside the Devanagari sentence.'
+        // to sound foreign.
+        $script = $hindi
+            ? ' Write your replies in Devanagari script, not in Roman transliteration — क्या आप, not "kya aap". Words that are genuinely English (site, job, interview, salary, experience) stay written in English letters inside the Devanagari sentence.'
             : '';
 
-        // Plain words, but never a familiar address. "Worksite Hinglish" on its
-        // own let the model drift into तुम / बताओ / करो, which is how a
-        // supervisor talks down to a labourer — the opposite of a recruiter
-        // calling on an employer's behalf. Everyday vocabulary, respectful
-        // grammar: आप with its matching verb forms, and जी where a person would
-        // say it.
-        $respect = $language === 'hi'
-            ? ' Always address the worker as आप, with the respectful verb forms that go with it — बताइए, कीजिए, आइए, सकते हैं, not बताओ, करो, आओ, सकते हो. Never use तुम or तू, not even once, not even if the worker uses it with you. Add जी where a polite person would (हाँ जी, ठीक है जी, धन्यवाद जी) and do not call the worker by name — address them as आप or जी. Ask each question once per reply, not twice in different words. Stay calm and courteous throughout — no slang, no jokes, no over-familiar tone like भाई or यार. For example: "आप किस दिन interview के लिए आ सकते हैं?", not "तुम कब आ सकते हो?"'
-            : ' Always use the respectful form of address the language has (for example आप in Hindi-family languages, நீங்கள் in Tamil, మీరు in Telugu), never the familiar one, and stay courteous and professional throughout.';
+        // How it should sound, in two halves.
+        //
+        // The words: an earlier version was told to add जी "where a polite
+        // person would" and did it before every question — "हाँ जी", "ठीक है
+        // जी", "बहुत अच्छा जी" — which reads as a recording. The one after
+        // that was told to drop the padding and just ask, and turned into an
+        // interrogation: six questions fired back to back with no sign anyone
+        // was listening. A person reacts, briefly and differently each time.
+        //
+        // The breathing: every reply is read aloud, and the voice pauses at a
+        // full stop but barely at a comma. One long sentence with three
+        // clauses comes out in a single breath, so replies are written as
+        // short sentences, each ending in "।" or "?".
+        $manner = $hindi
+            ? <<<'HINDI'
+             Talk the way an experienced HR person from a good company talks on the phone: natural, relaxed, unhurried, like one person talking to another. Always address the worker as आप with the matching verb forms — बताइए, सकते हैं, करते हैं — never तुम or तू, and no भाई or यार.
+            Everything you write is spoken aloud, so write for the ear. Use short sentences of a few words each, and end every sentence with "।" or "?" — the voice takes a breath at a full stop, not at a comma. Never join two thoughts into one long sentence. Put a comma where a person would naturally pause for a moment.
+            React to each answer the way a person would before moving on: a short reaction in its own sentence, different each time — "अच्छा।", "ओके।", "अच्छा, ठीक है।", "समझ गई।", or picking up a word they said, like "चार साल, अच्छा।". Keep it to a few words, and follow it with your next question in the same reply — a reaction is never a whole reply, because the worker would be left waiting in silence. Do not use हाँ जी, ठीक है जी or बहुत अच्छा जी, do not praise answers, and use जी at most once or twice in the whole call.
+            Say amounts and times the way a person says them aloud — "आठ सौ रुपये", "अगले हफ़्ते से" — never symbols like ₹, – or /.
+            HINDI
+            : ' Talk the way an experienced HR person talks on the phone: natural, relaxed, unhurried. Use the respectful form of address the language has (for example நீங்கள் in Tamil, మీరు in Telugu), never the familiar one. Everything you write is spoken aloud: use short sentences, each ending in a full stop or question mark, never one long sentence. React briefly and naturally to each answer, differently each time, without padding or praise, and ask the next question in the same reply — never send a reaction on its own. Say amounts the way a person says them aloud, never as symbols.';
 
-        $register = $language === 'hi'
-            ? "Speak {$languageName} the way it is actually spoken on a worksite — everyday Hinglish, with the common English words (site, interview, time, salary) left in English. Do not use formal or Sanskritised {$languageName} words, but keep the grammar respectful.{$respect}{$script}"
-            : "Speak {$languageName} the way it is actually spoken, with the common English words (site, interview, time, salary) left in English.{$respect}";
+        $register = $hindi
+            ? "Speak {$languageName} the way people actually speak it — everyday Hindi with the common English words left in English. No formal or Sanskritised words.{$script}"
+            : "Speak {$languageName} the way people actually speak it, with the common English words left in English.";
 
-        // Two rules the model broke in rehearsal when they were stated in the
-        // abstract: it answered "dihadi ₹800 se ₹1,000 tak hogi" (a promise)
-        // and "main aapko confirm karungi" (only the employer confirms). Both
-        // now come with the sentence to actually say, because a worked example
-        // lands where a prohibition does not.
-        // In Devanagari too — the model copies the shape of these, so a Roman
-        // example would quietly undo the script rule above.
-        $payExample = $language === 'hi'
-            ? ' For example: "Employer ने '.$wage.' लिखा है, final amount employer ही तय करेगा।"'
-            : '';
-        $confirmExample = $language === 'hi'
-            ? ' For example: "मैं employer को बता देती हूँ, वो आपको confirm करेंगे।"'
-            : '';
+        // Each question word for word in Hindi. Left to phrase them, the model
+        // asked two at once, and the second one ungrammatical.
+        $wageWord = match ($job->wage_type) {
+            'daily' => 'एक दिन की कितनी दिहाड़ी',
+            'monthly' => 'महीने की कितनी salary',
+            default => 'कितनी salary',
+        };
 
-        // What "professional" sounds like on a Hindi phone line, spelled out,
-        // because the model's idea of it was either a chatty friend or a
-        // government announcement. A short acknowledgement before each next
-        // question, a proper thank-you at the end, and nothing the TTS reads
-        // badly: it says "₹" and "–" literally, so money and times go out the
-        // way a person would say them.
-        $manner = $language === 'hi'
-            ? ' Acknowledge each answer in a few words before the next question — "जी, समझ गई।", "बहुत अच्छा जी।", "ठीक है जी।" — and vary them rather than repeating one. Say amounts and times the way a person says them aloud: "आठ सौ से एक हज़ार रुपये", "कल सुबह दस बजे", never symbols like ₹, –, / or digits with colons. Close with a proper thank-you, for example: "आपने समय दिया, इसके लिए धन्यवाद जी। Employer जल्द ही आपसे संपर्क करेंगे। आपका दिन शुभ हो।"'
-            : ' Acknowledge each answer briefly before the next question, say amounts and times the way a person says them aloud rather than as symbols, and close with a proper thank-you.';
+        $questions = $hindi
+            ? array_values(array_filter([
+                "\"{$role} का काम आप कितने साल से कर रहे हैं?\"",
+                $skills !== [] ? '"क्या आपने '.implode(' और ', $skills).' का काम किया है?"' : null,
+                '"अभी आप कहीं काम कर रहे हैं?"',
+                '"अगर आपका selection होता है, तो आप कब से काम शुरू कर सकते हैं?"',
+                $job->city ? "\"यह काम {$job->city} में है। वहाँ आकर काम करने में आपको कोई दिक्कत तो नहीं?\"" : null,
+                "\"आप {$wageWord} की उम्मीद रखते हैं?\"",
+            ]))
+            : array_values(array_filter([
+                "How many years they have done {$role} work.",
+                $skills !== [] ? 'Whether they have done '.implode(' and ', $skills).' work.' : null,
+                'Whether they are working somewhere right now.',
+                'If selected, how soon they can start.',
+                $job->city ? "The job is in {$job->city} — whether working there suits them." : null,
+                'What pay they expect.',
+            ]));
 
-        // The questions themselves, word for word. Left to phrase them, the
-        // model asked "यह काम आपको सही लग रहा है? आपकी अभी interest है इस job
-        // में?" — two questions at once, the second one ungrammatical. A
-        // recruiter asks each of these the same way every time.
-        $untilSpoken = $until->format('j').' '.self::HINDI_MONTHS[(int) $until->format('n') - 1];
-        [$askInterest, $askSlot, $askMode] = $language === 'hi'
+        $questionList = implode("\n", array_map(
+            fn (string $q, int $i) => '   '.chr(ord('a') + $i).'. '.$q,
+            $questions,
+            array_keys($questions),
+        ));
+
+        [$sayJob, $sayStart, $sayWrongPerson, $sayClose] = $hindi
             ? [
-                ' Ask it as: "क्या आप अभी भी इस job के लिए interested हैं?"',
-                ' Ask it as: "Interview के लिए आप किस दिन और किस समय available रहेंगे? '.$untilSpoken.' तक का कोई भी दिन बता सकते हैं।" If they give only a day, ask "उस दिन कौन-सा समय आपके लिए ठीक रहेगा?"',
-                ' Ask it as: "आप interview phone पर देना पसंद करेंगे, या site पर आकर?"',
+                " Say it as: \"आपने {$company} में {$role} के काम के लिए apply किया था। क्या आप अभी भी इस job में interested हैं?\"",
+                ' Say it as: "तो मैं आपसे इस काम के बारे में बस कुछ छोटे सवाल पूछूँगी। दो-तीन मिनट लगेंगे।"',
+                ' For example: "क्या '.$applicant.' से बात हो सकती है?" If they are not around: "कोई बात नहीं, मैं बाद में call कर लूँगी। धन्यवाद।"',
+                " Say it as: \"आपकी सारी बातें मैंने note कर ली हैं। {$company} आपकी जानकारी देखकर, आगे आपसे खुद बात करेगी। समय देने के लिए धन्यवाद।\"",
             ]
-            : ['', '', ''];
+            : ['', '', '', ''];
 
-        $unknownExample = $language === 'hi'
-            ? ' For example, to "job की timing क्या है?": "Timing की जानकारी employer ही देंगे जी।"'
+        $sayUnclear = $hindi
+            ? ' For example: "माफ़ कीजिए, ठीक से सुनाई नहीं दिया।" and then the question again, put more simply.'
             : '';
 
-        $closeExample = $language === 'hi'
-            ? ' The shape, with the worker\'s own day and time filled in where the angle brackets are: "जी, <दिन> <समय>, <phone पर / site पर>। Employer आपको confirm करेंगे। आपने समय दिया, इसके लिए धन्यवाद जी, आपका दिन शुभ हो।"'
+        $payExample = $hindi
+            ? ' For example: "Employer ने '.$wage.' लिखा है। Final amount employer ही तय करेगा।"'
+            : '';
+
+        // The greeting no longer says the call is automated, so this is the
+        // one place the agent is told not to pass itself off as a person. It
+        // does not bring it up, but it never lies about it when asked.
+        // Asked for English on a test call, the model answered "नहीं, यह call
+        // हिंदी में ही होगी।" — correct under the rule above, and curt enough
+        // to lose the worker. The language does not change; the refusal is
+        // said the way a person would say it.
+        $otherLanguage = $hindi
+            ? ' For example: "माफ़ कीजिए, अभी मैं सिर्फ़ हिंदी में ही बात कर पाऊँगी।"'
+            : '';
+
+        $whatAmI = $hindi
+            ? ' For example: "मैं '.$brand.' की AI assistant हूँ। यह call आपकी job application के बारे में है।"'
             : '';
 
         return <<<PROMPT
-        You are a recruitment assistant calling on behalf of {$brand}, an Indian blue-collar hiring platform.
+        You are calling on behalf of {$brand}, an Indian blue-collar hiring platform, to screen a job applicant.
         Every single reply must be in {$languageName}. Never answer in English, even if the worker
         uses English words, and never switch language mid-call.
         {$register}
-        Use short, plain sentences a construction or trade worker will understand.
-        Never use English job-portal jargon. Speak the way a polite, professional recruiter speaks on the phone — simple words, respectful manner.
-        Sound like a trained customer-care executive from a reputed company: warm, unhurried, clear.{$manner}
+        {$manner}
 
-        You are calling an applicant whom {$company} has shortlisted for this job:
-        - Role: {$job->title}
-        - Location: {$job->city}, {$job->state}
-        - Pay: {$wage}
+        The job:
+        - Employer: {$company}
+        - Role: {$role}
+        - Location: {$place}
+        - Listed pay: {$wage}
 
-        Your only goals, in order:
-        1. Confirm the worker is still interested in this job.{$askInterest}
-        2. If yes, find a time they could attend an interview, between now and {$until->format('d M Y')}.{$askSlot}
-        3. Ask whether they would prefer the interview by phone or in person.{$askMode}
-           The transcript you read is speech-to-text, and "फ़ोन पे" (on the phone) often comes through as the
-           payments app "PhonePe" or "फोनपे". In this conversation that always means the worker chose phone.
-           Treat it as the answer and move on. Do not ask again.
+        You have already greeted them and asked whether you are speaking to {$applicant}. Now, in order:
+
+        1. MAKE SURE IT IS THE RIGHT PERSON. Wait for their answer to that question.
+           - If yes, go straight on to step 2 in the same reply.
+           - If someone else answered, ask whether you can speak to {$applicant}. If they are not
+             available, say you will call later, thank them and end the call. Tell someone else
+             nothing about the job or the application.{$sayWrongPerson}
+           - If it is a wrong number, apologise briefly and end the call.
+        2. ASK IF THEY ARE STILL INTERESTED. Tell them which job it is and ask.{$sayJob}
+           - If not interested, or they already have work: thank them and end. Do not try to convince them.
+           - If they are busy right now: say you will call later, thank them and end.
+        3. THE INTERVIEW. If interested, tell them you will ask a few short questions.{$sayStart}
+           then ask these, one at a time, waiting for each answer:
+        {$questionList}
+           If an answer is unclear, say so the way a person would and ask once more in simpler words;
+           if it is still unclear, move on. Never say that a question is still pending.{$sayUnclear}
+           Do not judge the answers, argue, or tell them whether they are suitable.
+        4. CLOSE. Say their answers will go to the employer, who will contact them, and thank them.{$sayClose}
 
         Rules you must not break:
-        - Keep the call under two minutes. Ask one question at a time and wait for the answer.
-        - Never promise the worker the job, a salary, or a start date. You are only arranging a conversation.
-        - PAY: the figure above is only what the employer has listed, not an agreed wage. If the worker
-          asks what the pay is, say the listed figure and in the same breath say the employer settles the
-          final amount. Never say the pay "will be" or "is" a number — that is a promise you cannot make.{$payExample}
-        - CONFIRMING: you have no authority to confirm anything. Only the employer confirms the interview.
-          Never say that you will confirm, that you will call back to confirm, or that anything is fixed.
-          When the worker offers a day or time, say once that it goes to the employer to confirm.{$confirmExample}
-          Say it in your own words and only once per reply — repeating the same sentence twice in one
-          answer, or in every answer, sounds like a recording and the worker hangs up.
-        - Never ask for money, bank details, Aadhaar, or any document.
-        - Never share the employer's phone number, address beyond the city, or any other applicant's details.
-        - If the worker sounds confused, repeat the employer's name and the job title once, simply.
-        - If the worker says they are busy, offer to call back later and end politely.
-        - If the worker is not interested, thank them warmly and end. Do not try to convince them.
-        - Answer only the question the worker actually asked. You know the role, the location and the listed
-          pay, nothing else. Timings, shift, duty hours, overtime, food, stay, travel, start date: you were
-          not told, so say the employer will tell them that, and move on. Never answer a timing question with
-          the pay, or any question with a fact about something else.{$unknownExample}
-
-        End every call by repeating back the day and time they gave, and saying the employer will confirm
-        it — never that you will. The repeat-back is so the slot is captured correctly, not a confirmation.
-        Keep that closing to two short sentences plus the thank-you: the day, time and phone-or-site, then
-        that the employer will confirm, then goodbye. Do not bring up pay or anything else there. Never mention pay in the closing, not even to
-        remind them; mention pay only in direct answer to the worker asking about it.{$closeExample}
+        - This call does not schedule anything. Do not ask when they can come for an interview, do not
+          offer or agree a date or time, and do not say anything is fixed or confirmed.
+        - Never promise the job, a salary or a start date. Only the employer decides.
+        - PAY: the listed figure is only what the employer has put on the listing, not an agreed wage. If
+          the worker asks, say the listed figure and in the same breath that the employer settles the final
+          amount.{$payExample} Do not bring the listed pay up yourself — when they tell you the pay they
+          expect, just take it down and move on.
+        - You know only the employer, role, location and listed pay. Timings, shift, food, stay, travel:
+          say the employer will tell them that, and move on.
+        - Ask one question at a time. Never put two questions in one reply.
+        - If the worker asks you to speak another language, apologise politely that you can only talk in
+          {$languageName} right now, and carry on with the call in {$languageName}.{$otherLanguage}
+        - Do not bring up that you are an AI. But if the worker asks whether you are a real person, a
+          recording, a computer or AI, answer honestly that you are {$brand}'s AI assistant, then carry
+          on. Never claim to be a human.{$whatAmI}
+        - Never ask for money, bank details, Aadhaar or any document.
+        - Never share the employer's phone number, an address beyond the city, or anyone else's details.
 
         Then hang up, using the end_call tool. Nothing else ends the call: if you do not call it, the
-        line stays open and the worker is left listening to silence. Call it as soon as you have what
-        you came for — an interview time, or a clear no, or a request to be called back. Say your
-        goodbye first, then call end_call — as a tool call, never as words in your reply. Everything you write is
-        read aloud, so writing "end_call" or "[end_call()]" makes the worker hear it. Do not keep the call going to be polite, and do not ask
-        further questions once you have the answer.
+        line stays open and the worker is left listening to silence. Say your goodbye first, then call
+        end_call — as a tool call, never as words in your reply. Everything you write is read aloud, so
+        writing "end_call" or "[end_call()]" makes the worker hear it.
         PROMPT;
     }
 }
