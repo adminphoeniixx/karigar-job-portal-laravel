@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, BadgeCheck, Briefcase, Mail, MapPin, Phone, Star, UserRound } from '@lucide/vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ArrowLeft, BadgeCheck, Briefcase, KeyRound, Mail, MapPin, Phone, Star, UserRound } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
 interface Review {
@@ -10,7 +11,7 @@ interface Review {
     created_at: string;
 }
 
-defineProps<{
+const props = defineProps<{
     worker: {
         id: number;
         user_id: number;
@@ -27,11 +28,21 @@ defineProps<{
         phone: string | null;
         email: string | null;
         contact_unlocked: boolean;
+        can_unlock: boolean;
     };
+    unlocks: { used: number; limit: number; remaining: number | null; purchased: number };
     reviews: { average: number; count: number; items: Review[] } | null;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Find Workers', href: '/employer/workers' }, { title: 'Profile', href: '#' }] } });
+
+const unlocksLeft = computed(() => (props.unlocks.remaining === null ? null : props.unlocks.remaining + props.unlocks.purchased));
+
+const unlocking = ref(false);
+const unlock = () => {
+    unlocking.value = true;
+    router.post(`/employer/workers/${props.worker.id}/unlock`, {}, { preserveScroll: true, onFinish: () => (unlocking.value = false) });
+};
 </script>
 
 <template>
@@ -106,9 +117,23 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Find Workers', href: '/employe
                         <p class="inline-flex items-center gap-2"><Mail class="size-4 text-orange-600" /> {{ worker.email }}</p>
                         <p v-if="worker.phone" class="inline-flex items-center gap-2"><Phone class="size-4 text-orange-600" /> {{ worker.phone }}</p>
                     </div>
+                    <div v-else-if="worker.can_unlock" class="mt-3">
+                        <p class="text-sm text-muted-foreground">
+                            Unlocking reveals this karigar's number and uses one contact unlock.
+                            <template v-if="unlocksLeft !== null">You have {{ unlocksLeft }} left.</template>
+                        </p>
+                        <button
+                            type="button"
+                            :disabled="unlocking"
+                            class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                            @click="unlock"
+                        >
+                            <KeyRound class="size-4" /> Unlock contact
+                        </button>
+                    </div>
                     <div v-else class="mt-3">
-                        <p class="text-sm text-muted-foreground">Contact details unlock when you unlock this worker from one of your job's applicants.</p>
-                        <Link href="/employer/jobs" class="mt-3 inline-flex rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted">Go to my jobs</Link>
+                        <p class="text-sm text-muted-foreground">Subscribe to a plan to unlock karigar contacts.</p>
+                        <Link href="/subscription" class="mt-3 inline-flex rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted">View plans</Link>
                     </div>
                 </div>
             </div>

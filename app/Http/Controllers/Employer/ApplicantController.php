@@ -9,6 +9,7 @@ use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\ShortlistedNotification;
+use App\Services\CreditWallet;
 use App\Services\Screening\ScreeningService;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\RedirectResponse;
@@ -99,7 +100,7 @@ class ApplicantController extends Controller
             'applications' => $applications,
             'sort' => $sort,
             'contactUnlocks' => [
-                'used' => $this->unlocksUsed($request),
+                'used' => CreditWallet::for($request->user())->unlocksUsed(),
                 'limit' => $request->user()->employerAccount()->activeSubscription()?->plan->contactUnlockLimit() ?? 0,
             ],
         ]);
@@ -297,13 +298,18 @@ class ApplicantController extends Controller
             return back();
         }
 
-        $limit = $request->user()->employerAccount()->activeSubscription()?->plan->contactUnlockLimit() ?? 0;
+        $wallet = CreditWallet::for($request->user());
 
-        if ($limit > 0 && $this->unlocksUsed($request) >= $limit) {
-            return back()->with('toast', [
-                'type' => 'error',
-                'message' => __('You have reached your plan\'s contact unlock limit.'),
-            ]);
+        // A karigar already unlocked (another job, or the Worker Database) is free.
+        if (! $wallet->hasUnlocked($application->worker_id)) {
+            if (! $wallet->canUnlock()) {
+                return back()->with('toast', [
+                    'type' => 'error',
+                    'message' => __('You have reached your plan\'s contact unlock limit.'),
+                ]);
+            }
+
+            $wallet->consumeUnlock();
         }
 
         $application->update(['contact_unlocked' => true]);
@@ -312,15 +318,5 @@ class ApplicantController extends Controller
             'type' => 'success',
             'message' => __('Contact unlocked.'),
         ]);
-    }
-
-    /**
-     * How many contact unlocks the employer has consumed across all their jobs.
-     */
-    private function unlocksUsed(Request $request): int
-    {
-        return JobApplication::where('contact_unlocked', true)
-            ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->employerAccount()->id))
-            ->count();
     }
 }

@@ -384,6 +384,10 @@ allowance first, then purchased top-up credits.
 Already unlocked → `200 { "applicant": {...} }` only (no `message`, no `credits`,
 nothing charged), so treat both shapes as success.
 
+Unlocks count **karigars, not clicks**, and applicants share one pool with the
+Find Workers directory (§7). A worker already unlocked on another job, or from
+the directory, opens free even when the allowance is at 0.
+
 ### `POST /employer/jobs/{job}/rescore`
 Queue AI scoring for the job's applicants — unscored ones only, or everyone with
 `?force=1`.
@@ -499,8 +503,12 @@ worker said no, or never answered.
 ---
 
 ## 7. Find Workers 🔒
-Typesense-powered directory, 15/page. Rows beyond the plan's contact quota come
-back `locked: true` with `phone: null`.
+Typesense-powered directory, 15/page. A number is shown only for karigars this
+employer has **unlocked**: `POST /employer/workers/{worker}/unlock` spends one
+contact unlock from the same pool as applicant unlocks. The plan's database
+quota (`access.quota`) says how far down the results can be unlocked:
+`can_unlock: true` marks the rows the employer can unlock now. Show an
+"Unlock contact" button on those rows and a locked state on the rest.
 
 ### `GET /employer/workers?q=&state=&city=&skill=&page=`
 Full filter-sheet support:
@@ -515,25 +523,43 @@ Full filter-sheet support:
   "workers": { "data": [ { "id", "user_id", "name", "avatar_url", "bio",
       "skills": [...], "city", "state", "experience_years", "expected_wage",
       "wage_type", "available", "verified", "rating", "distance_km",
-      "phone", "locked" } ],
+      "phone", "locked", "contact_unlocked", "can_unlock" } ],
     "links": {...}, "meta": {...} },
   "filters": { "q": null, ... },
-  "access": { "quota": 25, "accessible": 6, "total": 6, "has_plan": true }
+  "access": { "quota": 25, "accessible": 6, "total": 6, "has_plan": true },
+  "credits": { ...CreditSummary }       // unlocks left for the counter
 }
 ```
+`phone` is `null` and `locked: true` until the karigar is unlocked.
 
 ### `GET /employer/workers/{worker}`
 `{worker}` is a **worker profile id**. Contact is revealed only if this employer
-account has unlocked that worker through any application.
+account has unlocked that worker, through an application or the directory.
 ```json
 {
   "worker": { "id", "user_id", "name", "avatar_url", "bio", "skills": [...],
     "spoken_languages": [...], "city", "state", "experience_years", "education",
     "expected_wage", "wage_type", "available", "verified",
-    "phone": null, "email": null, "contact_unlocked": false },
+    "phone": null, "email": null, "contact_unlocked": false, "can_unlock": true },
   "rating": { "average": 4.8, "count": 23 },
   "reviews": [ { ...ReviewResource } ]        // latest 10
 }
+```
+
+### `POST /employer/workers/{worker}/unlock`
+Reveal a directory karigar's number, spending one contact unlock (plan
+allowance first, then purchased credits). A karigar already unlocked costs
+nothing. After an unlock the employer can also open a chat with the karigar.
+```json
+// 200
+{ "message": "Contact unlocked.",
+  "worker": { "id", "user_id", "phone": "9876543210", "email", "contact_unlocked": true },
+  "credits": { ...CreditSummary } }
+// 422 — no active plan / database quota
+{ "message": "Subscribe to a plan to unlock karigar contacts.", "code": "no_plan" }
+// 422 — nothing left
+{ "message": "You have reached your plan's contact unlock limit.",
+  "code": "out_of_credits", "credits": {...} }
 ```
 
 ---

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Lock, Mail, MapPin, Phone, Search, Star, UserRound } from '@lucide/vue';
-import { computed, reactive, watch } from 'vue';
+import { KeyRound, Lock, Mail, MapPin, Phone, Search, Star, UserRound } from '@lucide/vue';
+import { computed, reactive, ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
@@ -22,12 +22,14 @@ interface Worker {
     phone: string | null;
     email: string | null;
     locked: boolean;
+    can_unlock: boolean;
 }
 
 const props = defineProps<{
     workers: { data: Worker[]; links: { url: string | null; label: string; active: boolean }[] };
     filters: { q?: string; state?: string; city?: string; skill?: string };
     access: { quota: number; accessible: number; total: number; has_plan: boolean };
+    unlocks: { used: number; limit: number; remaining: number | null; purchased: number };
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Worker Database', href: '/employer/workers' }] } });
@@ -59,6 +61,15 @@ const go = (url: string | null) => {
 };
 
 const num = (n: number) => n.toLocaleString('en-IN');
+
+// Unlocks left: plan allowance plus purchased credits; null = the plan doesn't meter them.
+const unlocksLeft = computed(() => (props.unlocks.remaining === null ? null : props.unlocks.remaining + props.unlocks.purchased));
+
+const unlocking = ref<number | null>(null);
+const unlock = (w: Worker) => {
+    unlocking.value = w.id;
+    router.post(`/employer/workers/${w.id}/unlock`, {}, { preserveScroll: true, onFinish: () => (unlocking.value = null) });
+};
 </script>
 
 <template>
@@ -75,7 +86,9 @@ const num = (n: number) => n.toLocaleString('en-IN');
         <div v-else class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-orange-500/5 px-5 py-4 text-sm">
             <span>
                 Your plan gives access to <strong>{{ num(access.quota) }}</strong> worker contacts.
-                <span class="text-muted-foreground">Showing contacts for the first {{ num(access.quota) }} matches.</span>
+                <span v-if="unlocksLeft !== null"><strong>{{ num(unlocksLeft) }}</strong> contact unlocks left.</span>
+                <span v-else>Unlimited contact unlocks.</span>
+                <span class="text-muted-foreground">Unlocking a karigar reveals their number and uses one unlock, same as unlocking an applicant.</span>
             </span>
             <Link href="/subscription" class="shrink-0 text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">Need more? Upgrade →</Link>
         </div>
@@ -141,6 +154,16 @@ const num = (n: number) => n.toLocaleString('en-IN');
                     </template>
                     <template v-else-if="!w.locked">
                         <span class="flex-1 text-center text-xs text-muted-foreground">No phone on file</span>
+                    </template>
+                    <template v-else-if="w.can_unlock">
+                        <button
+                            type="button"
+                            :disabled="unlocking === w.id"
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-60"
+                            @click="unlock(w)"
+                        >
+                            <KeyRound class="size-4" /> Unlock contact
+                        </button>
                     </template>
                     <template v-else>
                         <span class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">

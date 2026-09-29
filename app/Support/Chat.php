@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Models\User;
+use App\Models\WorkerContactUnlock;
 use App\Notifications\NewMessageNotification;
 
 /**
@@ -103,14 +104,15 @@ class Chat
     }
 
     /**
-     * Employers may only message workers who applied to one of their jobs;
-     * workers may reply to those.
+     * Employers may only message workers who applied to one of their jobs or
+     * whom they unlocked from the Worker Database; workers may reply to those.
      */
     public function mayChat(int $employerId, int $workerId): bool
     {
         return JobApplication::where('worker_id', $workerId)
             ->whereHas('job', fn ($q) => $q->where('employer_id', $employerId))
-            ->exists();
+            ->exists()
+            || WorkerContactUnlock::where('employer_id', $employerId)->where('worker_id', $workerId)->exists();
     }
 
     /**

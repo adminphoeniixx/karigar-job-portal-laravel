@@ -240,15 +240,18 @@ class ApplicantController extends Controller
 
         $wallet = CreditWallet::for($request->user());
 
-        if (! $wallet->canUnlock()) {
-            return response()->json([
-                'message' => __('You have reached your plan\'s contact unlock limit.'),
-                'code' => 'out_of_credits',
-                'credits' => $wallet->summary(),
-            ], 422);
-        }
+        // A karigar already unlocked (another job, or the Worker Database) is free.
+        if (! $wallet->hasUnlocked($application->worker_id)) {
+            if (! $wallet->canUnlock()) {
+                return response()->json([
+                    'message' => __('You have reached your plan\'s contact unlock limit.'),
+                    'code' => 'out_of_credits',
+                    'credits' => $wallet->summary(),
+                ], 422);
+            }
 
-        $wallet->consumeUnlock();
+            $wallet->consumeUnlock();
+        }
 
         $application->update(['contact_unlocked' => true]);
         $application->loadMissing(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title');

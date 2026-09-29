@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\EmployerProfile;
 use App\Models\JobApplication;
 use App\Models\User;
+use App\Models\WorkerContactUnlock;
 
 /**
  * The employer's contact-credit wallet, as the app's "12 contact credits" card
@@ -15,6 +16,8 @@ use App\Models\User;
  *  - purchased top-ups stored on the employer profile (`credit_balance`).
  *
  * Unlocks spend the plan allowance first and fall back to purchased credits.
+ * Applicants and the Worker Database share that one pool, and it counts
+ * karigars, not unlock clicks: a karigar already unlocked either way is free.
  * Boosts always spend purchased credits.
  */
 class CreditWallet
@@ -43,13 +46,61 @@ class CreditWallet
     }
 
     /**
+     * Karigars (worker user ids) this employer account has unlocked, through
+     * an application or straight from the Worker Database.
+     *
+     * @return list<int>
+     */
+    public function unlockedWorkerIds(): array
+    {
+        $fromApplications = JobApplication::where('contact_unlocked', true)
+            ->whereHas('job', fn ($q) => $q->where('employer_id', $this->account->id))
+            ->pluck('worker_id');
+
+        $fromDirectory = WorkerContactUnlock::where('employer_id', $this->account->id)->pluck('worker_id');
+
+        return $fromApplications->merge($fromDirectory)->map(fn ($id) => (int) $id)->unique()->values()->all();
+    }
+
+    /**
      * Contacts this employer account has already unlocked.
      */
     public function unlocksUsed(): int
     {
-        return JobApplication::where('contact_unlocked', true)
-            ->whereHas('job', fn ($q) => $q->where('employer_id', $this->account->id))
-            ->count();
+        return count($this->unlockedWorkerIds());
+    }
+
+    public function hasUnlocked(int $workerId): bool
+    {
+        return WorkerContactUnlock::where('employer_id', $this->account->id)->where('worker_id', $workerId)->exists()
+            || JobApplication::where('worker_id', $workerId)
+                ->where('contact_unlocked', true)
+                ->whereHas('job', fn ($q) => $q->where('employer_id', $this->account->id))
+                ->exists();
+    }
+
+    /**
+     * Unlock a karigar from the Worker Database. Returns false when the
+     * employer is out of unlocks; a karigar already unlocked costs nothing.
+     */
+    public function unlockWorker(User $worker, User $by): bool
+    {
+        if ($this->hasUnlocked($worker->id)) {
+            return true;
+        }
+
+        if (! $this->canUnlock()) {
+            return false;
+        }
+
+        $this->consumeUnlock();
+
+        WorkerContactUnlock::firstOrCreate(
+            ['employer_id' => $this->account->id, 'worker_id' => $worker->id],
+            ['unlocked_by' => $by->id],
+        );
+
+        return true;
     }
 
     /**

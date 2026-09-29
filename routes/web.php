@@ -185,6 +185,7 @@ Route::middleware(['auth'])->group(function () {
         // Worker directory (Typesense)
         Route::get('employer/workers', [WorkerDirectoryController::class, 'index'])->name('workers.index');
         Route::get('employer/workers/{worker}', [WorkerDirectoryController::class, 'show'])->name('workers.show');
+        Route::post('employer/workers/{worker}/unlock', [WorkerDirectoryController::class, 'unlock'])->name('workers.unlock');
 
         // Subscriptions
         Route::get('subscription', [SubscriptionController::class, 'pricing'])->name('subscription.pricing');

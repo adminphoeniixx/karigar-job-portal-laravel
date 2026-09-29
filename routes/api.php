@@ -201,6 +201,7 @@ Route::prefix('v1')->group(function () {
             // Find workers
             Route::get('employer/workers', [WorkerDirectoryController::class, 'index'])->name('api.employer.workers');
             Route::get('employer/workers/{worker}', [WorkerDirectoryController::class, 'show'])->name('api.employer.workers.show');
+            Route::post('employer/workers/{worker}/unlock', [WorkerDirectoryController::class, 'unlock'])->name('api.employer.workers.unlock');
 
             // Business verification (GST / PAN) — same admin toggle as worker KYC.
             Route::middleware('kyc.enabled')->group(function () {

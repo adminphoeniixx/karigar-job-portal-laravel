@@ -1345,7 +1345,7 @@
                 }
               ]
             },
-            "description": "Typesense-powered. Rows beyond the plan quota come back locked (phone null)."
+            "description": "Typesense-powered. phone is null until the karigar is unlocked; can_unlock marks rows within the plan quota."
           }
         },
         {
@@ -1371,7 +1371,34 @@
                 "{{worker_id}}"
               ]
             },
-            "description": "`worker_id` is a worker PROFILE id. Contact shown only if unlocked via an application."
+            "description": "`worker_id` is a worker PROFILE id. Contact shown only once unlocked, via an application or the directory unlock below."
+          }
+        },
+        {
+          "name": "Unlock worker contact (directory)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/workers/{{worker_id}}/unlock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "workers",
+                "{{worker_id}}",
+                "unlock"
+              ]
+            },
+            "description": "Spends one contact unlock from the same pool as applicant unlocks; free if this karigar is already unlocked. 422 `no_plan` without a plan, 422 `out_of_credits` when the pool is spent."
           }
         },
         {

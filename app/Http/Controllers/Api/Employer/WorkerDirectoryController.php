@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Employer;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\ReviewResource;
 use App\Models\WorkerProfile;
+use App\Services\CreditWallet;
 use App\Support\ReferenceData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,8 +17,9 @@ use Illuminate\Http\Request;
 class WorkerDirectoryController extends Controller
 {
     /**
-     * Search / browse workers. Rows beyond the plan quota are returned locked
-     * (no contact details).
+     * Search / browse workers. Numbers come back only for karigars this
+     * employer has unlocked; `can_unlock` marks the rows within the plan quota
+     * that {@see unlock()} may reveal.
      */
     public function index(Request $request): JsonResponse
     {
@@ -54,6 +56,8 @@ class WorkerDirectoryController extends Controller
         }
 
         $quota = $request->user()->contactDatabaseQuota();
+        $wallet = CreditWallet::for($request->user());
+        $unlockedIds = array_flip($wallet->unlockedWorkerIds());
         $perPage = 15;
         $page = max(1, (int) $request->query('page', 1));
         $offset = ($page - 1) * $perPage;
@@ -65,8 +69,9 @@ class WorkerDirectoryController extends Controller
             : null;
 
         $index = 0;
-        $workers->getCollection()->transform(function (WorkerProfile $w) use (&$index, $offset, $quota, $point) {
-            $unlocked = $quota > 0 && ($offset + $index) < $quota;
+        $workers->getCollection()->transform(function (WorkerProfile $w) use (&$index, $offset, $quota, $point, $unlockedIds) {
+            $inQuota = $quota > 0 && ($offset + $index) < $quota;
+            $unlocked = isset($unlockedIds[$w->user_id]);
             $index++;
 
             return [
@@ -87,6 +92,8 @@ class WorkerDirectoryController extends Controller
                 'distance_km' => $point ? $this->distanceKm($point, $w) : null,
                 'phone' => $unlocked ? $w->phone : null,
                 'locked' => ! $unlocked,
+                'contact_unlocked' => $unlocked,
+                'can_unlock' => ! $unlocked && $inQuota,
             ];
         });
 
@@ -99,23 +106,19 @@ class WorkerDirectoryController extends Controller
                 'total' => $workers->total(),
                 'has_plan' => $request->user()->hasActiveSubscription(),
             ],
+            'credits' => $wallet->summary(),
         ]);
     }
 
     /**
      * A single worker's public profile. Contact is revealed only when this
-     * employer has unlocked the worker through any application.
+     * employer has unlocked the worker, from an application or the directory.
      */
     public function show(Request $request, WorkerProfile $worker): JsonResponse
     {
         $worker->load('user:id,name,email,phone', 'user.kyc');
 
-        $unlocked = $worker->user
-            ? $worker->user->applications()
-                ->where('contact_unlocked', true)
-                ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->employerAccount()->id))
-                ->exists()
-            : false;
+        $unlocked = $worker->user !== null && CreditWallet::for($request->user())->hasUnlocked($worker->user_id);
 
         $reviews = $worker->user
             ? $worker->user->reviewsReceived()->with('reviewer:id,name', 'job:id,title')->latest()->limit(10)->get()
@@ -141,12 +144,55 @@ class WorkerDirectoryController extends Controller
                 'phone' => $unlocked ? ($worker->phone ?? $worker->user?->phone) : null,
                 'email' => $unlocked ? $worker->user?->email : null,
                 'contact_unlocked' => $unlocked,
+                'can_unlock' => ! $unlocked && $worker->user !== null && $request->user()->contactDatabaseQuota() > 0,
             ],
             'rating' => [
                 'average' => $worker->user?->averageRating() ?? 0.0,
                 'count' => $worker->user ? $worker->user->reviewsReceived()->count() : 0,
             ],
             'reviews' => ReviewResource::collection($reviews),
+        ]);
+    }
+
+    /**
+     * Reveal a karigar's number from the directory, spending one contact
+     * unlock (the same pool applicant unlocks use). Already unlocked is free.
+     */
+    public function unlock(Request $request, WorkerProfile $worker): JsonResponse
+    {
+        $worker->load('user:id,name,email,phone');
+
+        if ($worker->user === null) {
+            abort(404);
+        }
+
+        if ($request->user()->contactDatabaseQuota() <= 0) {
+            return response()->json([
+                'message' => __('Subscribe to a plan to unlock karigar contacts.'),
+                'code' => 'no_plan',
+            ], 422);
+        }
+
+        $wallet = CreditWallet::for($request->user());
+
+        if (! $wallet->unlockWorker($worker->user, $request->user())) {
+            return response()->json([
+                'message' => __('You have reached your plan\'s contact unlock limit.'),
+                'code' => 'out_of_credits',
+                'credits' => $wallet->summary(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => __('Contact unlocked.'),
+            'worker' => [
+                'id' => $worker->id,
+                'user_id' => $worker->user_id,
+                'phone' => $worker->phone ?? $worker->user->phone,
+                'email' => $worker->user->email,
+                'contact_unlocked' => true,
+            ],
+            'credits' => CreditWallet::for($request->user())->summary(),
         ]);
     }
 
