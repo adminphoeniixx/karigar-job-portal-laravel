@@ -104,9 +104,13 @@ class JobListingController extends Controller
         $this->authorize('create', JobListing::class);
 
         $account = $request->user()->employerAccount();
-        $gate = JobPostingGate::evaluate($account);
 
-        if (! $gate['allowed']) {
+        // Only a job going live spends the quota; a draft is always saved.
+        $gate = $request->input('status') === JobStatus::Active->value
+            ? JobPostingGate::evaluate($account)
+            : null;
+
+        if ($gate !== null && ! $gate['allowed']) {
             return back()->with('toast', [
                 'type' => 'error',
                 'message' => $gate['message'],
@@ -115,7 +119,7 @@ class JobListingController extends Controller
 
         $job = $account->jobListings()->create($request->validated());
 
-        if ($gate['consumesFreePost']) {
+        if ($gate !== null && $gate['consumesFreePost']) {
             JobPostingGate::consumeFreePost($account);
         }
 
@@ -125,7 +129,7 @@ class JobListingController extends Controller
             $this->sendPostedEmail($job, $account);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Job posted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $job->isDraft() ? __('Draft saved.') : __('Job posted.')]);
 
         return to_route('jobs.index');
     }
@@ -189,9 +193,33 @@ class JobListingController extends Controller
     {
         $this->authorize('update', $job);
 
+        $account = $request->user()->employerAccount();
+
+        // A job that has never been live (a draft) is being published: that is
+        // the moment it is checked against the plan, as a new post would be.
+        $goingLive = $job->published_at === null && $request->input('status') === JobStatus::Active->value;
+        $gate = $goingLive ? JobPostingGate::evaluate($account) : null;
+
+        if ($gate !== null && ! $gate['allowed']) {
+            return back()->with('toast', ['type' => 'error', 'message' => $gate['message']]);
+        }
+
         $job->update($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Job updated.')]);
+        if ($gate !== null) {
+            if ($gate['consumesFreePost']) {
+                JobPostingGate::consumeFreePost($account);
+            }
+
+            $this->notifyWorkers($job);
+            $this->sendPostedEmail($job, $account);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => match (true) {
+            $goingLive => __('Job posted.'),
+            $job->isDraft() => __('Draft saved.'),
+            default => __('Job updated.'),
+        }]);
 
         return to_route('jobs.index');
     }

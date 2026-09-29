@@ -171,6 +171,8 @@ export default {
         expiresOn: 'Expiry date',
         postBtn: 'Naukri post karein',
         updateBtn: 'Naukri update karein',
+        saveDraft: 'Draft save karein',
+        draftHint: 'Draft live nahi hota aur aapke plan ki job post kharch nahi karta. Taiyaar hone par post karein.',
     },
     tracker: {
         track: 'Track',

@@ -223,6 +223,29 @@ HTML,
                 'placeholders' => ['app_name', 'employer_name', 'worker_name', 'job_title', 'outcome', 'summary', 'proposed_interview_at', 'action_url'],
                 'is_active' => true,
             ],
+            [
+                'key' => 'payment_received',
+                'name' => 'Payment received, with tax invoice (to employer)',
+                'description' => 'Sent once a plan payment goes through. The tax invoice is attached as a PDF.',
+                'subject' => 'Payment received — tax invoice {{ invoice_number }}',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>Thank you — your payment for the <strong>{{ plan_name }}</strong> plan has gone through and the plan is active.</p>
+<table cellpadding="0" cellspacing="0" style="margin:20px 0;border-collapse:collapse;">
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Invoice</td><td style="padding:6px 0;font-weight:600;">{{ invoice_number }} ({{ invoice_date }})</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Plan price</td><td style="padding:6px 0;">{{ amount_before_tax }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">GST</td><td style="padding:6px 0;">{{ gst_breakup }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Total paid</td><td style="padding:6px 0;font-weight:600;">{{ total_paid }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Valid until</td><td style="padding:6px 0;">{{ valid_until }}</td></tr>
+</table>
+<p>Your tax invoice is attached to this email as a PDF.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#bf3a16;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View invoice</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'plan_name', 'invoice_number', 'invoice_date', 'amount_before_tax', 'gst_breakup', 'total_paid', 'valid_until', 'action_url'],
+                'is_active' => true,
+            ],
         ];
     }
 }

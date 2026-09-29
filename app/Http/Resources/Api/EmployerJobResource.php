@@ -44,6 +44,10 @@ class EmployerJobResource extends JsonResource
             'requires_worker_fee' => $this->requires_worker_fee,
             'worker_fee_amount' => $this->worker_fee_amount,
             'status' => $this->status->value,
+            // Never been live. Publishing it (status → active) is checked against
+            // the plan's job posts; saving it as a draft never is.
+            'is_draft' => $this->published_at === null,
+            'published_at' => $this->published_at?->toIso8601String(),
             'status_label' => $this->status->label(),
             'stats' => [
                 'views' => (int) $this->views_count,

@@ -171,6 +171,8 @@ export default {
         expiresOn: 'Expires on',
         postBtn: 'Post job',
         updateBtn: 'Update job',
+        saveDraft: 'Save as draft',
+        draftHint: 'Drafts are saved without going live and do not use your plan\'s job posts. Publish when ready.',
     },
     tracker: {
         track: 'Track',

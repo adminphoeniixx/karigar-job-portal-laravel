@@ -191,6 +191,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('subscription/{plan}/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
         Route::post('subscription/callback', [SubscriptionController::class, 'callback'])->name('subscription.callback');
         Route::get('subscription/{subscription}/invoice', [InvoiceController::class, 'show'])->name('subscription.invoice');
+        Route::get('subscription/{subscription}/invoice.pdf', [InvoiceController::class, 'pdf'])->name('subscription.invoice.pdf');
     });
 });
 
@@ -261,6 +262,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // App-wide settings (feature toggles)
     Route::get('settings', [AdminSettingController::class, 'index'])->name('settings.index');
     Route::patch('settings', [AdminSettingController::class, 'update'])->name('settings.update');
+    Route::patch('settings/billing', [AdminSettingController::class, 'updateBilling'])->name('settings.billing');
 });
 
 require __DIR__.'/settings.php';

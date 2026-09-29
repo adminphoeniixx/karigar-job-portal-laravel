@@ -12,6 +12,7 @@ interface Plan {
     interval: string;
     features: { job_post_limit?: number; contact_unlock_limit?: number; featured?: boolean } | null;
     razorpay_plan_id: string | null;
+    feature_list: string[];
 }
 
 interface CouponResult {
@@ -155,7 +156,9 @@ const subscribe = () => {
                     >{{ discountFor(plan) > 0 ? money(finalPrice(plan)) : '₹' + plan.price }}</span>
                     <span class="pb-1 text-sm text-muted-foreground">/{{ plan.interval }}</span>
                 </div>
-                <div class="relative mt-0.5 text-[11px] text-muted-foreground">+ {{ gstPercent }}% GST</div>
+                <div v-if="gstPercent > 0" class="relative mt-0.5 text-[11px] text-muted-foreground">
+                    + {{ gstPercent }}% GST · {{ money(totalFor(plan)) }} total
+                </div>
                 <div v-if="discountFor(plan) > 0" class="relative mt-1 flex items-center gap-2 text-sm">
                     <span class="text-muted-foreground line-through">₹{{ plan.price }}</span>
                     <span class="inline-flex items-center rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-500 ring-1 ring-inset ring-rose-500/20">
@@ -163,17 +166,9 @@ const subscribe = () => {
                     </span>
                 </div>
                 <ul class="relative mt-6 flex-1 space-y-3 text-sm">
-                    <li class="flex items-center gap-2">
-                        <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                        {{ plan.features?.job_post_limit ?? 0 }} {{ $t('subscription.jobPosts') }}
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                        {{ plan.features?.contact_unlock_limit ?? 0 }} {{ $t('subscription.contactUnlocks') }}
-                    </li>
-                    <li v-if="plan.features?.featured" class="flex items-center gap-2">
-                        <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                        {{ $t('subscription.featured') }}
+                    <li v-for="line in plan.feature_list" :key="line" class="flex items-center gap-2">
+                        <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
+                        {{ line }}
                     </li>
                 </ul>
                 <button
@@ -228,17 +223,9 @@ const subscribe = () => {
 
             <!-- Plan details -->
             <ul class="mt-5 space-y-2.5 rounded-xl bg-muted/40 p-4 text-sm">
-                <li class="flex items-center gap-2">
-                    <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                    <strong>{{ selected.features?.job_post_limit ?? 0 }}</strong>&nbsp;{{ $t('subscription.jobPosts') }}
-                </li>
-                <li class="flex items-center gap-2">
-                    <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                    <strong>{{ selected.features?.contact_unlock_limit ?? 0 }}</strong>&nbsp;{{ $t('subscription.contactUnlocks') }}
-                </li>
-                <li v-if="selected.features?.featured" class="flex items-center gap-2">
-                    <span class="flex size-5 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                    {{ $t('subscription.featured') }}
+                <li v-for="line in selected.feature_list" :key="line" class="flex items-center gap-2">
+                    <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
+                    {{ line }}
                 </li>
             </ul>
 

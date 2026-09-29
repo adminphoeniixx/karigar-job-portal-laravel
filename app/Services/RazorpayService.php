@@ -30,23 +30,44 @@ class RazorpayService
     /**
      * Create a Razorpay plan for the given local plan and return its id.
      *
+     * The amount is the price with GST added. Razorpay charges a subscription
+     * whatever its plan says, so a plan made at the bare price (as these used
+     * to be) collected ₹499 while the invoice said ₹588.82.
+     *
      * Razorpay `period` accepts daily|weekly|monthly|yearly; our local
      * `interval` (monthly|yearly) maps straight across with interval count 1.
      */
     public function createPlan(Plan $plan): string
     {
+        $gross = $plan->grossPrice();
+
         $razorpayPlan = $this->api()->plan->create([
             'period' => $plan->interval === 'yearly' ? 'yearly' : 'monthly',
             'interval' => 1,
             'item' => [
                 'name' => $plan->name,
-                'amount' => (int) round($plan->price * 100), // paise
+                'amount' => (int) round($gross * 100), // paise
                 'currency' => $plan->currency ?? 'INR',
-                'description' => "Super Karigar {$plan->name} subscription",
+                'description' => "Super Karigar {$plan->name} subscription (incl. GST)",
             ],
         ]);
 
+        $plan->update(['razorpay_plan_id' => $razorpayPlan['id'], 'razorpay_amount' => $gross]);
+
         return $razorpayPlan['id'];
+    }
+
+    /**
+     * Make sure the plan's Razorpay plan charges today's price with today's
+     * GST, creating a new one if not. Razorpay plans cannot be edited, so a
+     * changed price or rate means a new plan; subscriptions already running on
+     * the old one keep it, new ones get this.
+     */
+    public function ensurePlan(Plan $plan): void
+    {
+        if (! $plan->razorpayPlanIsCurrent()) {
+            $this->createPlan($plan);
+        }
     }
 
     /**

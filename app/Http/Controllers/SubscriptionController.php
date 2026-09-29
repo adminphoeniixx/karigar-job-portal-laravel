@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\SubscriptionStatus;
 use App\Models\Coupon;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Billing\Gst;
+use App\Services\Billing\SubscriptionCheckout;
 use App\Services\RazorpayService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,10 +20,11 @@ class SubscriptionController extends Controller
     public function pricing(Request $request): Response
     {
         return Inertia::render('subscription/Pricing', [
-            'plans' => Plan::where('is_active', true)->orderBy('price')->get(),
+            'plans' => Plan::where('is_active', true)->orderBy('price')->get()
+                ->map(fn (Plan $plan) => [...$plan->toArray(), 'feature_list' => $plan->featureList()]),
             'current' => $request->user()->activeSubscription()?->load('plan'),
             'razorpayConfigured' => app(RazorpayService::class)->configured(),
-            'gstPercent' => (float) config('billing.gst_percent'),
+            'gstPercent' => Gst::percent(),
             // Paid subscriptions with an issued tax invoice.
             'invoices' => $request->user()->subscriptions()
                 ->whereNotNull('invoice_number')
@@ -41,9 +43,9 @@ class SubscriptionController extends Controller
         ]);
     }
 
-    public function subscribe(Plan $plan, Request $request, RazorpayService $razorpay): RedirectResponse|Response
+    public function subscribe(Plan $plan, Request $request, RazorpayService $razorpay, SubscriptionCheckout $checkout): RedirectResponse|Response
     {
-        if (! $razorpay->configured() || empty($plan->razorpay_plan_id)) {
+        if (! $razorpay->configured()) {
             return back()->with('toast', [
                 'type' => 'error',
                 'message' => __('Payments are not configured yet. Please try again later.'),
@@ -72,36 +74,14 @@ class SubscriptionController extends Controller
             $discount = $coupon->discountFor((float) $plan->price);
         }
 
-        $remote = $razorpay->createSubscription($plan, offerId: $coupon?->razorpay_offer_id);
-
-        // GST breakup, captured at purchase time.
-        $subtotal = round((float) $plan->price - $discount, 2);
-        $gstPercent = (float) config('billing.gst_percent');
-        $gstAmount = round($subtotal * $gstPercent / 100, 2);
-
-        $subscription = $request->user()->subscriptions()->create([
-            'plan_id' => $plan->id,
-            'coupon_id' => $coupon?->id,
-            'discount_amount' => $coupon ? $discount : null,
-            'subtotal_amount' => $subtotal,
-            'gst_percent' => $gstPercent,
-            'gst_amount' => $gstAmount,
-            'total_amount' => round($subtotal + $gstAmount, 2),
-            'razorpay_subscription_id' => $remote['id'],
-            'status' => SubscriptionStatus::Created,
-        ]);
+        $subscription = $checkout->start($request->user(), $plan, $coupon, $discount);
 
         return Inertia::render('subscription/Checkout', [
             'razorpayKey' => config('services.razorpay.key'),
             'subscriptionId' => $subscription->razorpay_subscription_id,
             'plan' => $plan,
             'discountAmount' => $coupon ? $discount : null,
-            'gst' => [
-                'percent' => $gstPercent,
-                'amount' => $gstAmount,
-                'subtotal' => $subtotal,
-                'total' => $subscription->total_amount,
-            ],
+            'amounts' => SubscriptionCheckout::amounts($subscription),
         ]);
     }
 

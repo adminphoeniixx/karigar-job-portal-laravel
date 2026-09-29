@@ -11,7 +11,7 @@ class SyncRazorpayPlans extends Command
 {
     protected $signature = 'razorpay:sync-plans {--force : Recreate a Razorpay plan even if one is already linked}';
 
-    protected $description = 'Create Razorpay plans for local plans missing a razorpay_plan_id and store the returned id';
+    protected $description = 'Create Razorpay plans (GST included) for local plans that have none, or whose price or GST rate changed';
 
     public function handle(RazorpayService $razorpay): int
     {
@@ -21,12 +21,11 @@ class SyncRazorpayPlans extends Command
             return self::FAILURE;
         }
 
-        $plans = Plan::query()
-            ->when(! $this->option('force'), fn ($q) => $q->whereNull('razorpay_plan_id'))
-            ->get();
+        $plans = Plan::query()->get()
+            ->when(! $this->option('force'), fn ($plans) => $plans->reject->razorpayPlanIsCurrent());
 
         if ($plans->isEmpty()) {
-            $this->info('All plans already linked to Razorpay. Use --force to recreate.');
+            $this->info('Every plan already has a Razorpay plan at the current price and GST. Use --force to recreate.');
 
             return self::SUCCESS;
         }
@@ -34,7 +33,6 @@ class SyncRazorpayPlans extends Command
         foreach ($plans as $plan) {
             try {
                 $id = $razorpay->createPlan($plan);
-                $plan->update(['razorpay_plan_id' => $id]);
                 $this->line("  <info>✓</info> {$plan->name} → {$id}");
             } catch (Throwable $e) {
                 $this->error("  ✗ {$plan->name}: {$e->getMessage()}");

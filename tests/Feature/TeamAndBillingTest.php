@@ -149,7 +149,7 @@ it('shows the tax invoice to its owner only', function () {
         ->assertInertia(fn ($page) => $page
             ->component('subscription/Invoice')
             ->where('invoice.number', $subscription->invoice_number)
-            ->where('invoice.total', '588.82'));
+            ->where('invoice.total', 588.82));
 
     $other = User::factory()->create(['role' => UserRole::Employer->value]);
     $this->actingAs($other)->get("/subscription/{$subscription->id}/invoice")->assertForbidden();

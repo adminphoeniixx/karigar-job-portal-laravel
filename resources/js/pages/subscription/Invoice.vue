@@ -1,22 +1,28 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, Printer } from '@lucide/vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { ArrowLeft, Download, Printer } from '@lucide/vue';
+import { computed } from 'vue';
 
 interface Invoice {
     number: string;
     date: string | null;
-    plan: { name: string; interval: string; price: string };
+    plan: { name: string; interval: string; price: number };
     coupon_code: string | null;
-    discount: string | null;
-    subtotal: string | null;
-    gst_percent: string | null;
-    gst_amount: string | null;
-    total: string | null;
+    discount: number | null;
+    subtotal: number | null;
+    gst_percent: number | null;
+    gst_amount: number | null;
+    total: number | null;
+    cgst_amount: number | null;
+    sgst_amount: number | null;
+    igst_amount: number | null;
+    place_of_supply: string | null;
+    sac: string | null;
     period: { from: string | null; to: string | null };
     payment_ref: string | null;
 }
 
-defineProps<{
+const props = defineProps<{
     invoice: Invoice;
     seller: { name: string; address: string; gstin: string; email: string };
     buyer: { name: string; address: string; gstin: string | null; email: string; phone: string | null };
@@ -24,9 +30,18 @@ defineProps<{
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Subscription', href: '/subscription' }, { title: 'Invoice', href: '#' }] } });
 
-const inr = (v: string | null) => (v == null ? '—' : '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 }));
+// Invoices issued before the split carry only the combined GST line.
+const split = computed(() => props.invoice.cgst_amount !== null || props.invoice.igst_amount !== null);
+const intraState = computed(() => Number(props.invoice.cgst_amount ?? 0) > 0);
+const halfRate = computed(() => Number(props.invoice.gst_percent ?? 0) / 2);
+
+const inr = (v: string | number | null) => (v == null ? '—' : '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 }));
 
 const printInvoice = () => window.print();
+
+// This page is /subscription/{id}/invoice; the PDF sits beside it.
+const page = usePage();
+const pdfHref = computed(() => page.url.split('?')[0] + '.pdf');
 </script>
 
 <template>
@@ -37,12 +52,20 @@ const printInvoice = () => window.print();
             <Link href="/subscription" class="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">
                 <ArrowLeft class="size-4" /> Back to subscription
             </Link>
-            <button
-                class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:opacity-90"
-                @click="printInvoice"
-            >
-                <Printer class="size-4" /> Print / Save PDF
-            </button>
+            <div class="flex items-center gap-2">
+                <a
+                    :href="pdfHref"
+                    class="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted"
+                >
+                    <Download class="size-4" /> PDF
+                </a>
+                <button
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:opacity-90"
+                    @click="printInvoice"
+                >
+                    <Printer class="size-4" /> Print
+                </button>
+            </div>
         </div>
 
         <!-- Invoice sheet -->
@@ -50,10 +73,8 @@ const printInvoice = () => window.print();
             <!-- Header -->
             <div class="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
                 <div>
-                    <div class="flex items-center gap-2 text-xl font-bold">
-                        <span class="flex size-9 items-center justify-center rounded-xl bg-primary text-white">K</span>
-                        {{ seller.name }}
-                    </div>
+                    <img src="/images/brand/wordmark.png" alt="Super Karigar" width="534" height="230" class="h-14 w-auto" />
+                    <div class="mt-3 text-base font-bold">{{ seller.name }}</div>
                     <p v-if="seller.address" class="mt-2 max-w-xs text-xs text-muted-foreground">{{ seller.address }}</p>
                     <p v-if="seller.gstin" class="mt-1 text-xs font-medium">GSTIN: {{ seller.gstin }}</p>
                     <p v-if="seller.email" class="text-xs text-muted-foreground">{{ seller.email }}</p>
@@ -77,6 +98,9 @@ const printInvoice = () => window.print();
                 <div class="sm:text-right">
                     <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payment reference</div>
                     <div class="mt-1.5 text-sm">{{ invoice.payment_ref || '—' }}</div>
+                    <div v-if="invoice.place_of_supply" class="mt-2 text-xs text-muted-foreground">
+                        Place of supply: <span class="font-medium text-foreground">{{ invoice.place_of_supply }}</span>
+                    </div>
                     <div v-if="invoice.period.from" class="mt-2 text-xs text-muted-foreground">
                         Service period: {{ invoice.period.from }} — {{ invoice.period.to }}
                     </div>
@@ -95,7 +119,9 @@ const printInvoice = () => window.print();
                     <tr class="border-b">
                         <td class="py-3.5">
                             <div class="font-medium">{{ invoice.plan.name }} plan — subscription</div>
-                            <div class="text-xs capitalize text-muted-foreground">Billed {{ invoice.plan.interval }}</div>
+                            <div class="text-xs capitalize text-muted-foreground">
+                                Billed {{ invoice.plan.interval }}<template v-if="invoice.sac"> · SAC {{ invoice.sac }}</template>
+                            </div>
                         </td>
                         <td class="py-3.5 text-right tabular-nums">{{ inr(invoice.plan.price) }}</td>
                     </tr>
@@ -107,7 +133,21 @@ const printInvoice = () => window.print();
                         <td class="py-3 text-muted-foreground">Taxable value</td>
                         <td class="py-3 text-right tabular-nums">{{ inr(invoice.subtotal) }}</td>
                     </tr>
-                    <tr class="border-b">
+                    <template v-if="split && intraState">
+                        <tr class="border-b">
+                            <td class="py-3 text-muted-foreground">CGST ({{ halfRate }}%)</td>
+                            <td class="py-3 text-right tabular-nums">{{ inr(invoice.cgst_amount) }}</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="py-3 text-muted-foreground">SGST ({{ halfRate }}%)</td>
+                            <td class="py-3 text-right tabular-nums">{{ inr(invoice.sgst_amount) }}</td>
+                        </tr>
+                    </template>
+                    <tr v-else-if="split" class="border-b">
+                        <td class="py-3 text-muted-foreground">IGST ({{ Number(invoice.gst_percent ?? 0) }}%)</td>
+                        <td class="py-3 text-right tabular-nums">{{ inr(invoice.igst_amount) }}</td>
+                    </tr>
+                    <tr v-else class="border-b">
                         <td class="py-3 text-muted-foreground">GST ({{ Number(invoice.gst_percent ?? 0) }}%)</td>
                         <td class="py-3 text-right tabular-nums">{{ inr(invoice.gst_amount) }}</td>
                     </tr>

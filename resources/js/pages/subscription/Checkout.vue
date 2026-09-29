@@ -13,8 +13,19 @@ const props = defineProps<{
     subscriptionId: string;
     plan: Plan;
     discountAmount?: string | null;
-    gst?: { percent: number; amount: number; subtotal: number; total: string | null } | null;
+    amounts: {
+        discount: number;
+        subtotal: number;
+        gst_percent: number;
+        gst: number;
+        cgst: number;
+        sgst: number;
+        igst: number;
+        total: number;
+    };
 }>();
+
+const inr = (v: number) => '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Checkout', href: '/subscription' }] } });
 
@@ -66,6 +77,16 @@ onMounted(() => {
             <Loader2 class="size-8 animate-spin" />
         </span>
         <h1 class="text-xl font-semibold">Completing your {{ plan.name }} subscription…</h1>
+        <dl class="w-full max-w-xs space-y-1.5 rounded-xl border bg-card p-4 text-left text-sm">
+            <div class="flex justify-between"><dt class="text-muted-foreground">Plan price</dt><dd class="tabular-nums">{{ inr(amounts.subtotal + amounts.discount) }}</dd></div>
+            <div v-if="amounts.discount" class="flex justify-between"><dt class="text-muted-foreground">Discount</dt><dd class="tabular-nums">− {{ inr(amounts.discount) }}</dd></div>
+            <template v-if="amounts.cgst">
+                <div class="flex justify-between"><dt class="text-muted-foreground">CGST ({{ amounts.gst_percent / 2 }}%)</dt><dd class="tabular-nums">{{ inr(amounts.cgst) }}</dd></div>
+                <div class="flex justify-between"><dt class="text-muted-foreground">SGST ({{ amounts.gst_percent / 2 }}%)</dt><dd class="tabular-nums">{{ inr(amounts.sgst) }}</dd></div>
+            </template>
+            <div v-else-if="amounts.igst" class="flex justify-between"><dt class="text-muted-foreground">IGST ({{ amounts.gst_percent }}%)</dt><dd class="tabular-nums">{{ inr(amounts.igst) }}</dd></div>
+            <div class="flex justify-between border-t pt-1.5 font-semibold"><dt>Total payable</dt><dd class="tabular-nums">{{ inr(amounts.total) }}</dd></div>
+        </dl>
         <p class="max-w-sm text-sm text-muted-foreground">If the Razorpay window does not open automatically, click the button below.</p>
         <button
             class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"

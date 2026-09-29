@@ -19,20 +19,23 @@ interface Plan {
     is_active: boolean;
 }
 
-const props = defineProps<{ plans: Plan[] }>();
+const props = defineProps<{ plans: Plan[]; gstPercent: number }>();
+
+const withGst = (price: number) => Math.round(price * (100 + props.gstPercent)) / 100;
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Plans', href: '/admin/plans' }] } });
 
 const drafts = reactive<
     Record<
         number,
-        { job_post_limit: number; contact_unlock_limit: number; contact_database_limit: number; featured: boolean; is_active: boolean }
+        { price: number; job_post_limit: number; contact_unlock_limit: number; contact_database_limit: number; featured: boolean; is_active: boolean }
     >
 >(
     Object.fromEntries(
         props.plans.map((p) => [
             p.id,
             {
+                price: Number(p.price),
                 job_post_limit: p.features?.job_post_limit ?? 0,
                 contact_unlock_limit: p.features?.contact_unlock_limit ?? 0,
                 contact_database_limit: p.features?.contact_database_limit ?? 0,
@@ -52,13 +55,16 @@ const save = (p: Plan) => {
     <Head title="Plans" />
 
     <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="Layers" title="Plans & Limits" description="Set what each subscription plan grants — including how many karigar-database contacts an employer can access." />
+        <PageHeader :icon="Layers" title="Plans & Limits" description="Price and what each plan grants. A new price reaches Razorpay by itself on the next checkout; running subscriptions keep the price they signed up at." />
 
         <div v-for="p in plans" :key="p.id" class="rounded-2xl border bg-card p-5 shadow-sm">
             <div class="flex items-center justify-between border-b pb-3">
                 <div>
                     <h3 class="font-semibold">{{ p.name }}</h3>
-                    <p class="text-xs text-muted-foreground">₹{{ p.price }} / {{ p.interval }}</p>
+                    <p class="text-xs text-muted-foreground">
+                        ₹{{ drafts[p.id].price }} / {{ p.interval }}
+                        <template v-if="gstPercent > 0"> · ₹{{ withGst(drafts[p.id].price) }} with {{ gstPercent }}% GST</template>
+                    </p>
                 </div>
                 <span
                     class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset"
@@ -68,13 +74,17 @@ const save = (p: Plan) => {
                 </span>
             </div>
 
-            <div class="mt-4 grid gap-4 sm:grid-cols-3">
+            <div class="mt-4 grid gap-4 sm:grid-cols-4">
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-muted-foreground">Job posts</label>
+                    <label class="mb-1 block text-xs font-medium text-muted-foreground">Price ₹ (before GST)</label>
+                    <input v-model.number="drafts[p.id].price" type="number" min="1" step="1" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-muted-foreground">Job posts / {{ p.interval === 'yearly' ? 'year' : 'month' }} (0 = unlimited)</label>
                     <input v-model.number="drafts[p.id].job_post_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-muted-foreground">Contact unlocks (applications)</label>
+                    <label class="mb-1 block text-xs font-medium text-muted-foreground">Contact unlocks (0 = unlimited)</label>
                     <input v-model.number="drafts[p.id].contact_unlock_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
@@ -85,7 +95,7 @@ const save = (p: Plan) => {
 
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
                 <div class="flex items-center gap-4 text-sm">
-                    <label class="flex items-center gap-2"><input v-model="drafts[p.id].featured" type="checkbox" class="size-4 rounded border-input text-orange-600 focus:ring-orange-500/40" /> Featured</label>
+                    <label class="flex items-center gap-2"><input v-model="drafts[p.id].featured" type="checkbox" class="size-4 rounded border-input text-orange-600 focus:ring-orange-500/40" /> Recommended badge</label>
                     <label class="flex items-center gap-2"><input v-model="drafts[p.id].is_active" type="checkbox" class="size-4 rounded border-input text-orange-600 focus:ring-orange-500/40" /> Active</label>
                 </div>
                 <button

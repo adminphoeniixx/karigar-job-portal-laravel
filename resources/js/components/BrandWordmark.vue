@@ -21,8 +21,8 @@ withDefaults(defineProps<{ tone?: 'brand' | 'plain' }>(), { tone: 'brand' });
     <img
         :src="tone === 'plain' ? '/images/brand/wordmark-light.png' : '/images/brand/wordmark.png'"
         alt="Super Karigar"
-        width="834"
-        height="320"
+        width="534"
+        height="230"
         class="h-[2.4em] w-auto max-w-full select-none"
     />
 </template>

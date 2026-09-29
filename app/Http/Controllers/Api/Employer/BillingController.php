@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Api\Employer;
 
-use App\Enums\SubscriptionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\CreditPurchase;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Services\Billing\Gst;
+use App\Services\Billing\SubscriptionCheckout;
 use App\Services\CreditWallet;
+use App\Services\JobPostingGate;
 use App\Services\RazorpayService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,12 +37,21 @@ class BillingController extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'slug' => $plan->slug,
+                // Before GST; `price_with_gst` is what the employer pays.
                 'price' => (float) $plan->price,
+                'gst_amount' => round($plan->grossPrice() - (float) $plan->price, 2),
+                'price_with_gst' => $plan->grossPrice(),
                 'currency' => $plan->currency,
                 'interval' => $plan->interval,
+                // The raw limits, for logic. Show `feature_list` to the user:
+                // `features` is keys and numbers, and rendered as-is it reads
+                // "job post limit" with no number.
                 'features' => $plan->features ?? [],
+                'feature_list' => $plan->featureList(),
+                'recommended' => $plan->isRecommended(),
                 'is_current' => $current?->plan_id === $plan->id,
-                'purchasable' => ! empty($plan->razorpay_plan_id),
+                // Razorpay plans are created on demand at checkout now.
+                'purchasable' => $razorpay->configured(),
             ]),
             'current' => $current ? [
                 'id' => $current->id,
@@ -63,6 +74,8 @@ class BillingController extends Controller
                     'days' => $tier['days'],
                     'label' => $tier['label'],
                 ])->values(),
+            // Job posts used in the current billing period; null without a plan.
+            'job_posts' => JobPostingGate::usage($account),
             'invoices' => $account->subscriptions()
                 ->whereNotNull('invoice_number')
                 ->with('plan:id,name')
@@ -82,7 +95,7 @@ class BillingController extends Controller
             'payment' => [
                 'configured' => $razorpay->configured(),
                 'key' => config('services.razorpay.key'),
-                'gst_percent' => (float) config('billing.gst_percent'),
+                'gst_percent' => Gst::percent(),
             ],
         ]);
     }
@@ -91,12 +104,12 @@ class BillingController extends Controller
      * Start a subscription: creates the Razorpay subscription and returns the
      * ids the app hands to the Razorpay checkout SDK.
      */
-    public function subscribe(Request $request, Plan $plan, RazorpayService $razorpay): JsonResponse
+    public function subscribe(Request $request, Plan $plan, RazorpayService $razorpay, SubscriptionCheckout $checkout): JsonResponse
     {
         $account = $request->user()->employerAccount();
         abort_unless($request->user()->id === $account->id, 403, __('Only the account owner can change the plan.'));
 
-        if (! $razorpay->configured() || empty($plan->razorpay_plan_id)) {
+        if (! $razorpay->configured()) {
             return response()->json([
                 'message' => __('Payments are not configured yet. Please try again later.'),
             ], 422);
@@ -118,36 +131,14 @@ class BillingController extends Controller
             $discount = $coupon->discountFor((float) $plan->price);
         }
 
-        $remote = $razorpay->createSubscription($plan, offerId: $coupon?->razorpay_offer_id);
-
-        $subtotal = round((float) $plan->price - $discount, 2);
-        $gstPercent = (float) config('billing.gst_percent');
-        $gstAmount = round($subtotal * $gstPercent / 100, 2);
-
-        $subscription = $account->subscriptions()->create([
-            'plan_id' => $plan->id,
-            'coupon_id' => $coupon?->id,
-            'discount_amount' => $coupon ? $discount : null,
-            'subtotal_amount' => $subtotal,
-            'gst_percent' => $gstPercent,
-            'gst_amount' => $gstAmount,
-            'total_amount' => round($subtotal + $gstAmount, 2),
-            'razorpay_subscription_id' => $remote['id'],
-            'status' => SubscriptionStatus::Created,
-        ]);
+        $subscription = $checkout->start($account, $plan, $coupon, $discount);
 
         return response()->json([
             'subscription_id' => $subscription->id,
             'razorpay_subscription_id' => $subscription->razorpay_subscription_id,
             'razorpay_key' => config('services.razorpay.key'),
             'plan' => ['id' => $plan->id, 'name' => $plan->name, 'price' => (float) $plan->price],
-            'amounts' => [
-                'discount' => $coupon ? $discount : 0,
-                'subtotal' => $subtotal,
-                'gst_percent' => $gstPercent,
-                'gst' => $gstAmount,
-                'total' => (float) $subscription->total_amount,
-            ],
+            'amounts' => SubscriptionCheckout::amounts($subscription),
         ], 201);
     }
 

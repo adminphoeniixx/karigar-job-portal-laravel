@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ScoreApplication;
+use App\Models\Plan;
 use App\Models\Setting;
+use App\Services\Billing\Gst;
 use App\Services\Screening\ScreeningService;
+use App\Support\GstStates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,6 +34,7 @@ class SettingController extends Controller
                 ),
                 'ai_screening_call_enabled' => Setting::bool(ScreeningService::ENABLED_KEY, false),
             ],
+            'billing' => $this->billing(),
         ]);
     }
 
@@ -59,5 +63,72 @@ class SettingController extends Controller
         Setting::set(ScreeningService::ENABLED_KEY, $data['ai_screening_call_enabled'] ? '1' : '0');
 
         return back()->with('toast', ['type' => 'success', 'message' => __('Settings updated.')]);
+    }
+
+    /**
+     * GST and the seller details printed on invoices. Saved on its own so a
+     * typo in a GSTIN cannot block the feature toggles above it, and the other
+     * way round.
+     *
+     * A new rate or price reaches Razorpay by itself: the next checkout on each
+     * plan finds its Razorpay plan charging the old amount and makes a new one.
+     */
+    public function updateBilling(Request $request): RedirectResponse
+    {
+        $request->merge([
+            'seller_gstin' => strtoupper(trim((string) $request->input('seller_gstin'))),
+        ]);
+
+        $data = $request->validate([
+            'gst_enabled' => ['required', 'boolean'],
+            'gst_percent' => ['required', 'numeric', 'min:0', 'max:28'],
+            'seller_name' => ['required', 'string', 'max:150'],
+            'seller_address' => ['required', 'string', 'max:300'],
+            'seller_gstin' => ['required', 'string', 'regex:/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/'],
+            'sac_code' => ['required', 'string', 'regex:/^\d{4,8}$/'],
+        ], [
+            'seller_gstin.regex' => __('That is not a valid GSTIN (15 characters, e.g. 06AAFCP6967R1ZF).'),
+            'sac_code.regex' => __('SAC is 4 to 8 digits.'),
+        ]);
+
+        if (GstStates::codeFromGstin($data['seller_gstin']) === null) {
+            return back()->withErrors(['seller_gstin' => __('The first two digits are not an Indian state code.')]);
+        }
+
+        Setting::set(Gst::ENABLED_KEY, $data['gst_enabled'] ? '1' : '0');
+        Setting::set(Gst::PERCENT_KEY, (string) round((float) $data['gst_percent'], 2));
+        Setting::set(Gst::SELLER_NAME_KEY, trim($data['seller_name']));
+        Setting::set(Gst::SELLER_ADDRESS_KEY, trim($data['seller_address']));
+        Setting::set(Gst::SELLER_GSTIN_KEY, $data['seller_gstin']);
+        Setting::set(Gst::SAC_KEY, $data['sac_code']);
+
+        return back()->with('toast', ['type' => 'success', 'message' => __('Billing settings updated.')]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function billing(): array
+    {
+        $seller = Gst::seller();
+        $stored = Setting::get(Gst::PERCENT_KEY);
+
+        return [
+            'gst_enabled' => Gst::enabled(),
+            // The rate itself, even while GST is off, so switching it back on
+            // does not lose it.
+            'gst_percent' => is_numeric($stored) ? (float) $stored : (float) config('billing.gst_percent', 18),
+            'seller_name' => $seller['name'],
+            'seller_address' => $seller['address'],
+            'seller_gstin' => $seller['gstin'],
+            'seller_state' => $seller['state_code'] ? GstStates::label($seller['state_code']) : null,
+            'sac_code' => $seller['sac'],
+            'invoice_prefix' => config('billing.invoice_prefix', 'KRG'),
+            'plans' => Plan::orderBy('price')->get()->map(fn (Plan $plan) => [
+                'name' => $plan->name,
+                'price' => (float) $plan->price,
+                'interval' => $plan->interval,
+            ]),
+        ];
     }
 }

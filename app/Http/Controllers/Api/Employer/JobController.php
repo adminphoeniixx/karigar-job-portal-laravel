@@ -80,9 +80,13 @@ class JobController extends Controller
         $this->authorize('create', JobListing::class);
 
         $account = $request->user()->employerAccount();
-        $gate = JobPostingGate::evaluate($account);
 
-        if (! $gate['allowed']) {
+        // Only a job going live spends the quota; a draft is always saved.
+        $gate = $request->input('status') === JobStatus::Active->value
+            ? JobPostingGate::evaluate($account)
+            : null;
+
+        if ($gate !== null && ! $gate['allowed']) {
             return response()->json([
                 'message' => $gate['message'],
             ], 422);
@@ -90,7 +94,7 @@ class JobController extends Controller
 
         $job = $account->jobListings()->create($request->validated());
 
-        if ($gate['consumesFreePost']) {
+        if ($gate !== null && $gate['consumesFreePost']) {
             JobPostingGate::consumeFreePost($account);
         }
 
@@ -100,7 +104,7 @@ class JobController extends Controller
         }
 
         return response()->json([
-            'message' => __('Job posted.'),
+            'message' => $job->isDraft() ? __('Draft saved.') : __('Job posted.'),
             'job' => new EmployerJobResource($job),
         ], 201);
     }
@@ -112,17 +116,35 @@ class JobController extends Controller
     {
         $this->authorize('update', $job);
 
+        $account = $request->user()->employerAccount();
+
+        // Publishing a draft is checked against the plan like a new post.
+        $goingLive = $job->published_at === null && $request->input('status') === JobStatus::Active->value;
+        $gate = $goingLive ? JobPostingGate::evaluate($account) : null;
+
+        if ($gate !== null && ! $gate['allowed']) {
+            return response()->json(['message' => $gate['message']], 422);
+        }
+
         $wasActive = $job->status === JobStatus::Active;
         $job->update($request->validated());
+
+        if ($gate !== null && $gate['consumesFreePost']) {
+            JobPostingGate::consumeFreePost($account);
+        }
 
         // Newly-activated job → notify workers, same as the web flow.
         if (! $wasActive && $job->status === JobStatus::Active) {
             $this->notifyWorkers($job);
-            $this->sendPostedEmail($job, $request->user()->employerAccount());
+            $this->sendPostedEmail($job, $account);
         }
 
         return response()->json([
-            'message' => __('Job updated.'),
+            'message' => match (true) {
+                $goingLive => __('Job posted.'),
+                $job->isDraft() => __('Draft saved.'),
+                default => __('Job updated.'),
+            },
             'job' => new EmployerJobResource($job),
         ]);
     }

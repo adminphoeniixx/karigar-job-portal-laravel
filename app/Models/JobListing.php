@@ -46,7 +46,7 @@ class JobListing extends Model
         'title', 'description', 'category', 'skills',
         'wage_min', 'wage_max', 'wage_type',
         'address', 'city', 'state', 'latitude', 'longitude',
-        'vacancies', 'experience_min', 'status', 'expires_at',
+        'vacancies', 'experience_min', 'status', 'published_at', 'expires_at',
         'contact_mode', 'contact_phone', 'shift', 'perks',
         'requires_worker_fee', 'worker_fee_amount',
         'boost_tier', 'boosted_until',
@@ -64,9 +64,30 @@ class JobListing extends Model
             'worker_fee_amount' => 'decimal:2',
             'status' => JobStatus::class,
             'expires_at' => 'datetime',
+            'published_at' => 'datetime',
             'wage_min' => 'decimal:2',
             'wage_max' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Stamp the moment a job first goes live, whichever path takes it there —
+     * posted straight away, a draft published, or an admin activating it.
+     * Drafts have no stamp, and closing and reopening keeps the first one, so
+     * the plan's job-post limit counts each job once.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (JobListing $job) {
+            if ($job->status === JobStatus::Active && $job->published_at === null) {
+                $job->published_at = now();
+            }
+        });
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->status === JobStatus::Draft;
     }
 
     public function searchableAs(): string

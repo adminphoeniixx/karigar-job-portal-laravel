@@ -11,8 +11,8 @@
             <td align="center">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
                     <tr>
-                        <td style="background:linear-gradient(135deg,#0d9488,#0891b2);padding:24px 32px;">
-                            <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.02em;">{{ config('app.name') }}</span>
+                        <td style="background:#ffffff;padding:24px 32px 8px;border-bottom:1px solid #efe9df;">
+                            <img src="{{ url('/images/brand/wordmark.png') }}" alt="{{ config('app.name') }}" width="116" height="50" style="display:block;height:50px;width:auto;border:0;">
                         </td>
                     </tr>
                     <tr>

@@ -23,6 +23,18 @@ class JobListingRequest extends FormRequest
             $this->merge(['requires_worker_fee' => false]);
         }
 
+        // A draft is somewhere to leave a half-written job, so it needs only a
+        // title. The columns behind these two are not nullable; they are
+        // filled in properly when the job is published, which validates them.
+        if ($this->input('status') === 'draft') {
+            if (! $this->filled('description')) {
+                $this->merge(['description' => '']);
+            }
+            if (! $this->filled('vacancies')) {
+                $this->merge(['vacancies' => 1]);
+            }
+        }
+
         // Ignore any stale amount when no fee is charged.
         if (! $this->boolean('requires_worker_fee')) {
             $this->merge(['worker_fee_amount' => null]);
@@ -36,7 +48,9 @@ class JobListingRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:5000'],
+            'description' => $this->input('status') === 'draft'
+                ? ['present', 'nullable', 'string', 'max:5000']
+                : ['required', 'string', 'max:5000'],
             'category' => ['nullable', 'string', 'max:100'],
             'skills' => ['nullable', 'array', 'max:30'],
             'skills.*' => ['string', 'max:50'],

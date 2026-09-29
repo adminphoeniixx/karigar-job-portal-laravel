@@ -27,6 +27,7 @@ interface Job {
     longitude: string | null;
     vacancies: number;
     status: string;
+    published_at?: string | null;
     expires_at: string | null;
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
@@ -192,6 +193,16 @@ const selectClass =
     'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
 const textareaClass =
     'flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20';
+
+// A job that has never been live is still a draft in the making: it gets
+// "Save as draft" next to "Post job", and no status picker. Once published, the
+// picker is back for closing and reopening.
+const neverPublished = !isEdit || !props.job?.published_at;
+
+const submitAs = (status: 'draft' | 'active') => {
+    form.status = status;
+    submit();
+};
 
 const submit = () => {
     if (isEdit) {
@@ -477,10 +488,9 @@ const submit = () => {
                         <Input id="vacancies" type="number" min="1" v-model="form.vacancies" />
                         <InputError :message="form.errors.vacancies" />
                     </div>
-                    <div class="grid gap-2">
+                    <div v-if="!neverPublished" class="grid gap-2">
                         <Label for="status">{{ $t('kyc.status') }}</Label>
                         <select id="status" v-model="form.status" :class="selectClass">
-                            <option value="draft">{{ $t('status.draft') }}</option>
                             <option value="active">{{ $t('status.active') }}</option>
                             <option value="closed">{{ $t('status.closed') }}</option>
                         </select>
@@ -494,14 +504,34 @@ const submit = () => {
                 </div>
             </section>
 
-            <div class="flex items-center justify-end gap-3">
+            <p v-if="neverPublished" class="text-right text-xs text-muted-foreground">{{ $t('jobForm.draftHint') }}</p>
+            <div class="flex flex-wrap items-center justify-end gap-3">
                 <Link href="/employer/jobs" class="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">{{ $t('common.cancel') }}</Link>
                 <button
+                    v-if="neverPublished"
+                    type="button"
+                    :disabled="form.processing"
+                    class="inline-flex items-center gap-1.5 rounded-xl border px-5 py-2.5 text-sm font-semibold transition hover:bg-muted active:scale-95 disabled:opacity-50"
+                    @click="submitAs('draft')"
+                >
+                    {{ $t('jobForm.saveDraft') }}
+                </button>
+                <button
+                    v-if="neverPublished"
+                    type="button"
+                    :disabled="form.processing"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                    @click="submitAs('active')"
+                >
+                    {{ $t('jobForm.postBtn') }}
+                </button>
+                <button
+                    v-else
                     type="submit"
                     :disabled="form.processing"
                     class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
-                    {{ isEdit ? $t('jobForm.updateBtn') : $t('jobForm.postBtn') }}
+                    {{ $t('jobForm.updateBtn') }}
                 </button>
             </div>
         </form>

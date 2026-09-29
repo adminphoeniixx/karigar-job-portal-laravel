@@ -217,6 +217,7 @@ Route::prefix('v1')->group(function () {
             Route::post('employer/plans/callback', [BillingController::class, 'callback'])->name('api.employer.plans.callback');
             Route::post('employer/plans/{plan}/subscribe', [BillingController::class, 'subscribe'])->name('api.employer.plans.subscribe');
             Route::get('employer/invoices/{subscription}', [EmployerInvoiceController::class, 'show'])->name('api.employer.invoices.show');
+            Route::get('employer/invoices/{subscription}/pdf', [EmployerInvoiceController::class, 'pdf'])->name('api.employer.invoices.pdf');
             Route::post('employer/credits/top-up', [BillingController::class, 'topUp'])->name('api.employer.credits.topup');
             Route::post('employer/credits/callback', [BillingController::class, 'topUpCallback'])->name('api.employer.credits.callback');
 

@@ -16,8 +16,9 @@ class TemplatedMailer
      * recipient has no address — and never lets a mail failure break the caller.
      *
      * @param  array<string, string|int|null>  $data
+     * @param  array<string, string>  $attachments  filename => raw contents
      */
-    public static function send(string $key, ?string $email, array $data = []): void
+    public static function send(string $key, ?string $email, array $data = [], array $attachments = []): void
     {
         // No address, or a phone-OTP placeholder address (<phone>@phone.karigar)
         // that has no real inbox — skip rather than send a guaranteed bounce,
@@ -47,7 +48,11 @@ class TemplatedMailer
             // starts two `queue:work --queue=default` processes unconditionally.
             // If that ever stops being true, mail stops silently — nothing here
             // will tell you.
-            Mail::to($email)->queue(new TemplatedMail($rendered['subject'], $rendered['body']));
+            Mail::to($email)->queue(new TemplatedMail(
+                $rendered['subject'],
+                $rendered['body'],
+                array_map('base64_encode', $attachments),
+            ));
         } catch (Throwable $e) {
             // Now catches a queue that will not accept the job, rather than a
             // relay that will not accept the mail. The delivery failure itself

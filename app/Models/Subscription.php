@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\SubscriptionStatus;
+use App\Services\Billing\InvoiceDocument;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -22,6 +24,7 @@ class Subscription extends Model
     protected $fillable = [
         'employer_id', 'plan_id', 'coupon_id', 'discount_amount',
         'subtotal_amount', 'gst_percent', 'gst_amount', 'total_amount',
+        'cgst_amount', 'sgst_amount', 'igst_amount', 'place_of_supply', 'seller_gstin', 'sac_code',
         'invoice_number', 'invoiced_at',
         'razorpay_subscription_id', 'razorpay_customer_id',
         'status', 'starts_at', 'ends_at',
@@ -36,6 +39,9 @@ class Subscription extends Model
             'gst_percent' => 'decimal:2',
             'gst_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
+            'cgst_amount' => 'decimal:2',
+            'sgst_amount' => 'decimal:2',
+            'igst_amount' => 'decimal:2',
             'invoiced_at' => 'datetime',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
@@ -44,6 +50,10 @@ class Subscription extends Model
 
     /**
      * Mark the subscription paid/active and issue its tax invoice number.
+     *
+     * The app's payment callback and Razorpay's webhook both call this for the
+     * same payment, in either order; the invoice is issued, and emailed, only
+     * by whichever gets here first.
      */
     public function activateWithInvoice(): void
     {
@@ -53,17 +63,31 @@ class Subscription extends Model
             'ends_at' => $this->plan->interval === 'yearly' ? now()->addYear() : now()->addMonth(),
         ]);
 
+        $issuing = false;
+
         if ($this->invoice_number === null) {
-            $this->invoice_number = sprintf(
+            $number = sprintf(
                 '%s-%s-%05d',
                 config('billing.invoice_prefix', 'KRG'),
                 now()->format('Y'),
                 $this->id,
             );
-            $this->invoiced_at = now();
+
+            // Claimed with a conditional update rather than read-then-write, so
+            // a callback and a webhook racing each other cannot both issue it.
+            $issuing = static::whereKey($this->id)
+                ->whereNull('invoice_number')
+                ->update(['invoice_number' => $number, 'invoiced_at' => now()]) === 1;
+
+            $this->invoice_number = $number;
+            $this->invoiced_at ??= now();
         }
 
         $this->save();
+
+        if ($issuing) {
+            InvoiceDocument::for($this)->email();
+        }
     }
 
     /**
@@ -72,6 +96,25 @@ class Subscription extends Model
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class);
+    }
+
+    /**
+     * When the billing period now running began. A renewal moves ends_at on
+     * (the Razorpay webhook sets it to the cycle's end), so the cycle is the
+     * one interval before it. Per-period limits count from here.
+     */
+    public function currentCycleStart(): CarbonInterface
+    {
+        if ($this->ends_at !== null) {
+            $start = $this->plan->interval === 'yearly'
+                ? $this->ends_at->copy()->subYear()
+                : $this->ends_at->copy()->subMonth();
+
+            // Never before the subscription itself began.
+            return $this->starts_at !== null && $this->starts_at->gt($start) ? $this->starts_at : $start;
+        }
+
+        return $this->starts_at ?? $this->created_at;
     }
 
     public function isActive(): bool

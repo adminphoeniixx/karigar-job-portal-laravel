@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Billing\Gst;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $currency
  * @property string $interval
  * @property string|null $razorpay_plan_id
+ * @property string|null $razorpay_amount
  * @property array<string, mixed>|null $features
  * @property bool $is_active
  */
@@ -20,7 +22,7 @@ class Plan extends Model
 {
     protected $fillable = [
         'name', 'slug', 'price', 'currency', 'interval',
-        'razorpay_plan_id', 'features', 'is_active',
+        'razorpay_plan_id', 'razorpay_amount', 'features', 'is_active',
     ];
 
     protected function casts(): array
@@ -29,6 +31,7 @@ class Plan extends Model
             'features' => 'array',
             'is_active' => 'boolean',
             'price' => 'decimal:2',
+            'razorpay_amount' => 'decimal:2',
         ];
     }
 
@@ -48,6 +51,65 @@ class Plan extends Model
     public function contactDatabaseLimit(): int
     {
         return (int) ($this->features['contact_database_limit'] ?? 0);
+    }
+
+    /**
+     * Whether this is the plan the catalogue highlights. It is a badge, not
+     * something the employer gets, so it is not in {@see featureList()}.
+     */
+    public function isRecommended(): bool
+    {
+        return (bool) ($this->features['featured'] ?? false);
+    }
+
+    /**
+     * What the plan gives, as lines a person reads: "5 job posts per month",
+     * "20 contact unlocks". The apps show these as they are, so the catalogue
+     * never has to know what a limit key means. 0 means unlimited everywhere
+     * the limits are enforced, and is said that way here.
+     *
+     * @return list<string>
+     */
+    public function featureList(): array
+    {
+        $per = $this->interval === 'yearly' ? __('per year') : __('per month');
+
+        $jobs = $this->jobPostLimit();
+        $unlocks = $this->contactUnlockLimit();
+        $database = $this->contactDatabaseLimit();
+
+        return array_values(array_filter([
+            $jobs > 0
+                ? trans_choice(':count job post|:count job posts', $jobs, ['count' => number_format($jobs)]).' '.$per
+                : __('Unlimited job posts'),
+            $unlocks > 0
+                ? trans_choice(':count contact unlock|:count contact unlocks', $unlocks, ['count' => number_format($unlocks)])
+                : __('Unlimited contact unlocks'),
+            $database > 0
+                ? __('Access to :count karigar contacts', ['count' => number_format($database)])
+                : null,
+            __('AI-ranked applicants'),
+            __('GST invoice for every payment'),
+        ]));
+    }
+
+    /**
+     * The price the employer pays, GST included, at today's rate.
+     */
+    public function grossPrice(): float
+    {
+        return Gst::gross((float) $this->price);
+    }
+
+    /**
+     * Whether the linked Razorpay plan still charges the right amount. It was
+     * made for one price and one GST rate; change either and it is stale.
+     */
+    public function razorpayPlanIsCurrent(): bool
+    {
+        return ! empty($this->razorpay_plan_id)
+            && $this->razorpay_amount !== null
+            && abs((float) $this->razorpay_amount - $this->grossPrice()) < 0.01;
     }
 
     /**
