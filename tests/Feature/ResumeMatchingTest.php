@@ -43,6 +43,8 @@ beforeEach(function () {
     $this->worker->workerProfile()->create(['city' => 'Jaipur', 'skills' => []]);
 
     $this->employer = User::factory()->create(['role' => UserRole::Employer->value]);
+
+    giveJobPlan($this->employer);
     $this->employer->employerProfile()->create(['company_name' => 'Test Employer']);
 
     $this->job = $this->employer->jobListings()->create([

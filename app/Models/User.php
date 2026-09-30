@@ -4,7 +4,6 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\KycStatus;
-use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -267,30 +266,52 @@ class User extends Authenticatable implements PasskeyUser
         return round((float) $this->reviewsReceived()->avg('rating'), 1);
     }
 
-    public function activeSubscription(): ?Subscription
+    /**
+     * The subscription granting access right now to one kind of plan: the job
+     * plan by default, or the database plan ({@see Plan::TYPE_DATABASE}). An
+     * account can hold one of each.
+     */
+    public function activeSubscription(string $type = Plan::TYPE_JOB): ?Subscription
     {
         return $this->subscriptions()
-            ->whereIn('status', array_map(fn ($s) => $s->value, SubscriptionStatus::entitled()))
-            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now()))
+            ->entitled()
+            ->ofType($type)
             ->latest()
             ->first();
     }
 
-    public function hasActiveSubscription(): bool
+    public function hasActiveSubscription(string $type = Plan::TYPE_JOB): bool
     {
-        return $this->activeSubscription() !== null;
+        return $this->activeSubscription($type) !== null;
+    }
+
+    /**
+     * Whether this account paid for a job plan before and has none now. Its
+     * jobs stop hiring and its applicants are hidden until it renews. An
+     * account that never had a plan (the free first post) has not lapsed.
+     */
+    public function jobPlanLapsed(): bool
+    {
+        return ! $this->hasActiveSubscription()
+            && $this->subscriptions()->ofType(Plan::TYPE_JOB)->whereNotNull('starts_at')->exists();
     }
 
     /**
      * How many worker-database contacts this employer can access: the active
-     * plan's quota plus any admin-granted bonus. Zero without an active plan.
+     * job plan's and database plan's quotas plus any admin-granted bonus. Zero
+     * without an active plan, bonus included: access ends with the plan.
      */
     public function contactDatabaseQuota(): int
     {
         $owner = $this->employerAccount();
-        $planQuota = $owner->activeSubscription()?->plan->contactDatabaseLimit() ?? 0;
+        $plans = collect([$owner->activeSubscription(), $owner->activeSubscription(Plan::TYPE_DATABASE)])->filter();
+
+        if ($plans->isEmpty()) {
+            return 0;
+        }
+
         $bonus = (int) ($owner->employerProfile?->contact_quota_bonus ?? 0);
 
-        return $planQuota + $bonus;
+        return $plans->sum(fn (Subscription $s) => $s->plan->contactDatabaseLimit()) + $bonus;
     }
 }

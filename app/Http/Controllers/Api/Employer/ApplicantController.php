@@ -11,6 +11,7 @@ use App\Models\JobListing;
 use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ShortlistedNotification;
+use App\Services\ApplicantAccess;
 use App\Services\CreditWallet;
 use App\Support\ReferenceData;
 use App\Support\TemplatedMailer;
@@ -41,7 +42,10 @@ class ApplicantController extends Controller
         $stage = $filters['stage'] ?? 'all';
         $sort = $filters['sort'] ?? 'best_match';
 
-        $applications = $job->applications()
+        // Only the released batch, or the kept ones without a job plan.
+        $access = ApplicantAccess::for($request->user());
+
+        $applications = tap($job->applications(), fn ($q) => $access->constrain($q, $job))
             ->with(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc')
             ->when($stage !== 'all', fn ($q) => $this->scopeStage($q, $stage))
             // Best-match sorts by AI score (unscored applicants fall to the bottom).
@@ -50,7 +54,8 @@ class ApplicantController extends Controller
             ->paginate(20);
 
         return ApplicantResource::collection($applications)->additional([
-            'counts' => $this->stageCounts($job),
+            'counts' => $this->stageCounts($job, $access),
+            'access' => $access->summary($job),
         ]);
     }
 
@@ -226,7 +231,8 @@ class ApplicantController extends Controller
     }
 
     /**
-     * Reveal an applicant's contact details, spending one contact credit.
+     * Reveal an applicant's contact details, spending one contact credit
+     * (free when the karigar is already unlocked).
      */
     public function unlockContact(Request $request, JobApplication $application): JsonResponse
     {
@@ -240,20 +246,14 @@ class ApplicantController extends Controller
 
         $wallet = CreditWallet::for($request->user());
 
-        // A karigar already unlocked (another job, or the Worker Database) is free.
-        if (! $wallet->hasUnlocked($application->worker_id)) {
-            if (! $wallet->canUnlock()) {
-                return response()->json([
-                    'message' => __('You have reached your plan\'s contact unlock limit.'),
-                    'code' => 'out_of_credits',
-                    'credits' => $wallet->summary(),
-                ], 422);
-            }
-
-            $wallet->consumeUnlock();
+        if (! $wallet->unlockApplication($application, $request->user())) {
+            return response()->json([
+                'message' => __('You have reached your plan\'s contact unlock limit.'),
+                'code' => 'out_of_credits',
+                'credits' => $wallet->summary(),
+            ], 422);
         }
 
-        $application->update(['contact_unlocked' => true]);
         $application->loadMissing(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title');
 
         return response()->json([
@@ -288,24 +288,25 @@ class ApplicantController extends Controller
     }
 
     /**
-     * Per-stage applicant counts for the segmented tabs.
+     * Per-stage counts of the applicants the employer can see, for the segmented tabs.
      *
      * @return array<string, int>
      */
-    private function stageCounts(JobListing $job): array
+    private function stageCounts(JobListing $job, ApplicantAccess $access): array
     {
-        $counts = ['all' => $job->applications()->count()];
+        $visible = fn () => tap($job->applications(), fn ($q) => $access->constrain($q, $job));
 
-        foreach (['pending', 'shortlisted', 'interview', 'hired', 'rejected'] as $stage) {
-            $counts[$stage] = $this->scopeStage($job->applications(), $stage)->count();
+        $counts = ['all' => $visible()->count()];
+
+        foreach (JobApplication::STAGES as $stage) {
+            $counts[$stage] = $this->scopeStage($visible(), $stage)->count();
         }
 
         return $counts;
     }
 
     /**
-     * Constrain a query to one pipeline stage. The stages are exclusive so the
-     * segmented tabs add up: New → Shortlisted → Interview → Hired / Rejected.
+     * Constrain a query to one pipeline stage ({@see JobApplication::scopeInStage()}).
      *
      * @template TQuery of \Illuminate\Database\Eloquent\Builder<JobApplication>
      *
@@ -314,18 +315,6 @@ class ApplicantController extends Controller
      */
     private function scopeStage($query, string $stage)
     {
-        return match ($stage) {
-            'pending' => $query->where('status', ApplicationStatus::Pending)
-                ->whereNull('shortlisted_at')
-                ->whereNull('interview_at'),
-            'shortlisted' => $query->whereNotNull('shortlisted_at')
-                ->whereNull('interview_at')
-                ->whereNotIn('status', [ApplicationStatus::Accepted, ApplicationStatus::Rejected]),
-            'interview' => $query->whereNotNull('interview_at')
-                ->whereNotIn('status', [ApplicationStatus::Accepted, ApplicationStatus::Rejected]),
-            'hired' => $query->where('status', ApplicationStatus::Accepted),
-            'rejected' => $query->where('status', ApplicationStatus::Rejected),
-            default => $query,
-        };
+        return $query->inStage($stage);
     }
 }

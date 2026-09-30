@@ -30,6 +30,7 @@ class BillingController extends Controller
     {
         $account = $request->user()->employerAccount();
         $current = $account->activeSubscription();
+        $currentDatabase = $account->activeSubscription(Plan::TYPE_DATABASE);
 
         return response()->json([
             'credits' => CreditWallet::for($account)->summary(),
@@ -37,6 +38,9 @@ class BillingController extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'slug' => $plan->slug,
+                // job: posts jobs and shows applicants; database: the Worker
+                // Database only. One of each can run at the same time.
+                'type' => $plan->type,
                 // Before GST; `price_with_gst` is what the employer pays.
                 'price' => (float) $plan->price,
                 'gst_amount' => round($plan->grossPrice() - (float) $plan->price, 2),
@@ -49,7 +53,7 @@ class BillingController extends Controller
                 'features' => $plan->features ?? [],
                 'feature_list' => $plan->featureList(),
                 'recommended' => $plan->isRecommended(),
-                'is_current' => $current?->plan_id === $plan->id,
+                'is_current' => in_array($plan->id, [$current?->plan_id, $currentDatabase?->plan_id], true),
                 // Razorpay plans are created on demand at checkout now.
                 'purchasable' => $razorpay->configured(),
             ]),
@@ -60,6 +64,16 @@ class BillingController extends Controller
                 'starts_at' => $current->starts_at?->toIso8601String(),
                 'ends_at' => $current->ends_at?->toIso8601String(),
             ] : null,
+            'current_database' => $currentDatabase ? [
+                'id' => $currentDatabase->id,
+                'plan' => $currentDatabase->plan->name,
+                'status' => $currentDatabase->status->value,
+                'starts_at' => $currentDatabase->starts_at?->toIso8601String(),
+                'ends_at' => $currentDatabase->ends_at?->toIso8601String(),
+            ] : null,
+            // Paid for a job plan before and holds none now: jobs are paused
+            // and applicants hidden until it renews.
+            'job_plan_lapsed' => $account->jobPlanLapsed(),
             'credit_packs' => collect(config('billing.credit_packs'))
                 ->map(fn (array $pack, string $key) => [
                     'key' => $key,

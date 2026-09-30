@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { KeyRound, Lock, Mail, MapPin, Phone, Search, Star, UserRound } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
+import WorkerDatabaseTabs from '@/components/WorkerDatabaseTabs.vue';
 import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
 
@@ -30,6 +31,7 @@ const props = defineProps<{
     filters: { q?: string; state?: string; city?: string; skill?: string };
     access: { quota: number; accessible: number; total: number; has_plan: boolean };
     unlocks: { used: number; limit: number; remaining: number | null; purchased: number };
+    contactCounts: { database_total: number; applicants_total: number };
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Worker Database', href: '/employer/workers' }] } });
@@ -78,17 +80,18 @@ const unlock = (w: Worker) => {
     <div class="flex flex-col gap-6 p-4 md:p-6">
         <PageHeader :icon="UserRound" title="Worker Database" description="Browse worker contacts and call them directly to hire" />
 
+        <WorkerDatabaseTabs active="find" :counts="contactCounts" />
+
         <!-- Access banner -->
         <div v-if="!access.has_plan" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
-            <span class="inline-flex items-center gap-2"><Lock class="size-4 shrink-0" /> Subscribe to a plan to unlock worker contact numbers.</span>
+            <span class="inline-flex items-center gap-2"><Lock class="size-4 shrink-0" /> Subscribe to a job plan or a database plan to unlock worker contact numbers.</span>
             <Link href="/subscription" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white">View plans</Link>
         </div>
         <div v-else class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-orange-500/5 px-5 py-4 text-sm">
             <span>
                 Your plan gives access to <strong>{{ num(access.quota) }}</strong> worker contacts.
                 <span v-if="unlocksLeft !== null"><strong>{{ num(unlocksLeft) }}</strong> contact unlocks left.</span>
-                <span v-else>Unlimited contact unlocks.</span>
-                <span class="text-muted-foreground">Unlocking a karigar reveals their number and uses one unlock, same as unlocking an applicant.</span>
+                <span v-else>Unlimited contact unlocks.</span>{{ ' ' }}<span class="text-muted-foreground">Unlocking a karigar reveals their number and uses one unlock, same as unlocking an applicant.</span>
             </span>
             <Link href="/subscription" class="shrink-0 text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">Need more? Upgrade →</Link>
         </div>

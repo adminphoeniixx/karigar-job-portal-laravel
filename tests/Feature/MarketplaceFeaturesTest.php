@@ -82,6 +82,7 @@ it('lets a worker see their applications and withdraw one', function () {
 // ───────────────────────── EMPLOYER APPLICANT REVIEW ─────────────────────────
 
 it('lets an employer view applicants and accept one, notifying the worker', function () {
+    subscribe($this->employer, $this->plan);
     $app = $this->job->applications()->create(['worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending->value]);
 
     $this->actingAs($this->employer)->get("/employer/jobs/{$this->job->id}/applicants")->assertOk();

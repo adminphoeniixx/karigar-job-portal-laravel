@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ApplicationStatus;
 use App\Enums\JobStatus;
+use App\Jobs\ScoreApplication;
 use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Notifications\NewApplicationNotification;
@@ -39,6 +40,14 @@ class JobApplicationController extends Controller
     {
         abort_unless($job->status === JobStatus::Active, 404);
 
+        // Live, but its employer's plan ran out: paused until renewed.
+        if (! $job->isOpenForApplications()) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => __('This job is not taking applications right now.'),
+            ]);
+        }
+
         $data = $request->validate([
             'cover_note' => ['nullable', 'string', 'max:1000'],
             'expected_wage' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
@@ -60,7 +69,7 @@ class JobApplicationController extends Controller
             'status' => ApplicationStatus::Pending,
         ]);
 
-        \App\Jobs\ScoreApplication::dispatch($application->id);
+        ScoreApplication::dispatch($application->id);
 
         $job->employer->notify(new NewApplicationNotification($application));
 

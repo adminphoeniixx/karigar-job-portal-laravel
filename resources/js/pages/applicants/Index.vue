@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { CalendarClock, Check, ChevronDown, FileText, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, PhoneCall, Send, Sparkles, Star, TriangleAlert, Unlock, Users, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
@@ -68,6 +68,15 @@ const props = defineProps<{
     applications: Applicant[];
     sort: 'best_match' | 'recent';
     contactUnlocks: { used: number; limit: number };
+    // Who is hidden and why: a later batch, or no (or a lapsed) job plan.
+    access: {
+        total: number;
+        visible: number;
+        hidden: number;
+        reason: 'batch' | 'plan_expired' | 'no_plan' | null;
+        undecided: number;
+        next_batch: number;
+    };
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'My Jobs', href: '/employer/jobs' }, { title: 'Applicants', href: '#' }] } });
@@ -221,6 +230,26 @@ const submitReview = () => {
                 </div>
             </template>
         </PageHeader>
+
+        <!-- Applicants arrive in batches, and only with a job plan. -->
+        <div v-if="access.reason === 'batch'" class="flex items-start gap-2 rounded-2xl border bg-orange-500/5 px-5 py-4 text-sm">
+            <Users class="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-400" />
+            <span>
+                <strong>{{ $t('applicants.batchInfo', { visible: access.visible, total: access.total }) }}</strong>{{ ' ' }}<span class="text-muted-foreground">{{ $t('applicants.batchNext', { undecided: access.undecided, next: access.next_batch }) }}</span>
+            </span>
+        </div>
+        <div
+            v-else-if="access.reason"
+            class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300"
+        >
+            <span class="inline-flex items-start gap-2">
+                <Lock class="mt-0.5 size-4 shrink-0" />
+                {{ access.reason === 'plan_expired' ? $t('applicants.planExpiredInfo', { hidden: access.hidden }, access.hidden) : $t('applicants.noPlanInfo', { hidden: access.hidden }, access.hidden) }}
+            </span>
+            <Link href="/subscription" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white">
+                {{ access.reason === 'plan_expired' ? $t('applicants.renewPlan') : $t('applicants.viewPlans') }}
+            </Link>
+        </div>
 
         <!-- Sort + AI scoring -->
         <div v-if="applications.length" class="flex flex-wrap items-center gap-2">
@@ -452,7 +481,7 @@ const submitReview = () => {
             </div>
         </div>
 
-        <div v-else class="rounded-2xl border bg-card px-5 py-16 text-center shadow-sm">
+        <div v-else-if="!access.hidden" class="rounded-2xl border bg-card px-5 py-16 text-center shadow-sm">
             <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Users class="size-7" /></div>
             <p class="mt-4 font-medium">{{ $t('applicants.empty') }}</p>
             <p class="mt-1 text-sm text-muted-foreground">{{ $t('applicants.emptyHint') }}</p>

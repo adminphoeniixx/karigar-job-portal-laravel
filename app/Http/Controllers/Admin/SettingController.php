@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ScoreApplication;
 use App\Models\Plan;
 use App\Models\Setting;
+use App\Services\ApplicantAccess;
 use App\Services\Billing\Gst;
 use App\Services\Screening\ScreeningService;
 use App\Support\GstStates;
@@ -33,6 +34,8 @@ class SettingController extends Controller
                     ScoreApplication::DEFAULT_REJECT_BELOW,
                 ),
                 'ai_screening_call_enabled' => Setting::bool(ScreeningService::ENABLED_KEY, false),
+                'applicant_first_batch' => ApplicantAccess::firstBatch(),
+                'applicant_next_batch' => ApplicantAccess::nextBatch(),
             ],
             'billing' => $this->billing(),
         ]);
@@ -52,6 +55,9 @@ class SettingController extends Controller
             // be widened into applicants the model considered a plausible match.
             'ai_auto_reject_below' => ['required', 'integer', 'min:5', 'max:40'],
             'ai_screening_call_enabled' => ['required', 'boolean'],
+            // Applicants shown per job at first, and per batch after that.
+            'applicant_first_batch' => ['sometimes', 'integer', 'min:1', 'max:500'],
+            'applicant_next_batch' => ['sometimes', 'integer', 'min:1', 'max:500'],
         ]);
 
         Setting::set('first_post_free_enabled', $data['first_post_free_enabled'] ? '1' : '0');
@@ -61,6 +67,11 @@ class SettingController extends Controller
         Setting::set(ScoreApplication::REJECT_ENABLED_KEY, $data['ai_auto_reject_enabled'] ? '1' : '0');
         Setting::set(ScoreApplication::REJECT_BELOW_KEY, (string) $data['ai_auto_reject_below']);
         Setting::set(ScreeningService::ENABLED_KEY, $data['ai_screening_call_enabled'] ? '1' : '0');
+        foreach ([ApplicantAccess::FIRST_BATCH_KEY, ApplicantAccess::NEXT_BATCH_KEY] as $key) {
+            if (isset($data[$key])) {
+                Setting::set($key, (string) $data[$key]);
+            }
+        }
 
         return back()->with('toast', ['type' => 'success', 'message' => __('Settings updated.')]);
     }

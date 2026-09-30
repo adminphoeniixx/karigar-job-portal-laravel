@@ -1402,6 +1402,122 @@
           }
         },
         {
+          "name": "My contacts: database",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/contacts/database?q=&skill=&state=&city=&period=all&sort=recent&page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "contacts",
+                "database"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "skill",
+                  "value": ""
+                },
+                {
+                  "key": "state",
+                  "value": ""
+                },
+                {
+                  "key": "city",
+                  "value": ""
+                },
+                {
+                  "key": "period",
+                  "value": "all"
+                },
+                {
+                  "key": "sort",
+                  "value": "recent"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Karigars unlocked from Find Workers with the plan. period=all|cycle, sort=recent|oldest|name. `usage` feeds the plan banner and tab badges."
+          }
+        },
+        {
+          "name": "My contacts: applicants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/contacts/applicants?q=&skill=&state=&city=&job=&stage=all&sort=recent&page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "contacts",
+                "applicants"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                },
+                {
+                  "key": "skill",
+                  "value": ""
+                },
+                {
+                  "key": "state",
+                  "value": ""
+                },
+                {
+                  "key": "city",
+                  "value": ""
+                },
+                {
+                  "key": "job",
+                  "value": ""
+                },
+                {
+                  "key": "stage",
+                  "value": "all"
+                },
+                {
+                  "key": "sort",
+                  "value": "recent"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Applicants to your jobs whose contact is unlocked, one row per application. stage=all|pending|shortlisted|interview|hired|rejected; `jobs` lists your jobs for the picker."
+          }
+        },
+        {
           "name": "Search workers (all filters)",
           "request": {
             "method": "GET",

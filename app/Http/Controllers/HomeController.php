@@ -28,21 +28,21 @@ class HomeController extends Controller
         // Filtering here rather than fixing the rows means the section stays
         // honest whatever ends up in the table. If nothing matches, the
         // section already has its own empty state.
-        $latestJobs = JobListing::active()
+        $latestJobs = JobListing::active()->hiring()
             ->whereIn('category', Category::cachedActiveNames())
             ->with('employer:id,name')
             ->latest()
             ->limit(6)
             ->get();
 
-        $cities = JobListing::active()
+        $cities = JobListing::active()->hiring()
             ->whereNotNull('city')
             ->distinct()
             ->count('city');
 
         return Inertia::render('Welcome', [
             'stats' => [
-                'jobs' => JobListing::active()->count(),
+                'jobs' => JobListing::active()->hiring()->count(),
                 'workers' => User::where('role', UserRole::Worker->value)->count(),
                 'employers' => User::where('role', UserRole::Employer->value)->count(),
                 'cities' => $cities,

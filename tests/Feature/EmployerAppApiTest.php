@@ -20,6 +20,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->employer = User::factory()->create(['role' => UserRole::Employer->value]);
+    giveJobPlan($this->employer);
     $this->employer->employerProfile()->create(['company_name' => 'Sri Sai Constructions', 'city' => 'Chennai']);
 
     $this->worker = User::factory()->create(['role' => UserRole::Worker->value]);

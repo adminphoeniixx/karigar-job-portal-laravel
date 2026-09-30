@@ -15,7 +15,7 @@ class PlanController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/Plans', [
-            'plans' => Plan::orderBy('price')->get(['id', 'name', 'slug', 'price', 'interval', 'features', 'is_active']),
+            'plans' => Plan::orderBy('type', 'desc')->orderBy('price')->get(['id', 'name', 'slug', 'type', 'price', 'interval', 'features', 'is_active']),
             'gstPercent' => Gst::percent(),
         ]);
     }

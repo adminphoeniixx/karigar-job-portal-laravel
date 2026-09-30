@@ -8,6 +8,7 @@ interface Plan {
     id: number;
     name: string;
     slug: string;
+    type: 'job' | 'database';
     price: string;
     interval: string;
     features: { job_post_limit?: number; contact_unlock_limit?: number; featured?: boolean } | null;
@@ -37,6 +38,7 @@ interface InvoiceRow {
 const props = defineProps<{
     plans: Plan[];
     current: { id: number; status: string; plan: Plan } | null;
+    currentDatabase: { id: number; status: string; plan: Plan } | null;
     razorpayConfigured: boolean;
     couponResult: CouponResult | null;
     gstPercent: number;
@@ -44,6 +46,16 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Subscription', href: '/subscription' }] } });
+
+// Job plans and database plans are bought separately; one of each can run at once.
+const sections = computed(() =>
+    [
+        { key: 'job', plans: props.plans.filter((p) => p.type !== 'database') },
+        { key: 'database', plans: props.plans.filter((p) => p.type === 'database') },
+    ].filter((section) => section.plans.length),
+);
+
+const isCurrent = (plan: Plan) => props.current?.plan.id === plan.id || props.currentDatabase?.plan.id === plan.id;
 
 // ── Plan details popup ──────────────────────────────────────────────
 const selected = ref<Plan | null>(null);
@@ -122,11 +134,13 @@ const subscribe = () => {
     <div class="flex flex-col gap-6 p-4 md:p-6">
         <PageHeader :icon="CreditCard" :title="$t('subscription.title')" :description="$t('subscription.subtitle')" />
 
-        <div v-if="current" class="flex items-center gap-2 rounded-2xl border bg-orange-500/5 px-5 py-4">
-            <span class="flex size-9 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-5" /></span>
-            <div class="text-sm">
-                {{ $t('subscription.activePlan') }}: <strong>{{ current.plan.name }}</strong>
-                <span class="ml-2 inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold capitalize text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300">{{ current.status }}</span>
+        <div v-if="current || currentDatabase" class="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border bg-orange-500/5 px-5 py-4">
+            <div v-for="sub in [current, currentDatabase].filter((s) => s !== null)" :key="sub.id" class="flex items-center gap-2 text-sm">
+                <span class="flex size-9 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-5" /></span>
+                <span>
+                    {{ sub.plan.type === 'database' ? $t('subscription.databasePlan') : $t('subscription.activePlan') }}: <strong>{{ sub.plan.name }}</strong>
+                    <span class="ml-2 inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold capitalize text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300">{{ sub.status }}</span>
+                </span>
             </div>
         </div>
 
@@ -135,54 +149,60 @@ const subscribe = () => {
             <span>Razorpay test keys are not configured yet. Plans are shown, but checkout will work once the keys are added to <code class="rounded bg-amber-500/20 px-1">.env</code>.</span>
         </div>
 
-        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div
-                v-for="plan in plans"
-                :key="plan.id"
-                class="relative flex flex-col overflow-hidden rounded-3xl border bg-card p-6 shadow-sm transition hover:shadow-md"
-                :class="plan.features?.featured ? 'border-orange-500/40 ring-2 ring-orange-500/20' : ''"
-            >
-                <div v-if="plan.features?.featured" class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/15 blur-2xl"></div>
-                <div class="relative flex items-center justify-between">
-                    <h3 class="text-lg font-bold">{{ plan.name }}</h3>
-                    <span v-if="plan.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-white">
-                        <Sparkles class="size-3" /> {{ $t('subscription.popular') }}
-                    </span>
-                </div>
-                <div class="relative mt-3 flex items-end gap-1">
-                    <span
-                        class="text-4xl font-bold tracking-tight"
-                        :class="discountFor(plan) > 0 ? 'text-orange-600 dark:text-orange-400' : ''"
-                    >{{ discountFor(plan) > 0 ? money(finalPrice(plan)) : '₹' + plan.price }}</span>
-                    <span class="pb-1 text-sm text-muted-foreground">/{{ plan.interval }}</span>
-                </div>
-                <div v-if="gstPercent > 0" class="relative mt-0.5 text-[11px] text-muted-foreground">
-                    + {{ gstPercent }}% GST · {{ money(totalFor(plan)) }} total
-                </div>
-                <div v-if="discountFor(plan) > 0" class="relative mt-1 flex items-center gap-2 text-sm">
-                    <span class="text-muted-foreground line-through">₹{{ plan.price }}</span>
-                    <span class="inline-flex items-center rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-500 ring-1 ring-inset ring-rose-500/20">
-                        {{ $t('subscription.saveAmount') }} {{ money(discountFor(plan)) }}
-                    </span>
-                </div>
-                <ul class="relative mt-6 flex-1 space-y-3 text-sm">
-                    <li v-for="line in plan.feature_list" :key="line" class="flex items-center gap-2">
-                        <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
-                        {{ line }}
-                    </li>
-                </ul>
-                <button
-                    class="relative mt-6 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95 disabled:opacity-50"
-                    :class="current?.plan.id === plan.id
-                        ? 'cursor-default border text-muted-foreground'
-                        : 'bg-primary text-white shadow-lg shadow-orange-600/25 hover:opacity-90'"
-                    :disabled="current?.plan.id === plan.id"
-                    @click="openPlan(plan)"
-                >
-                    {{ current?.plan.id === plan.id ? $t('subscription.currentPlan') : $t('subscription.viewDetails') }}
-                </button>
+        <section v-for="section in sections" :key="section.key" class="flex flex-col gap-4">
+            <div>
+                <h2 class="text-lg font-bold">{{ section.key === 'database' ? $t('subscription.databasePlans') : $t('subscription.jobPlans') }}</h2>
+                <p class="text-sm text-muted-foreground">{{ section.key === 'database' ? $t('subscription.databasePlansHint') : $t('subscription.jobPlansHint') }}</p>
             </div>
-        </div>
+            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                <div
+                    v-for="plan in section.plans"
+                    :key="plan.id"
+                    class="relative flex flex-col overflow-hidden rounded-3xl border bg-card p-6 shadow-sm transition hover:shadow-md"
+                    :class="plan.features?.featured ? 'border-orange-500/40 ring-2 ring-orange-500/20' : ''"
+                >
+                    <div v-if="plan.features?.featured" class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/15 blur-2xl"></div>
+                    <div class="relative flex items-center justify-between">
+                        <h3 class="text-lg font-bold">{{ plan.name }}</h3>
+                        <span v-if="plan.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-white">
+                            <Sparkles class="size-3" /> {{ $t('subscription.popular') }}
+                        </span>
+                    </div>
+                    <div class="relative mt-3 flex items-end gap-1">
+                        <span
+                            class="text-4xl font-bold tracking-tight"
+                            :class="discountFor(plan) > 0 ? 'text-orange-600 dark:text-orange-400' : ''"
+                        >{{ money(finalPrice(plan)) }}</span>
+                        <span class="pb-1 text-sm text-muted-foreground">/{{ plan.interval }}</span>
+                    </div>
+                    <div v-if="gstPercent > 0" class="relative mt-0.5 text-[11px] text-muted-foreground">
+                        + {{ gstPercent }}% GST · {{ money(totalFor(plan)) }} total
+                    </div>
+                    <div v-if="discountFor(plan) > 0" class="relative mt-1 flex items-center gap-2 text-sm">
+                        <span class="text-muted-foreground line-through">{{ money(parseFloat(plan.price)) }}</span>
+                        <span class="inline-flex items-center rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-500 ring-1 ring-inset ring-rose-500/20">
+                            {{ $t('subscription.saveAmount') }} {{ money(discountFor(plan)) }}
+                        </span>
+                    </div>
+                    <ul class="relative mt-6 flex-1 space-y-3 text-sm">
+                        <li v-for="line in plan.feature_list" :key="line" class="flex items-center gap-2">
+                            <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-3.5" /></span>
+                            {{ line }}
+                        </li>
+                    </ul>
+                    <button
+                        class="relative mt-6 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-95 disabled:opacity-50"
+                        :class="isCurrent(plan)
+                            ? 'cursor-default border text-muted-foreground'
+                            : 'bg-primary text-white shadow-lg shadow-orange-600/25 hover:opacity-90'"
+                        :disabled="isCurrent(plan)"
+                        @click="openPlan(plan)"
+                    >
+                        {{ isCurrent(plan) ? $t('subscription.currentPlan') : $t('subscription.viewDetails') }}
+                    </button>
+                </div>
+            </div>
+        </section>
         <!-- Tax invoices -->
         <div v-if="invoices.length" class="rounded-2xl border bg-card shadow-sm">
             <div class="border-b px-6 py-4">
@@ -263,7 +283,7 @@ const subscribe = () => {
             <!-- Price summary (with GST breakup) -->
             <div class="mt-5 space-y-1.5 rounded-xl border p-4 text-sm">
                 <div class="flex justify-between text-muted-foreground">
-                    <span>{{ $t('subscription.planPrice') }}</span><span>₹{{ selected.price }}</span>
+                    <span>{{ $t('subscription.planPrice') }}</span><span>{{ money(parseFloat(selected.price)) }}</span>
                 </div>
                 <div v-if="selectedDiscount > 0" class="flex justify-between font-medium text-emerald-600 dark:text-emerald-400">
                     <span>{{ $t('subscription.couponDiscount') }}</span><span>− {{ money(selectedDiscount) }}</span>

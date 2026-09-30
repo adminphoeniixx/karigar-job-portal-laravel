@@ -21,6 +21,7 @@ interface Job {
 const props = defineProps<{
     jobs: { data: Job[]; links: { url: string | null; label: string; active: boolean }[] };
     filters: { q?: string; status?: string };
+    hiringPaused: boolean;
 }>();
 
 const { t } = useI18n();
@@ -84,6 +85,12 @@ const destroy = (id: number) => {
                 </Link>
             </template>
         </PageHeader>
+
+        <!-- The job plan ran out: live jobs are paused until it is renewed. -->
+        <div v-if="hiringPaused" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
+            <span>{{ $t('myJobs.pausedInfo') }}</span>
+            <Link href="/subscription" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white">{{ $t('myJobs.renewPlan') }}</Link>
+        </div>
 
         <!-- Filters -->
         <div class="flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3 shadow-sm">
@@ -168,6 +175,12 @@ const destroy = (id: number) => {
                                     class="inline-flex items-center rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-semibold text-rose-600 ring-1 ring-inset ring-rose-500/20 dark:text-rose-300"
                                 >
                                     {{ $t('status.expired') }}
+                                </span>
+                                <span
+                                    v-else-if="hiringPaused && job.status === 'active'"
+                                    class="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:text-amber-300"
+                                >
+                                    {{ $t('status.paused') }}
                                 </span>
                                 <span v-else class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[job.status]">
                                     {{ $t(`status.${job.status}`) }}

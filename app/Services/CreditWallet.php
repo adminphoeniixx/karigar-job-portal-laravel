@@ -4,20 +4,28 @@ namespace App\Services;
 
 use App\Models\EmployerProfile;
 use App\Models\JobApplication;
+use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WorkerContactUnlock;
 
 /**
  * The employer's contact-credit wallet, as the app's "12 contact credits" card
- * shows it. Credits come from two places:
+ * shows it. Unlocks are paid from three pools:
  *
- *  - the active plan's contact-unlock allowance (metered per plan; a limit of
- *    0 means the plan does not meter unlocks at all), and
+ *  - the job plan's contact-unlock allowance,
+ *  - the database plan's allowance, when the account holds one, and
  *  - purchased top-ups stored on the employer profile (`credit_balance`).
  *
- * Unlocks spend the plan allowance first and fall back to purchased credits.
- * Applicants and the Worker Database share that one pool, and it counts
- * karigars, not unlock clicks: a karigar already unlocked either way is free.
+ * Each plan's allowance renews on its own billing cycle and counts the unlocks
+ * it paid for since that cycle began; a limit of 0 means the plan does not
+ * meter unlocks. A Worker Database unlock spends the database plan first, an
+ * applicant unlock the job plan first, then the other plan, then a purchased
+ * credit. Without a plan only purchased credits unlock.
+ *
+ * Unlocks count karigars, not clicks: a karigar's first unlock is recorded as
+ * a WorkerContactUnlock and never charged again. Whether the number still
+ * shows is up to the plans the account holds now (see {@see contactVisible()}).
  * Boosts always spend purchased credits.
  */
 class CreditWallet
@@ -25,6 +33,12 @@ class CreditWallet
     private User $account;
 
     private EmployerProfile $profile;
+
+    /** @var array<string, Subscription|null> */
+    private array $subscriptions = [];
+
+    /** @var array<string, array{plan: string, limit: int, used: int, remaining: int|null, resets_at: string|null}>|null */
+    private ?array $pools = null;
 
     public function __construct(User $user)
     {
@@ -38,11 +52,83 @@ class CreditWallet
     }
 
     /**
-     * The plan's contact-unlock allowance; 0 means "not metered by the plan".
+     * The account's active subscription of one plan type, looked up once.
+     */
+    public function subscription(string $type = Plan::TYPE_JOB): ?Subscription
+    {
+        if (! array_key_exists($type, $this->subscriptions)) {
+            $this->subscriptions[$type] = $this->account->activeSubscription($type);
+        }
+
+        return $this->subscriptions[$type];
+    }
+
+    /**
+     * The allowance of each plan the account holds, this cycle.
+     *
+     * @return array<string, array{plan: string, limit: int, used: int, remaining: int|null, resets_at: string|null}>
+     */
+    public function pools(): array
+    {
+        if ($this->pools !== null) {
+            return $this->pools;
+        }
+
+        $pools = [];
+
+        foreach ([WorkerContactUnlock::POOL_JOB => Plan::TYPE_JOB, WorkerContactUnlock::POOL_DATABASE => Plan::TYPE_DATABASE] as $pool => $type) {
+            $subscription = $this->subscription($type);
+
+            if ($subscription === null) {
+                continue;
+            }
+
+            $limit = $subscription->plan->contactUnlockLimit();
+            $used = WorkerContactUnlock::where('employer_id', $this->account->id)
+                ->where('pool', $pool)
+                ->where('created_at', '>=', $subscription->currentCycleStart())
+                ->count();
+
+            $pools[$pool] = [
+                'plan' => $subscription->plan->name,
+                'limit' => $limit,
+                'used' => $used,
+                // null: this plan does not meter unlocks.
+                'remaining' => $limit > 0 ? max($limit - $used, 0) : null,
+                'resets_at' => $subscription->ends_at?->toIso8601String(),
+            ];
+        }
+
+        return $this->pools = $pools;
+    }
+
+    /**
+     * The plans' allowances added up; 0 without a plan.
      */
     public function planLimit(): int
     {
-        return $this->account->activeSubscription()?->plan->contactUnlockLimit() ?? 0;
+        return collect($this->pools())->sum('limit');
+    }
+
+    /**
+     * Unlocks the plans paid for this cycle.
+     */
+    public function unlocksUsed(): int
+    {
+        return collect($this->pools())->sum('used');
+    }
+
+    /**
+     * Unlocks left on the plans, or null when a plan does not meter them.
+     * Zero without a plan.
+     */
+    public function planRemaining(): ?int
+    {
+        $pools = collect($this->pools());
+
+        return $pools->contains(fn (array $pool) => $pool['remaining'] === null)
+            ? null
+            : $pools->sum('remaining');
     }
 
     /**
@@ -62,14 +148,6 @@ class CreditWallet
         return $fromApplications->merge($fromDirectory)->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
-    /**
-     * Contacts this employer account has already unlocked.
-     */
-    public function unlocksUsed(): int
-    {
-        return count($this->unlockedWorkerIds());
-    }
-
     public function hasUnlocked(int $workerId): bool
     {
         return WorkerContactUnlock::where('employer_id', $this->account->id)->where('worker_id', $workerId)->exists()
@@ -80,37 +158,102 @@ class CreditWallet
     }
 
     /**
+     * Whether the karigar's number shows to this employer right now. It needs
+     * an unlock and a plan to show it through: Worker Database access for any
+     * unlocked karigar, or the job plan for an unlocked applicant. An
+     * applicant the employer shortlisted or hired stays visible without one.
+     */
+    public function contactVisible(int $workerId): bool
+    {
+        $applications = JobApplication::where('worker_id', $workerId)
+            ->where('contact_unlocked', true)
+            ->whereHas('job', fn ($q) => $q->where('employer_id', $this->account->id));
+
+        if ((clone $applications)->kept()->exists()) {
+            return true;
+        }
+
+        if ($this->subscription(Plan::TYPE_JOB) !== null && (clone $applications)->exists()) {
+            return true;
+        }
+
+        return $this->account->contactDatabaseQuota() > 0 && $this->hasUnlocked($workerId);
+    }
+
+    /**
      * Unlock a karigar from the Worker Database. Returns false when the
      * employer is out of unlocks; a karigar already unlocked costs nothing.
      */
     public function unlockWorker(User $worker, User $by): bool
     {
-        if ($this->hasUnlocked($worker->id)) {
+        return $this->unlock($worker->id, $by, WorkerContactUnlock::SOURCE_DIRECTORY);
+    }
+
+    /**
+     * Reveal an applicant's contact. Returns false when the employer is out
+     * of unlocks; a karigar already unlocked (on another job, or from the
+     * Worker Database) costs nothing.
+     */
+    public function unlockApplication(JobApplication $application, User $by): bool
+    {
+        if ($application->contact_unlocked) {
             return true;
         }
 
-        if (! $this->canUnlock()) {
+        if (! $this->unlock($application->worker_id, $by, WorkerContactUnlock::SOURCE_APPLICATION)) {
             return false;
         }
 
-        $this->consumeUnlock();
-
-        WorkerContactUnlock::firstOrCreate(
-            ['employer_id' => $this->account->id, 'worker_id' => $worker->id],
-            ['unlocked_by' => $by->id],
-        );
+        $application->update(['contact_unlocked' => true]);
 
         return true;
     }
 
     /**
-     * Unlocks left on the plan, or null when the plan does not meter them.
+     * Charge for a karigar the first time they are unlocked, and record it
+     * with the pool that paid. The record's date places it in that pool's
+     * billing cycle.
      */
-    public function planRemaining(): ?int
+    private function unlock(int $workerId, User $by, string $source): bool
     {
-        $limit = $this->planLimit();
+        if ($this->hasUnlocked($workerId)) {
+            return true;
+        }
 
-        return $limit > 0 ? max($limit - $this->unlocksUsed(), 0) : null;
+        $pool = $this->charge($source);
+
+        if ($pool === null) {
+            return false;
+        }
+
+        WorkerContactUnlock::firstOrCreate(
+            ['employer_id' => $this->account->id, 'worker_id' => $workerId],
+            ['source' => $source, 'pool' => $pool, 'unlocked_by' => $by->id],
+        );
+        $this->pools = null;
+
+        return true;
+    }
+
+    /**
+     * Pick the pool that pays for one unlock, spending a purchased credit if
+     * it comes to that. Null when every pool is empty.
+     */
+    private function charge(string $source): ?string
+    {
+        $order = $source === WorkerContactUnlock::SOURCE_DIRECTORY
+            ? [WorkerContactUnlock::POOL_DATABASE, WorkerContactUnlock::POOL_JOB]
+            : [WorkerContactUnlock::POOL_JOB, WorkerContactUnlock::POOL_DATABASE];
+
+        $pools = $this->pools();
+
+        foreach ($order as $pool) {
+            if (isset($pools[$pool]) && ($pools[$pool]['remaining'] === null || $pools[$pool]['remaining'] > 0)) {
+                return $pool;
+            }
+        }
+
+        return $this->spend(1) ? WorkerContactUnlock::POOL_CREDIT : null;
     }
 
     /**
@@ -137,18 +280,6 @@ class CreditWallet
     public function canUnlock(): bool
     {
         return $this->isUnmetered() || $this->planRemaining() > 0 || $this->purchased() > 0;
-    }
-
-    /**
-     * Charge one contact unlock: plan allowance first, then a purchased credit.
-     */
-    public function consumeUnlock(): void
-    {
-        if ($this->isUnmetered() || $this->planRemaining() > 0) {
-            return; // Covered by the plan; nothing to deduct.
-        }
-
-        $this->spend(1);
     }
 
     public function canSpend(int $credits): bool
@@ -187,7 +318,10 @@ class CreditWallet
      */
     public function summary(): array
     {
-        $subscription = $this->account->activeSubscription();
+        $job = $this->subscription(Plan::TYPE_JOB);
+        $database = $this->subscription(Plan::TYPE_DATABASE);
+        $main = $job ?? $database;
+        $pools = $this->pools();
 
         return [
             'balance' => $this->balance(),
@@ -196,10 +330,19 @@ class CreditWallet
             'plan_limit' => $this->planLimit(),
             'plan_remaining' => $this->planRemaining(),
             'unlocks_used' => $this->unlocksUsed(),
-            'plan' => $subscription?->plan->name,
-            'plan_label' => $subscription
-                ? $subscription->plan->name.' · '.__('renews :date', ['date' => $subscription->ends_at?->format('d M Y') ?? '—'])
+            'unlocks_reset_at' => $main?->ends_at?->toIso8601String(),
+            'plan' => $job?->plan->name,
+            'plan_label' => $main
+                ? $main->plan->name.' · '.__('renews :date', ['date' => $main->ends_at?->format('d M Y') ?? '—'])
                 : __('Free plan · unlock karigar numbers'),
+            // The database plan's own allowance, when the account holds one.
+            'database_plan' => $database ? [
+                'name' => $database->plan->name,
+                'limit' => $pools[WorkerContactUnlock::POOL_DATABASE]['limit'],
+                'used' => $pools[WorkerContactUnlock::POOL_DATABASE]['used'],
+                'remaining' => $pools[WorkerContactUnlock::POOL_DATABASE]['remaining'],
+                'renews_at' => $database->ends_at?->toIso8601String(),
+            ] : null,
             'directory_quota' => $this->account->contactDatabaseQuota(),
         ];
     }

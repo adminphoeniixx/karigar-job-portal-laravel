@@ -31,6 +31,7 @@ export default {
         optional: 'optional',
     },
     status: {
+        paused: 'Paused',
         active: 'Active',
         draft: 'Draft',
         closed: 'Closed',
@@ -107,6 +108,8 @@ export default {
         backToJobs: 'Back to jobs',
     },
     myJobs: {
+        pausedInfo: 'Your job plan has ended, so your live jobs are paused: karigars can\'t find them or apply. Renew to open them again.',
+        renewPlan: 'Renew plan',
         title: 'My Jobs',
         subtitle: 'Manage your job postings',
         searchPlaceholder: 'Search your jobs by title…',
@@ -203,6 +206,12 @@ export default {
         shortlisted: 'Shortlisted',
     },
     applicants: {
+        batchInfo: 'Showing {visible} of {total} applicants.',
+        batchNext: 'Shortlist, hire or reject the {undecided} still open to see the next {next}.',
+        noPlanInfo: '{hidden} applicant is waiting. Subscribe to a plan to see them. | {hidden} applicants are waiting. Subscribe to a plan to see them.',
+        planExpiredInfo: 'Your plan has ended, so {hidden} applicant is hidden. Renew to see them again; shortlisted and hired applicants stay visible. | Your plan has ended, so {hidden} applicants are hidden. Renew to see them again; shortlisted and hired applicants stay visible.',
+        viewPlans: 'View plans',
+        renewPlan: 'Renew plan',
         resume: 'Resume',
         sortBestMatch: 'Best match',
         sortRecent: 'Recent',
@@ -283,6 +292,11 @@ export default {
         emptyHint: "Add your staff by mobile number — they'll see your jobs and applicants based on their role.",
     },
     subscription: {
+        jobPlans: 'Job plans',
+        jobPlansHint: 'Post jobs, see your applicants and open the Worker Database.',
+        databasePlans: 'Database plans',
+        databasePlansHint: 'Only need karigar numbers? A database plan opens the Worker Database on its own, or adds to your job plan.',
+        databasePlan: 'Database plan',
         title: 'Plans',
         subtitle: 'Choose a plan to start posting jobs',
         activePlan: 'Active plan',

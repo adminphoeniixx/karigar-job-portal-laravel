@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $name
  * @property string $slug
+ * @property string $type
  * @property string $price
  * @property string $currency
  * @property string $interval
@@ -20,8 +21,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Plan extends Model
 {
+    /** Posts jobs and shows their applicants; may also open the Worker Database. */
+    public const TYPE_JOB = 'job';
+
+    /** Opens the Worker Database only. Held on its own or next to a job plan. */
+    public const TYPE_DATABASE = 'database';
+
     protected $fillable = [
-        'name', 'slug', 'price', 'currency', 'interval',
+        'name', 'slug', 'type', 'price', 'currency', 'interval',
         'razorpay_plan_id', 'razorpay_amount', 'features', 'is_active',
     ];
 
@@ -33,6 +40,11 @@ class Plan extends Model
             'price' => 'decimal:2',
             'razorpay_amount' => 'decimal:2',
         ];
+    }
+
+    public function isDatabase(): bool
+    {
+        return $this->type === self::TYPE_DATABASE;
     }
 
     public function jobPostLimit(): int
@@ -78,13 +90,25 @@ class Plan extends Model
         $unlocks = $this->contactUnlockLimit();
         $database = $this->contactDatabaseLimit();
 
+        $unlockLine = $unlocks > 0
+            ? trans_choice(':count contact unlock|:count contact unlocks', $unlocks, ['count' => number_format($unlocks)]).' '.$per
+            : __('Unlimited contact unlocks');
+
+        if ($this->isDatabase()) {
+            return array_values(array_filter([
+                $database > 0 ? __('Access to :count karigar contacts', ['count' => number_format($database)]) : null,
+                $unlockLine,
+                __('Search karigars by skill and location'),
+                __('Works on its own or with a job plan'),
+                __('GST invoice for every payment'),
+            ]));
+        }
+
         return array_values(array_filter([
             $jobs > 0
                 ? trans_choice(':count job post|:count job posts', $jobs, ['count' => number_format($jobs)]).' '.$per
                 : __('Unlimited job posts'),
-            $unlocks > 0
-                ? trans_choice(':count contact unlock|:count contact unlocks', $unlocks, ['count' => number_format($unlocks)])
-                : __('Unlimited contact unlocks'),
+            $unlockLine,
             $database > 0
                 ? __('Access to :count karigar contacts', ['count' => number_format($database)])
                 : null,

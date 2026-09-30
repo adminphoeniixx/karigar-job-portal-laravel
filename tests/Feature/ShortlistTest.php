@@ -40,6 +40,7 @@ beforeEach(function () {
 });
 
 it('lets an employer shortlist an applicant, notifying and emailing the worker', function () {
+    giveJobPlan($this->employer);
     Mail::fake();
     Notification::fake();
 

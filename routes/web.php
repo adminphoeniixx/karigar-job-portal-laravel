@@ -18,6 +18,7 @@ use App\Http\Controllers\Auth\RoleAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeleteAccountController;
 use App\Http\Controllers\Employer\ApplicantController;
+use App\Http\Controllers\Employer\ContactListController;
 use App\Http\Controllers\Employer\EscrowController;
 use App\Http\Controllers\Employer\ScreeningController;
 use App\Http\Controllers\Employer\TeamController;
@@ -137,8 +138,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('worker/resume', [ResumeController::class, 'destroy'])->name('worker.resume.destroy');
     });
 
-    // Employer job management
-    Route::middleware('role:employer')->group(function () {
+    // Employer job management. An {application} route only opens applicants
+    // the employer's plan shows it (ApplicantAccess).
+    Route::middleware(['role:employer', 'applicant.visible'])->group(function () {
         Route::get('employer/jobs', [JobListingController::class, 'index'])->name('jobs.index');
         // Posting a new job requires an active subscription.
         Route::middleware('subscription')->group(function () {
@@ -184,6 +186,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Worker directory (Typesense)
         Route::get('employer/workers', [WorkerDirectoryController::class, 'index'])->name('workers.index');
+        // My contacts: karigars unlocked from the database, and applicants (before {worker}).
+        Route::get('employer/workers/contacts', [ContactListController::class, 'database'])->name('workers.contacts');
+        Route::get('employer/workers/contacts/applicants', [ContactListController::class, 'applicants'])->name('workers.contacts.applicants');
         Route::get('employer/workers/{worker}', [WorkerDirectoryController::class, 'show'])->name('workers.show');
         Route::post('employer/workers/{worker}/unlock', [WorkerDirectoryController::class, 'unlock'])->name('workers.unlock');
 

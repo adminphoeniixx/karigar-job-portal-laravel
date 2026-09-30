@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Employer;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\ReviewResource;
 use App\Models\WorkerProfile;
+use App\Services\ContactList;
 use App\Services\CreditWallet;
 use App\Support\ReferenceData;
 use Illuminate\Http\JsonResponse;
@@ -71,7 +72,9 @@ class WorkerDirectoryController extends Controller
         $index = 0;
         $workers->getCollection()->transform(function (WorkerProfile $w) use (&$index, $offset, $quota, $point, $unlockedIds) {
             $inQuota = $quota > 0 && ($offset + $index) < $quota;
-            $unlocked = isset($unlockedIds[$w->user_id]);
+            // A number shows while the database is open to the employer.
+            $paidFor = isset($unlockedIds[$w->user_id]);
+            $unlocked = $paidFor && $quota > 0;
             $index++;
 
             return [
@@ -93,7 +96,7 @@ class WorkerDirectoryController extends Controller
                 'phone' => $unlocked ? $w->phone : null,
                 'locked' => ! $unlocked,
                 'contact_unlocked' => $unlocked,
-                'can_unlock' => ! $unlocked && $inQuota,
+                'can_unlock' => ! $paidFor && $inQuota,
             ];
         });
 
@@ -104,21 +107,25 @@ class WorkerDirectoryController extends Controller
                 'quota' => $quota,
                 'accessible' => min($workers->total(), $quota),
                 'total' => $workers->total(),
-                'has_plan' => $request->user()->hasActiveSubscription(),
+                // A job or database plan that opens the Worker Database.
+                'has_plan' => $quota > 0,
             ],
             'credits' => $wallet->summary(),
+            'contact_counts' => ContactList::for($request->user())->counts(),
         ]);
     }
 
     /**
-     * A single worker's public profile. Contact is revealed only when this
-     * employer has unlocked the worker, from an application or the directory.
+     * A single worker's public profile. Contact is revealed while this
+     * employer may see it: unlocked, and a plan still showing it
+     * ({@see CreditWallet::contactVisible()}).
      */
     public function show(Request $request, WorkerProfile $worker): JsonResponse
     {
         $worker->load('user:id,name,email,phone', 'user.kyc');
 
-        $unlocked = $worker->user !== null && CreditWallet::for($request->user())->hasUnlocked($worker->user_id);
+        $wallet = CreditWallet::for($request->user());
+        $unlocked = $worker->user !== null && $wallet->contactVisible($worker->user_id);
 
         $reviews = $worker->user
             ? $worker->user->reviewsReceived()->with('reviewer:id,name', 'job:id,title')->latest()->limit(10)->get()
@@ -144,7 +151,7 @@ class WorkerDirectoryController extends Controller
                 'phone' => $unlocked ? ($worker->phone ?? $worker->user?->phone) : null,
                 'email' => $unlocked ? $worker->user?->email : null,
                 'contact_unlocked' => $unlocked,
-                'can_unlock' => ! $unlocked && $worker->user !== null && $request->user()->contactDatabaseQuota() > 0,
+                'can_unlock' => $worker->user !== null && ! $wallet->hasUnlocked($worker->user_id) && $request->user()->contactDatabaseQuota() > 0,
             ],
             'rating' => [
                 'average' => $worker->user?->averageRating() ?? 0.0,

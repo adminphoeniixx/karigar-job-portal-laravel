@@ -120,7 +120,7 @@ Everything the home screen needs in one call.
   },
   "features": { "verification_enabled": true },
   "active_jobs": [ { ...EmployerJobResource } ],       // up to 5 active jobs
-  "recent_applicants": [ { ...ApplicantResource } ]    // up to 5 newest
+  "recent_applicants": [ { ...ApplicantResource } ]    // up to 5 newest the employer may see (§6)
 }
 ```
 `features.verification_enabled` is the admin verification switch — when it is
@@ -199,6 +199,9 @@ not parse multipart bodies on PUT/PATCH. Images go to BunnyCDN.
 
 ### `GET /employer/jobs?status=draft|active|closed&q=<search>`
 Paginated (15/page), newest first — the My Jobs tabs. `q` matches the title.
+The response also has `hiring_paused`: `true` when the job plan ran out, so the
+live jobs are out of search and closed to applications until it renews. Show a
+banner with a Renew button above the list.
 
 ### `GET /employer/jobs/suggest-description`
 AI drafts for the Post Job screen's description box, so the employer is not
@@ -319,6 +322,15 @@ Worker `phone` / `email` stay `null` until the contact is unlocked. `stage` is
 one of `pending | shortlisted | interview | hired | rejected` and the stages are
 **exclusive**, so the segmented tabs add up to `all`.
 
+**Which applicants the employer sees.** Applicants arrive in **batches**,
+oldest first: the first 20, then 15 more each time every applicant shown so far
+has a decision (shortlisted, interview, hired or rejected). Both sizes are
+admin settings. Applicants show only while the account holds an active **job
+plan**; without one (never subscribed, or the plan ran out) only the count is
+shown. Shortlisted, interviewed and hired applicants always stay visible. Every
+`{application}` route on a hidden applicant returns `403` "This applicant is not
+visible on your plan yet.
+
 ### `GET /employer/jobs/{job}/applicants?stage=all|pending|shortlisted|interview|hired|rejected&sort=best_match|recent`
 Paginated (20/page). **`sort` defaults to `best_match`** (AI score descending,
 unscored applicants last); `recent` is newest first.
@@ -326,9 +338,20 @@ unscored applicants last); `recent` is newest first.
 {
   "data": [ { ...ApplicantResource } ],
   "counts": { "all": 12, "pending": 8, "shortlisted": 3, "interview": 1, "hired": 1, "rejected": 0 },
+  "access": { "total": 40, "visible": 20, "hidden": 20, "reason": "batch",
+              "undecided": 6, "next_batch": 15 },
   "links": {...}, "meta": {...}
 }
 ```
+`data` and `counts` cover only the visible applicants; `access.total` is
+everyone who applied. `access.reason` says why some are hidden:
+
+| `reason` | Show |
+|---|---|
+| `null` | Nothing hidden |
+| `batch` | "Showing {visible} of {total}. Shortlist, hire or reject the {undecided} still open to see the next {next_batch}." |
+| `no_plan` | "{hidden} applicants are waiting. Subscribe to a plan to see them." + Plans button |
+| `plan_expired` | "Your plan has ended, so {hidden} applicants are hidden. Renew to see them again; shortlisted and hired applicants stay visible." + Renew button |
 
 ### `GET /employer/shortlisted`
 Everyone shortlisted across **all** of the employer's jobs — the app's own
@@ -527,14 +550,21 @@ Full filter-sheet support:
     "links": {...}, "meta": {...} },
   "filters": { "q": null, ... },
   "access": { "quota": 25, "accessible": 6, "total": 6, "has_plan": true },
-  "credits": { ...CreditSummary }       // unlocks left for the counter
+  "credits": { ...CreditSummary },      // unlocks left for the counter
+  "contact_counts": { "database_total": 4, "applicants_total": 3 }   // tab badges, see §7b
 }
 ```
-`phone` is `null` and `locked: true` until the karigar is unlocked.
+`phone` is `null` and `locked: true` until the karigar is unlocked, and again
+once the Worker Database access ends. `access.has_plan` is true while a job
+plan or a database plan opens the database (`quota` > 0).
 
 ### `GET /employer/workers/{worker}`
-`{worker}` is a **worker profile id**. Contact is revealed only if this employer
-account has unlocked that worker, through an application or the directory.
+`{worker}` is a **worker profile id**. Contact is revealed while the employer may
+see it: unlocked, and still covered by a plan — Worker Database access for any
+unlocked karigar, a job plan for an unlocked applicant, or no plan needed for a
+karigar the employer shortlisted or hired. `can_unlock` is false for a karigar
+unlocked before whose number is hidden now; renewing brings it back without a
+new unlock.
 ```json
 {
   "worker": { "id", "user_id", "name", "avatar_url", "bio", "skills": [...],
@@ -561,6 +591,75 @@ nothing. After an unlock the employer can also open a chat with the karigar.
 { "message": "You have reached your plan's contact unlock limit.",
   "code": "out_of_credits", "credits": {...} }
 ```
+
+---
+
+## 7b. My contacts 🔒
+The karigars whose numbers the employer holds, as two lists (two tabs next to
+Find Workers): **Database contacts** (unlocked from Find Workers with the plan)
+and **Applicant contacts** (applicants to the employer's own jobs whose contact
+is unlocked). Every row carries the number, so the list is also the employer's
+phone book. 20 per page; the paginator is Laravel's plain one (`data`,
+`current_page`, `last_page`, `total`, `next_page_url`, ...).
+
+Both take `q` (name or phone, partial), `skill` (a whole skill, any case),
+`state`, `city`, `sort=recent|oldest|name` and `page`. `filters` echoes what was
+applied and is always an object (`{}` when empty).
+
+**Row** (both lists):
+```json
+{ "worker_id": 88, "profile_id": 41, "name": "Meena Devi", "avatar_url": "https://…",
+  "phone": "9876543210", "email": "meena@…", "city": "Jaipur", "state": "Rajasthan",
+  "skills": ["Weaving", "Dyeing"], "experience_years": 6,
+  "expected_wage": "800.00", "wage_type": "daily" }
+```
+Database rows add `unlocked_at` (ISO) and `unlocked_by` (team member's name).
+Applicant rows add `application_id`, `job: { id, title }`, `stage`
+(`pending|shortlisted|interview|hired|rejected`, as on the applicants screen)
+and `applied_at`. `profile_id` opens `GET /employer/workers/{worker}`.
+
+**`usage`** (both lists): the plan banner and the tab badges.
+```json
+{ "plan": "Pro", "database_plan": "Database Basic",
+  "limit": 180, "used": 12, "remaining": 168, "purchased": 50,
+  "resets_at": "2026-10-02T07:14:09+00:00",
+  "pools": {
+    "job": { "plan": "Pro", "limit": 150, "used": 10, "remaining": 140, "resets_at": "…" },
+    "database": { "plan": "Database Basic", "limit": 30, "used": 2, "remaining": 28, "resets_at": "…" }
+  },
+  "used_database": 8, "used_applicants": 4,
+  "has_database_access": true, "has_job_plan": true, "job_plan_lapsed": false,
+  "database_total": 23, "applicants_total": 17,
+  "database_hidden": 0, "applicants_hidden": 0 }
+```
+`pools` has one entry per plan held, each renewing on its own cycle; the top
+`limit` / `used` / `remaining` add them up (`remaining: null` = a plan does not
+meter unlocks). `plan` is the job plan, `database_plan` the database plan, both
+`null` when not held. The lists hold only what the employer can see now: when
+the database access or the job plan ends, `database_hidden` /
+`applicants_hidden` say how many are out of sight until it renews (karigars the
+employer shortlisted or hired stay).
+
+### `GET /employer/contacts/database`
+Extra filter: `period=all|cycle` (`cycle` = unlocked this billing cycle).
+```json
+{ "contacts": { "data": [ { ...Row, "unlocked_at", "unlocked_by" } ], "total": 23, ... },
+  "filters": { "skill": "Weaving" },
+  "usage": { ... } }
+```
+
+### `GET /employer/contacts/applicants`
+Extra filters: `job` (one of the employer's job ids) and
+`stage=all|pending|shortlisted|interview|hired|rejected`. `jobs` lists the
+employer's jobs for the job picker.
+```json
+{ "contacts": { "data": [ { ...Row, "application_id", "job": { "id", "title" },
+                            "stage", "applied_at" } ], "total": 17, ... },
+  "filters": { "stage": "hired" },
+  "usage": { ... },
+  "jobs": [ { "id": 153, "title": "Handloom weaver" } ] }
+```
+An unknown `stage` or `sort` is a `422`.
 
 ---
 
@@ -707,11 +806,23 @@ Non-participants get `403`.
 **CreditSummary** (returned by the dashboard, unlock, boost and plan calls):
 ```json
 { "balance": 12, "unmetered": false, "purchased": 12, "plan_limit": 50,
-  "plan_remaining": 0, "unlocks_used": 50, "plan": "Starter",
-  "plan_label": "Starter · renews 28 Aug 2026", "directory_quota": 25 }
+  "plan_remaining": 0, "unlocks_used": 50, "unlocks_reset_at": "2026-08-28T10:00:00+05:30",
+  "plan": "Starter", "plan_label": "Starter · renews 28 Aug 2026",
+  "database_plan": { "name": "Database Basic", "limit": 30, "used": 2, "remaining": 28,
+                     "renews_at": "2026-10-10T09:00:00+05:30" } | null,
+  "directory_quota": 25 }
 ```
+`plan_limit` / `plan_remaining` / `unlocks_used` add up the job plan and the
+database plan. A Worker Database unlock spends the database plan first, an
+applicant unlock the job plan first, then the other plan, then a purchased
+credit. **Without any plan, unlocks need purchased credits** (`plan_remaining:
+0`); they used to be free.
 Credits come from the plan's contact-unlock allowance plus purchased top-ups.
 Unlocks spend the plan allowance first; boosts always spend purchased credits.
+The allowance renews every billing cycle, like job posts: `unlocks_used` counts
+karigars first unlocked in the cycle now running, and `unlocks_reset_at` is when
+it next renews (`null` without a subscription). A karigar unlocked once stays
+unlocked across cycles and never costs again.
 `plan_limit: 0` means the plan does not meter unlocks — then `unmetered` is
 `true` and `plan_remaining` is `null`. With no subscription, `plan_label` reads
 "Free plan · unlock worker numbers".
@@ -720,17 +831,26 @@ Unlocks spend the plan allowance first; boosts always spend purchased credits.
 ```json
 {
   "credits": { ...CreditSummary },
-  "plans": [ { "id", "name", "slug", "price", "currency", "interval",
+  "plans": [ { "id", "name", "slug", "type", "price", "currency", "interval",
                "features": {...}, "is_current": false, "purchasable": true } ],
-  "current": { "id", "plan", "status", "starts_at", "ends_at" } | null,
+  "current": { "id", "plan", "status", "starts_at", "ends_at" } | null,          // job plan
+  "current_database": { "id", "plan", "status", "starts_at", "ends_at" } | null, // database plan
+  "job_plan_lapsed": false,
   "credit_packs": [ { "key": "topup_25", "credits": 25, "price": 299, "label": "25 credits" } ],
   "boost_tiers": [ { "key": "standard", "credits": 1, "days": 3, "label": "Standard boost" } ],
   "invoices": [ { "id", "invoice_number", "plan", "total", "date", "url" } ],
   "payment": { "configured": true, "key": "rzp_live_xxx", "gst_percent": 18 }
 }
 ```
-`purchasable: false` means the plan has no Razorpay plan id yet — hide or
-disable its buy button. `invoices[].url` is the token-auth JSON endpoint below;
+`purchasable: false` means payments are not configured on the server — hide or
+disable the buy buttons. Razorpay plans are created at checkout, so a new plan
+is buyable straight away. Show every plan `plans` returns, cheapest first,
+using its `feature_list` lines as they are, in two groups by `type`: **job
+plans** (post jobs, see applicants, open the database) and **database plans**
+(the Worker Database only). An account holds at most one of each at a time, so
+`is_current` can be true on two plans. `job_plan_lapsed: true` means the job
+plan ran out: its jobs are paused and applicants hidden until it renews — show
+a Renew prompt. `invoices[].url` is the token-auth JSON endpoint below;
 `invoices[].web_url` is the printable web page, for "open in browser" / share.
 
 ### `GET /employer/invoices/{subscription}`

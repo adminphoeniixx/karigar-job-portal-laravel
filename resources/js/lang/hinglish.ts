@@ -31,6 +31,7 @@ export default {
         optional: 'optional',
     },
     status: {
+        paused: 'Ruki hui',
         active: 'Active',
         draft: 'Draft',
         closed: 'Band',
@@ -107,6 +108,8 @@ export default {
         backToJobs: 'Naukriyon par wapas',
     },
     myJobs: {
+        pausedInfo: 'Aapka job plan khatam ho gaya hai, isliye aapki live jobs ruki hui hain: karigar na unhe dhoondh sakte hain na apply kar sakte hain. Dobara kholne ke liye plan renew karein.',
+        renewPlan: 'Plan renew karein',
         title: 'Meri Naukriyan',
         subtitle: 'Apni post ki hui naukriyan manage karein',
         searchPlaceholder: 'Title se search karein…',
@@ -203,6 +206,12 @@ export default {
         shortlisted: 'Shortlisted',
     },
     applicants: {
+        batchInfo: '{total} mein se {visible} applicants dikh rahe hain.',
+        batchNext: 'Agle {next} dekhne ke liye baaki {undecided} ko shortlist, hire ya reject karein.',
+        noPlanInfo: '{hidden} applicants intezaar kar rahe hain. Unhe dekhne ke liye plan lein.',
+        planExpiredInfo: 'Aapka plan khatam ho gaya hai, isliye {hidden} applicants chhupe hain. Dobara dekhne ke liye plan renew karein; shortlist aur hire kiye applicants dikhte rahenge.',
+        viewPlans: 'Plans dekhein',
+        renewPlan: 'Plan renew karein',
         resume: 'Resume',
         sortBestMatch: 'Best match',
         sortRecent: 'Naye pehle',
@@ -283,6 +292,11 @@ export default {
         emptyHint: 'Mobile number se staff jodein — role ke hisaab se wo aapki naukriyan aur applicants dekhenge.',
     },
     subscription: {
+        jobPlans: 'Job plans',
+        jobPlansHint: 'Job post karein, apne applicants dekhein aur Worker Database kholein.',
+        databasePlans: 'Database plans',
+        databasePlansHint: 'Sirf karigaron ke number chahiye? Database plan akele Worker Database kholta hai, ya aapke job plan mein jud jaata hai.',
+        databasePlan: 'Database plan',
         title: 'Plans',
         subtitle: 'Naukri post karne ke liye plan chunein',
         activePlan: 'Active plan',

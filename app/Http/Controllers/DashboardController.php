@@ -157,13 +157,13 @@ class DashboardController extends Controller
                 Setting::bool('kyc_verification_enabled', true)
                     ? ['label' => 'KYC Status', 'value' => $kyc?->status->label() ?? 'Not submitted', 'hint' => 'Verification', 'tone' => 'amber']
                     : null,
-                ['label' => 'Available Jobs', 'value' => (string) JobListing::active()->count(), 'hint' => 'Near you', 'tone' => 'emerald'],
+                ['label' => 'Available Jobs', 'value' => (string) JobListing::active()->hiring()->count(), 'hint' => 'Near you', 'tone' => 'emerald'],
                 ['label' => 'Profile', 'value' => $user->workerProfile?->skills ? 'Active' : 'Incomplete', 'hint' => 'Skills', 'tone' => 'violet'],
             ])),
             'table' => [
                 'title' => 'Latest jobs',
                 'columns' => ['Title', 'Location', 'Wage', 'Category'],
-                'rows' => JobListing::active()->latest()->limit(8)->get()->map(fn ($j) => [
+                'rows' => JobListing::active()->hiring()->latest()->limit(8)->get()->map(fn ($j) => [
                     $j->title,
                     collect([$j->city, $j->state])->filter()->join(', ') ?: '—',
                     $j->wage_min ? '₹'.$j->wage_min : '—',

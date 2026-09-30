@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\Api;
 
-use App\Enums\ApplicationStatus;
 use App\Models\JobApplication;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -99,12 +98,6 @@ class ApplicantResource extends JsonResource
      */
     protected function stage(): string
     {
-        return match (true) {
-            $this->status === ApplicationStatus::Accepted => 'hired',
-            $this->status === ApplicationStatus::Rejected => 'rejected',
-            $this->interview_at !== null => 'interview',
-            $this->shortlisted_at !== null => 'shortlisted',
-            default => 'pending',
-        };
+        return $this->resource->stage();
     }
 }

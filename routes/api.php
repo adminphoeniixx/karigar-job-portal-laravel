@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\Employer\ApplicantController as EmployerApplicantController;
 use App\Http\Controllers\Api\Employer\BillingController;
+use App\Http\Controllers\Api\Employer\ContactListController;
 use App\Http\Controllers\Api\Employer\DashboardController as EmployerDashboardController;
 use App\Http\Controllers\Api\Employer\InvoiceController as EmployerInvoiceController;
 use App\Http\Controllers\Api\Employer\JobController as EmployerJobController;
@@ -153,7 +154,8 @@ Route::prefix('v1')->group(function () {
         });
 
         // ---- Employer-only ----
-        Route::middleware('role:employer')->group(function () {
+        // An {application} route only opens applicants the plan shows (ApplicantAccess).
+        Route::middleware(['role:employer', 'applicant.visible'])->group(function () {
             Route::get('employer/dashboard', [EmployerDashboardController::class, 'index'])->name('api.employer.dashboard');
 
             // Business profile / registration
@@ -202,6 +204,10 @@ Route::prefix('v1')->group(function () {
             Route::get('employer/workers', [WorkerDirectoryController::class, 'index'])->name('api.employer.workers');
             Route::get('employer/workers/{worker}', [WorkerDirectoryController::class, 'show'])->name('api.employer.workers.show');
             Route::post('employer/workers/{worker}/unlock', [WorkerDirectoryController::class, 'unlock'])->name('api.employer.workers.unlock');
+
+            // My contacts: karigars unlocked from the database, and applicants.
+            Route::get('employer/contacts/database', [ContactListController::class, 'database'])->name('api.employer.contacts.database');
+            Route::get('employer/contacts/applicants', [ContactListController::class, 'applicants'])->name('api.employer.contacts.applicants');
 
             // Business verification (GST / PAN) — same admin toggle as worker KYC.
             Route::middleware('kyc.enabled')->group(function () {

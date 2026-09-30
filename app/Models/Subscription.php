@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\SubscriptionStatus;
 use App\Services\Billing\InvoiceDocument;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -88,6 +89,32 @@ class Subscription extends Model
         if ($issuing) {
             InvoiceDocument::for($this)->email();
         }
+
+        // A renewed job plan puts the employer's paused jobs back in search.
+        if (! $this->plan->isDatabase()) {
+            JobListing::syncSearchFor($this->employer);
+        }
+    }
+
+    /**
+     * Subscriptions that grant access right now.
+     *
+     * @param  Builder<Subscription>  $query
+     */
+    public function scopeEntitled(Builder $query): void
+    {
+        $query->whereIn('status', array_map(fn ($s) => $s->value, SubscriptionStatus::entitled()))
+            ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now()));
+    }
+
+    /**
+     * Subscriptions to one kind of plan ({@see Plan::TYPE_JOB} or {@see Plan::TYPE_DATABASE}).
+     *
+     * @param  Builder<Subscription>  $query
+     */
+    public function scopeOfType(Builder $query, string $type): void
+    {
+        $query->whereHas('plan', fn (Builder $p) => $p->where('type', $type));
     }
 
     /**

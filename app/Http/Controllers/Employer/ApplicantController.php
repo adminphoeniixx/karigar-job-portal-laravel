@@ -9,6 +9,7 @@ use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\ShortlistedNotification;
+use App\Services\ApplicantAccess;
 use App\Services\CreditWallet;
 use App\Services\Screening\ScreeningService;
 use App\Support\TemplatedMailer;
@@ -31,7 +32,10 @@ class ApplicantController extends Controller
         // applicants fall to the bottom rather than to the top.
         $sort = $request->string('sort')->toString() === 'recent' ? 'recent' : 'best_match';
 
-        $applications = $job->applications()
+        // Only the released batch, or the kept ones without a job plan.
+        $access = ApplicantAccess::for($request->user());
+
+        $applications = tap($job->applications(), fn ($q) => $access->constrain($q, $job))
             // `phone` is in the whitelist because a worker's number can live
             // on either row: the profile if they filled one in, the user row
             // if they only ever signed in with it. Without it here the user
@@ -95,13 +99,16 @@ class ApplicantController extends Controller
                 ],
             ]);
 
+        $wallet = CreditWallet::for($request->user());
+
         return Inertia::render('applicants/Index', [
             'job' => $job->only('id', 'title'),
             'applications' => $applications,
             'sort' => $sort,
+            'access' => $access->summary($job),
             'contactUnlocks' => [
-                'used' => CreditWallet::for($request->user())->unlocksUsed(),
-                'limit' => $request->user()->employerAccount()->activeSubscription()?->plan->contactUnlockLimit() ?? 0,
+                'used' => $wallet->unlocksUsed(),
+                'limit' => $wallet->planLimit(),
             ],
         ]);
     }
@@ -288,7 +295,8 @@ class ApplicantController extends Controller
     }
 
     /**
-     * Reveal an applicant's contact details, consuming one unlock from the plan.
+     * Reveal an applicant's contact details, consuming one unlock from the plan
+     * (free when the karigar is already unlocked).
      */
     public function unlockContact(Request $request, JobApplication $application): RedirectResponse
     {
@@ -298,21 +306,12 @@ class ApplicantController extends Controller
             return back();
         }
 
-        $wallet = CreditWallet::for($request->user());
-
-        // A karigar already unlocked (another job, or the Worker Database) is free.
-        if (! $wallet->hasUnlocked($application->worker_id)) {
-            if (! $wallet->canUnlock()) {
-                return back()->with('toast', [
-                    'type' => 'error',
-                    'message' => __('You have reached your plan\'s contact unlock limit.'),
-                ]);
-            }
-
-            $wallet->consumeUnlock();
+        if (! CreditWallet::for($request->user())->unlockApplication($application, $request->user())) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => __('You have reached your plan\'s contact unlock limit.'),
+            ]);
         }
-
-        $application->update(['contact_unlocked' => true]);
 
         return back()->with('toast', [
             'type' => 'success',

@@ -1,5 +1,9 @@
 <?php
 
+use App\Enums\SubscriptionStatus;
+use App\Models\Plan;
+use App\Models\Subscription;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,4 +51,23 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * An active job plan for an employer. Applicants are only visible with one
+ * (ApplicantAccess), so tests about working applicants start here. Unlocks
+ * and job posts are unmetered, as they were before plans gated applicants.
+ */
+function giveJobPlan(User $employer): Subscription
+{
+    $plan = Plan::firstOrCreate(['slug' => 'test-job-plan'], [
+        'name' => 'Test Job Plan', 'type' => Plan::TYPE_JOB, 'price' => 499, 'currency' => 'INR', 'interval' => 'monthly',
+        'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 0, 'contact_database_limit' => 1000],
+        'is_active' => true,
+    ]);
+
+    return Subscription::create([
+        'employer_id' => $employer->id, 'plan_id' => $plan->id,
+        'status' => SubscriptionStatus::Active->value, 'starts_at' => now(), 'ends_at' => now()->addMonth(),
+    ]);
 }

@@ -22,7 +22,9 @@ class SubscriptionController extends Controller
         return Inertia::render('subscription/Pricing', [
             'plans' => Plan::where('is_active', true)->orderBy('price')->get()
                 ->map(fn (Plan $plan) => [...$plan->toArray(), 'feature_list' => $plan->featureList()]),
+            // The job plan and the database plan run side by side.
             'current' => $request->user()->activeSubscription()?->load('plan'),
+            'currentDatabase' => $request->user()->activeSubscription(Plan::TYPE_DATABASE)?->load('plan'),
             'razorpayConfigured' => app(RazorpayService::class)->configured(),
             'gstPercent' => Gst::percent(),
             // Paid subscriptions with an issued tax invoice.

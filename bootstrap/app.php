@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureActiveSubscription;
+use App\Http\Middleware\EnsureApplicantVisible;
 use App\Http\Middleware\EnsureKycEnabled;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\HandleAppearance;
@@ -48,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureRole::class,
             'subscription' => EnsureActiveSubscription::class,
             'kyc.enabled' => EnsureKycEnabled::class,
+            'applicant.visible' => EnsureApplicantVisible::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, Receipt, Settings as SettingsIcon } from '@lucide/vue';
+import { Check, Layers, Receipt, Settings as SettingsIcon } from '@lucide/vue';
 import { computed, reactive } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -15,6 +15,8 @@ const props = defineProps<{
     settings: Record<SettingKey, boolean> & {
         ai_auto_shortlist_threshold: number;
         ai_auto_reject_below: number;
+        applicant_first_batch: number;
+        applicant_next_batch: number;
     };
     billing: {
         gst_enabled: boolean;
@@ -39,6 +41,8 @@ const form = reactive({
     ai_auto_reject_enabled: props.settings.ai_auto_reject_enabled,
     ai_auto_reject_below: props.settings.ai_auto_reject_below,
     ai_screening_call_enabled: props.settings.ai_screening_call_enabled,
+    applicant_first_batch: props.settings.applicant_first_batch,
+    applicant_next_batch: props.settings.applicant_next_batch,
 });
 
 const inputClass =
@@ -246,6 +250,26 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                         </span>
                     </div>
                     <p class="mt-2 text-xs text-muted-foreground">{{ rejectHint }}</p>
+                </div>
+            </div>
+
+            <!-- Applicants arrive in batches (ApplicantAccess). -->
+            <div class="mt-5 border-t pt-5">
+                <h3 class="flex items-center gap-2 font-semibold"><Layers class="size-4 text-primary" /> Applicants in batches</h3>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    An employer sees a job's applicants a batch at a time, oldest first. The next batch opens once every
+                    applicant shown so far is shortlisted, hired or rejected. Shortlisted and hired applicants always stay
+                    visible, even after the employer's plan ends.
+                </p>
+                <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                    <label class="text-sm font-medium">
+                        First batch
+                        <input v-model.number="form.applicant_first_batch" type="number" min="1" max="500" :class="inputClass" />
+                    </label>
+                    <label class="text-sm font-medium">
+                        Each batch after that
+                        <input v-model.number="form.applicant_next_batch" type="number" min="1" max="500" :class="inputClass" />
+                    </label>
                 </div>
             </div>
 

@@ -8,6 +8,7 @@ interface Plan {
     id: number;
     name: string;
     slug: string;
+    type: 'job' | 'database';
     price: string;
     interval: string;
     features: {
@@ -60,7 +61,13 @@ const save = (p: Plan) => {
         <div v-for="p in plans" :key="p.id" class="rounded-2xl border bg-card p-5 shadow-sm">
             <div class="flex items-center justify-between border-b pb-3">
                 <div>
-                    <h3 class="font-semibold">{{ p.name }}</h3>
+                    <h3 class="flex items-center gap-2 font-semibold">
+                        {{ p.name }}
+                        <span
+                            class="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                            :class="p.type === 'database' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-300' : 'bg-muted text-muted-foreground'"
+                        >{{ p.type === 'database' ? 'Database plan' : 'Job plan' }}</span>
+                    </h3>
                     <p class="text-xs text-muted-foreground">
                         ₹{{ drafts[p.id].price }} / {{ p.interval }}
                         <template v-if="gstPercent > 0"> · ₹{{ withGst(drafts[p.id].price) }} with {{ gstPercent }}% GST</template>
@@ -74,12 +81,13 @@ const save = (p: Plan) => {
                 </span>
             </div>
 
-            <div class="mt-4 grid gap-4 sm:grid-cols-4">
+            <div class="mt-4 grid gap-4" :class="p.type === 'database' ? 'sm:grid-cols-3' : 'sm:grid-cols-4'">
                 <div>
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Price ₹ (before GST)</label>
                     <input v-model.number="drafts[p.id].price" type="number" min="1" step="1" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
-                <div>
+                <!-- A database plan posts no jobs. -->
+                <div v-if="p.type !== 'database'">
                     <label class="mb-1 block text-xs font-medium text-muted-foreground">Job posts / {{ p.interval === 'yearly' ? 'year' : 'month' }} (0 = unlimited)</label>
                     <input v-model.number="drafts[p.id].job_post_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>

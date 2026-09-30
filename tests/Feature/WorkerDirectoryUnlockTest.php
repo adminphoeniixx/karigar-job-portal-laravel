@@ -115,6 +115,52 @@ it('refuses a directory unlock without a plan', function () {
     expect(WorkerContactUnlock::count())->toBe(0);
 });
 
+it('renews the unlock allowance every billing cycle', function () {
+    // Mid-month, so adding and taking away a month lands on the same day.
+    $this->travelTo('2026-03-10 10:00:00');
+    subscribeDirectory($this->employer, $this->plan);
+    $otherProfile = $this->other->workerProfile()->create(['phone' => '9000000099']);
+
+    $this->actingAs($this->employer, 'sanctum')->postJson("/api/v1/employer/workers/{$this->profile->id}/unlock")->assertOk();
+    $this->actingAs($this->employer, 'sanctum')->postJson("/api/v1/employer/workers/{$otherProfile->id}/unlock")->assertStatus(422);
+
+    // The plan renews: Razorpay's webhook moves ends_at a month on.
+    $this->travelTo('2026-04-11 10:00:00');
+    Subscription::first()->update(['ends_at' => now()->addMonth()]);
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->postJson("/api/v1/employer/workers/{$otherProfile->id}/unlock")
+        ->assertOk()
+        ->assertJsonPath('credits.unlocks_used', 1);
+
+    // The karigar unlocked last cycle stays unlocked.
+    expect(CreditWallet::for($this->employer)->hasUnlocked($this->worker->id))->toBeTrue();
+});
+
+it('records an applicant unlock against the cycle', function () {
+    subscribeDirectory($this->employer, $this->plan);
+
+    $application = $this->job->applications()->create(['worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending->value]);
+    $this->actingAs($this->employer)->post("/employer/applications/{$application->id}/unlock");
+
+    expect(WorkerContactUnlock::where('employer_id', $this->employer->id)->where('worker_id', $this->worker->id)->exists())->toBeTrue()
+        ->and(CreditWallet::for($this->employer)->planRemaining())->toBe(0);
+});
+
+it('backfills unlock records for applicants unlocked before', function () {
+    $application = $this->job->applications()->create([
+        'worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending->value, 'contact_unlocked' => true,
+    ]);
+
+    $migration = require database_path('migrations/2026_09_29_000002_backfill_worker_contact_unlocks_from_applications.php');
+    $migration->up();
+    $migration->up(); // safe to run twice
+
+    expect(WorkerContactUnlock::count())->toBe(1)
+        ->and(WorkerContactUnlock::first()->employer_id)->toBe($this->employer->id)
+        ->and($application->fresh()->contact_unlocked)->toBeTrue();
+});
+
 it('lets the employer message a karigar unlocked from the directory', function () {
     subscribeDirectory($this->employer, $this->plan);
 

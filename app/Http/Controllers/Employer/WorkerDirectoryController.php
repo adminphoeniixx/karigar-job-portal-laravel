@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employer;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\ReviewController;
 use App\Models\WorkerProfile;
+use App\Services\ContactList;
 use App\Services\CreditWallet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,9 @@ class WorkerDirectoryController extends Controller
         $index = 0;
         $workers->getCollection()->transform(function (WorkerProfile $w) use (&$index, $offset, $quota, $unlockedIds) {
             $inQuota = $quota > 0 && ($offset + $index) < $quota;
-            $unlocked = isset($unlockedIds[$w->user_id]);
+            // A number shows while the database is open to the employer.
+            $paidFor = isset($unlockedIds[$w->user_id]);
+            $unlocked = $paidFor && $quota > 0;
             $index++;
 
             return [
@@ -68,7 +71,7 @@ class WorkerDirectoryController extends Controller
                 'phone' => $unlocked ? $w->phone : null,
                 'email' => $unlocked ? $w->user?->email : null,
                 'locked' => ! $unlocked,
-                'can_unlock' => ! $unlocked && $inQuota,
+                'can_unlock' => ! $paidFor && $inQuota,
             ];
         });
 
@@ -79,9 +82,11 @@ class WorkerDirectoryController extends Controller
                 'quota' => $quota,
                 'accessible' => min($workers->total(), $quota),
                 'total' => $workers->total(),
-                'has_plan' => $request->user()->hasActiveSubscription(),
+                // A job or database plan that opens the Worker Database.
+                'has_plan' => $quota > 0,
             ],
             'unlocks' => $this->unlocks($wallet),
+            'contactCounts' => ContactList::for($request->user())->counts(),
         ]);
     }
 
@@ -90,7 +95,7 @@ class WorkerDirectoryController extends Controller
         $worker->load('user:id,name,email');
 
         $wallet = CreditWallet::for($request->user());
-        $unlocked = $worker->user !== null && $wallet->hasUnlocked($worker->user_id);
+        $unlocked = $worker->user !== null && $wallet->contactVisible($worker->user_id);
 
         return Inertia::render('workers/Show', [
             'worker' => [
@@ -109,7 +114,7 @@ class WorkerDirectoryController extends Controller
                 'phone' => $unlocked ? $worker->phone : null,
                 'email' => $unlocked ? $worker->user?->email : null,
                 'contact_unlocked' => $unlocked,
-                'can_unlock' => ! $unlocked && $worker->user !== null && $request->user()->contactDatabaseQuota() > 0,
+                'can_unlock' => $worker->user !== null && ! $wallet->hasUnlocked($worker->user_id) && $request->user()->contactDatabaseQuota() > 0,
             ],
             'unlocks' => $this->unlocks($wallet),
             'reviews' => $worker->user ? ReviewController::summaryFor($worker->user) : null,

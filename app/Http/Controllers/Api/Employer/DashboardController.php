@@ -11,6 +11,7 @@ use App\Http\Resources\Api\EmployerProfileResource;
 use App\Models\ChatMessage;
 use App\Models\JobApplication;
 use App\Models\Setting;
+use App\Services\ApplicantAccess;
 use App\Services\CreditWallet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,11 +46,17 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        // Only applicants the employer may see: released in a batch under a
+        // job plan, or kept (ApplicantAccess). The newest few that qualify.
+        $access = ApplicantAccess::for($user);
         $recentApplicants = JobApplication::whereIn('job_listing_id', $jobIds)
-            ->with('worker:id,name,email,phone', 'worker.workerProfile', 'worker.kyc', 'job:id,title')
+            ->with('worker:id,name,email,phone', 'worker.workerProfile', 'worker.kyc', 'job')
             ->latest()
-            ->limit(5)
-            ->get();
+            ->limit(50)
+            ->get()
+            ->filter(fn (JobApplication $application) => $access->isVisible($application))
+            ->take(5)
+            ->values();
 
         return response()->json([
             'greeting' => $account->name,

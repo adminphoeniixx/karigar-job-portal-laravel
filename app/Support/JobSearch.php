@@ -19,8 +19,10 @@ class JobSearch
     {
         $filterBy = self::buildFilterBy($filters);
 
+        // hiring(): a job whose employer's plan ran out can still be in the
+        // index until `jobs:sync-hiring` runs; it must not show meanwhile.
         $search = JobListing::search(trim((string) ($filters['q'] ?? '')) ?: '*')
-            ->query(fn ($query) => $query->with('employer:id,name'));
+            ->query(fn ($query) => $query->with('employer:id,name')->hiring());
 
         if ($filterBy !== '') {
             $search->options(['filter_by' => $filterBy]);

@@ -51,7 +51,11 @@ class JobController extends Controller
             ->latest()
             ->paginate(15);
 
-        return EmployerJobResource::collection($jobs);
+        return EmployerJobResource::collection($jobs)->additional([
+            // The job plan ran out: live jobs are out of search and closed to
+            // applications until it is renewed.
+            'hiring_paused' => $request->user()->employerAccount()->jobPlanLapsed(),
+        ]);
     }
 
     /**

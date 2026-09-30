@@ -23,13 +23,13 @@ class DashboardController extends Controller
         $verificationEnabled = Setting::bool('kyc_verification_enabled', true);
         $kyc = $verificationEnabled ? $user->kyc : null;
 
-        $latest = JobListing::active()->with('employer:id,name')->latest()->limit(5)->get();
+        $latest = JobListing::active()->hiring()->with('employer:id,name')->latest()->limit(5)->get();
 
         return response()->json([
             'greeting' => $user->name,
             'profile' => new WorkerProfileResource($profile),
             'stats' => [
-                'available_jobs' => JobListing::active()->count(),
+                'available_jobs' => JobListing::active()->hiring()->count(),
                 'applications' => $user->applications()->count(),
                 'saved_jobs' => $user->savedJobs()->count(),
                 // null while verification is switched off, so the app shows no

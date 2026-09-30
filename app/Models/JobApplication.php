@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Api\Worker\ReviewController;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -31,6 +32,12 @@ use Illuminate\Support\Carbon;
  */
 class JobApplication extends Model
 {
+    /**
+     * The employer's pipeline, in order: New → Shortlisted → Interview →
+     * Hired / Rejected. Every application is in exactly one.
+     */
+    public const STAGES = ['pending', 'shortlisted', 'interview', 'hired', 'rejected'];
+
     protected $fillable = [
         'job_listing_id', 'worker_id', 'cover_note', 'expected_wage', 'status', 'contact_unlocked', 'shortlisted_at', 'status_changed_at',
         'offered_wage', 'start_date', 'offer_message',
@@ -115,6 +122,76 @@ class JobApplication extends Model
         ];
 
         return [$applied, $review, $shortlist, $decision];
+    }
+
+    /**
+     * Which of {@see STAGES} this application is in: status and the shortlist
+     * and interview dates collapsed into one.
+     */
+    public function stage(): string
+    {
+        return match (true) {
+            $this->status === ApplicationStatus::Accepted => 'hired',
+            $this->status === ApplicationStatus::Rejected => 'rejected',
+            $this->interview_at !== null => 'interview',
+            $this->shortlisted_at !== null => 'shortlisted',
+            default => 'pending',
+        };
+    }
+
+    /**
+     * Constrain a query to one of {@see STAGES}. The stages are exclusive, so
+     * per-stage counts add up.
+     *
+     * @param  Builder<JobApplication>  $query
+     */
+    public function scopeInStage(Builder $query, string $stage): void
+    {
+        match ($stage) {
+            'pending' => $query->where('status', ApplicationStatus::Pending)
+                ->whereNull('shortlisted_at')
+                ->whereNull('interview_at'),
+            'shortlisted' => $query->whereNotNull('shortlisted_at')
+                ->whereNull('interview_at')
+                ->whereNotIn('status', [ApplicationStatus::Accepted, ApplicationStatus::Rejected]),
+            'interview' => $query->whereNotNull('interview_at')
+                ->whereNotIn('status', [ApplicationStatus::Accepted, ApplicationStatus::Rejected]),
+            'hired' => $query->where('status', ApplicationStatus::Accepted),
+            'rejected' => $query->where('status', ApplicationStatus::Rejected),
+            default => $query,
+        };
+    }
+
+    /**
+     * Shortlisted, in interview or hired: the applicants an employer keeps
+     * seeing after its plan runs out, and past the batch it has been shown.
+     */
+    public function isKept(): bool
+    {
+        return $this->shortlisted_at !== null
+            || $this->interview_at !== null
+            || $this->status === ApplicationStatus::Accepted;
+    }
+
+    /**
+     * @param  Builder<JobApplication>  $query
+     */
+    public function scopeKept(Builder $query): void
+    {
+        $query->where(fn (Builder $q) => $q
+            ->whereNotNull('shortlisted_at')
+            ->orWhereNotNull('interview_at')
+            ->orWhere('status', ApplicationStatus::Accepted));
+    }
+
+    /**
+     * Whether the employer has acted on this applicant (or the karigar
+     * withdrew): what opens the next batch of applicants.
+     */
+    public function isDecided(): bool
+    {
+        return $this->isKept()
+            || in_array($this->status, [ApplicationStatus::Rejected, ApplicationStatus::Withdrawn], true);
     }
 
     /**

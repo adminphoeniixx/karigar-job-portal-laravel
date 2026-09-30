@@ -57,6 +57,14 @@ class ApplicationController extends Controller
     {
         abort_unless($job->status === JobStatus::Active, 404);
 
+        // Live, but its employer's plan ran out: paused until renewed.
+        if (! $job->isOpenForApplications()) {
+            return response()->json([
+                'message' => __('This job is not taking applications right now.'),
+                'code' => 'job_not_hiring',
+            ], 422);
+        }
+
         $data = $request->validate([
             'cover_note' => ['nullable', 'string', 'max:1000'],
             'expected_wage' => ['nullable', 'numeric', 'min:0', 'max:99999999'],

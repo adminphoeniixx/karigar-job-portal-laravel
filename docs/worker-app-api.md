@@ -248,6 +248,10 @@ application is always pending).
 ```
 Notifies the employer + sends both transactional emails (same as web).
 409-style guard: re-applying returns `422` "You have already applied...".
+A job whose employer's plan ran out is paused: it drops out of search, and
+applying returns `422` with `code: "job_not_hiring"` ("This job is not taking
+applications right now."). Show the message; the job comes back when the
+employer renews.
 
 ### `DELETE /applications/{application}`
 Withdraw your own application. → `{ "message": "Application withdrawn." }`

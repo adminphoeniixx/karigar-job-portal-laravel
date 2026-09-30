@@ -45,6 +45,8 @@ class JobListingController extends Controller
         return Inertia::render('jobs/Index', [
             'jobs' => $jobs,
             'filters' => $filters,
+            // The job plan ran out: live jobs are out of search and closed to applications.
+            'hiringPaused' => $request->user()->employerAccount()->jobPlanLapsed(),
         ]);
     }
 

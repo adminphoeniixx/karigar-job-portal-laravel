@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Laravel\Scout\Searchable;
+use Throwable;
 
 /**
  * @property int $id
@@ -96,12 +97,48 @@ class JobListing extends Model
     }
 
     /**
-     * Only active, unexpired jobs are indexed for public search.
+     * Only jobs taking applications are indexed for public search.
      */
     public function shouldBeSearchable(): bool
     {
+        return $this->isOpenForApplications();
+    }
+
+    /**
+     * Active, unexpired, and the employer is hiring: its job plan has not run
+     * out ({@see User::jobPlanLapsed()}).
+     */
+    public function isOpenForApplications(): bool
+    {
         return $this->status === JobStatus::Active
-            && ($this->expires_at === null || $this->expires_at->isFuture());
+            && ($this->expires_at === null || $this->expires_at->isFuture())
+            && ! $this->isHiringPaused();
+    }
+
+    /**
+     * The employer's job plan ran out: the job is out of search and closed to
+     * applications until the plan is renewed.
+     */
+    public function isHiringPaused(): bool
+    {
+        return (bool) $this->employer?->jobPlanLapsed();
+    }
+
+    /**
+     * Put an employer's live jobs back in search, or take them out, to match
+     * whether it is hiring. Called when a job plan starts or renews, and by
+     * `jobs:sync-hiring` for plans that ran out. A search outage must never
+     * fail the payment or command that called it.
+     */
+    public static function syncSearchFor(User $employer): void
+    {
+        try {
+            [$open, $paused] = $employer->jobListings()->active()->get()->partition->shouldBeSearchable();
+            $open->searchable();
+            $paused->unsearchable();
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     /**
@@ -202,6 +239,20 @@ class JobListing extends Model
     {
         $query->where('status', JobStatus::Active)
             ->where(fn (Builder $q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+    }
+
+    /**
+     * Jobs whose employer is hiring: it holds a job plan, or never had one
+     * (the free first post). Keeps paused jobs out of search results even
+     * before `jobs:sync-hiring` has taken them out of the index.
+     *
+     * @param  Builder<JobListing>  $query
+     */
+    public function scopeHiring(Builder $query): void
+    {
+        $query->whereHas('employer', fn (Builder $employer) => $employer->where(fn (Builder $q) => $q
+            ->whereHas('subscriptions', fn (Builder $s) => $s->entitled()->ofType(Plan::TYPE_JOB))
+            ->orWhereDoesntHave('subscriptions', fn (Builder $s) => $s->ofType(Plan::TYPE_JOB)->whereNotNull('starts_at'))));
     }
 
     /**
