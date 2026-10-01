@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Support\ReferenceData;
+use App\Support\Wage;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,6 +12,21 @@ class WorkerProfileUpdateRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()?->isWorker() ?? false;
+    }
+
+    /**
+     * Wages are monthly. An expected wage sent per day or per hour, as older
+     * app builds do, is stored as its monthly amount.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('expected_wage')) {
+            $this->merge(['expected_wage' => Wage::monthly($this->input('expected_wage'), $this->input('wage_type'))]);
+        }
+
+        if ($this->has('expected_wage') || $this->has('wage_type')) {
+            $this->merge(['wage_type' => Wage::MONTHLY]);
+        }
     }
 
     /**
@@ -26,7 +43,7 @@ class WorkerProfileUpdateRequest extends FormRequest
             'experience_years' => ['nullable', 'integer', 'min:0', 'max:70'],
             'bio' => ['nullable', 'string', 'max:2000'],
             'expected_wage' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
-            'wage_type' => ['nullable', 'string', 'in:hourly,daily,monthly'],
+            'wage_type' => ['nullable', 'string', Rule::in(ReferenceData::WAGE_TYPES)],
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],

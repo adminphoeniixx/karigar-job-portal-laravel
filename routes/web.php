@@ -156,6 +156,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('employer/jobs/{job}/edit', [JobListingController::class, 'edit'])->name('jobs.edit');
         Route::patch('employer/jobs/{job}', [JobListingController::class, 'update'])->name('jobs.update');
         Route::delete('employer/jobs/{job}', [JobListingController::class, 'destroy'])->name('jobs.destroy');
+        Route::post('employer/jobs/{job}/repost', [JobListingController::class, 'repost'])->name('jobs.repost');
 
         // Applicants for a job
         Route::get('employer/jobs/{job}/applicants', [ApplicantController::class, 'index'])->name('applicants.index');

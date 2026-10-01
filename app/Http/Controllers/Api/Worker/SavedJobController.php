@@ -17,7 +17,7 @@ class SavedJobController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $saved = $request->user()->savedJobs()
-            ->with('job', 'job.employer:id,name')
+            ->with('job', 'job.employer:id,name', 'job.employer.kyc')
             ->latest()
             ->paginate(15);
 

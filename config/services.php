@@ -50,6 +50,13 @@ return [
         'test_otp' => env('AUTH_TEST_OTP'),
     ],
 
+    // OpenStreetMap's geocoder, placing a job's map pin from its address when
+    // the client sent none (the employer app). Off in tests.
+    'geocoder' => [
+        'enabled' => env('GEOCODER_ENABLED', true),
+        'url' => env('GEOCODER_URL', 'https://nominatim.openstreetmap.org/search'),
+    ],
+
     'ai' => [
         // Swappable LLM provider for AI candidate scoring. Any OpenAI-compatible
         // chat-completions endpoint works: DigitalOcean Serverless Inference,

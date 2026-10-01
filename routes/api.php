@@ -168,11 +168,13 @@ Route::prefix('v1')->group(function () {
             Route::post('employer/jobs', [EmployerJobController::class, 'store'])->name('api.employer.jobs.store');
             // AI description drafts for the Post Job form. Declared before the
             // {job} route so the literal path is not swallowed by it.
+            Route::get('employer/jobs/form-options', [EmployerJobController::class, 'formOptions'])->name('api.employer.jobs.formOptions');
             Route::get('employer/jobs/suggest-description', [EmployerJobController::class, 'suggestDescription'])
                 ->middleware('throttle:20,1')->name('api.employer.jobs.suggestDescription');
             Route::get('employer/jobs/{job}', [EmployerJobController::class, 'show'])->name('api.employer.jobs.show');
             Route::match(['put', 'patch'], 'employer/jobs/{job}', [EmployerJobController::class, 'update'])->name('api.employer.jobs.update');
             Route::post('employer/jobs/{job}/close', [EmployerJobController::class, 'close'])->name('api.employer.jobs.close');
+            Route::post('employer/jobs/{job}/repost', [EmployerJobController::class, 'repost'])->name('api.employer.jobs.repost');
             Route::delete('employer/jobs/{job}', [EmployerJobController::class, 'destroy'])->name('api.employer.jobs.destroy');
             Route::post('employer/jobs/{job}/boost', [EmployerJobController::class, 'boost'])->name('api.employer.jobs.boost');
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\JobBrowseController;
 use App\Http\Resources\Api\JobDetailResource;
 use App\Http\Resources\Api\JobResource;
 use App\Models\JobListing;
+use App\Support\JobFeed;
 use App\Support\JobSearch;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -18,13 +19,34 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class JobController extends Controller
 {
     /**
-     * Paginated, filtered list of active jobs.
+     * The job list. Opened plain, it is the karigar's own feed (JobFeed):
+     * their categories, nearest first from `lat`/`lng`, the phone's current
+     * position. A search or filter they choose goes to the full search.
      */
     public function index(Request $request): AnonymousResourceCollection
     {
         $filters = JobBrowseController::validateFilters($request);
+        $all = $request->validate(['all' => ['nullable', 'boolean']])['all'] ?? false;
 
-        return JobResource::collection(JobSearch::paginate($filters));
+        $searching = collect(['q', 'state', 'city', 'category', 'skill'])
+            ->contains(fn (string $key) => filled($filters[$key] ?? null));
+
+        if ($searching) {
+            return JobResource::collection(JobSearch::paginate($filters));
+        }
+
+        $feed = JobFeed::for(
+            $request->user(),
+            isset($filters['lat'], $filters['lng']) ? (float) $filters['lat'] : null,
+            isset($filters['lat'], $filters['lng']) ? (float) $filters['lng'] : null,
+            (bool) $all,
+        );
+
+        $jobs = $feed->query(isset($filters['radius']) ? (float) $filters['radius'] : null)
+            ->paginate(15)
+            ->withQueryString();
+
+        return JobResource::collection($jobs)->additional(['feed' => $feed->meta()]);
     }
 
     /**
@@ -37,7 +59,7 @@ class JobController extends Controller
         // Feeds the employer's job-funnel "Views" metric.
         $job->incrementQuietly('views_count');
 
-        $job->load('employer:id,name');
+        $job->load('employer:id,name', 'employer.kyc');
         $user = $request->user();
         $application = $job->applications()->where('worker_id', $user->id)->first();
 

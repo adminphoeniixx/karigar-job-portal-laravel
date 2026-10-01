@@ -21,12 +21,16 @@ class ReferenceController extends Controller
     {
         return response()->json([
             'states' => ReferenceData::states(),
-            'skills' => ReferenceData::SKILLS,
+            // What a karigar picks at sign-up is what jobs are posted under,
+            // so the two match: all active craft categories.
+            'skills' => $this->categories(),
             'spoken_languages' => ReferenceData::SPOKEN_LANGUAGES,
             'education_levels' => ReferenceData::EDUCATION_LEVELS,
             'wage_types' => ReferenceData::WAGE_TYPES,
             'app_languages' => ReferenceData::APP_LANGUAGES,
             'job_categories' => $this->categories(),
+            // Skills to suggest once a category is picked on the job form.
+            'category_skills' => Category::cachedSkillsMap(),
             // Employer-app dropdowns.
             'shifts' => ReferenceData::SHIFTS,
             'perks' => ReferenceData::PERKS,

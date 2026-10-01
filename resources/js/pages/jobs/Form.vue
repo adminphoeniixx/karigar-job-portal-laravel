@@ -9,7 +9,6 @@ import SkillTagInput from '@/components/SkillTagInput.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { citiesFor, indianStates } from '@/data/indianLocations';
-import { commonSkills } from '@/data/skills';
 
 interface Job {
     id: number;
@@ -26,18 +25,32 @@ interface Job {
     latitude: string | null;
     longitude: string | null;
     vacancies: number;
+    experience_min: number | null;
+    experience_max: number | null;
     status: string;
     published_at?: string | null;
     expires_at: string | null;
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
+    contact_name: string | null;
+    contact_designation: string | null;
     shift: 'day' | 'night' | 'rotational' | null;
+    shift_start: string | null;
+    shift_end: string | null;
     perks: string[] | null;
     requires_worker_fee: boolean;
     worker_fee_amount: string | null;
 }
 
-const props = defineProps<{ job: Job | null; defaultPhone: string | null; freePostAvailable?: boolean }>();
+const props = defineProps<{
+    job: Job | null;
+    defaultPhone: string | null;
+    freePostAvailable?: boolean;
+    // Skills to suggest per category, and the perks to offer (the usual ones
+    // plus this employer's own from earlier jobs).
+    categorySkills: Record<string, string[]>;
+    perkOptions: string[];
+}>();
 
 const isEdit = props.job !== null;
 
@@ -55,27 +68,50 @@ const form = useForm({
     skills: props.job?.skills ?? [],
     wage_min: props.job?.wage_min ?? '',
     wage_max: props.job?.wage_max ?? '',
-    wage_type: props.job?.wage_type ?? '',
+    // Wages are monthly only (App\Support\Wage).
+    wage_type: 'monthly',
     address: props.job?.address ?? '',
     city: props.job?.city ?? '',
     state: props.job?.state ?? '',
     latitude: props.job?.latitude ?? '',
     longitude: props.job?.longitude ?? '',
     vacancies: props.job?.vacancies ?? 1,
+    experience_min: props.job?.experience_min ?? '',
+    experience_max: props.job?.experience_max ?? '',
     status: props.job?.status ?? 'active',
     expires_at: props.job?.expires_at?.slice(0, 10) ?? '',
     contact_mode: props.job?.contact_mode ?? 'apply',
     contact_phone: props.job?.contact_phone ?? props.defaultPhone ?? '',
+    contact_name: props.job?.contact_name ?? '',
+    contact_designation: props.job?.contact_designation ?? '',
     shift: props.job?.shift ?? '',
+    shift_start: props.job?.shift_start ?? '',
+    shift_end: props.job?.shift_end ?? '',
     perks: props.job?.perks ?? [],
     requires_worker_fee: props.job?.requires_worker_fee ?? false,
     worker_fee_amount: props.job?.worker_fee_amount ?? '',
 });
 
-const perkOptions = ['Food', 'Accommodation', 'Travel allowance', 'Bonus', 'Overtime pay', 'Weekly off'];
+// The chosen category's skills; the employer can still type any other.
+const skillSuggestions = computed(() => props.categorySkills[form.category] ?? []);
+
+// Perk chips: the offered ones, then any the employer typed on this job.
+const perkChips = computed(() => {
+    const seen = new Set(props.perkOptions.map((p) => p.toLowerCase()));
+    return [...props.perkOptions, ...form.perks.filter((p) => !seen.has(p.toLowerCase()))];
+});
 
 const togglePerk = (perk: string) => {
     form.perks = form.perks.includes(perk) ? form.perks.filter((x) => x !== perk) : [...form.perks, perk];
+};
+
+const newPerk = ref('');
+const addPerk = () => {
+    const perk = newPerk.value.trim();
+    if (perk && !form.perks.some((p) => p.toLowerCase() === perk.toLowerCase())) {
+        form.perks = [...form.perks, perk];
+    }
+    newPerk.value = '';
 };
 
 const contactModes = [
@@ -147,17 +183,20 @@ const suggestions = ref<string[]>([]);
 const suggesting = ref(false);
 const suggestError = ref(false);
 const suggestedFor = ref('');
+// Drafts in English or Hindi (Devanagari).
+const aiLanguage = ref<'en' | 'hi'>('en');
 
 const canSuggest = computed(() => form.title.trim().length >= 3);
 
 const fetchSuggestions = async () => {
     const title = form.title.trim();
-    if (!canSuggest.value || suggesting.value || suggestedFor.value === title) return;
+    const key = `${aiLanguage.value}:${title}`;
+    if (!canSuggest.value || suggesting.value || suggestedFor.value === key) return;
 
     suggesting.value = true;
     suggestError.value = false;
     try {
-        const params = new URLSearchParams({ title });
+        const params = new URLSearchParams({ title, language: aiLanguage.value });
         if (form.category) params.set('category', form.category);
         if (form.city) params.set('city', form.city);
         if (form.state) params.set('state', form.state);
@@ -170,7 +209,7 @@ const fetchSuggestions = async () => {
 
         const data = await res.json();
         suggestions.value = data.suggestions ?? [];
-        suggestedFor.value = title;
+        suggestedFor.value = key;
     } catch {
         // Drafting is a convenience — a failure must never block posting.
         suggestError.value = true;
@@ -182,6 +221,11 @@ const fetchSuggestions = async () => {
 // Only volunteer drafts into an empty box; never over an employer's own words.
 const onDescriptionFocus = () => {
     if (!form.description.trim()) fetchSuggestions();
+};
+
+const setAiLanguage = (language: 'en' | 'hi') => {
+    aiLanguage.value = language;
+    fetchSuggestions();
 };
 
 const useSuggestion = (text: string) => {
@@ -249,15 +293,30 @@ const submit = () => {
                     <div class="grid gap-2">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <Label for="description">{{ $t('jobs.description') }}</Label>
-                            <button
-                                type="button"
-                                :disabled="!canSuggest || suggesting"
-                                class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
-                                @click="fetchSuggestions"
-                            >
-                                <Sparkles class="size-3.5 text-orange-500" />
-                                {{ suggesting ? $t('jobForm.aiWriting') : $t('jobForm.aiSuggest') }}
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <div class="inline-flex rounded-lg border p-0.5 text-xs font-semibold">
+                                    <button
+                                        v-for="lang in (['en', 'hi'] as const)"
+                                        :key="lang"
+                                        type="button"
+                                        class="rounded-md px-2 py-0.5 transition"
+                                        :class="aiLanguage === lang ? 'bg-orange-500/10 text-orange-600 dark:text-orange-300' : 'text-muted-foreground hover:text-foreground'"
+                                        :disabled="!canSuggest || suggesting"
+                                        @click="setAiLanguage(lang)"
+                                    >
+                                        {{ lang === 'en' ? 'English' : 'हिंदी' }}
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    :disabled="!canSuggest || suggesting"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+                                    @click="fetchSuggestions"
+                                >
+                                    <Sparkles class="size-3.5 text-orange-500" />
+                                    {{ suggesting ? $t('jobForm.aiWriting') : $t('jobForm.aiSuggest') }}
+                                </button>
+                            </div>
                         </div>
                         <textarea
                             id="description"
@@ -298,8 +357,26 @@ const submit = () => {
                         </div>
                         <div class="grid gap-2">
                             <Label for="skills">{{ $t('jobForm.skills') }}</Label>
-                            <SkillTagInput id="skills" v-model="form.skills" :suggestions="commonSkills" placeholder="e.g. Welding — type or pick, it becomes a tag" />
+                            <SkillTagInput
+                                id="skills"
+                                v-model="form.skills"
+                                :suggestions="skillSuggestions"
+                                :placeholder="form.category ? $t('jobForm.skillsPlaceholder') : $t('jobForm.skillsPickCategory')"
+                            />
                             <InputError :message="form.errors.skills" />
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="experience_min">{{ $t('jobForm.experienceMin') }}</Label>
+                            <Input id="experience_min" v-model="form.experience_min" type="number" min="0" max="60" placeholder="0" />
+                            <InputError :message="form.errors.experience_min" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="experience_max">{{ $t('jobForm.experienceMax') }}</Label>
+                            <Input id="experience_max" v-model="form.experience_max" type="number" min="0" max="60" placeholder="5" />
+                            <InputError :message="form.errors.experience_max" />
                         </div>
                     </div>
                 </div>
@@ -323,10 +400,7 @@ const submit = () => {
                     </div>
                     <div class="grid gap-2">
                         <Label for="wage_type">{{ $t('jobForm.wageType') }}</Label>
-                        <select id="wage_type" v-model="form.wage_type" :class="selectClass">
-                            <option value="">—</option>
-                            <option value="hourly">{{ $t('jobForm.hourly') }}</option>
-                            <option value="daily">{{ $t('jobForm.daily') }}</option>
+                        <select id="wage_type" v-model="form.wage_type" :class="selectClass" disabled>
                             <option value="monthly">{{ $t('jobForm.monthly') }}</option>
                         </select>
                         <InputError :message="form.errors.wage_type" />
@@ -390,12 +464,23 @@ const submit = () => {
                             <option value="rotational">{{ $t('jobs.rotationalShift') }}</option>
                         </select>
                         <InputError :message="form.errors.shift" />
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="grid gap-1">
+                                <Label for="shift_start" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftFrom') }}</Label>
+                                <Input id="shift_start" v-model="form.shift_start" type="time" />
+                            </div>
+                            <div class="grid gap-1">
+                                <Label for="shift_end" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftTo') }}</Label>
+                                <Input id="shift_end" v-model="form.shift_end" type="time" />
+                            </div>
+                        </div>
+                        <InputError :message="form.errors.shift_start || form.errors.shift_end" />
                     </div>
                     <div class="grid gap-2">
                         <Label class="flex items-center gap-1.5"><Gift class="size-3.5 text-orange-500" /> {{ $t('jobs.perks') }}</Label>
                         <div class="flex flex-wrap gap-2">
                             <button
-                                v-for="perk in perkOptions"
+                                v-for="perk in perkChips"
                                 :key="perk"
                                 type="button"
                                 class="rounded-full border px-3 py-1.5 text-xs font-medium transition"
@@ -405,6 +490,12 @@ const submit = () => {
                                 @click="togglePerk(perk)"
                             >
                                 {{ form.perks.includes(perk) ? '✓ ' : '' }}{{ perk }}
+                            </button>
+                        </div>
+                        <div class="flex gap-2">
+                            <Input v-model="newPerk" :placeholder="$t('jobForm.addPerkPlaceholder')" maxlength="40" @keydown.enter.prevent="addPerk" />
+                            <button type="button" class="shrink-0 rounded-md border px-3 text-xs font-semibold text-muted-foreground transition hover:bg-muted" @click="addPerk">
+                                {{ $t('jobForm.addPerk') }}
                             </button>
                         </div>
                         <InputError :message="form.errors.perks" />
@@ -469,11 +560,23 @@ const submit = () => {
                 </div>
                 <InputError class="mt-2" :message="form.errors.contact_mode" />
 
-                <div v-if="form.contact_mode !== 'apply'" class="mt-4 grid max-w-sm gap-2">
-                    <Label for="contact_phone">{{ $t('jobForm.phoneWorkersCall') }}</Label>
-                    <Input id="contact_phone" v-model="form.contact_phone" type="tel" placeholder="+91 98765 43210" />
-                    <p class="text-xs text-muted-foreground">{{ $t('jobForm.phonePublicHint') }}</p>
-                    <InputError :message="form.errors.contact_phone" />
+                <div v-if="form.contact_mode !== 'apply'" class="mt-4 grid gap-4 sm:grid-cols-3">
+                    <div class="grid gap-2">
+                        <Label for="contact_name">{{ $t('jobForm.contactName') }}</Label>
+                        <Input id="contact_name" v-model="form.contact_name" maxlength="100" :placeholder="$t('jobForm.contactNamePlaceholder')" />
+                        <InputError :message="form.errors.contact_name" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="contact_phone">{{ $t('jobForm.phoneWorkersCall') }}</Label>
+                        <Input id="contact_phone" v-model="form.contact_phone" type="tel" placeholder="+91 98765 43210" />
+                        <InputError :message="form.errors.contact_phone" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="contact_designation">{{ $t('jobForm.contactDesignation') }}</Label>
+                        <Input id="contact_designation" v-model="form.contact_designation" maxlength="100" :placeholder="$t('jobForm.contactDesignationPlaceholder')" />
+                        <InputError :message="form.errors.contact_designation" />
+                    </div>
+                    <p class="text-xs text-muted-foreground sm:col-span-3">{{ $t('jobForm.phonePublicHint') }}</p>
                 </div>
             </section>
 

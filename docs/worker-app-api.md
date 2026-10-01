@@ -68,14 +68,17 @@ For registration dropdowns/chips and job filters. Cache on first launch.
 ```json
 {
   "states": ["Andhra Pradesh", ...],
-  "skills": ["Plumbing", "Electrician", ...],
+  "skills": ["Bunai / Knitting", "Weaving", "Kadhai / Embroidery", ...],   // the 14 craft categories
   "spoken_languages": ["Hindi", "English", "Tamil", ...],
   "education_levels": ["Below 10th", "10th Pass", "12th Pass", "ITI / Diploma", "Graduate", "Post Graduate"],
-  "wage_types": ["hourly", "daily", "monthly"],
+  "wage_types": ["monthly"],                 // wages are monthly only
   "app_languages": [{ "code": "en", "native": "English", "english": "English" }, ...],
-  "job_categories": ["Plumbing", "Electrical", ...]
+  "job_categories": ["Bunai / Knitting", "Weaving", ...]
 }
 ```
+`skills` and `job_categories` are the same list: every active craft category, in
+display order. The sign-up skills step shows all of them, so a karigar's skills
+match the categories jobs are posted under (the job feed matches on them).
 
 ### `GET /reference/cities?state=Tamil%20Nadu`
 `{ "cities": ["Chennai", "Coimbatore", ...] }`
@@ -108,8 +111,8 @@ Any subset of these fields (JSON):
   "education": "12th Pass",               // must be one of education_levels
   "spoken_languages": ["Hindi", "Tamil"],
   "bio": "6 years experience...",
-  "expected_wage": 900,
-  "wage_type": "daily",                   // hourly | daily | monthly
+  "expected_wage": 18000,                 // per month
+  "wage_type": "monthly",                 // monthly only; a daily/hourly figure is converted
   "city": "Chennai",
   "state": "Tamil Nadu",
   "latitude": 13.0827,
@@ -161,8 +164,8 @@ publicly reachable. Only an employer the worker has applied to can fetch it.
 {
   "id": 3, "name": "Rakesh Kumar", "email": "rakesh@example.com", "phone": "9876543210", "gender": "male",
   "skills": ["Plumbing"], "experience_years": 6, "education": "12th Pass",
-  "spoken_languages": ["Hindi","Tamil"], "bio": "...", "expected_wage": "900.00",
-  "wage_type": "daily", "city": "Chennai", "state": "Tamil Nadu",
+  "spoken_languages": ["Hindi","Tamil"], "bio": "...", "expected_wage": "18000.00",
+  "wage_type": "monthly", "city": "Chennai", "state": "Tamil Nadu",
   "latitude": 13.0827, "longitude": 80.2707, "travel_radius_km": 15,
   "available": true, "payout_upi": "rakesh@okhdfcbank",
   "avatar_url": null, "completion": 70
@@ -174,20 +177,44 @@ publicly reachable. Only an employer the worker has applied to can fetch it.
 ## 4. Jobs 🔒 (worker)
 
 ### `GET /jobs`
-Filters (all optional): `q, state, city, category, skill, lat, lng, radius`.
-Typesense-backed, paginated (15/page).
+Paginated (15/page). Two modes:
+
+**The karigar's feed** (no `q`, `state`, `city`, `category` or `skill`): jobs in
+the karigar's own categories — a job whose category, or one of whose skills, is
+one of the profile's `skills` — **nearest first**. Send the phone's current
+position as `lat` + `lng` every time the list opens. Without it the saved
+profile position is used, then the profile's city (same city, then same state).
+Jobs with no map pin come after the pinned ones. Optional: `radius` (km) keeps
+to that distance; `all=1` drops the category filter. A karigar with no skills
+sees every job. Paused jobs (employer's plan ran out) never appear.
 ```json
-{ "data": [ { ...JobResource } ], "links": {...}, "meta": {...} }
+{ "data": [ { ...JobResource, "distance_km": 3.4 } ],
+  "feed": { "type": "for_you", "categories": ["Weaving"], "location": "current" },
+  "links": {...}, "meta": {...} }
 ```
+`feed.location`: `current` (from `lat`/`lng`) | `profile` | `city` | `none`.
+`feed.categories` empty: not filtered by category.
+
+**Search** (any of `q`, `state`, `city`, `category`, `skill`): the full
+Typesense search across every job, as before; `lat`/`lng`/`radius` filter by
+distance there. No `feed` block, and `distance_km` is `null`.
+
 **JobResource:** `id, title, category, skills, city, state, location_label,
-wage_min, wage_max, wage_type, wage_label ("₹800–1000 / daily"), vacancies,
-created_at, created_ago, expires_at, employer{id,name}`.
+wage_min, wage_max, wage_type, wage_label ("₹20,800 – ₹26,000 / monthly"),
+vacancies, experience_label, created_at, created_ago, expires_at, distance_km,
+employer{id, name, verified}`. Wages are **monthly**. `employer.verified` is
+true for a business the admin verified (false while verification is switched
+off): show a ✔ Verified tag next to the name.
 
 ### `GET /jobs/{job}`
 Full detail + the worker's context.
 ```json
 {
   "data": { ...JobDetailResource, "contact_phone": "98..." /* only if callable */ },
+  // data.employer: { "id", "name", "verified" }
+  // data also: "experience_min", "experience_max", "experience_label" ("2–5 yrs"),
+  // "shift_start", "shift_end", "shift_hours_label" ("9:00 AM – 6:00 PM"), and on
+  // a call job "contact_name" / "contact_designation" (who picks up) with "contact_phone"
   "meta": {
     "employer_rating": { "average": 4.7, "count": 12 },
     "application": { "status": "pending", "status_label": "Pending", "created_ago": "2 hours ago" },
@@ -242,7 +269,7 @@ application is always pending).
 
 ### `POST /jobs/{job}/apply`
 ```json
-{ "cover_note": "Available from tomorrow", "expected_wage": 900 }
+{ "cover_note": "Available from tomorrow", "expected_wage": 18000 }   // per month
 // 201
 { "message": "Application submitted.", "application": { ...ApplicationResource } }
 ```
@@ -326,8 +353,9 @@ Removes the token so the device stops receiving pushes. → `{ "removed": true }
 
 ## 10. Dashboard & Locale 🔒 (worker)
 
-### `GET /worker/dashboard`
-Everything the home screen needs:
+### `GET /worker/dashboard?lat=&lng=`
+Everything the home screen needs. `latest_jobs` is the top 5 of the karigar's
+feed (see `GET /jobs`): send the phone's `lat`/`lng` for nearest first.
 ```json
 {
   "greeting": "Rakesh Kumar",

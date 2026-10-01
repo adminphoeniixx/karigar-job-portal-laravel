@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Services\Geocoder;
 use App\Support\ReferenceData;
+use App\Support\Wage;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class JobListingRequest extends FormRequest
 {
@@ -39,6 +42,39 @@ class JobListingRequest extends FormRequest
         if (! $this->boolean('requires_worker_fee')) {
             $this->merge(['worker_fee_amount' => null]);
         }
+
+        if (is_array($this->input('perks'))) {
+            $this->merge(['perks' => collect($this->input('perks'))
+                ->map(fn ($perk) => is_string($perk) ? trim($perk) : $perk)
+                ->filter(fn ($perk) => $perk !== '' && $perk !== null)
+                ->unique(fn ($perk) => is_string($perk) ? mb_strtolower($perk) : $perk)
+                ->values()
+                ->all()]);
+        }
+
+        // Wages are monthly. One sent per day or per hour, as older app builds
+        // do, is stored as its monthly amount.
+        $period = $this->input('wage_type');
+
+        foreach (['wage_min', 'wage_max'] as $field) {
+            if ($this->has($field)) {
+                $this->merge([$field => Wage::monthly($this->input($field), $period)]);
+            }
+        }
+
+        if ($this->filled('wage_min') || $this->filled('wage_max') || $this->has('wage_type')) {
+            $this->merge(['wage_type' => Wage::MONTHLY]);
+        }
+
+        // No map pin from the client (the employer app sends an address but no
+        // coordinates): place it from the address, or from the city and state.
+        if (! $this->filled('latitude') && ! $this->filled('longitude') && ($this->filled('address') || $this->filled('city'))) {
+            $pin = app(Geocoder::class)->locate($this->input('address'), $this->input('city'), $this->input('state'));
+
+            if ($pin !== null) {
+                $this->merge(['latitude' => $pin[0], 'longitude' => $pin[1]]);
+            }
+        }
     }
 
     /**
@@ -56,7 +92,7 @@ class JobListingRequest extends FormRequest
             'skills.*' => ['string', 'max:50'],
             'wage_min' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
             'wage_max' => ['nullable', 'numeric', 'min:0', 'max:10000000', 'gte:wage_min'],
-            'wage_type' => ['nullable', 'string', 'in:hourly,daily,monthly'],
+            'wage_type' => ['nullable', 'string', Rule::in(ReferenceData::WAGE_TYPES)],
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
@@ -64,13 +100,21 @@ class JobListingRequest extends FormRequest
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'vacancies' => ['required', 'integer', 'min:1', 'max:10000'],
             'experience_min' => ['nullable', 'integer', 'min:0', 'max:60'],
+            'experience_max' => ['nullable', 'integer', 'min:0', 'max:60', 'gte:experience_min'],
             'shift' => ['nullable', 'string', 'in:'.implode(',', ReferenceData::SHIFTS)],
-            'perks' => ['nullable', 'array', 'max:10'],
-            'perks.*' => ['string', 'in:'.implode(',', ReferenceData::PERKS)],
+            // The shift's hours, "HH:MM" 24-hour; a night shift may end before it starts.
+            'shift_start' => ['nullable', 'date_format:H:i', 'required_with:shift_end'],
+            'shift_end' => ['nullable', 'date_format:H:i', 'required_with:shift_start'],
+            // Any perk: ReferenceData::PERKS are only suggestions.
+            'perks' => ['nullable', 'array', 'max:15'],
+            'perks.*' => ['string', 'max:40'],
             'requires_worker_fee' => ['required', 'boolean'],
             'worker_fee_amount' => ['nullable', 'numeric', 'min:1', 'max:1000000', 'required_if:requires_worker_fee,true'],
             'contact_mode' => ['required', 'string', 'in:apply,call,both'],
             'contact_phone' => ['nullable', 'string', 'max:20', 'required_if:contact_mode,call', 'required_if:contact_mode,both'],
+            // Who picks up when a karigar calls.
+            'contact_name' => ['nullable', 'string', 'max:100'],
+            'contact_designation' => ['nullable', 'string', 'max:100'],
             'status' => ['required', 'string', 'in:draft,active,closed'],
             'expires_at' => ['nullable', 'date', 'after:today'],
         ];

@@ -63,7 +63,8 @@ const form = useForm<{
     experience_years: props.profile.experience_years ?? '',
     bio: props.profile.bio ?? '',
     expected_wage: props.profile.expected_wage ?? '',
-    wage_type: props.profile.wage_type ?? '',
+    // Wages are monthly only (App\Support\Wage).
+    wage_type: 'monthly',
     city: props.profile.city ?? '',
     state: props.profile.state ?? '',
     latitude: props.profile.latitude ?? '',
@@ -168,7 +169,7 @@ const submit = () => {
                         </div>
                         <div class="grid gap-2">
                             <Label for="skills">{{ $t('profile.skills') }}</Label>
-                            <SkillTagInput id="skills" v-model="form.skills" :suggestions="commonSkills" placeholder="e.g. Plumbing — type or pick, it becomes a tag" />
+                            <SkillTagInput id="skills" v-model="form.skills" :suggestions="commonSkills" placeholder="e.g. Weaving — type or pick, it becomes a tag" />
                             <InputError :message="form.errors.skills" />
                         </div>
                         <InputError :message="form.errors.avatar" />
@@ -194,10 +195,7 @@ const submit = () => {
                     </div>
                     <div class="grid gap-2">
                         <Label for="wage_type">Wage type</Label>
-                        <select id="wage_type" v-model="form.wage_type" :class="selectClass">
-                            <option value="">—</option>
-                            <option value="hourly">Hourly</option>
-                            <option value="daily">Daily</option>
+                        <select id="wage_type" v-model="form.wage_type" :class="selectClass" disabled>
                             <option value="monthly">Monthly</option>
                         </select>
                         <InputError :message="form.errors.wage_type" />

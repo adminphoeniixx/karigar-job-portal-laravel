@@ -16,6 +16,8 @@ use App\Notifications\NewJobNotification;
 use App\Services\CreditWallet;
 use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
+use App\Services\JobRepost;
+use App\Support\JobFormOptions;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -326,6 +328,8 @@ class JobController extends Controller
             'skills.*' => ['string', 'max:60'],
             'city' => ['nullable', 'string', 'max:80'],
             'state' => ['nullable', 'string', 'max:80'],
+            // en | hi (Devanagari)
+            'language' => ['nullable', 'string', 'in:'.implode(',', JobDescriptionWriter::LANGUAGES)],
         ]);
 
         return response()->json([
@@ -335,6 +339,7 @@ class JobController extends Controller
                 array_values($data['skills'] ?? []),
                 $data['city'] ?? null,
                 $data['state'] ?? null,
+                $data['language'] ?? 'en',
             ),
         ]);
     }
@@ -376,5 +381,34 @@ class JobController extends Controller
         if ($workers->isNotEmpty()) {
             Notification::send($workers, new NewJobNotification($job));
         }
+    }
+
+    /**
+     * Repost a closed or expired job: a new copy, live today (JobRepost).
+     * The copy is a new job post against the plan's limit.
+     */
+    public function repost(JobListing $job): JsonResponse
+    {
+        $this->authorize('update', $job);
+
+        $result = JobRepost::repost($job);
+
+        if (is_string($result)) {
+            return response()->json(['message' => $result, 'code' => 'cannot_repost'], 422);
+        }
+
+        return response()->json([
+            'message' => __('Job reposted.'),
+            'job' => new EmployerJobResource($result->loadCount('applications')),
+        ], 201);
+    }
+
+    /**
+     * What the job form offers: each category's skills, the perks to pick
+     * from (the usual ones plus this employer's own), and the shifts.
+     */
+    public function formOptions(Request $request): JsonResponse
+    {
+        return response()->json(JobFormOptions::for($request->user()));
     }
 }

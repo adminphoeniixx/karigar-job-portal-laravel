@@ -85,10 +85,11 @@ it('saves shift and perks on a job post', function () {
         ->and($job->perks)->toBe(['Food', 'Weekly off']);
 });
 
-it('rejects unknown perks and shifts', function () {
+it('rejects an unknown shift but takes any perk the employer writes', function () {
     $this->actingAs($this->employer)
         ->post('/employer/jobs', $this->payload + ['contact_mode' => 'apply', 'shift' => 'evening', 'perks' => ['Free car']])
-        ->assertSessionHasErrors(['shift', 'perks.0']);
+        ->assertSessionHasErrors('shift')
+        ->assertSessionDoesntHaveErrors('perks.0');
 });
 
 it('saves a worker joining fee when required', function () {

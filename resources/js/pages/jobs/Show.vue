@@ -26,6 +26,12 @@ interface Job {
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
     shift: 'day' | 'night' | 'rotational' | null;
+    shift_start?: string | null;
+    shift_end?: string | null;
+    experience_min?: number | null;
+    experience_max?: number | null;
+    contact_name?: string | null;
+    contact_designation?: string | null;
     perks: string[] | null;
     requires_worker_fee: boolean;
     worker_fee_amount: string | null;
@@ -63,6 +69,27 @@ const canCall = props.job.contact_mode !== 'apply' && !!props.job.contact_phone;
 const applyAllowed = props.job.contact_mode !== 'call';
 
 const shiftLabel: Record<string, string> = { day: 'Day shift', night: 'Night shift', rotational: 'Rotational shift' };
+
+// "09:00" → "9:00 AM"
+const hour12 = (time: string): string => {
+    const [h, m] = time.split(':').map(Number);
+    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
+const shiftHours = props.job.shift_start && props.job.shift_end ? `${hour12(props.job.shift_start)} – ${hour12(props.job.shift_end)}` : null;
+
+// The experience asked for: "2–5", "2+", "0–3"; null when the job does not say.
+const experienceRange = (() => {
+    const { experience_min: min, experience_max: max } = props.job;
+    if (min != null && max != null) return min === max ? `${min}` : `${min}–${max}`;
+    if (min != null) return min === 0 ? null : `${min}+`;
+    if (max != null) return `0–${max}`;
+    return null;
+})();
+const freshersWelcome = props.job.experience_min === 0 && props.job.experience_max == null;
+
+// Who picks up when a karigar calls.
+const contactPerson = [props.job.contact_name, props.job.contact_designation].filter(Boolean).join(', ');
+
 
 const showForm = ref(false);
 const form = useForm({ cover_note: '', expected_wage: '' });
@@ -138,7 +165,13 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     <div class="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold">
                         <Sun class="size-4 text-primary" /> {{ job.shift ? shiftLabel[job.shift] : '—' }}
                     </div>
+                    <div v-if="shiftHours" class="mt-1 text-xs text-muted-foreground">{{ shiftHours }}</div>
                 </div>
+            </div>
+
+            <div v-if="experienceRange || freshersWelcome" class="border-b border-foreground/10 py-6 text-sm">
+                <span class="label-rule text-muted-foreground">{{ $t('jobs.experience') }}</span>
+                <span class="ml-3 font-semibold">{{ freshersWelcome ? $t('jobs.freshersWelcome') : `${experienceRange} ${$t('jobs.yrs')}` }}</span>
             </div>
 
             <div v-if="job.skills?.length" class="flex flex-wrap gap-2 border-b border-foreground/10 py-6">
@@ -173,6 +206,7 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                         <a :href="`tel:${job.contact_phone}`" class="mt-4 inline-flex items-center gap-2 rounded-sm bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-primary">
                             <Phone class="size-4" /> {{ job.contact_phone }}
                         </a>
+                        <p v-if="contactPerson" class="mt-2 text-sm text-muted-foreground">{{ $t('jobs.askFor') }}: <span class="font-semibold text-foreground">{{ contactPerson }}</span></p>
                     </div>
 
                     <!-- GUEST -->

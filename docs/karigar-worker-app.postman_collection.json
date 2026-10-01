@@ -573,7 +573,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/jobs?q=&city=&state=&category=&skill=",
+              "raw": "{{base_url}}/api/v1/jobs?q=&city=&state=&category=&skill=&lat=&lng=&radius=&all=0",
               "host": [
                 "{{base_url}}"
               ],
@@ -617,9 +617,14 @@
                   "key": "radius",
                   "value": "",
                   "disabled": true
+                },
+                {
+                  "key": "all",
+                  "value": "0"
                 }
               ]
-            }
+            },
+            "description": "The karigar's feed: their categories, nearest first from lat/lng (the phone's position). Any of q/state/city/category/skill switches to the full search; all=1 drops the category filter."
           }
         },
         {
@@ -1089,7 +1094,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/worker/dashboard",
+              "raw": "{{base_url}}/api/v1/worker/dashboard?lat=26.9124&lng=75.7873",
               "host": [
                 "{{base_url}}"
               ],
@@ -1098,8 +1103,19 @@
                 "v1",
                 "worker",
                 "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "26.9124"
+                },
+                {
+                  "key": "lng",
+                  "value": "75.7873"
+                }
               ]
-            }
+            },
+            "description": "latest_jobs is the top 5 of the karigar's feed; send the phone's lat/lng."
           }
         },
         {

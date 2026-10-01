@@ -40,11 +40,20 @@ class JobDetailResource extends JsonResource
             'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
             'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
             'vacancies' => $this->vacancies,
+            'experience_min' => $this->experience_min,
+            'experience_max' => $this->experience_max,
+            'experience_label' => $this->resource->experienceLabel(),
             'shift' => $this->shift,
+            'shift_start' => $this->shift_start,
+            'shift_end' => $this->shift_end,
+            'shift_hours_label' => $this->resource->shiftHoursLabel(),
             'perks' => $this->perks ?? [],
             'contact_mode' => $this->contact_mode,
-            // Only exposed when the employer allows calling.
+            // Only exposed when the employer allows calling: the number, and
+            // who picks up.
             'contact_phone' => $this->when($canCall, $this->contact_phone),
+            'contact_name' => $this->when($canCall, $this->contact_name),
+            'contact_designation' => $this->when($canCall, $this->contact_designation),
             'requires_worker_fee' => $this->requires_worker_fee,
             'worker_fee_amount' => $this->worker_fee_amount,
             'created_at' => $this->created_at?->toIso8601String(),
@@ -53,6 +62,8 @@ class JobDetailResource extends JsonResource
             'employer' => [
                 'id' => $this->employer->id,
                 'name' => $this->employer->name,
+                // Business verified by the admin; false while verification is switched off.
+                'verified' => $this->employer->isKycVerified(),
             ],
         ];
     }

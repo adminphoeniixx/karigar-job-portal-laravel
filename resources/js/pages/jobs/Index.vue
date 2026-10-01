@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { BriefcaseBusiness, CalendarDays, MapPin, Pencil, Phone, Plus, Search, Trash2, Users, UsersRound, X } from '@lucide/vue';
+import { BriefcaseBusiness, CalendarDays, MapPin, Pencil, Phone, Plus, RotateCcw, Search, Trash2, Users, UsersRound, X } from '@lucide/vue';
 import { reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PageHeader from '@/components/PageHeader.vue';
@@ -63,6 +63,12 @@ const fmtDate = (iso: string | null): string =>
     iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
 const isExpired = (job: Job): boolean => !!job.expires_at && new Date(job.expires_at).getTime() <= Date.now();
+
+// A closed or expired job can go live again as a fresh copy (a new job post).
+const canRepost = (job: Job): boolean => job.status === 'closed' || (job.status === 'active' && isExpired(job));
+const repost = (id: number) => {
+    router.post(`/employer/jobs/${id}/repost`, {}, { preserveScroll: true });
+};
 
 const destroy = (id: number) => {
     if (window.confirm(t('myJobs.deleteConfirm'))) {
@@ -194,6 +200,13 @@ const destroy = (id: number) => {
                                     >
                                         <UsersRound class="size-3.5" /> {{ $t('jobs.applicants') }}
                                     </Link>
+                                    <button
+                                        v-if="canRepost(job)"
+                                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-500/10 dark:text-emerald-300"
+                                        @click="repost(job.id)"
+                                    >
+                                        <RotateCcw class="size-3.5" /> {{ $t('myJobs.repost') }}
+                                    </button>
                                     <Link
                                         :href="`/employer/jobs/${job.id}/edit`"
                                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"

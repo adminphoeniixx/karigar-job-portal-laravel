@@ -582,7 +582,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Plumber for Apartment Project\",\n  \"description\": \"12-floor residential project. Bathroom & kitchen line fitting, drainage and testing.\",\n  \"category\": \"Plumbing\",\n  \"skills\": [\"Plumbing\", \"Pipe Fitting\"],\n  \"wage_min\": 800,\n  \"wage_max\": 1000,\n  \"wage_type\": \"daily\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"vacancies\": 3,\n  \"shift\": \"day\",\n  \"perks\": [\"Food\", \"Accommodation\"],\n  \"contact_mode\": \"both\",\n  \"contact_phone\": \"{{phone}}\",\n  \"requires_worker_fee\": false,\n  \"status\": \"active\"\n}"
+              "raw": "{\n  \"title\": \"Plumber for Apartment Project\",\n  \"description\": \"12-floor residential project. Bathroom & kitchen line fitting, drainage and testing.\",\n  \"category\": \"Weaving\",\n  \"skills\": [\n    \"Handloom weaving\",\n    \"Dyeing\"\n  ],\n  \"wage_min\": 20000,\n  \"wage_max\": 26000,\n  \"wage_type\": \"monthly\",\n  \"city\": \"Jaipur\",\n  \"state\": \"Rajasthan\",\n  \"vacancies\": 3,\n  \"shift\": \"day\",\n  \"perks\": [\n    \"ESI\",\n    \"PF\",\n    \"Diwali bonus\"\n  ],\n  \"contact_mode\": \"both\",\n  \"contact_phone\": \"9876543210\",\n  \"requires_worker_fee\": false,\n  \"status\": \"active\",\n  \"address\": \"Plot 12, Sanganer\",\n  \"experience_min\": 1,\n  \"experience_max\": 5,\n  \"shift_start\": \"09:00\",\n  \"shift_end\": \"18:00\",\n  \"contact_name\": \"Ramesh Kumar\",\n  \"contact_designation\": \"Supervisor\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/employer/jobs",
@@ -641,6 +641,59 @@
               ]
             },
             "description": "AI drafts for the Post Job description box. `title` is required (3-150 chars); `category`, `city`, `state` and `skills[]` are optional and only sharpen the draft. Returns `{ \"suggestions\": [...] }` - normally two, but exactly one template-built draft when no AI key is configured, so render whatever length comes back. Throttled to 20/min; the same wording is cached for a day."
+          }
+        },
+        {
+          "name": "Job form options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/form-options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "form-options"
+              ]
+            },
+            "description": "Skills per category (suggest once a category is picked), perks (the usual ones + this employer's own), shifts."
+          }
+        },
+        {
+          "name": "Repost job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/repost",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}",
+                "repost"
+              ]
+            },
+            "description": "A closed or expired job copied into a new live job (counts as a job post). 422 code cannot_repost when still live, a draft, or no posts left."
           }
         },
         {

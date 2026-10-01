@@ -18,11 +18,14 @@ class Category extends Model
     /** Forgotten by Admin\CategoryController whenever a category changes. */
     public const CACHE_KEY = 'categories.active';
 
-    protected $fillable = ['name', 'slug', 'is_active', 'sort_order'];
+    /** Cache key of {@see cachedSkillsMap()}; forgotten with CACHE_KEY. */
+    public const SKILLS_CACHE_KEY = 'categories.skills';
+
+    protected $fillable = ['name', 'slug', 'skills', 'is_active', 'sort_order'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['is_active' => 'boolean', 'skills' => 'array'];
     }
 
     protected static function booted(): void
@@ -62,5 +65,24 @@ class Category extends Model
     public static function cachedActiveNames(): array
     {
         return Cache::rememberForever(self::CACHE_KEY, fn () => static::activeNames());
+    }
+
+    /**
+     * The skills jobs in each active category are posted with, keyed by
+     * category name, for the job form's suggestions. Cached as a plain array
+     * (cached models do not survive: see the app's cache config); the admin
+     * controller forgets it with the name list.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function cachedSkillsMap(): array
+    {
+        return Cache::rememberForever(self::SKILLS_CACHE_KEY, fn () => static::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['name', 'skills'])
+            ->mapWithKeys(fn (Category $category) => [$category->name => array_values($category->skills ?? [])])
+            ->all());
     }
 }

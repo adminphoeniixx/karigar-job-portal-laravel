@@ -29,6 +29,12 @@ interface Job {
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
     shift: 'day' | 'night' | 'rotational' | null;
+    shift_start?: string | null;
+    shift_end?: string | null;
+    experience_min?: number | null;
+    experience_max?: number | null;
+    contact_name?: string | null;
+    contact_designation?: string | null;
     perks: string[] | null;
     requires_worker_fee: boolean;
     worker_fee_amount: string | null;
@@ -83,6 +89,27 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
 
 const shiftLabel: Record<string, string> = { day: 'jobs.dayShift', night: 'jobs.nightShift', rotational: 'jobs.rotationalShift' };
 
+// "09:00" → "9:00 AM"
+const hour12 = (time: string): string => {
+    const [h, m] = time.split(':').map(Number);
+    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
+const shiftHours = props.job.shift_start && props.job.shift_end ? `${hour12(props.job.shift_start)} – ${hour12(props.job.shift_end)}` : null;
+
+// The experience asked for: "2–5", "2+", "0–3"; null when the job does not say.
+const experienceRange = (() => {
+    const { experience_min: min, experience_max: max } = props.job;
+    if (min != null && max != null) return min === max ? `${min}` : `${min}–${max}`;
+    if (min != null) return min === 0 ? null : `${min}+`;
+    if (max != null) return `0–${max}`;
+    return null;
+})();
+const freshersWelcome = props.job.experience_min === 0 && props.job.experience_max == null;
+
+// Who picks up when a karigar calls.
+const contactPerson = [props.job.contact_name, props.job.contact_designation].filter(Boolean).join(', ');
+
+
 const fmtDate = (iso: string | null): string =>
     iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 </script>
@@ -115,7 +142,8 @@ const fmtDate = (iso: string | null): string =>
                         <span v-if="job.category" class="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-300">{{ job.category }}</span>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><MapPin class="size-4" /> {{ [job.city, job.state].filter(Boolean).join(', ') || 'Location N/A' }}</span>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><Clock class="size-4" /> {{ $t('jobs.posted') }} {{ fmtDate(job.created_at) }}</span>
-                        <span v-if="job.shift" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Sun class="size-3.5" /> {{ $t(shiftLabel[job.shift]) }}</span>
+                        <span v-if="job.shift" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Sun class="size-3.5" /> {{ $t(shiftLabel[job.shift]) }}<template v-if="shiftHours"> · {{ shiftHours }}</template></span>
+                        <span v-if="experienceRange || freshersWelcome" class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-600 dark:text-sky-300">{{ $t('jobs.experience') }}: {{ freshersWelcome ? $t('jobs.freshersWelcome') : `${experienceRange} ${$t('jobs.yrs')}` }}</span>
                         <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Wallet class="size-3.5" /> {{ $t('jobs.joiningFee') }}: ₹{{ job.worker_fee_amount }}</span>
                         <span v-else class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300"><BadgeCheck class="size-3.5" /> {{ $t('jobs.noFee') }}</span>
                         <span v-if="job.expires_at" class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 dark:text-rose-300">{{ $t('jobs.applyBy') }} {{ fmtDate(job.expires_at) }}</span>
@@ -192,6 +220,7 @@ const fmtDate = (iso: string | null): string =>
                         >
                             <Phone class="size-4" /> {{ $t('jobs.callNow') }} · {{ job.contact_phone }}
                         </a>
+                        <p v-if="canCall && contactPerson" class="mt-2 text-center text-xs text-muted-foreground">{{ $t('jobs.askFor') }}: <span class="font-semibold text-foreground">{{ contactPerson }}</span></p>
 
                         <button
                             v-if="canApply && !showForm"

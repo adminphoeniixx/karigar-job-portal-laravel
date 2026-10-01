@@ -54,22 +54,6 @@ class ReferenceData
     ];
 
     /**
-     * Common skill suggestions (mirrors resources/js/data/skills.ts).
-     *
-     * @var list<string>
-     */
-    public const SKILLS = [
-        'Plumbing', 'Pipe Fitting', 'Electrical Wiring', 'Electrician', 'Carpentry',
-        'Woodwork', 'Painting', 'Wall Putty', 'Welding', 'Fabrication', 'Masonry',
-        'Tiling', 'Plastering', 'POP / False Ceiling', 'AC Repair', 'Refrigerator Repair',
-        'Washing Machine Repair', 'Appliance Repair', 'Driving', 'Heavy Vehicle Driving',
-        'Gardening', 'Landscaping', 'Cooking', 'Housekeeping', 'Cleaning', 'Tailoring',
-        'Stitching', 'Beautician', 'Hair Styling', 'Security', 'Loading / Unloading',
-        'Helper', 'Mechanic', 'Two-Wheeler Repair', 'Mobile Repair', 'CCTV Installation',
-        'Solar Panel Installation', 'Borewell', 'Roofing', 'Waterproofing',
-    ];
-
-    /**
      * Languages a worker may speak — used for job matching (not the app UI locale).
      *
      * @var list<string>
@@ -89,11 +73,12 @@ class ReferenceData
     ];
 
     /**
-     * Wage period options (must match WorkerProfileUpdateRequest wage_type rule).
+     * Wage periods on offer. Only monthly now: a daily or hourly figure from
+     * an older app build is converted on the way in (App\Support\Wage).
      *
      * @var list<string>
      */
-    public const WAGE_TYPES = ['hourly', 'daily', 'monthly'];
+    public const WAGE_TYPES = [Wage::MONTHLY];
 
     /**
      * Work-shift options for a job post (must match JobListingRequest shift rule).
@@ -103,11 +88,15 @@ class ReferenceData
     public const SHIFTS = ['day', 'night', 'rotational', 'flexible'];
 
     /**
-     * Perks a job can offer (must match JobListingRequest perks.* rule).
+     * Perks suggested on the job form. Only suggestions: an employer can add
+     * any perk of its own, and its past ones are offered back to it.
      *
      * @var list<string>
      */
-    public const PERKS = ['Food', 'Accommodation', 'Travel allowance', 'Bonus', 'Overtime pay', 'Weekly off'];
+    public const PERKS = [
+        'ESI', 'PF', 'Food', 'Accommodation', 'Travel allowance', 'Bonus', 'Overtime pay',
+        'Weekly off', 'Paid leave', 'Medical insurance', 'Uniform', 'Tools provided',
+    ];
 
     /**
      * How a worker may reach the employer (must match JobListingRequest contact_mode rule).

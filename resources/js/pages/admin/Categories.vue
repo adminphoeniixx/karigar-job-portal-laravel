@@ -1,16 +1,27 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, Plus, Tags, Trash2, X } from '@lucide/vue';
+import { Check, ChevronDown, Plus, Tags, Trash2, X } from '@lucide/vue';
+import { reactive, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
+import SkillTagInput from '@/components/SkillTagInput.vue';
 
 interface Category {
     id: number;
     name: string;
     slug: string;
     is_active: boolean;
+    skills: string[] | null;
 }
 
-defineProps<{ categories: Category[] }>();
+const props = defineProps<{ categories: Category[] }>();
+
+// Skills suggested on the job form once this category is picked.
+const open = ref<number | null>(null);
+const skills = reactive<Record<number, string[]>>(Object.fromEntries(props.categories.map((c) => [c.id, [...(c.skills ?? [])]])));
+
+const saveSkills = (c: Category) => {
+    router.patch(`/admin/categories/${c.id}`, { skills: skills[c.id] }, { preserveScroll: true });
+};
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Categories', href: '/admin/categories' }] } });
 
@@ -61,7 +72,8 @@ const remove = (c: Category) => {
 
         <!-- List -->
         <div class="overflow-hidden rounded-2xl border bg-card shadow-sm">
-            <div v-for="c in categories" :key="c.id" class="flex items-center justify-between gap-3 border-b px-5 py-3.5 last:border-0">
+            <div v-for="c in categories" :key="c.id" class="border-b last:border-0">
+            <div class="flex items-center justify-between gap-3 px-5 py-3.5">
                 <div class="flex items-center gap-3">
                     <span class="font-medium">{{ c.name }}</span>
                     <span
@@ -72,6 +84,12 @@ const remove = (c: Category) => {
                     </span>
                 </div>
                 <div class="flex items-center gap-1">
+                    <button
+                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        @click="open = open === c.id ? null : c.id"
+                    >
+                        Skills ({{ skills[c.id]?.length ?? 0 }}) <ChevronDown class="size-3.5 transition" :class="open === c.id ? 'rotate-180' : ''" />
+                    </button>
                     <button
                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                         @click="toggle(c)"
@@ -85,6 +103,17 @@ const remove = (c: Category) => {
                         <Trash2 class="size-3.5" /> Delete
                     </button>
                 </div>
+            </div>
+            <!-- Skills employers are offered when they post a job in this category -->
+            <div v-if="open === c.id" class="flex flex-col gap-3 bg-muted/30 px-5 pb-4 pt-1">
+                <p class="text-xs text-muted-foreground">Suggested on the job form once an employer picks {{ c.name }}. They can still type their own.</p>
+                <SkillTagInput v-model="skills[c.id]" placeholder="Add a skill and press Enter…" />
+                <div class="flex justify-end">
+                    <button class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90" @click="saveSkills(c)">
+                        <Check class="size-3.5" /> Save skills
+                    </button>
+                </div>
+            </div>
             </div>
             <div v-if="categories.length === 0" class="px-5 py-12 text-center text-sm text-muted-foreground">
                 No categories yet — add your first one above.

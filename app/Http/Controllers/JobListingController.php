@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Notifications\NewJobNotification;
 use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
+use App\Services\JobRepost;
+use App\Support\JobFormOptions;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -56,11 +58,15 @@ class JobListingController extends Controller
 
         $account = $request->user()->employerAccount();
 
+        $options = JobFormOptions::for($request->user());
+
         return Inertia::render('jobs/Form', [
             'job' => null,
             'defaultPhone' => $request->user()->employerProfile?->phone,
             // Show a "your first post is free" hint when this applies.
             'freePostAvailable' => JobPostingGate::evaluate($account)['consumesFreePost'],
+            'categorySkills' => $options['category_skills'],
+            'perkOptions' => $options['perks'],
         ]);
     }
 
@@ -82,6 +88,8 @@ class JobListingController extends Controller
             'skills.*' => ['string', 'max:60'],
             'city' => ['nullable', 'string', 'max:80'],
             'state' => ['nullable', 'string', 'max:80'],
+            // en | hi (Devanagari)
+            'language' => ['nullable', 'string', 'in:'.implode(',', JobDescriptionWriter::LANGUAGES)],
         ]);
 
         if ($validator->fails()) {
@@ -97,6 +105,7 @@ class JobListingController extends Controller
                 array_values($data['skills'] ?? []),
                 $data['city'] ?? null,
                 $data['state'] ?? null,
+                $data['language'] ?? 'en',
             ),
         ]);
     }
@@ -185,9 +194,13 @@ class JobListingController extends Controller
     {
         $this->authorize('update', $job);
 
+        $options = JobFormOptions::for($request->user());
+
         return Inertia::render('jobs/Form', [
             'job' => $job,
             'defaultPhone' => $request->user()->employerProfile?->phone,
+            'categorySkills' => $options['category_skills'],
+            'perkOptions' => $options['perks'],
         ]);
     }
 
@@ -235,5 +248,24 @@ class JobListingController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Job deleted.')]);
 
         return to_route('jobs.index');
+    }
+
+    /**
+     * Repost a closed or expired job: a new copy, live today (JobRepost).
+     */
+    public function repost(JobListing $job): RedirectResponse
+    {
+        $this->authorize('update', $job);
+
+        $result = JobRepost::repost($job);
+
+        if (is_string($result)) {
+            return back()->with('toast', ['type' => 'error', 'message' => $result]);
+        }
+
+        return to_route('jobs.index')->with('toast', [
+            'type' => 'success',
+            'message' => __('Job reposted. It is live again.'),
+        ]);
     }
 }

@@ -81,7 +81,7 @@ One call the app can cache on first launch:
 {
   "states": [...], "skills": [...], "spoken_languages": [...],
   "education_levels": [...], "job_categories": [...],
-  "wage_types": ["hourly", "daily", "monthly"],
+  "wage_types": ["monthly"],                 // wages are monthly only
   "shifts": ["day", "night", "rotational", "flexible"],
   "perks": ["Food", "Accommodation", "Travel allowance", "Bonus", "Overtime pay", "Weekly off"],
   "contact_modes": ["apply", "call", "both"],
@@ -182,12 +182,16 @@ not parse multipart bodies on PUT/PATCH. Images go to BunnyCDN.
 ```json
 {
   "id": 12, "title": "...", "description": "...", "category": "Plumbing",
-  "skills": [...], "wage_min": 800, "wage_max": 1000, "wage_type": "daily",
-  "wage_label": "₹800–1000 / daily",
-  "city": "Chennai", "state": "Tamil Nadu", "location_label": "Chennai, Tamil Nadu",
-  "latitude": 13.08, "longitude": 80.27,
-  "vacancies": 3, "experience_min": 1, "shift": "day", "perks": [...],
+  "skills": [...], "wage_min": 20000, "wage_max": 26000, "wage_type": "monthly",
+  "wage_label": "₹20,000 – ₹26,000 / monthly",
+  "address": "Plot 12, Sanganer", "city": "Jaipur", "state": "Rajasthan",
+  "location_label": "Jaipur, Rajasthan", "latitude": 26.8, "longitude": 75.8,
+  "vacancies": 3, "experience_min": 1, "experience_max": 5, "experience_label": "1–5 yrs",
+  "shift": "day", "shift_start": "09:00", "shift_end": "18:00", "shift_hours_label": "9:00 AM – 6:00 PM",
+  "perks": [...],
   "contact_mode": "both", "contact_phone": "9876543210",
+  "contact_name": "Ramesh Kumar", "contact_designation": "Supervisor",
+  "reposted_from_id": null,
   "requires_worker_fee": false, "worker_fee_amount": null,
   "status": "active", "status_label": "Active",
   "stats": { "views": 240, "applicants": 12, "shortlisted": 3, "interview": 1, "hired": 1 },
@@ -207,8 +211,9 @@ banner with a Renew button above the list.
 AI drafts for the Post Job screen's description box, so the employer is not
 staring at an empty textarea. Throttled to 20/min.
 ```
-?title=Plumber for apartment project&category=Plumbing&city=Chennai&state=Tamil Nadu&skills[]=Pipe Fitting
+?title=Handloom weaver&category=Weaving&city=Jaipur&state=Rajasthan&skills[]=Dyeing&language=hi
 ```
+`language`: `en` (default) or `hi` — Hindi in Devanagari.
 ```json
 { "suggestions": [ "We need an experienced plumber…", "Looking for a skilled plumber…" ] }
 ```
@@ -229,23 +234,30 @@ and emails the employer a confirmation.
 {
   "title": "Plumber for Apartment Project",
   "description": "12-floor residential project...",
-  "category": "Plumbing", "skills": ["Plumbing", "Pipe Fitting"],
-  "wage_min": 800, "wage_max": 1000, "wage_type": "daily",
-  "city": "Chennai", "state": "Tamil Nadu", "latitude": 13.08, "longitude": 80.27,
-  "vacancies": 3, "experience_min": 1,
-  "shift": "day", "perks": ["Food", "Accommodation"],
+  "category": "Weaving", "skills": ["Handloom weaving", "Dyeing"],
+  "wage_min": 20000, "wage_max": 26000, "wage_type": "monthly",
+  "state": "Rajasthan", "city": "Jaipur", "address": "Plot 12, Sanganer",
+  "latitude": 26.8, "longitude": 75.8,          // optional: placed from the address when missing
+  "vacancies": 3, "experience_min": 1, "experience_max": 5,
+  "shift": "day", "shift_start": "09:00", "shift_end": "18:00",
+  "perks": ["ESI", "PF", "Diwali bonus"],       // any perk; the list is only suggestions
   "contact_mode": "both", "contact_phone": "9876543210",
+  "contact_name": "Ramesh Kumar", "contact_designation": "Supervisor",
   "requires_worker_fee": false, "status": "active"
 }
 // 201 → { "message": "Job posted.", "job": { ...EmployerJobResource } }
 ```
 Rules: `title` required ≤255 · `description` required ≤5000 ·
 `vacancies` required 1–10000 · `status` required in draft/active/closed ·
-`wage_type` in hourly/daily/monthly · `wage_max` ≥ `wage_min` ·
-`experience_min` 0–60 · `shift` in day/night/rotational/flexible ·
-`perks.*` from the reference `perks` list (≤10) · `skills.*` ≤30 items ·
-`contact_mode` in apply/call/both (defaults to `apply`; `contact_phone`
-required for call/both) · `requires_worker_fee` boolean (defaults false;
+`wage_type` is `monthly` (wages are per month; a `daily` or `hourly` figure sent by an older build is stored ×26 / ×208 as monthly) · `wage_max` ≥ `wage_min` ·
+`experience_min` / `experience_max` 0–60, max ≥ min · `shift` in
+day/night/rotational/flexible · `shift_start` / `shift_end` `"HH:MM"` 24-hour,
+both or neither (a night shift may end before it starts) · `perks.*` any text
+≤40 chars, ≤15 perks (trimmed, repeats dropped) · `skills.*` ≤30 items ·
+`address` ≤255 · `contact_mode` in apply/call/both (defaults to `apply`;
+`contact_phone` required for call/both; `contact_name` and
+`contact_designation` ≤100, shown to karigars next to the number) ·
+`requires_worker_fee` boolean (defaults false;
 `worker_fee_amount` required when true) · `expires_at` optional, after today.
 
 **Posting gate** — `422` before anything is created:
@@ -253,7 +265,33 @@ required for call/both) · `requires_worker_fee` boolean (defaults false;
   is used up / switched off in admin.
 - `"You have reached your plan's job posting limit."` — plan limit hit.
 
+No `latitude`/`longitude` but an `address` or `city`: the server finds the map
+pin from the address (or city and state), as the web form does.
+
 ### `PUT|PATCH /employer/jobs/{job}` — same body → `{ "message": "Job updated.", "job": {...} }`
+
+### `GET /employer/jobs/form-options`
+What the Post Job form offers:
+```json
+{ "category_skills": { "Weaving": ["Handloom weaving", "Powerloom operation", "Dyeing", ...], ... },
+  "perks": ["ESI", "PF", "Food", "Accommodation", ..., "Diwali bonus"],
+  "shifts": ["day", "night", "rotational", "flexible"] }
+```
+Suggest `category_skills[<chosen category>]` as skill chips once a category is
+picked; the employer may still type others. `perks` are the usual ones plus this
+employer's own from earlier jobs.
+
+### `POST /employer/jobs/{job}/repost`
+A closed or expired job copied into a new job, live today. It is a new job post:
+the plan's job-post limit applies. The old job and its applicants stay as they
+were; the copy has `reposted_from_id`. An expiry date runs as long as the old
+one did.
+```json
+// 201
+{ "message": "Job reposted.", "job": { ...EmployerJobResource } }
+// 422 — still live, a draft, or no job posts left
+{ "message": "This job is still live.", "code": "cannot_repost" }
+```
 A draft flipped to `active` fires the same worker notifications as a fresh post.
 ### `POST /employer/jobs/{job}/close` → `{ "message": "Job closed.", "job": {...} }`
 ### `DELETE /employer/jobs/{job}` → `{ "message": "Job deleted." }`
@@ -611,7 +649,7 @@ applied and is always an object (`{}` when empty).
 { "worker_id": 88, "profile_id": 41, "name": "Meena Devi", "avatar_url": "https://…",
   "phone": "9876543210", "email": "meena@…", "city": "Jaipur", "state": "Rajasthan",
   "skills": ["Weaving", "Dyeing"], "experience_years": 6,
-  "expected_wage": "800.00", "wage_type": "daily" }
+  "expected_wage": "20800.00", "wage_type": "monthly" }
 ```
 Database rows add `unlocked_at` (ISO) and `unlocked_by` (team member's name).
 Applicant rows add `application_id`, `job: { id, title }`, `stage`

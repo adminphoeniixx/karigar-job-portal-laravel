@@ -7,6 +7,7 @@ use App\Http\Resources\Api\JobResource;
 use App\Http\Resources\Api\WorkerProfileResource;
 use App\Models\JobListing;
 use App\Models\Setting;
+use App\Support\JobFeed;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -23,7 +24,17 @@ class DashboardController extends Controller
         $verificationEnabled = Setting::bool('kyc_verification_enabled', true);
         $kyc = $verificationEnabled ? $user->kyc : null;
 
-        $latest = JobListing::active()->hiring()->with('employer:id,name')->latest()->limit(5)->get();
+        // The top of the karigar's own feed: their categories, nearest first
+        // from the phone's position when the app sends it.
+        $point = $request->validate([
+            'lat' => ['nullable', 'numeric', 'between:-90,90', 'required_with:lng'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:lat'],
+        ]);
+        $latest = JobFeed::for(
+            $user,
+            isset($point['lat']) ? (float) $point['lat'] : null,
+            isset($point['lng']) ? (float) $point['lng'] : null,
+        )->query()->limit(5)->get();
 
         return response()->json([
             'greeting' => $user->name,

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use App\Support\ReferenceData;
+use App\Support\Wage;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +17,21 @@ class WorkerProfileRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()?->isWorker() ?? false;
+    }
+
+    /**
+     * Wages are monthly. An expected wage sent per day or per hour, as older
+     * app builds do, is stored as its monthly amount.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('expected_wage')) {
+            $this->merge(['expected_wage' => Wage::monthly($this->input('expected_wage'), $this->input('wage_type'))]);
+        }
+
+        if ($this->has('expected_wage') || $this->has('wage_type')) {
+            $this->merge(['wage_type' => Wage::MONTHLY]);
+        }
     }
 
     /**

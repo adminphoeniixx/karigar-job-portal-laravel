@@ -21,6 +21,12 @@ use Throwable;
  * @property string|null $wage_min
  * @property string|null $wage_max
  * @property string|null $wage_type
+ * @property int|null $experience_max
+ * @property string|null $shift_start
+ * @property string|null $shift_end
+ * @property string|null $contact_name
+ * @property string|null $contact_designation
+ * @property int|null $reposted_from_id
  * @property string|null $city
  * @property string|null $state
  * @property string|null $latitude
@@ -47,8 +53,9 @@ class JobListing extends Model
         'title', 'description', 'category', 'skills',
         'wage_min', 'wage_max', 'wage_type',
         'address', 'city', 'state', 'latitude', 'longitude',
-        'vacancies', 'experience_min', 'status', 'published_at', 'expires_at',
-        'contact_mode', 'contact_phone', 'shift', 'perks',
+        'vacancies', 'experience_min', 'experience_max', 'status', 'published_at', 'expires_at',
+        'contact_mode', 'contact_phone', 'contact_name', 'contact_designation',
+        'shift', 'shift_start', 'shift_end', 'perks', 'reposted_from_id',
         'requires_worker_fee', 'worker_fee_amount',
         'boost_tier', 'boosted_until',
     ];
@@ -59,6 +66,7 @@ class JobListing extends Model
             'skills' => 'array',
             'perks' => 'array',
             'experience_min' => 'integer',
+            'experience_max' => 'integer',
             'views_count' => 'integer',
             'boosted_until' => 'datetime',
             'requires_worker_fee' => 'boolean',
@@ -94,6 +102,39 @@ class JobListing extends Model
     public function searchableAs(): string
     {
         return 'job_listings';
+    }
+
+    /**
+     * The experience asked for, as shown: "2–5 yrs", "2+ yrs", "Up to 5 yrs",
+     * "Freshers welcome", or null when the job does not say.
+     */
+    public function experienceLabel(): ?string
+    {
+        $min = $this->experience_min;
+        $max = $this->experience_max;
+
+        return match (true) {
+            $min !== null && $max !== null && $min === $max => trans_choice(':count yr|:count yrs', $min, ['count' => $min]),
+            $min !== null && $max !== null => __(':min–:max yrs', ['min' => $min, 'max' => $max]),
+            $min === 0 => __('Freshers welcome'),
+            $min !== null => __(':min+ yrs', ['min' => $min]),
+            $max !== null => __('Up to :max yrs', ['max' => $max]),
+            default => null,
+        };
+    }
+
+    /**
+     * The shift's hours, "9:00 AM – 6:00 PM", or null without them.
+     */
+    public function shiftHoursLabel(): ?string
+    {
+        if (! $this->shift_start || ! $this->shift_end) {
+            return null;
+        }
+
+        $format = fn (string $time): string => Carbon::createFromFormat('H:i', $time)->format('g:i A');
+
+        return $format($this->shift_start).' – '.$format($this->shift_end);
     }
 
     /**

@@ -28,13 +28,20 @@ class JobResource extends JsonResource
             'wage_max' => $this->wage_max,
             'wage_type' => $this->wage_type,
             'wage_label' => $this->resource->wageLabel(),
+            'experience_label' => $this->resource->experienceLabel(),
             'vacancies' => $this->vacancies,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),
             'expires_at' => $this->expires_at?->toIso8601String(),
+            // km from the karigar, when the list was sorted by distance (JobFeed).
+            'distance_km' => array_key_exists('distance_km', $this->resource->getAttributes()) && $this->resource->getAttribute('distance_km') !== null
+                ? round((float) $this->resource->getAttribute('distance_km'), 1)
+                : null,
             'employer' => $this->whenLoaded('employer', fn () => [
                 'id' => $this->employer->id,
                 'name' => $this->employer->name,
+                // Business verified by the admin; false while verification is switched off.
+                'verified' => $this->employer->isKycVerified(),
             ]),
         ];
     }
