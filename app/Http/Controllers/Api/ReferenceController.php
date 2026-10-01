@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Support\KycRequirements;
 use App\Support\ReferenceData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,9 @@ class ReferenceController extends Controller
             'hiring_as' => ReferenceData::HIRING_AS,
             'interview_modes' => ReferenceData::INTERVIEW_MODES,
             'worker_sorts' => ReferenceData::WORKER_SORTS,
+            // Verification screens: business types, the documents each needs,
+            // number formats and what can stand in for a missing document.
+            'verification' => KycRequirements::reference(),
             'credit_packs' => collect(config('billing.credit_packs'))
                 ->map(fn (array $pack, string $key) => ['key' => $key] + $pack)
                 ->values(),

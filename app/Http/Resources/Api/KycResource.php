@@ -23,6 +23,11 @@ class KycResource extends JsonResource
             'status_label' => $this->status->label(),
             'masked_pan' => $this->masked_pan,
             'masked_aadhaar' => $this->masked_aadhaar,
+            // Employers only: what the documents were asked by.
+            'business_type' => $this->business_type,
+            // One entry per document asked for: given, or missing with the alternate offered.
+            'documents' => $this->documentsSummary($this->user?->employerProfile?->gstin),
+            'has_missing_documents' => $this->has_missing_documents,
             'remarks' => $this->remarks,
             'reviewed_at' => $this->reviewed_at?->toIso8601String(),
             'submitted_at' => $this->created_at?->toIso8601String(),

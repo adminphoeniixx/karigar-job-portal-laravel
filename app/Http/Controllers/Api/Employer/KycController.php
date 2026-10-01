@@ -2,77 +2,65 @@
 
 namespace App\Http\Controllers\Api\Employer;
 
-use App\Enums\KycStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EmployerKycRequest;
 use App\Http\Resources\Api\KycResource;
+use App\Models\User;
+use App\Services\KycSubmission;
+use App\Support\EmployerVerification;
+use App\Support\KycRequirements;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 /**
- * Business verification for the employer app. GSTIN is stored on the employer
- * profile; the business PAN + proof docs reuse the shared KycDocument record
- * (its aadhaar_doc_path slot holds the GST certificate for businesses).
+ * Business verification for the employer app. The documents asked for follow
+ * the business type (see KycRequirements); company details and the GSTIN sit
+ * on the employer profile, the numbers and proofs on the shared KycDocument.
+ * An employer has to be verified before a job can go live.
  */
 class KycController extends Controller
 {
     /**
-     * Current verification status (masked), plus the saved GSTIN.
+     * Company details, current verification status (masked) and what posting needs.
      */
     public function show(Request $request): JsonResponse
     {
-        $account = $request->user()->employerAccount();
-        $kyc = $account->kyc;
-
-        return response()->json([
-            'gstin' => $account->employerProfile?->gstin,
-            'kyc' => $kyc ? new KycResource($kyc) : null,
-        ]);
+        return response()->json($this->payload($request->user()->employerAccount()));
     }
 
     /**
-     * Submit / re-submit GSTIN + business PAN for verification.
+     * Submit / re-submit business details + documents for verification.
      */
     public function store(EmployerKycRequest $request): JsonResponse
     {
         $account = $request->user()->employerAccount();
-
-        // GSTIN lives on the public employer profile.
-        $account->employerProfile()->firstOrCreate([])->update([
-            'gstin' => $request->validated('gstin'),
-        ]);
-
-        $kyc = $account->kyc()->firstOrNew([]);
-        $kyc->pan_number = $request->validated('pan_number');
-
-        if ($request->hasFile('pan_doc')) {
-            $this->replaceFile($kyc->pan_doc_path);
-            $kyc->pan_doc_path = $request->file('pan_doc')->store('kyc', 'local');
-        }
-
-        if ($request->hasFile('gst_doc')) {
-            $this->replaceFile($kyc->aadhaar_doc_path);
-            $kyc->aadhaar_doc_path = $request->file('gst_doc')->store('kyc', 'local');
-        }
-
-        $kyc->status = KycStatus::Pending;
-        $kyc->reviewed_by = null;
-        $kyc->reviewed_at = null;
-        $kyc->remarks = null;
-        $kyc->save();
+        KycSubmission::save($request, $account);
 
         return response()->json([
             'message' => __('Business verification submitted for review.'),
-            'gstin' => $request->validated('gstin'),
-            'kyc' => new KycResource($kyc),
+            ...$this->payload($account->fresh()),
         ], 201);
     }
 
-    private function replaceFile(?string $path): void
+    /**
+     * @return array<string, mixed>
+     */
+    private function payload(User $account): array
     {
-        if ($path && Storage::disk('local')->exists($path)) {
-            Storage::disk('local')->delete($path);
-        }
+        $profile = $account->employerProfile;
+        $kyc = $account->kyc;
+
+        return [
+            'business' => [
+                'business_type' => $profile?->business_type,
+                'legal_name' => $profile?->legal_name,
+                'registered_address' => $profile?->registered_address,
+                'company_name' => $profile?->company_name,
+            ],
+            'gstin' => $profile?->gstin,
+            'required_documents' => KycRequirements::documentsFor('employer', $profile?->business_type),
+            'kyc' => $kyc ? new KycResource($kyc) : null,
+            'verification' => EmployerVerification::summary($account),
+        ];
     }
 }

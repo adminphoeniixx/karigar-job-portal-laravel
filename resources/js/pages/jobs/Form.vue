@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, BadgeCheck, BriefcaseBusiness, Gift, IndianRupee, MapPin, Phone, Settings2, Sparkles, Sun, Wallet } from '@lucide/vue';
+import { ArrowLeft, BadgeCheck, BriefcaseBusiness, Gift, IndianRupee, MapPin, Phone, Settings2, ShieldAlert, Sparkles, Sun, Wallet } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -46,6 +46,8 @@ const props = defineProps<{
     job: Job | null;
     defaultPhone: string | null;
     freePostAvailable?: boolean;
+    // Set while the employer's business is not verified yet: the job can only be saved as a draft.
+    verificationBlock?: string | null;
     // Skills to suggest per category, and the perks to offer (the usual ones
     // plus this employer's own from earlier jobs).
     categorySkills: Record<string, string[]>;
@@ -268,6 +270,16 @@ const submit = () => {
                 </Link>
             </template>
         </PageHeader>
+
+        <Link
+            v-if="verificationBlock"
+            href="/kyc"
+            class="flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 transition hover:bg-amber-500/15 dark:text-amber-300"
+        >
+            <ShieldAlert class="size-5 shrink-0" />
+            <span class="flex-1">{{ verificationBlock }}</span>
+            <span class="shrink-0 font-semibold underline underline-offset-2">Verify now</span>
+        </Link>
 
         <div
             v-if="!isEdit && freePostAvailable"

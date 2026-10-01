@@ -50,6 +50,12 @@ return [
         'test_otp' => env('AUTH_TEST_OTP'),
     ],
 
+    // Default for the admin setting "Employers must be verified to post jobs"
+    // until an admin saves it. Off in tests, which post jobs freely.
+    'kyc' => [
+        'employer_required' => env('EMPLOYER_VERIFICATION_REQUIRED', true),
+    ],
+
     // OpenStreetMap's geocoder, placing a job's map pin from its address when
     // the client sent none (the employer app). Off in tests.
     'geocoder' => [

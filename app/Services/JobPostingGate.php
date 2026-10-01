@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\EmployerVerification;
 
 /**
  * Decides whether an employer account may post another job. Shared by the web
@@ -16,23 +17,29 @@ use App\Models\User;
  *    while the "first post free" promo is enabled by an admin. After that, a
  *    subscription is required.
  *
+ * Before either, the employer must be verified ({@see EmployerVerification}).
+ *
  * It is asked when a job goes live, not when it is saved: a draft costs
  * nothing, and publishing it is the moment the quota is spent.
  */
 class JobPostingGate
 {
     /**
-     * @return array{allowed: bool, message: ?string, consumesFreePost: bool}
+     * @return array{allowed: bool, message: ?string, consumesFreePost: bool, code: ?string}
      */
     public static function evaluate(User $account): array
     {
+        if ($blocked = EmployerVerification::blockMessage($account)) {
+            return self::deny($blocked, 'verification_required');
+        }
+
         $subscription = $account->activeSubscription();
 
         if ($subscription) {
             $limit = $subscription->plan->jobPostLimit();
 
             if ($limit > 0 && self::postedThisCycle($account) >= $limit) {
-                return self::deny(__('You have used all :limit job posts in your plan for this billing period. Save it as a draft, or upgrade your plan.', ['limit' => $limit]));
+                return self::deny(__('You have used all :limit job posts in your plan for this billing period. Save it as a draft, or upgrade your plan.', ['limit' => $limit]), 'post_limit_reached');
             }
 
             return self::allow(false);
@@ -43,7 +50,7 @@ class JobPostingGate
             return self::allow(true);
         }
 
-        return self::deny(__('Subscribe to a plan to post jobs.'));
+        return self::deny(__('Subscribe to a plan to post jobs.'), 'subscription_required');
     }
 
     /**
@@ -104,18 +111,19 @@ class JobPostingGate
     }
 
     /**
-     * @return array{allowed: true, message: null, consumesFreePost: bool}
+     * @return array{allowed: true, message: null, consumesFreePost: bool, code: null}
      */
     private static function allow(bool $consumesFreePost): array
     {
-        return ['allowed' => true, 'message' => null, 'consumesFreePost' => $consumesFreePost];
+        return ['allowed' => true, 'message' => null, 'consumesFreePost' => $consumesFreePost, 'code' => null];
     }
 
     /**
-     * @return array{allowed: false, message: string, consumesFreePost: false}
+     * @param  string  $code  machine-readable reason the apps branch on
+     * @return array{allowed: false, message: string, consumesFreePost: false, code: string}
      */
-    private static function deny(string $message): array
+    private static function deny(string $message, string $code): array
     {
-        return ['allowed' => false, 'message' => $message, 'consumesFreePost' => false];
+        return ['allowed' => false, 'message' => $message, 'consumesFreePost' => false, 'code' => $code];
     }
 }

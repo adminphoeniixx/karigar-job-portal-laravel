@@ -7,6 +7,7 @@ import PageHeader from '@/components/PageHeader.vue';
 type SettingKey =
     | 'first_post_free_enabled'
     | 'kyc_verification_enabled'
+    | 'employer_verification_required'
     | 'ai_auto_shortlist_enabled'
     | 'ai_auto_reject_enabled'
     | 'ai_screening_call_enabled';
@@ -36,6 +37,7 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Settings', href: '/admin/setti
 const form = reactive({
     first_post_free_enabled: props.settings.first_post_free_enabled,
     kyc_verification_enabled: props.settings.kyc_verification_enabled,
+    employer_verification_required: props.settings.employer_verification_required,
     ai_auto_shortlist_enabled: props.settings.ai_auto_shortlist_enabled,
     ai_auto_shortlist_threshold: props.settings.ai_auto_shortlist_threshold,
     ai_auto_reject_enabled: props.settings.ai_auto_reject_enabled,
@@ -65,6 +67,15 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'approved ones show a verified badge. When off, the feature disappears everywhere — ' +
             'the apps hide their KYC screens, the badge stops showing, and the KYC endpoints ' +
             'return 404. Submitted documents are kept, so turning it back on restores them.',
+    },
+    {
+        key: 'employer_verification_required',
+        title: 'Employers must be verified to post jobs',
+        description:
+            'When on, an employer\'s job only goes live after you approve their business ' +
+            'verification (PAN / GST or an alternate document) in KYC Review. They can still ' +
+            'save drafts meanwhile. Jobs already live are not touched. Has no effect while KYC ' +
+            'verification is off.',
     },
     {
         key: 'ai_auto_shortlist_enabled',

@@ -10,6 +10,7 @@ use App\Notifications\NewJobNotification;
 use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
 use App\Services\JobRepost;
+use App\Support\EmployerVerification;
 use App\Support\JobFormOptions;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
@@ -65,6 +66,8 @@ class JobListingController extends Controller
             'defaultPhone' => $request->user()->employerProfile?->phone,
             // Show a "your first post is free" hint when this applies.
             'freePostAvailable' => JobPostingGate::evaluate($account)['consumesFreePost'],
+            // Why the job cannot go live yet (business verification), if so.
+            'verificationBlock' => EmployerVerification::blockMessage($account),
             'categorySkills' => $options['category_skills'],
             'perkOptions' => $options['perks'],
         ]);
@@ -199,6 +202,9 @@ class JobListingController extends Controller
         return Inertia::render('jobs/Form', [
             'job' => $job,
             'defaultPhone' => $request->user()->employerProfile?->phone,
+            'verificationBlock' => $job->published_at === null
+                ? EmployerVerification::blockMessage($request->user()->employerAccount())
+                : null,
             'categorySkills' => $options['category_skills'],
             'perkOptions' => $options['perks'],
         ]);

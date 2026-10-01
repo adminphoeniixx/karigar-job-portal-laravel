@@ -149,6 +149,7 @@ class ReferenceData
      * @var list<array{code: string, native: string, english: string}>
      */
     public const APP_LANGUAGES = [
+        ['code' => 'hinglish', 'native' => 'Hindi + English', 'english' => 'Hinglish'],
         ['code' => 'en', 'native' => 'English', 'english' => 'English'],
         ['code' => 'hi', 'native' => 'हिन्दी', 'english' => 'Hindi'],
         ['code' => 'ta', 'native' => 'தமிழ்', 'english' => 'Tamil'],

@@ -702,31 +702,18 @@ An unknown `stage` or `sort` is a `422`.
 ---
 
 ## 8. Business verification (KYC) 🔒
-GSTIN is stored on the profile; business PAN + proof docs on the shared KYC
-record. Docs stay on the local private disk (never BunnyCDN).
+**Full spec: [`employer-app-verification.md`](employer-app-verification.md)** — business
+type, company details, documents per type, the "I don't have this document"
+alternate, and the rule that **an unverified employer cannot publish a job**
+(`422`, `code: "verification_required"`; drafts still save).
 
 **Both routes `404` while `features.verification_enabled` is `false`** — that is
 the admin switch, not an error; hide the screens instead of showing "not found".
 
-### `GET /employer/kyc`
-```json
-{ "gstin": "22ABCDE1234F1Z5",
-  "kyc": { "status": "verified", "status_label": "Verified", "masked_pan": "ABCXX1234F",
-           "masked_aadhaar": null, "remarks": null,
-           "reviewed_at": "...", "submitted_at": "..." } | null }
-```
-
-### `POST /employer/kyc` — `multipart/form-data`
-```
-gstin=22ABCDE1234F1Z5      (required, 15 chars, format 22ABCDE1234F1Z5)
-pan_number=ABCDE1234F      (required, format ABCDE1234F)
-gst_doc=@gst.pdf           (jpg/png/pdf ≤5 MB)
-pan_doc=@pan.jpg           (jpg/png/pdf ≤5 MB)
-// 201 → { "message": "Business verification submitted for review.", "gstin", "kyc": {...} }
-```
-Both files are **required on the first submission** and optional on a re-submit
-(existing files are kept). A re-submit resets the status to `pending` and clears
-the admin's remarks.
+- `GET /employer/kyc` → `{ business, gstin, required_documents, kyc, verification }`
+- `POST /employer/kyc` (multipart) → `business_type`, `legal_name`,
+  `registered_address` + per document either `{number}` + `{doc}_doc`, or
+  `{doc}_missing=1` + `{doc}_alt_type` / `{doc}_alt_number` / `{doc}_alt_doc` / `{doc}_reason`.
 
 ---
 

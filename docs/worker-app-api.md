@@ -294,14 +294,18 @@ Withdraw your own application. → `{ "message": "Application withdrawn." }`
 
 ## 7. KYC 🔒 (worker, **optional**)
 
+Full spec, including the **"I don't have this document"** alternate:
+[`worker-app-verification.md`](worker-app-verification.md).
+
 ### `GET /kyc`
-`{ "kyc": null }` or `{ "kyc": { "status": "pending", "masked_pan": "ABXXXXX1", "masked_aadhaar": "XXXX XXXX 9012", "remarks": null, ... } }`
+`{ "kyc": null | { "status", "documents": [...], "has_missing_documents", "remarks", ... }, "required_documents": ["aadhaar", "pan"] }`
 
 ### `POST /kyc` (multipart)
-Fields: `pan_number` (ABCDE1234F), `aadhaar_number` (12 digits),
-`pan_doc`, `aadhaar_doc` (jpg/png/pdf ≤4 MB; required on first submit).
-→ `201 { "message": "KYC submitted for review.", "kyc": {...} }`. Raw numbers are
-encrypted at rest and never returned.
+Per document (`aadhaar`, `pan`) either the number (`aadhaar_number` / `pan_number`)
++ `{doc}_doc`, or `{doc}_missing=1` + `{doc}_alt_type`, `{doc}_alt_number`
+(optional), `{doc}_alt_doc`, `{doc}_reason`. Files jpg/png/pdf ≤5 MB, required on
+first submit. → `201 { "message": "KYC submitted for review.", "kyc": {...} }`.
+Raw numbers are encrypted at rest and never returned.
 
 ---
 

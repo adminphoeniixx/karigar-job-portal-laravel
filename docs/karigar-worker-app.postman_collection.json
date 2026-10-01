@@ -840,13 +840,18 @@
               "mode": "formdata",
               "formdata": [
                 {
-                  "key": "pan_number",
-                  "value": "ABCDE1234F",
+                  "key": "aadhaar_number",
+                  "value": "123456789012",
                   "type": "text"
                 },
                 {
-                  "key": "aadhaar_number",
-                  "value": "123456789012",
+                  "key": "aadhaar_doc",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "pan_number",
+                  "value": "ABCDE1234F",
                   "type": "text"
                 },
                 {
@@ -855,9 +860,34 @@
                   "src": []
                 },
                 {
-                  "key": "aadhaar_doc",
+                  "key": "pan_missing",
+                  "value": "1",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "pan_alt_type",
+                  "value": "voter_id",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "pan_alt_number",
+                  "value": "XYZ1234567",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "pan_alt_doc",
                   "type": "file",
-                  "src": []
+                  "src": [],
+                  "disabled": true
+                },
+                {
+                  "key": "pan_reason",
+                  "value": "Never applied for a PAN",
+                  "type": "text",
+                  "disabled": true
                 }
               ]
             },
@@ -871,7 +901,8 @@
                 "v1",
                 "kyc"
               ]
-            }
+            },
+            "description": "multipart/form-data. Per document: number + {doc}_doc, OR {doc}_missing=1 + {doc}_alt_type/_alt_number/_alt_doc/_reason (enable the disabled rows to try it). Files jpg/png/pdf ≤5 MB, optional on re-submit. Spec: docs/worker-app-verification.md"
           }
         }
       ]

@@ -17,6 +17,7 @@ use App\Services\CreditWallet;
 use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
 use App\Services\JobRepost;
+use App\Support\EmployerVerification;
 use App\Support\JobFormOptions;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
@@ -95,6 +96,7 @@ class JobController extends Controller
         if ($gate !== null && ! $gate['allowed']) {
             return response()->json([
                 'message' => $gate['message'],
+                'code' => $gate['code'],
             ], 422);
         }
 
@@ -129,7 +131,7 @@ class JobController extends Controller
         $gate = $goingLive ? JobPostingGate::evaluate($account) : null;
 
         if ($gate !== null && ! $gate['allowed']) {
-            return response()->json(['message' => $gate['message']], 422);
+            return response()->json(['message' => $gate['message'], 'code' => $gate['code']], 422);
         }
 
         $wasActive = $job->status === JobStatus::Active;
@@ -394,7 +396,9 @@ class JobController extends Controller
         $result = JobRepost::repost($job);
 
         if (is_string($result)) {
-            return response()->json(['message' => $result, 'code' => 'cannot_repost'], 422);
+            $code = $result === EmployerVerification::blockMessage($job->employer) ? 'verification_required' : 'cannot_repost';
+
+            return response()->json(['message' => $result, 'code' => $code], 422);
         }
 
         return response()->json([

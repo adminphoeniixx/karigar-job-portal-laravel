@@ -23,6 +23,10 @@ class SettingController extends Controller
             'settings' => [
                 'first_post_free_enabled' => Setting::bool('first_post_free_enabled', true),
                 'kyc_verification_enabled' => Setting::bool('kyc_verification_enabled', true),
+                'employer_verification_required' => Setting::bool(
+                    'employer_verification_required',
+                    (bool) config('services.kyc.employer_required', true),
+                ),
                 'ai_auto_shortlist_enabled' => Setting::bool(ScoreApplication::ENABLED_KEY, false),
                 'ai_auto_shortlist_threshold' => Setting::int(
                     ScoreApplication::THRESHOLD_KEY,
@@ -46,6 +50,7 @@ class SettingController extends Controller
         $data = $request->validate([
             'first_post_free_enabled' => ['required', 'boolean'],
             'kyc_verification_enabled' => ['required', 'boolean'],
+            'employer_verification_required' => ['sometimes', 'boolean'],
             'ai_auto_shortlist_enabled' => ['required', 'boolean'],
             // Below 40 the model calls a candidate a "weak" match, so allow the
             // admin to be lenient but not to shortlist literally everyone.
@@ -62,6 +67,9 @@ class SettingController extends Controller
 
         Setting::set('first_post_free_enabled', $data['first_post_free_enabled'] ? '1' : '0');
         Setting::set('kyc_verification_enabled', $data['kyc_verification_enabled'] ? '1' : '0');
+        if (isset($data['employer_verification_required'])) {
+            Setting::set('employer_verification_required', $data['employer_verification_required'] ? '1' : '0');
+        }
         Setting::set(ScoreApplication::ENABLED_KEY, $data['ai_auto_shortlist_enabled'] ? '1' : '0');
         Setting::set(ScoreApplication::THRESHOLD_KEY, (string) $data['ai_auto_shortlist_threshold']);
         Setting::set(ScoreApplication::REJECT_ENABLED_KEY, $data['ai_auto_reject_enabled'] ? '1' : '0');

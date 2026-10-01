@@ -2,60 +2,51 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\KycStatus;
 use App\Http\Requests\KycSubmitRequest;
+use App\Http\Resources\Api\KycResource;
+use App\Services\KycSubmission;
+use App\Support\EmployerVerification;
+use App\Support\KycRequirements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Verification on the web: Aadhaar + PAN for a worker, business details and
+ * the documents for its business type for an employer. Any document can be
+ * swapped for an alternate ID the admin checks by hand.
+ */
 class KycController extends Controller
 {
     public function show(Request $request): Response
     {
-        $kyc = $request->user()->kyc;
+        $user = $request->user();
+        $account = $user->isEmployer() ? $user->employerAccount() : $user;
+        $profile = $user->isEmployer() ? $account->employerProfile : null;
+        $kyc = $account->kyc;
 
         return Inertia::render('kyc/Submit', [
-            'kyc' => $kyc, // masked accessors only; raw numbers/paths are hidden
+            'role' => $user->isEmployer() ? 'employer' : 'worker',
+            // Masked values only; raw numbers and file paths never leave the server.
+            'kyc' => $kyc ? (new KycResource($kyc))->resolve($request) : null,
+            'business' => $profile ? [
+                'business_type' => $profile->business_type,
+                'legal_name' => $profile->legal_name,
+                'registered_address' => $profile->registered_address ?? $profile->address,
+            ] : null,
+            'verification' => $user->isEmployer() ? EmployerVerification::summary($account) : null,
+            'reference' => KycRequirements::reference(),
         ]);
     }
 
     public function store(KycSubmitRequest $request): RedirectResponse
     {
         $user = $request->user();
-        $kyc = $user->kyc()->firstOrNew([]);
+        KycSubmission::save($request, $user->isEmployer() ? $user->employerAccount() : $user);
 
-        $kyc->pan_number = $request->validated('pan_number');
-        $kyc->aadhaar_number = $request->validated('aadhaar_number');
-        $kyc->aadhaar_hash = hash('sha256', $request->validated('aadhaar_number'));
-
-        if ($request->hasFile('pan_doc')) {
-            $this->replaceFile($kyc->pan_doc_path);
-            $kyc->pan_doc_path = $request->file('pan_doc')->store('kyc', 'local');
-        }
-
-        if ($request->hasFile('aadhaar_doc')) {
-            $this->replaceFile($kyc->aadhaar_doc_path);
-            $kyc->aadhaar_doc_path = $request->file('aadhaar_doc')->store('kyc', 'local');
-        }
-
-        // A fresh/re-submission always returns to pending review.
-        $kyc->status = KycStatus::Pending;
-        $kyc->reviewed_by = null;
-        $kyc->reviewed_at = null;
-        $kyc->remarks = null;
-        $kyc->save();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('KYC submitted for review.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Submitted for review.')]);
 
         return to_route('kyc.show');
-    }
-
-    private function replaceFile(?string $path): void
-    {
-        if ($path && Storage::disk('local')->exists($path)) {
-            Storage::disk('local')->delete($path);
-        }
     }
 }

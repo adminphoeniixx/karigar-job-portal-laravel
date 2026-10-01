@@ -1624,7 +1624,7 @@
           }
         },
         {
-          "name": "Submit verification (GST + PAN)",
+          "name": "Submit business verification",
           "request": {
             "method": "POST",
             "header": [
@@ -1637,13 +1637,33 @@
               "mode": "formdata",
               "formdata": [
                 {
-                  "key": "gstin",
-                  "value": "22ABCDE1234F1Z5",
+                  "key": "business_type",
+                  "value": "private_limited",
+                  "type": "text"
+                },
+                {
+                  "key": "legal_name",
+                  "value": "Sri Sai Interiors Pvt Ltd",
+                  "type": "text"
+                },
+                {
+                  "key": "registered_address",
+                  "value": "12 MG Road, Bengaluru 560001",
                   "type": "text"
                 },
                 {
                   "key": "pan_number",
-                  "value": "ABCDE1234F",
+                  "value": "AAFCS1234K",
+                  "type": "text"
+                },
+                {
+                  "key": "pan_doc",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "gstin",
+                  "value": "29AAFCS1234K1Z5",
                   "type": "text"
                 },
                 {
@@ -1652,9 +1672,34 @@
                   "src": []
                 },
                 {
-                  "key": "pan_doc",
+                  "key": "gst_missing",
+                  "value": "1",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "gst_alt_type",
+                  "value": "udyam",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "gst_alt_number",
+                  "value": "UDYAM-KA-03-0012345",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "gst_alt_doc",
                   "type": "file",
-                  "src": []
+                  "src": [],
+                  "disabled": true
+                },
+                {
+                  "key": "gst_reason",
+                  "value": "Turnover is below the GST limit",
+                  "type": "text",
+                  "disabled": true
                 }
               ]
             },
@@ -1670,7 +1715,7 @@
                 "kyc"
               ]
             },
-            "description": "multipart/form-data. Docs jpg/png/pdf ≤5 MB (optional on re-submit)."
+            "description": "multipart/form-data. Documents asked depend on business_type (see /reference → verification). Per document: number + {doc}_doc, OR {doc}_missing=1 + {doc}_alt_type/_alt_number/_alt_doc/_reason (enable the disabled rows to try it). Files jpg/png/pdf ≤5 MB, optional on re-submit. Spec: docs/employer-app-verification.md"
           }
         }
       ]

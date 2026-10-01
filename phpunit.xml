@@ -33,6 +33,7 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SCOUT_DRIVER" value="null"/>
         <env name="GEOCODER_ENABLED" value="false"/>
+        <env name="EMPLOYER_VERIFICATION_REQUIRED" value="false"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

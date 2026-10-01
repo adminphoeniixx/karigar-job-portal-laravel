@@ -12,6 +12,9 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $user_id
  * @property string|null $company_name
+ * @property string|null $business_type
+ * @property string|null $legal_name
+ * @property string|null $registered_address
  * @property string|null $gstin
  * @property string|null $phone
  * @property string|null $address
@@ -35,7 +38,8 @@ class EmployerProfile extends Model
         'company_name', 'gstin', 'phone', 'address', 'city', 'state',
         'latitude', 'longitude', 'logo_path', 'about', 'contact_quota_bonus',
         'free_post_used_at', 'hiring_as', 'industry', 'company_size',
-        'hiring_categories', 'credit_balance',
+        'hiring_categories', 'credit_balance', 'business_type', 'legal_name',
+        'registered_address',
     ];
 
     protected function casts(): array

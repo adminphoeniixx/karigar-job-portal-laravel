@@ -13,6 +13,7 @@ use App\Models\JobApplication;
 use App\Models\Setting;
 use App\Services\ApplicantAccess;
 use App\Services\CreditWallet;
+use App\Support\EmployerVerification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -82,7 +83,11 @@ class DashboardController extends Controller
             // verification_enabled is false.
             'features' => [
                 'verification_enabled' => Setting::bool('kyc_verification_enabled', true),
+                'employer_verification_required' => EmployerVerification::required(),
             ],
+            // Whether a job can go live yet; when not, show `message` and a
+            // button to the business-verification screen.
+            'verification' => EmployerVerification::summary($account),
             'active_jobs' => EmployerJobResource::collection($recentJobs),
             'recent_applicants' => ApplicantResource::collection($recentApplicants),
         ]);
