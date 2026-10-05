@@ -574,16 +574,16 @@
         <div class="row" style="gap:12px">
           <div class="field" style="flex:1"><label>Min ₹</label>
             <div class="row" style="border:1px solid var(--line);border-radius:12px;padding:0 12px">
-              <span class="muted">₹</span><input class="input" style="border:none;padding:12px 6px" placeholder="800" inputmode="numeric" />
+              <span class="muted">₹</span><input class="input" style="border:none;padding:12px 6px" placeholder="20000" inputmode="numeric" />
             </div>
           </div>
           <div class="field" style="flex:1"><label>Max ₹</label>
             <div class="row" style="border:1px solid var(--line);border-radius:12px;padding:0 12px">
-              <span class="muted">₹</span><input class="input" style="border:none;padding:12px 6px" placeholder="1000" inputmode="numeric" />
+              <span class="muted">₹</span><input class="input" style="border:none;padding:12px 6px" placeholder="26000" inputmode="numeric" />
             </div>
           </div>
           <div class="field" style="flex:0 0 92px"><label>Per</label>
-            <select class="select" style="padding:12px 8px"><option>day</option><option>hour</option><option>month</option><option>contract</option></select>
+            <select class="select" style="padding:12px 8px"><option>month</option></select>
           </div>
         </div>
 
@@ -1017,7 +1017,7 @@
       <p class="tiny muted" style="margin:0 0 16px">The worker will be notified and their contact will be shared with you.</p>
       <div class="field"><label>Offered wage</label>
         <div class="row" style="border:1px solid var(--line);border-radius:12px;padding:0 12px">
-          <span class="muted">₹</span><input class="input" style="border:none;padding:12px 6px" value="900" inputmode="numeric" /><span class="muted tiny">/ day</span>
+          <span class="muted">₹</span><input class="input" style="border:none;padding:12px 6px" value="23400" inputmode="numeric" /><span class="muted tiny">/ month</span>
         </div>
       </div>
       <div class="field"><label>Start date</label><input class="input" type="date" /></div>
@@ -1049,10 +1049,10 @@
       <h3>Filter workers</h3>
       <div class="field" style="margin-top:14px"><label>Trade / Category</label><select class="select"><option>All trades</option><option>Plumbing</option><option>Electrical</option><option>Carpentry</option><option>Painting</option><option>Masonry</option></select></div>
       <div class="field"><label>Minimum experience</label><select class="select"><option>Any</option><option>1+ years</option><option>3+ years</option><option>5+ years</option></select></div>
-      <div class="field"><label>Expected wage (₹/day)</label>
+      <div class="field"><label>Expected wage (₹/month)</label>
         <div class="row" style="gap:10px">
-          <div class="row" style="flex:1;border:1px solid var(--line);border-radius:12px;padding:0 12px"><span class="muted">₹</span><input class="input" style="border:none;padding:11px 6px" placeholder="Min 600" inputmode="numeric" /></div>
-          <div class="row" style="flex:1;border:1px solid var(--line);border-radius:12px;padding:0 12px"><span class="muted">₹</span><input class="input" style="border:none;padding:11px 6px" placeholder="Max 1200" inputmode="numeric" /></div>
+          <div class="row" style="flex:1;border:1px solid var(--line);border-radius:12px;padding:0 12px"><span class="muted">₹</span><input class="input" style="border:none;padding:11px 6px" placeholder="Min 15000" inputmode="numeric" /></div>
+          <div class="row" style="flex:1;border:1px solid var(--line);border-radius:12px;padding:0 12px"><span class="muted">₹</span><input class="input" style="border:none;padding:11px 6px" placeholder="Max 30000" inputmode="numeric" /></div>
         </div>
       </div>
       <div class="field"><label>Distance from site</label><select class="select"><option>Any distance</option><option>Within 3 km</option><option>Within 5 km</option><option>Within 10 km</option></select></div>
@@ -1180,24 +1180,24 @@
 /* ============================ DATA ============================ */
 // Employer's posted jobs
 const MYJOBS = [
-  {id:1,title:"Plumber for Apartment Project",cat:"Plumbing",city:"Chennai",state:"TN",min:800,max:1000,type:"day",vac:3,shift:"day",status:"active",posted:"2 days ago",applicants:12,shortlisted:3,hired:1,views:340,skills:["Plumbing","Pipe Fitting","Waterproofing"],perks:["Food","Accommodation"],desc:"Experienced plumbers needed for a 12-floor residential project. Bathroom & kitchen line fitting, drainage and testing. 3 months of work with on-time daily payment."},
-  {id:2,title:"Electrician — House Wiring",cat:"Electrical",city:"Chennai",state:"TN",min:900,max:1200,type:"day",vac:2,shift:"day",status:"active",posted:"1 day ago",applicants:8,shortlisted:2,hired:0,views:210,skills:["Electrical Wiring","Electrician"],perks:["Food"],desc:"Complete wiring for a 3BHK villa — DB board, fitting and testing. Tools provided."},
-  {id:3,title:"Masons — 4 needed",cat:"Masonry",city:"Chennai",state:"TN",min:850,max:1000,type:"day",vac:4,shift:"day",status:"active",posted:"4 days ago",applicants:14,shortlisted:4,hired:2,views:405,skills:["Masonry","Plastering"],perks:["Accommodation"],desc:"Compound wall construction and plastering. Helper provided, weekly payment."},
-  {id:4,title:"Painters (interior) — 2 needed",cat:"Painting",city:"Chennai",state:"TN",min:700,max:850,type:"day",vac:2,shift:"day",status:"active",posted:"6 days ago",applicants:3,shortlisted:0,hired:0,views:98,skills:["Painting","Wall Putty"],perks:["Food","Travel"],desc:"Interior painting — putty, primer and 2 coats. About 10 days of work."},
-  {id:5,title:"Carpenter for Modular Kitchen",cat:"Carpentry",city:"Chennai",state:"TN",min:1000,max:1400,type:"day",vac:1,shift:"day",status:"closed",posted:"3 weeks ago",applicants:20,shortlisted:5,hired:2,views:610,skills:["Carpentry","Woodwork"],perks:[],desc:"Modular kitchen and wardrobe fitting with fine finishing."},
-  {id:6,title:"AC Technician — Split & Window",cat:"AC Repair",city:"Chennai",state:"TN",min:600,max:900,type:"day",vac:2,shift:"rotational",status:"draft",posted:"Draft",applicants:0,shortlisted:0,hired:0,views:0,skills:["AC Repair"],perks:["Travel","Incentives"],desc:"AC installation, servicing and gas charging. Own bike required."},
+  {id:1,title:"Plumber for Apartment Project",cat:"Plumbing",city:"Chennai",state:"TN",min:20800,max:26000,type:"month",vac:3,shift:"day",status:"active",posted:"2 days ago",applicants:12,shortlisted:3,hired:1,views:340,skills:["Plumbing","Pipe Fitting","Waterproofing"],perks:["Food","Accommodation"],desc:"Experienced plumbers needed for a 12-floor residential project. Bathroom & kitchen line fitting, drainage and testing. 3 months of work with on-time daily payment."},
+  {id:2,title:"Electrician — House Wiring",cat:"Electrical",city:"Chennai",state:"TN",min:23400,max:31200,type:"month",vac:2,shift:"day",status:"active",posted:"1 day ago",applicants:8,shortlisted:2,hired:0,views:210,skills:["Electrical Wiring","Electrician"],perks:["Food"],desc:"Complete wiring for a 3BHK villa — DB board, fitting and testing. Tools provided."},
+  {id:3,title:"Masons — 4 needed",cat:"Masonry",city:"Chennai",state:"TN",min:22100,max:26000,type:"month",vac:4,shift:"day",status:"active",posted:"4 days ago",applicants:14,shortlisted:4,hired:2,views:405,skills:["Masonry","Plastering"],perks:["Accommodation"],desc:"Compound wall construction and plastering. Helper provided, weekly payment."},
+  {id:4,title:"Painters (interior) — 2 needed",cat:"Painting",city:"Chennai",state:"TN",min:18200,max:22100,type:"month",vac:2,shift:"day",status:"active",posted:"6 days ago",applicants:3,shortlisted:0,hired:0,views:98,skills:["Painting","Wall Putty"],perks:["Food","Travel"],desc:"Interior painting — putty, primer and 2 coats. About 10 days of work."},
+  {id:5,title:"Carpenter for Modular Kitchen",cat:"Carpentry",city:"Chennai",state:"TN",min:26000,max:36400,type:"month",vac:1,shift:"day",status:"closed",posted:"3 weeks ago",applicants:20,shortlisted:5,hired:2,views:610,skills:["Carpentry","Woodwork"],perks:[],desc:"Modular kitchen and wardrobe fitting with fine finishing."},
+  {id:6,title:"AC Technician — Split & Window",cat:"AC Repair",city:"Chennai",state:"TN",min:15600,max:23400,type:"month",vac:2,shift:"rotational",status:"draft",posted:"Draft",applicants:0,shortlisted:0,hired:0,views:0,skills:["AC Repair"],perks:["Travel","Incentives"],desc:"AC installation, servicing and gas charging. Own bike required."},
 ];
 
 // Applicants (worker pool) — reused for both applicant lists and Find Workers
 const WORKERS = [
-  {id:1,name:"Rakesh Kumar",init:"RK",trade:"Plumber",exp:6,city:"Chennai",dist:4.2,rating:"4.8",count:23,wage:900,verified:true,available:true,skills:["Plumbing","Pipe Fitting","Waterproofing","Tiling"],langs:["Hindi","Tamil"],bio:"6 years of experience. Bathroom & kitchen plumbing, leak repair and tiling specialist. On-time and clean work.",appliedFor:1,status:"shortlisted"},
-  {id:2,name:"Suresh Babu",init:"SB",trade:"Plumber",exp:9,city:"Chennai",dist:6.1,rating:"4.6",count:41,wage:1000,verified:true,available:true,skills:["Plumbing","Drainage","Testing"],langs:["Tamil","Telugu"],bio:"Senior plumber, handled 30+ apartment projects. Team lead experience.",appliedFor:1,status:"pending"},
-  {id:3,name:"Mohan Das",init:"MD",trade:"Plumber",exp:3,city:"Chennai",dist:2.8,rating:"4.4",count:9,wage:750,verified:false,available:true,skills:["Plumbing","Helper"],langs:["Tamil"],bio:"Hardworking plumber, quick learner. Available immediately.",appliedFor:1,status:"pending"},
-  {id:4,name:"Vijay Anand",init:"VA",trade:"Electrician",exp:7,city:"Chennai",dist:5.5,rating:"4.9",count:31,wage:1100,verified:true,available:true,skills:["Electrical Wiring","DB Board","Testing"],langs:["Tamil","English"],bio:"Certified electrician (ITI). Residential & commercial wiring expert.",appliedFor:2,status:"shortlisted"},
-  {id:5,name:"Karthik R",init:"KR",trade:"Electrician",exp:4,city:"Chennai",dist:3.4,rating:"4.5",count:15,wage:950,verified:true,available:false,skills:["Electrician","Appliance Repair"],langs:["Tamil","Kannada"],bio:"House wiring and appliance repair. Own tools.",appliedFor:2,status:"pending"},
-  {id:6,name:"Ganesh Iyer",init:"GI",trade:"Mason",exp:12,city:"Chennai",dist:7.2,rating:"4.7",count:52,wage:1000,verified:true,available:true,skills:["Masonry","Plastering","Bricklaying"],langs:["Tamil","Hindi"],bio:"12 years masonry experience. Compound walls, plastering, brickwork.",appliedFor:3,status:"hired"},
-  {id:7,name:"Prakash M",init:"PM",trade:"Plumber",exp:5,city:"Chennai",dist:3.1,rating:"4.5",count:18,wage:850,verified:true,available:true,skills:["Plumbing","Pipe Fitting","Sanitary"],langs:["Tamil","Hindi"],bio:"5 years plumbing experience across residential projects. Available immediately.",appliedFor:0,status:"pending"},
-  {id:8,name:"Imran Shaikh",init:"IS",trade:"Electrician",exp:8,city:"Chennai",dist:4.8,rating:"4.7",count:29,wage:1050,verified:true,available:true,skills:["Electrical Wiring","DB Board","Motor Repair"],langs:["Hindi","Urdu","Tamil"],bio:"8 years as an electrician. Wiring, panel work and motor repair. Own tools & bike.",appliedFor:0,status:"pending"},
+  {id:1,name:"Rakesh Kumar",init:"RK",trade:"Plumber",exp:6,city:"Chennai",dist:4.2,rating:"4.8",count:23,wage:23400,verified:true,available:true,skills:["Plumbing","Pipe Fitting","Waterproofing","Tiling"],langs:["Hindi","Tamil"],bio:"6 years of experience. Bathroom & kitchen plumbing, leak repair and tiling specialist. On-time and clean work.",appliedFor:1,status:"shortlisted"},
+  {id:2,name:"Suresh Babu",init:"SB",trade:"Plumber",exp:9,city:"Chennai",dist:6.1,rating:"4.6",count:41,wage:26000,verified:true,available:true,skills:["Plumbing","Drainage","Testing"],langs:["Tamil","Telugu"],bio:"Senior plumber, handled 30+ apartment projects. Team lead experience.",appliedFor:1,status:"pending"},
+  {id:3,name:"Mohan Das",init:"MD",trade:"Plumber",exp:3,city:"Chennai",dist:2.8,rating:"4.4",count:9,wage:19500,verified:false,available:true,skills:["Plumbing","Helper"],langs:["Tamil"],bio:"Hardworking plumber, quick learner. Available immediately.",appliedFor:1,status:"pending"},
+  {id:4,name:"Vijay Anand",init:"VA",trade:"Electrician",exp:7,city:"Chennai",dist:5.5,rating:"4.9",count:31,wage:28600,verified:true,available:true,skills:["Electrical Wiring","DB Board","Testing"],langs:["Tamil","English"],bio:"Certified electrician (ITI). Residential & commercial wiring expert.",appliedFor:2,status:"shortlisted"},
+  {id:5,name:"Karthik R",init:"KR",trade:"Electrician",exp:4,city:"Chennai",dist:3.4,rating:"4.5",count:15,wage:24700,verified:true,available:false,skills:["Electrician","Appliance Repair"],langs:["Tamil","Kannada"],bio:"House wiring and appliance repair. Own tools.",appliedFor:2,status:"pending"},
+  {id:6,name:"Ganesh Iyer",init:"GI",trade:"Mason",exp:12,city:"Chennai",dist:7.2,rating:"4.7",count:52,wage:26000,verified:true,available:true,skills:["Masonry","Plastering","Bricklaying"],langs:["Tamil","Hindi"],bio:"12 years masonry experience. Compound walls, plastering, brickwork.",appliedFor:3,status:"hired"},
+  {id:7,name:"Prakash M",init:"PM",trade:"Plumber",exp:5,city:"Chennai",dist:3.1,rating:"4.5",count:18,wage:22100,verified:true,available:true,skills:["Plumbing","Pipe Fitting","Sanitary"],langs:["Tamil","Hindi"],bio:"5 years plumbing experience across residential projects. Available immediately.",appliedFor:0,status:"pending"},
+  {id:8,name:"Imran Shaikh",init:"IS",trade:"Electrician",exp:8,city:"Chennai",dist:4.8,rating:"4.7",count:29,wage:27300,verified:true,available:true,skills:["Electrical Wiring","DB Board","Motor Repair"],langs:["Hindi","Urdu","Tamil"],bio:"8 years as an electrician. Wiring, panel work and motor repair. Own tools & bike.",appliedFor:0,status:"pending"},
 ];
 
 const NOTIS = [
@@ -1465,7 +1465,7 @@ function renderPostChips(){
 function publishJob(){ switchTab('s-jobs'); toast('Job published! Workers are being notified 🎉'); }
 
 /* ============================ MY JOBS ============================ */
-function wageStr(j){ if(!j.min&&!j.max) return "Not disclosed"; return "₹"+[j.min,j.max].filter(Boolean).join("–")+(j.type?" / "+j.type:""); }
+function wageStr(j){ if(!j.min&&!j.max) return "Not disclosed"; return "₹"+[j.min,j.max].filter(Boolean).map(n=>n.toLocaleString("en-IN")).join("–")+(j.type?" / "+j.type:""); }
 function myJobCardHtml(j){
   return `<div class="card jobcard" style="margin-bottom:12px" onclick="openManage(${j.id})">
     <div class="between">
@@ -1548,7 +1548,7 @@ function applicantCardHtml(w){
         ${AI_SCORE[w.id]!=null?`<div style="margin-top:6px">${aiChip(w)}</div>`:''}
         <div class="row" style="gap:10px;margin-top:5px">
           <span class="kv"><svg class="ic" viewBox="0 0 24 24"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${w.dist} km</span>
-          <span class="kv wage" style="color:var(--fg)">₹${w.wage}/day</span>
+          <span class="kv wage" style="color:var(--fg)">₹${w.wage.toLocaleString("en-IN")}/month</span>
         </div>
       </div>
       <span class="pill ${w.status}">${w.status[0].toUpperCase()+w.status.slice(1)}</span>
@@ -1599,7 +1599,7 @@ function openWorker(id){
       <div class="row" style="gap:8px;margin-top:14px">
         ${w.verified?'<span class="pill" style="background:rgba(255,255,255,.2);color:#fff">KYC Verified</span>':'<span class="pill" style="background:rgba(255,255,255,.2);color:#fff">Not verified</span>'}
         ${w.available?'<span class="pill" style="background:rgba(255,255,255,.2);color:#fff">● Available now</span>':'<span class="pill" style="background:rgba(255,255,255,.2);color:#fff">Busy</span>'}
-        <span class="pill" style="background:#fff;color:var(--primary)">₹${w.wage}/day</span>
+        <span class="pill" style="background:#fff;color:var(--primary)">₹${w.wage.toLocaleString("en-IN")}/month</span>
       </div>
     </div>
     <div class="pad" style="padding-bottom:0">
@@ -1649,7 +1649,7 @@ function workerBrowseCardHtml(w){
         <div class="tiny muted">${w.trade} · ${w.exp} yrs · ★ ${w.rating} (${w.count})</div>
         <div class="row" style="gap:10px;margin-top:5px">
           <span class="kv"><svg class="ic" viewBox="0 0 24 24"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${w.dist} km</span>
-          <span class="kv wage" style="color:var(--fg)">₹${w.wage}/day</span>
+          <span class="kv wage" style="color:var(--fg)">₹${w.wage.toLocaleString("en-IN")}/month</span>
           ${w.available?'<span class="kv" style="color:var(--green-fg);font-weight:600">● Available</span>':''}
         </div>
       </div>

@@ -353,7 +353,7 @@
             </div>
             <div class="field" style="flex:1"><label>Expected wage</label>
               <div class="row" style="border:1px solid var(--line);border-radius:12px;padding:0 12px">
-                <span class="muted">₹</span><input class="input" style="border:none;padding:12px 6px" placeholder="800" inputmode="numeric" /><span class="muted tiny">/day</span>
+                <span class="muted">₹</span><input class="input" style="border:none;padding:12px 6px" placeholder="20000" inputmode="numeric" /><span class="muted tiny">/month</span>
               </div>
             </div>
           </div>
@@ -873,18 +873,18 @@
 <script>
 /* ============================ DATA ============================ */
 const JOBS = [
-  {id:1,title:"Plumber for Apartment Project",cat:"Plumbing",emp:"Sri Sai Constructions",rating:"4.7",count:12,city:"Chennai",state:"TN",min:800,max:1000,type:"day",vac:3,shift:"day",new:true,skills:["Plumbing","Pipe Fitting","Waterproofing"],perks:["Food","Accommodation"],desc:"Experienced plumbers needed for a 12-floor residential project. Bathroom & kitchen line fitting, drainage and testing. 3 months of work with on-time daily payment.",fee:false,contact:"both"},
-  {id:2,title:"Electrician — House Wiring",cat:"Electrical",emp:"Kumar Interiors",rating:"4.9",count:8,city:"Chennai",state:"TN",min:900,max:1200,type:"day",vac:2,shift:"day",new:true,skills:["Electrical Wiring","Electrician"],perks:["Food"],desc:"Complete wiring for a 3BHK villa — DB board, fitting and testing. Tools provided. Experienced electrician preferred.",fee:false,contact:"apply"},
-  {id:3,title:"Carpenter for Modular Kitchen",cat:"Carpentry",emp:"WoodCraft Studio",rating:"4.6",count:20,city:"Coimbatore",state:"TN",min:1000,max:1400,type:"day",vac:1,shift:"day",new:false,skills:["Carpentry","Woodwork"],perks:[],desc:"Modular kitchen and wardrobe fitting with fine finishing. Please bring your own tools.",fee:false,contact:"call"},
-  {id:4,title:"Painters — 2 needed (interior)",cat:"Painting",emp:"ColorHome Painters",rating:"4.5",count:15,city:"Chennai",state:"TN",min:700,max:850,type:"day",vac:2,shift:"day",new:false,skills:["Painting","Wall Putty"],perks:["Food","Travel"],desc:"Interior painting — putty, primer and 2 coats. About 10 days of work, paid every evening.",fee:false,contact:"both"},
-  {id:5,title:"Mason for Compound Wall",cat:"Masonry",emp:"BuildRight",rating:"4.4",count:6,city:"Madurai",state:"TN",min:850,max:1000,type:"day",vac:4,shift:"day",new:false,skills:["Masonry","Plastering"],perks:["Accommodation"],desc:"Compound wall construction and plastering. A helper will be provided. Weekly payment.",fee:false,contact:"apply"},
-  {id:6,title:"AC Technician — Split & Window",cat:"AC Repair",emp:"CoolFix Services",rating:"4.8",count:31,city:"Chennai",state:"TN",min:600,max:900,type:"day",vac:2,shift:"rotational",new:true,skills:["AC Repair","Appliance Repair"],perks:["Travel","Incentives"],desc:"AC installation, servicing and gas charging. Own bike required. Per-job incentive paid separately.",fee:false,contact:"both"},
+  {id:1,title:"Plumber for Apartment Project",cat:"Plumbing",emp:"Sri Sai Constructions",rating:"4.7",count:12,city:"Chennai",state:"TN",min:20800,max:26000,type:"month",vac:3,shift:"day",new:true,skills:["Plumbing","Pipe Fitting","Waterproofing"],perks:["Food","Accommodation"],desc:"Experienced plumbers needed for a 12-floor residential project. Bathroom & kitchen line fitting, drainage and testing. 3 months of work with on-time daily payment.",fee:false,contact:"both"},
+  {id:2,title:"Electrician — House Wiring",cat:"Electrical",emp:"Kumar Interiors",rating:"4.9",count:8,city:"Chennai",state:"TN",min:23400,max:31200,type:"month",vac:2,shift:"day",new:true,skills:["Electrical Wiring","Electrician"],perks:["Food"],desc:"Complete wiring for a 3BHK villa — DB board, fitting and testing. Tools provided. Experienced electrician preferred.",fee:false,contact:"apply"},
+  {id:3,title:"Carpenter for Modular Kitchen",cat:"Carpentry",emp:"WoodCraft Studio",rating:"4.6",count:20,city:"Coimbatore",state:"TN",min:26000,max:36400,type:"month",vac:1,shift:"day",new:false,skills:["Carpentry","Woodwork"],perks:[],desc:"Modular kitchen and wardrobe fitting with fine finishing. Please bring your own tools.",fee:false,contact:"call"},
+  {id:4,title:"Painters — 2 needed (interior)",cat:"Painting",emp:"ColorHome Painters",rating:"4.5",count:15,city:"Chennai",state:"TN",min:18200,max:22100,type:"month",vac:2,shift:"day",new:false,skills:["Painting","Wall Putty"],perks:["Food","Travel"],desc:"Interior painting — putty, primer and 2 coats. About 10 days of work, paid every evening.",fee:false,contact:"both"},
+  {id:5,title:"Mason for Compound Wall",cat:"Masonry",emp:"BuildRight",rating:"4.4",count:6,city:"Madurai",state:"TN",min:22100,max:26000,type:"month",vac:4,shift:"day",new:false,skills:["Masonry","Plastering"],perks:["Accommodation"],desc:"Compound wall construction and plastering. A helper will be provided. Weekly payment.",fee:false,contact:"apply"},
+  {id:6,title:"AC Technician — Split & Window",cat:"AC Repair",emp:"CoolFix Services",rating:"4.8",count:31,city:"Chennai",state:"TN",min:15600,max:23400,type:"month",vac:2,shift:"rotational",new:true,skills:["AC Repair","Appliance Repair"],perks:["Travel","Incentives"],desc:"AC installation, servicing and gas charging. Own bike required. Per-job incentive paid separately.",fee:false,contact:"both"},
 ];
 
 const APPS = [
-  {id:1,title:"Plumber for Apartment Project",emp:"Sri Sai Constructions",city:"Chennai",wage:"₹900/day",status:"accepted",date:"10 Jul 2026",shortlisted:true},
-  {id:2,title:"Electrician — House Wiring",emp:"Kumar Interiors",city:"Chennai",wage:"₹1000/day",status:"pending",date:"11 Jul 2026",shortlisted:false},
-  {id:3,title:"Painters — interior",emp:"ColorHome Painters",city:"Chennai",wage:"₹800/day",status:"rejected",date:"6 Jul 2026",shortlisted:false},
+  {id:1,title:"Plumber for Apartment Project",emp:"Sri Sai Constructions",city:"Chennai",wage:"₹23,400/month",status:"accepted",date:"10 Jul 2026",shortlisted:true},
+  {id:2,title:"Electrician — House Wiring",emp:"Kumar Interiors",city:"Chennai",wage:"₹26,000/month",status:"pending",date:"11 Jul 2026",shortlisted:false},
+  {id:3,title:"Painters — interior",emp:"ColorHome Painters",city:"Chennai",wage:"₹20,800/month",status:"rejected",date:"6 Jul 2026",shortlisted:false},
 ];
 
 const SAVED = [1,4,6];
@@ -1018,7 +1018,7 @@ document.querySelectorAll('#otpBoxes input').forEach((b,i,arr)=>{
 });
 
 /* ============================ RENDER: JOBS ============================ */
-function wageStr(j){ if(!j.min&&!j.max) return "Not disclosed"; return "₹"+[j.min,j.max].filter(Boolean).join("–")+(j.type?" / "+j.type:""); }
+function wageStr(j){ if(!j.min&&!j.max) return "Not disclosed"; return "₹"+[j.min,j.max].filter(Boolean).map(n=>n.toLocaleString("en-IN")).join("–")+(j.type?" / "+j.type:""); }
 function jobCardHtml(j){
   return `<div class="card jobcard" style="margin-bottom:12px" onclick="openJob(${j.id})">
     <div class="between">

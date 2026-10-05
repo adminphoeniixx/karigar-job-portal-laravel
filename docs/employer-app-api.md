@@ -340,9 +340,9 @@ inviting twice returns `200` with `"invited": true` and sends nothing.
 ```json
 {
   "id": 14, "status": "pending", "status_label": "Pending", "stage": "pending",
-  "shortlisted": false, "cover_note": "...", "expected_wage": 900,
+  "shortlisted": false, "cover_note": "...", "expected_wage": 23400,
   "contact_unlocked": false,
-  "offer": { "wage": 900, "start_date": "2026-08-10", "message": "Report by 9 AM" } | null,
+  "offer": { "wage": 23400, "start_date": "2026-08-10", "message": "Report by 9 AM" } | null,
   "interview": { "at": "2026-08-02T10:30:00+05:30", "at_label": "02 Aug 2026, 10:30 AM",
                  "mode": "site", "note": "Gate 2" } | null,
   "resume": { "name": "suresh-plumber.pdf", "uploaded_at": "...", "download_url": "..." } | null,
@@ -409,7 +409,7 @@ offer fields are stored on the application and echoed back as `applicant.offer`
 ```json
 // body → 200
 { "status": "accepted",            // or "rejected"
-  "offered_wage": 900, "start_date": "2026-08-05", "message": "Report by 9 AM" }
+  "offered_wage": 23400, "start_date": "2026-08-05", "message": "Report by 9 AM" }
 { "message": "Applicant Accepted.", "applicant": { ...ApplicantResource } }
 ```
 
@@ -573,7 +573,8 @@ quota (`access.quota`) says how far down the results can be unlocked:
 
 ### `GET /employer/workers?q=&state=&city=&skill=&page=`
 Full filter-sheet support:
-`experience_min` (0–60), `wage_min` / `wage_max`, `languages[]` (≤10),
+`experience_min` (0–60), `wage_min` / `wage_max` (**per month**, matched
+against the karigar's monthly `expected_wage`), `languages[]` (≤10),
 `verified=1` (KYC only), `available=1` (available now),
 `sort=best_match|nearest|rating|experience|wage_low`, and
 `latitude` + `longitude` (send both) with optional `radius_km` (1–500) for
