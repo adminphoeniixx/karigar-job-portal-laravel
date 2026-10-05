@@ -77,6 +77,7 @@ export default {
         wage: 'મજૂરી',
         vacancies: 'ખાલી જગ્યાઓ',
         loginToApply: 'અરજી કરવા લોગિન કરો',
+        noLongerHiring: 'આ નોકરી માટે હવે અરજીઓ લેવામાં આવતી નથી.',
         by: 'દ્વારા',
         locationNA: 'સ્થળ ઉપલબ્ધ નથી',
         negotiable: 'વાટાઘાટ થઈ શકે',

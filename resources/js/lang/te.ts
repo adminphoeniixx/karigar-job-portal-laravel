@@ -77,6 +77,7 @@ export default {
         wage: 'కూలి',
         vacancies: 'ఖాళీలు',
         loginToApply: 'దరఖాస్తుకు లాగిన్ అవ్వండి',
+        noLongerHiring: 'ఈ ఉద్యోగానికి ఇప్పుడు దరఖాస్తులు తీసుకోవడం లేదు.',
         by: 'ద్వారా',
         locationNA: 'ప్రదేశం లేదు',
         negotiable: 'మాట్లాడుకోవచ్చు',

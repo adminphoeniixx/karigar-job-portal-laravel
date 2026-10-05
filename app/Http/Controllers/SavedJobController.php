@@ -12,7 +12,10 @@ class SavedJobController extends Controller
 {
     public function index(Request $request): Response
     {
+        // A saved job whose employer stopped hiring drops out (and comes back
+        // if the plan is renewed).
         $saved = $request->user()->savedJobs()
+            ->whereHas('job', fn ($q) => $q->open())
             ->with('job:id,title,city,state,category,wage_min,wage_max,wage_type,status')
             ->latest()
             ->paginate(15);

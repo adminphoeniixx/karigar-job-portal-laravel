@@ -45,6 +45,8 @@ const props = defineProps<{
     job: Job;
     employerRating: { average: number; count: number } | null;
     application: { status: string; created_at: string; tracking_steps: TrackStep[] } | null;
+    // false once the employer stopped hiring (plan lapsed) or the job expired.
+    isOpen: boolean;
     isSaved: boolean;
     resume: Resume | null;
 }>();
@@ -195,6 +197,9 @@ const fmtDate = (iso: string | null): string =>
                 <div class="sticky top-6 rounded-2xl border bg-card p-6 shadow-sm">
                     <!-- Already applied -->
                     <div v-if="application">
+                        <p v-if="!isOpen" class="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+                            {{ $t('jobs.noLongerHiring') }}
+                        </p>
                         <div class="rounded-xl border p-4" :class="statusPill[application.status] ?? statusPill.withdrawn">
                             <div class="flex items-center gap-2 text-sm font-bold"><Check class="size-4" /> {{ $t('jobs.applied') }}</div>
                             <div class="mt-2 inline-flex items-center gap-1.5 text-sm capitalize"><Clock class="size-3.5" /> {{ $t('kyc.status') }}: <b>{{ $t(`status.${application.status}`) }}</b></div>

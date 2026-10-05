@@ -77,6 +77,7 @@ export default {
         wage: 'கூலி',
         vacancies: 'காலியிடங்கள்',
         loginToApply: 'விண்ணப்பிக்க உள்நுழையவும்',
+        noLongerHiring: 'இந்த வேலைக்கு இனி விண்ணப்பங்கள் ஏற்கப்படுவதில்லை.',
         by: 'மூலம்',
         locationNA: 'இடம் இல்லை',
         negotiable: 'பேசித் தீர்மானிக்கலாம்',

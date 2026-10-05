@@ -219,10 +219,18 @@ Full detail + the worker's context.
     "employer_rating": { "average": 4.7, "count": 12 },
     "application": { "status": "pending", "status_label": "Pending", "created_ago": "2 hours ago" },
     "is_saved": false,
+    "is_open": true,
     "can_apply": true
   }
 }
 ```
+**A job stops showing once it stops hiring:** when the employer's plan runs out,
+the job passes its end date, or the employer closes it. It drops out of the
+feed, search and `GET /worker/saved` for **every** worker, and this endpoint
+returns `404`. A worker who **already applied** still gets the page so they can
+see their status, with `is_open: false` and `can_apply: false`: show "This job
+is no longer taking applications" and hide the Apply button. If the employer
+renews the plan, the job comes back everywhere on its own.
 
 ---
 
@@ -288,6 +296,7 @@ Withdraw your own application. → `{ "message": "Application withdrawn." }`
 ## 6. Saved jobs 🔒 (worker)
 
 - `GET /worker/saved` → paginated `SavedJobResource` (each embeds a `JobResource`).
+  Only jobs still hiring are listed (see `GET /jobs/{job}` above).
 - `POST /jobs/{job}/save` → toggle. `{ "saved": true, "message": "Saved." }`
 
 ---

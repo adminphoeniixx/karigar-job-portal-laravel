@@ -77,6 +77,7 @@ export default {
         wage: 'मजुरी',
         vacancies: 'रिक्त जागा',
         loginToApply: 'अर्जासाठी लॉगिन करा',
+        noLongerHiring: 'या नोकरीसाठी आता अर्ज घेतले जात नाहीत.',
         by: 'द्वारा',
         locationNA: 'ठिकाण उपलब्ध नाही',
         negotiable: 'बोलणी शक्य',

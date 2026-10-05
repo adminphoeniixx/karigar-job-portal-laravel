@@ -157,6 +157,27 @@ class JobListing extends Model
     }
 
     /**
+     * Whether this user may open the job page. A job that is not taking
+     * applications (paused by a lapsed plan, expired or closed) is gone for
+     * everyone, except its own employer, admins, and workers who already
+     * applied and still want to see where they stand.
+     */
+    public function isViewableBy(?User $user): bool
+    {
+        if ($this->isOpenForApplications()) {
+            return true;
+        }
+
+        if ($user === null) {
+            return false;
+        }
+
+        return $user->isAdmin()
+            || ($user->isEmployer() && $user->employerAccount()->id === $this->employer_id)
+            || $this->applications()->where('worker_id', $user->id)->exists();
+    }
+
+    /**
      * The employer's job plan ran out: the job is out of search and closed to
      * applications until the plan is renewed.
      */
@@ -280,6 +301,17 @@ class JobListing extends Model
     {
         $query->where('status', JobStatus::Active)
             ->where(fn (Builder $q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+    }
+
+    /**
+     * Jobs taking applications right now: live, unexpired and the employer is
+     * hiring. What every worker-facing list shows.
+     *
+     * @param  Builder<JobListing>  $query
+     */
+    public function scopeOpen(Builder $query): void
+    {
+        $query->active()->hiring();
     }
 
     /**

@@ -77,6 +77,7 @@ export default {
         wage: 'Mazdoori',
         vacancies: 'Vacancies',
         loginToApply: 'Apply karne ke liye login karein',
+        noLongerHiring: 'Is job par ab applications nahi li ja rahi hain.',
         by: 'by',
         locationNA: 'Location nahi hai',
         negotiable: 'Baat ho sakti hai',

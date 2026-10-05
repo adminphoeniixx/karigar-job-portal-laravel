@@ -247,6 +247,34 @@ it('keeps paused jobs off the karigar dashboards and tells the employer', functi
     $this->actingAs($this->employer, 'sanctum')->getJson('/api/v1/employer/jobs')->assertJsonPath('hiring_paused', false);
 });
 
+it('hides a paused job everywhere except from workers who already applied', function () {
+    $stranger = User::factory()->create(['role' => UserRole::Worker->value]);
+    $applicant = User::factory()->create(['role' => UserRole::Worker->value]);
+    $this->job->applications()->create(['worker_id' => $applicant->id, 'status' => ApplicationStatus::Pending->value]);
+    $stranger->savedJobs()->create(['job_listing_id' => $this->job->id]);
+
+    accessSubscribe($this->employer, $this->jobPlan, active: false);
+    $id = $this->job->id;
+
+    $this->actingAs($stranger, 'sanctum')->getJson("/api/v1/jobs/{$id}")->assertNotFound();
+    $this->actingAs($stranger)->get("/worker/jobs/{$id}")->assertNotFound();
+    $this->actingAs($stranger, 'sanctum')->getJson('/api/v1/worker/saved')->assertJsonCount(0, 'data');
+    $this->actingAs($stranger)->get('/worker/saved')->assertInertia(fn ($page) => $page->where('saved.data', []));
+    auth()->guard('web')->logout();
+    $this->get("/jobs/{$id}")->assertNotFound();
+
+    $this->actingAs($applicant, 'sanctum')->getJson("/api/v1/jobs/{$id}")
+        ->assertOk()
+        ->assertJsonPath('meta.is_open', false)
+        ->assertJsonPath('meta.can_apply', false);
+    $this->actingAs($this->employer)->get("/jobs/{$id}")->assertOk();
+
+    accessSubscribe($this->employer, $this->jobPlan);
+
+    $this->actingAs($stranger, 'sanctum')->getJson("/api/v1/jobs/{$id}")->assertOk()->assertJsonPath('meta.is_open', true);
+    $this->actingAs($stranger, 'sanctum')->getJson('/api/v1/worker/saved')->assertJsonCount(1, 'data');
+});
+
 it('does not pause jobs for a database plan running out', function () {
     accessSubscribe($this->employer, $this->databasePlan, active: false);
 

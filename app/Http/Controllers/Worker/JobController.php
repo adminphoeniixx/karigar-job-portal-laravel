@@ -28,11 +28,12 @@ class JobController extends Controller
 
     public function show(Request $request, JobListing $job): Response
     {
-        abort_unless($job->status->value === 'active', 404);
+        $user = $request->user();
+        // Paused, expired or closed jobs are gone except for workers who applied.
+        abort_unless($job->isViewableBy($user), 404);
 
         $job->load('employer:id,name');
 
-        $user = $request->user();
         $application = $job->applications()->where('worker_id', $user->id)->first();
 
         return Inertia::render('worker/JobShow', [
@@ -46,6 +47,7 @@ class JobController extends Controller
                 'created_at' => $application->created_at?->diffForHumans(),
                 'tracking_steps' => $application->trackingSteps(),
             ] : null,
+            'isOpen' => $job->isOpenForApplications(),
             'isSaved' => $user->savedJobs()->where('job_listing_id', $job->id)->exists(),
             // Offered right inside the apply panel: applying is when a worker
             // cares that the employer's AI will read their resume.

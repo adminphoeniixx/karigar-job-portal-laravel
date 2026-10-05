@@ -54,13 +54,18 @@ class JobController extends Controller
      */
     public function show(Request $request, JobListing $job): JobDetailResource
     {
-        abort_unless($job->status->value === 'active', 404);
+        $user = $request->user();
+        // Paused (plan lapsed), expired or closed jobs are gone, except for a
+        // worker who already applied and wants to see where they stand.
+        abort_unless($job->isViewableBy($user), 404);
+        $open = $job->isOpenForApplications();
 
         // Feeds the employer's job-funnel "Views" metric.
-        $job->incrementQuietly('views_count');
+        if ($open) {
+            $job->incrementQuietly('views_count');
+        }
 
         $job->load('employer:id,name', 'employer.kyc');
-        $user = $request->user();
         $application = $job->applications()->where('worker_id', $user->id)->first();
 
         return (new JobDetailResource($job))->additional([
@@ -75,7 +80,9 @@ class JobController extends Controller
                     'created_ago' => $application->created_at?->diffForHumans(),
                 ] : null,
                 'is_saved' => $user->savedJobs()->where('job_listing_id', $job->id)->exists(),
-                'can_apply' => $application === null,
+                // false once the job stops taking applications; show "No longer hiring".
+                'is_open' => $open,
+                'can_apply' => $application === null && $open,
             ],
         ]);
     }

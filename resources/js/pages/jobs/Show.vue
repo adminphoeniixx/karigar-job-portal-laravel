@@ -41,6 +41,8 @@ interface Job {
 const props = defineProps<{
     job: Job;
     canApply: boolean;
+    // false once the employer stopped hiring (plan lapsed) or the job expired.
+    isOpen: boolean;
     application: { status: string; created_at: string } | null;
     isSaved: boolean;
     resume: Resume | null;
@@ -224,6 +226,7 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     <!-- Already applied -->
                     <div v-else-if="application" class="mt-7 rounded-sm border p-5" :class="statusStyles[application.status] ?? statusStyles.withdrawn">
                         <div class="flex items-center gap-2 text-sm font-bold"><Check class="size-4" /> {{ $t('jobs.applied') }}</div>
+                        <p v-if="!isOpen" class="mt-2 text-sm">{{ $t('jobs.noLongerHiring') }}</p>
                         <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                             <span class="inline-flex items-center gap-1.5 capitalize"><Clock class="size-3.5" /> {{ $t(`status.${application.status}`) }}</span>
                             <span class="text-xs opacity-70">{{ application.created_at }}</span>

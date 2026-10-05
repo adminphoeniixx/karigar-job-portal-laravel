@@ -77,6 +77,7 @@ export default {
         wage: 'Wage',
         vacancies: 'Vacancies',
         loginToApply: 'Login to apply',
+        noLongerHiring: 'This job is no longer taking applications.',
         by: 'by',
         locationNA: 'Location N/A',
         negotiable: 'Negotiable',

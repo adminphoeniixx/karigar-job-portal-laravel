@@ -77,6 +77,7 @@ export default {
         wage: 'মজুরি',
         vacancies: 'শূন্যপদ',
         loginToApply: 'আবেদন করতে লগইন করুন',
+        noLongerHiring: 'এই কাজের জন্য এখন আর আবেদন নেওয়া হচ্ছে না।',
         by: 'দ্বারা',
         locationNA: 'অবস্থান নেই',
         negotiable: 'আলোচনাসাপেক্ষ',

@@ -22,14 +22,18 @@ class JobBrowseController extends Controller
 
     public function show(Request $request, JobListing $job): Response
     {
-        abort_unless($job->status->value === 'active', 404);
+        $user = $request->user();
+        // Paused, expired or closed jobs are gone except for workers who applied.
+        abort_unless($job->isViewableBy($user), 404);
+        $open = $job->isOpenForApplications();
 
         // Feeds the employer's job-funnel "Views" metric.
-        $job->incrementQuietly('views_count');
+        if ($open) {
+            $job->incrementQuietly('views_count');
+        }
 
         $job->load('employer:id,name');
 
-        $user = $request->user();
         $isWorker = $user?->isWorker() ?? false;
 
         $application = $isWorker
@@ -38,7 +42,8 @@ class JobBrowseController extends Controller
 
         return Inertia::render('jobs/Show', [
             'job' => $job,
-            'canApply' => $isWorker,
+            'canApply' => $isWorker && $open,
+            'isOpen' => $open,
             'application' => $application ? [
                 'status' => $application->status->value,
                 'created_at' => $application->created_at?->diffForHumans(),

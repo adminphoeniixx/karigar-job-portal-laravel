@@ -16,7 +16,10 @@ class SavedJobController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        // A saved job whose employer stopped hiring drops out (and comes back
+        // if the plan is renewed).
         $saved = $request->user()->savedJobs()
+            ->whereHas('job', fn ($q) => $q->open())
             ->with('job', 'job.employer:id,name', 'job.employer.kyc')
             ->latest()
             ->paginate(15);
