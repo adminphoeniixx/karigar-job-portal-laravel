@@ -8,7 +8,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WorkerContactUnlock;
-use App\Services\CreditWallet;
+use App\Services\ContactUnlocks;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -56,7 +56,7 @@ it('keeps a directory karigar\'s number hidden until it is unlocked', function (
         ->postJson("/api/v1/employer/workers/{$this->profile->id}/unlock")
         ->assertOk()
         ->assertJsonPath('worker.phone', '9876543210')
-        ->assertJsonPath('credits.unlocks_used', 1);
+        ->assertJsonPath('unlocks.unlocks_used', 1);
 
     $this->actingAs($this->employer, 'sanctum')
         ->getJson("/api/v1/employer/workers/{$this->profile->id}")
@@ -90,7 +90,7 @@ it('does not charge again for a karigar already unlocked', function () {
     $this->actingAs($this->employer)->post("/employer/workers/{$this->profile->id}/unlock");
 
     expect($application->fresh()->contact_unlocked)->toBeTrue()
-        ->and(CreditWallet::for($this->employer)->unlocksUsed())->toBe(1)
+        ->and(ContactUnlocks::for($this->employer)->unlocksUsed())->toBe(1)
         ->and(WorkerContactUnlock::count())->toBe(1);
 });
 
@@ -103,7 +103,7 @@ it('refuses a directory unlock once the pool is spent', function () {
     $this->actingAs($this->employer, 'sanctum')
         ->postJson("/api/v1/employer/workers/{$otherProfile->id}/unlock")
         ->assertStatus(422)
-        ->assertJsonPath('code', 'out_of_credits');
+        ->assertJsonPath('code', 'unlock_limit_reached');
 });
 
 it('refuses a directory unlock without a plan', function () {
@@ -131,10 +131,10 @@ it('renews the unlock allowance every billing cycle', function () {
     $this->actingAs($this->employer, 'sanctum')
         ->postJson("/api/v1/employer/workers/{$otherProfile->id}/unlock")
         ->assertOk()
-        ->assertJsonPath('credits.unlocks_used', 1);
+        ->assertJsonPath('unlocks.unlocks_used', 1);
 
     // The karigar unlocked last cycle stays unlocked.
-    expect(CreditWallet::for($this->employer)->hasUnlocked($this->worker->id))->toBeTrue();
+    expect(ContactUnlocks::for($this->employer)->hasUnlocked($this->worker->id))->toBeTrue();
 });
 
 it('records an applicant unlock against the cycle', function () {
@@ -144,7 +144,7 @@ it('records an applicant unlock against the cycle', function () {
     $this->actingAs($this->employer)->post("/employer/applications/{$application->id}/unlock");
 
     expect(WorkerContactUnlock::where('employer_id', $this->employer->id)->where('worker_id', $this->worker->id)->exists())->toBeTrue()
-        ->and(CreditWallet::for($this->employer)->planRemaining())->toBe(0);
+        ->and(ContactUnlocks::for($this->employer)->planRemaining())->toBe(0);
 });
 
 it('backfills unlock records for applicants unlocked before', function () {

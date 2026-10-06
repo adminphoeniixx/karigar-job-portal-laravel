@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\EmployerProfile;
 use App\Models\JobApplication;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -10,29 +9,27 @@ use App\Models\User;
 use App\Models\WorkerContactUnlock;
 
 /**
- * The employer's contact-credit wallet, as the app's "12 contact credits" card
- * shows it. Unlocks are paid from three pools:
+ * The employer's contact unlocks: how many karigar numbers the plans the
+ * account holds let it reveal. There is no wallet of bought credits; unlocks
+ * come only from plans:
  *
- *  - the job plan's contact-unlock allowance,
- *  - the database plan's allowance, when the account holds one, and
- *  - purchased top-ups stored on the employer profile (`credit_balance`).
+ *  - the job plan's contact-unlock allowance (applicants), and
+ *  - the database plan's allowance (the Worker Database), when the account
+ *    holds one.
  *
  * Each plan's allowance renews on its own billing cycle and counts the unlocks
  * it paid for since that cycle began; a limit of 0 means the plan does not
  * meter unlocks. A Worker Database unlock spends the database plan first, an
- * applicant unlock the job plan first, then the other plan, then a purchased
- * credit. Without a plan only purchased credits unlock.
+ * applicant unlock the job plan first, then the other plan. Without a plan
+ * nothing unlocks.
  *
  * Unlocks count karigars, not clicks: a karigar's first unlock is recorded as
  * a WorkerContactUnlock and never charged again. Whether the number still
  * shows is up to the plans the account holds now (see {@see contactVisible()}).
- * Boosts always spend purchased credits.
  */
-class CreditWallet
+class ContactUnlocks
 {
     private User $account;
-
-    private EmployerProfile $profile;
 
     /** @var array<string, Subscription|null> */
     private array $subscriptions = [];
@@ -43,7 +40,6 @@ class CreditWallet
     public function __construct(User $user)
     {
         $this->account = $user->employerAccount();
-        $this->profile = $this->account->employerProfile()->firstOrCreate([]);
     }
 
     public static function for(User $user): self
@@ -236,8 +232,8 @@ class CreditWallet
     }
 
     /**
-     * Pick the pool that pays for one unlock, spending a purchased credit if
-     * it comes to that. Null when every pool is empty.
+     * Pick the plan pool that pays for one unlock. Null when every plan is
+     * out of unlocks (or the account holds none).
      */
     private function charge(string $source): ?string
     {
@@ -253,66 +249,21 @@ class CreditWallet
             }
         }
 
-        return $this->spend(1) ? WorkerContactUnlock::POOL_CREDIT : null;
-    }
-
-    /**
-     * Purchased (top-up) credits.
-     */
-    public function purchased(): int
-    {
-        return (int) $this->profile->credit_balance;
+        return null;
     }
 
     public function isUnmetered(): bool
     {
-        return $this->planRemaining() === null;
-    }
-
-    /**
-     * Spendable credits right now (purchased + plan allowance left).
-     */
-    public function balance(): int
-    {
-        return $this->purchased() + ($this->planRemaining() ?? 0);
+        return $this->pools() !== [] && $this->planRemaining() === null;
     }
 
     public function canUnlock(): bool
     {
-        return $this->isUnmetered() || $this->planRemaining() > 0 || $this->purchased() > 0;
-    }
-
-    public function canSpend(int $credits): bool
-    {
-        return $this->purchased() >= $credits;
+        return $this->isUnmetered() || $this->planRemaining() > 0;
     }
 
     /**
-     * Deduct purchased credits (boosts). Returns false when short.
-     */
-    public function spend(int $credits): bool
-    {
-        if (! $this->canSpend($credits)) {
-            return false;
-        }
-
-        $this->profile->decrement('credit_balance', $credits);
-        $this->profile->refresh();
-
-        return true;
-    }
-
-    /**
-     * Add purchased credits (paid top-up or admin grant).
-     */
-    public function add(int $credits): void
-    {
-        $this->profile->increment('credit_balance', $credits);
-        $this->profile->refresh();
-    }
-
-    /**
-     * Wallet summary for the home card / Plans screen.
+     * The plan allowances, for the screens that count unlocks.
      *
      * @return array<string, mixed>
      */
@@ -324,17 +275,13 @@ class CreditWallet
         $pools = $this->pools();
 
         return [
-            'balance' => $this->balance(),
             'unmetered' => $this->isUnmetered(),
-            'purchased' => $this->purchased(),
             'plan_limit' => $this->planLimit(),
+            // Unlocks left across the plans; null when a plan does not meter them.
             'plan_remaining' => $this->planRemaining(),
             'unlocks_used' => $this->unlocksUsed(),
             'unlocks_reset_at' => $main?->ends_at?->toIso8601String(),
             'plan' => $job?->plan->name,
-            'plan_label' => $main
-                ? $main->plan->name.' · '.__('renews :date', ['date' => $main->ends_at?->format('d M Y') ?? '—'])
-                : __('Free plan · unlock karigar numbers'),
             // The database plan's own allowance, when the account holds one.
             'database_plan' => $database ? [
                 'name' => $database->plan->name,
@@ -344,6 +291,63 @@ class CreditWallet
                 'renews_at' => $database->ends_at?->toIso8601String(),
             ] : null,
             'directory_quota' => $this->account->contactDatabaseQuota(),
+        ];
+    }
+
+    /**
+     * The "Worker Database" card on the employer home, in the app and on the
+     * web: how many karigar contacts the account may browse, how many of
+     * them it can still unlock, and the button that sells a database plan.
+     * The lines are ready to show as they are.
+     *
+     * @return array<string, mixed>
+     */
+    public function database(): array
+    {
+        $contacts = $this->account->contactDatabaseQuota();
+        $pools = $this->pools();
+
+        // The database plan when the account holds one, else the job plan
+        // that opens the database alongside its job posts.
+        $pool = $pools[WorkerContactUnlock::POOL_DATABASE] ?? $pools[WorkerContactUnlock::POOL_JOB] ?? null;
+        $subscription = isset($pools[WorkerContactUnlock::POOL_DATABASE])
+            ? $this->subscription(Plan::TYPE_DATABASE)
+            : $this->subscription(Plan::TYPE_JOB);
+
+        if ($contacts <= 0 || $pool === null) {
+            return [
+                'active' => false,
+                'plan' => null,
+                'plan_type' => null,
+                'contacts' => 0,
+                'unlock_limit' => 0,
+                'unlocks_used' => 0,
+                'unlocks_remaining' => 0,
+                'renews_at' => null,
+                'title' => __('Worker Database'),
+                'subtitle' => __('Buy a database plan to see karigar numbers'),
+                'cta' => __('Buy Database'),
+            ];
+        }
+
+        $remaining = $pool['remaining'];
+
+        return [
+            'active' => true,
+            'plan' => $pool['plan'],
+            // database: a database plan; job: the job plan includes the database.
+            'plan_type' => isset($pools[WorkerContactUnlock::POOL_DATABASE]) ? Plan::TYPE_DATABASE : Plan::TYPE_JOB,
+            'contacts' => $contacts,
+            'unlock_limit' => $pool['limit'],
+            'unlocks_used' => $pool['used'],
+            // null: the plan does not meter unlocks.
+            'unlocks_remaining' => $remaining,
+            'renews_at' => $subscription?->ends_at?->toIso8601String(),
+            'title' => __(':count karigar contacts', ['count' => number_format($contacts)]),
+            'subtitle' => $remaining === null
+                ? __('Unlimited unlocks').' · '.$pool['plan']
+                : __(':left of :limit unlocks left', ['left' => number_format($remaining), 'limit' => number_format($pool['limit'])]).' · '.$pool['plan'],
+            'cta' => $remaining === 0 ? __('Upgrade') : __('View plans'),
         ];
     }
 }

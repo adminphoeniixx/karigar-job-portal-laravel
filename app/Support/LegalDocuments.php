@@ -134,7 +134,7 @@ class LegalDocuments
                 ]),
                 self::section('sharing', 'Who else sees it', [
                     self::heading('Other users'),
-                    self::paragraph('Your public profile — trade, skills, experience, city, photo — is visible to employers searching for workers. Your phone number is not. An employer only gets your contact details when you apply to their job, or when they spend credits to unlock your profile. Karigars see an employer\'s company details and the jobs they post.'),
+                    self::paragraph('Your public profile — trade, skills, experience, city, photo — is visible to employers searching for workers. Your phone number is not. An employer only gets your contact details when you apply to their job, or when they unlock your profile through a Worker Database plan. Karigars see an employer\'s company details and the jobs they post.'),
                     self::heading('Companies that help us run the service'),
                     self::paragraph('They may only use what we give them to do their job for us, never for themselves:'),
                     self::list([
@@ -234,11 +234,11 @@ class LegalDocuments
                         'You are responsible for the wages, safety and working conditions of anyone you hire.',
                     ]),
                 ]),
-                self::section('payments', 'Plans, credits and payments', [
+                self::section('payments', 'Plans and payments', [
                     self::list([
-                        'Employers pay for plans and contact credits. Prices are shown before you pay, with GST added at checkout, and a tax invoice is issued for every payment.',
+                        'Employers pay for job plans and Worker Database plans. Prices are shown before you pay, with GST added at checkout, and a tax invoice is issued for every payment.',
                         'Payments run through our payment provider. We never see or store your full card details.',
-                        'Credits are spent when you unlock a karigar\'s contact details or boost a job. Spending is immediate and cannot be undone.',
+                        'Each plan includes a number of contact unlocks. An unlock is used when you reveal a karigar\'s contact details, straight away, and cannot be undone.',
                         'A plan runs for the period you bought and does not renew by itself unless the checkout said so.',
                     ]),
                 ]),
@@ -278,7 +278,7 @@ class LegalDocuments
                     self::paragraph('To the extent the law allows, we are not liable for what happens between you and another user — unpaid wages, work that was not done, injury on site, or a hire that did not work out. Where we are held liable despite this, our liability is limited to what you paid us in the three months before the claim.'),
                 ]),
                 self::section('suspension', 'Suspension and closing accounts', [
-                    self::paragraph('We can suspend or close an account that breaks these terms, that we reasonably believe is fraudulent, or that puts other users at risk. Where we can, we tell you why and give you a chance to respond. You can close your own account at any time; closing it does not refund credits or an unused part of a plan.'),
+                    self::paragraph('We can suspend or close an account that breaks these terms, that we reasonably believe is fraudulent, or that puts other users at risk. Where we can, we tell you why and give you a chance to respond. You can close your own account at any time; closing it does not refund an unused part of a plan.'),
                 ]),
                 self::section('changes', 'Changes to these terms', [
                     self::paragraph('We update the date at the top when these terms change. If a change materially affects you, we will tell you in the app or by message rather than quietly editing this page. Continuing to use Super Karigar after that means you accept the new terms.'),

@@ -10,6 +10,7 @@ use App\Services\ApplicantAccess;
 use App\Services\Billing\Gst;
 use App\Services\Screening\ScreeningService;
 use App\Support\GstStates;
+use App\Support\Verification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -23,6 +24,7 @@ class SettingController extends Controller
             'settings' => [
                 'first_post_free_enabled' => Setting::bool('first_post_free_enabled', true),
                 'kyc_verification_enabled' => Setting::bool('kyc_verification_enabled', true),
+                'worker_verification_enabled' => Setting::bool(Verification::WORKER_KEY, true),
                 'employer_verification_required' => Setting::bool(
                     'employer_verification_required',
                     (bool) config('services.kyc.employer_required', true),
@@ -50,6 +52,7 @@ class SettingController extends Controller
         $data = $request->validate([
             'first_post_free_enabled' => ['required', 'boolean'],
             'kyc_verification_enabled' => ['required', 'boolean'],
+            'worker_verification_enabled' => ['sometimes', 'boolean'],
             'employer_verification_required' => ['sometimes', 'boolean'],
             'ai_auto_shortlist_enabled' => ['required', 'boolean'],
             // Below 40 the model calls a candidate a "weak" match, so allow the
@@ -67,6 +70,9 @@ class SettingController extends Controller
 
         Setting::set('first_post_free_enabled', $data['first_post_free_enabled'] ? '1' : '0');
         Setting::set('kyc_verification_enabled', $data['kyc_verification_enabled'] ? '1' : '0');
+        if (isset($data['worker_verification_enabled'])) {
+            Setting::set(Verification::WORKER_KEY, $data['worker_verification_enabled'] ? '1' : '0');
+        }
         if (isset($data['employer_verification_required'])) {
             Setting::set('employer_verification_required', $data['employer_verification_required'] ? '1' : '0');
         }

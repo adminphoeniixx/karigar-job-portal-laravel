@@ -51,7 +51,6 @@ const props = defineProps<{
         limit: number;
         used: number;
         remaining: number | null;
-        purchased: number;
         resets_at: string | null;
         // One entry per plan held: job and/or database, each on its own cycle.
         pools: Record<string, { plan: string; limit: number; used: number; remaining: number | null; resets_at: string | null }>;
@@ -177,7 +176,7 @@ const field = 'rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline
                     <span v-if="pool.resets_at" class="text-muted-foreground"> Renews {{ date(pool.resets_at) }}.</span>
                 </span>
                 <span class="text-muted-foreground">
-                    This cycle: {{ num(usage.used_database) }} from the database, {{ num(usage.used_applicants) }} {{ usage.used_applicants === 1 ? 'applicant' : 'applicants' }}.<template v-if="usage.purchased > 0"> Plus {{ num(usage.purchased) }} purchased credits.</template>
+                    This cycle: {{ num(usage.used_database) }} from the database, {{ num(usage.used_applicants) }} {{ usage.used_applicants === 1 ? 'applicant' : 'applicants' }}.
                 </span>
             </div>
             <Link href="/subscription" class="shrink-0 text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">Need more? Upgrade →</Link>

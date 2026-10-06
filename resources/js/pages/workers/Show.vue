@@ -30,13 +30,13 @@ const props = defineProps<{
         contact_unlocked: boolean;
         can_unlock: boolean;
     };
-    unlocks: { used: number; limit: number; remaining: number | null; purchased: number };
+    unlocks: { used: number; limit: number; remaining: number | null };
     reviews: { average: number; count: number; items: Review[] } | null;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Find Workers', href: '/employer/workers' }, { title: 'Profile', href: '#' }] } });
 
-const unlocksLeft = computed(() => (props.unlocks.remaining === null ? null : props.unlocks.remaining + props.unlocks.purchased));
+const unlocksLeft = computed(() => props.unlocks.remaining);
 
 const unlocking = ref(false);
 const unlock = () => {
@@ -133,7 +133,7 @@ const unlock = () => {
                     </div>
                     <div v-else class="mt-3">
                         <p class="text-sm text-muted-foreground">Subscribe to a plan to unlock karigar contacts.</p>
-                        <Link href="/subscription" class="mt-3 inline-flex rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted">View plans</Link>
+                        <Link href="/subscription#database" class="mt-3 inline-flex rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted">View plans</Link>
                     </div>
                 </div>
             </div>

@@ -12,7 +12,7 @@ use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ShortlistedNotification;
 use App\Services\ApplicantAccess;
-use App\Services\CreditWallet;
+use App\Services\ContactUnlocks;
 use App\Support\ReferenceData;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
@@ -122,7 +122,7 @@ class ApplicantController extends Controller
             ? 'application_accepted'
             : 'application_rejected';
 
-        TemplatedMailer::send($key, $application->worker->email, [
+        TemplatedMailer::send($key, $application->worker->alertEmail(), [
             'worker_name' => $application->worker->name,
             'employer_name' => $job->employer->name,
             'job_title' => $job->title,
@@ -162,7 +162,7 @@ class ApplicantController extends Controller
         $application->worker->notify(new ShortlistedNotification($application));
 
         $job = $application->job;
-        TemplatedMailer::send('application_shortlisted', $application->worker->email, [
+        TemplatedMailer::send('application_shortlisted', $application->worker->alertEmail(), [
             'worker_name' => $application->worker->name,
             'employer_name' => $job->employer->name,
             'job_title' => $job->title,
@@ -244,13 +244,13 @@ class ApplicantController extends Controller
             return response()->json(['applicant' => new ApplicantResource($application)]);
         }
 
-        $wallet = CreditWallet::for($request->user());
+        $wallet = ContactUnlocks::for($request->user());
 
         if (! $wallet->unlockApplication($application, $request->user())) {
             return response()->json([
                 'message' => __('You have reached your plan\'s contact unlock limit.'),
-                'code' => 'out_of_credits',
-                'credits' => $wallet->summary(),
+                'code' => 'unlock_limit_reached',
+                'unlocks' => $wallet->summary(),
             ], 422);
         }
 
@@ -259,7 +259,7 @@ class ApplicantController extends Controller
         return response()->json([
             'message' => __('Contact unlocked.'),
             'applicant' => new ApplicantResource($application),
-            'credits' => CreditWallet::for($request->user())->summary(),
+            'unlocks' => ContactUnlocks::for($request->user())->summary(),
         ]);
     }
 

@@ -2,6 +2,8 @@
 
 use App\Models\JobListing;
 use App\Models\User;
+use App\Services\Geocoder;
+use App\Support\LocateByCity;
 use App\Support\WageConversion;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -25,6 +27,10 @@ Artisan::command('jobs:sync-hiring', function () {
 
 Schedule::command('jobs:sync-hiring')->hourly();
 
+// New karigars who typed a city but dropped no pin get the city centre, so
+// Find Workers can show how far away they are.
+Schedule::command('karigars:locate --sync')->hourly()->withoutOverlapping();
+
 // Wages are monthly (App\Support\Wage). The migration converted what was
 // there; run this after deploying to catch rows older code wrote in between,
 // with --sync on the server to refresh the karigar search index.
@@ -39,3 +45,24 @@ Artisan::command('wages:to-monthly {--sync : Also re-sync real karigars in searc
             : $this->info("Re-synced {$synced} karigars in search.");
     }
 })->purpose('Turn daily and hourly wages into monthly ones');
+
+// Karigars and employers with a city but no map pin: place them at the city
+// centre so distances, "nearest" and the radius filter work for them.
+Artisan::command('karigars:locate {--sync : Also re-sync the placed karigars in search} {--all : With --sync, re-sync every real karigar, for rows placed before search could be reached}', function (Geocoder $geocoder) {
+    $counts = LocateByCity::run($geocoder, (bool) $this->option('sync'));
+
+    if ($this->option('sync') && $this->option('all')) {
+        $counts['synced'] = WageConversion::syncSearch();
+    }
+    $this->info("Placed {$counts['workers']} karigars and {$counts['employers']} employers in {$counts['cities']} cities.");
+
+    if ($counts['unmatched'] !== []) {
+        $this->warn('No match for: '.implode('; ', $counts['unmatched']));
+    }
+
+    if ($this->option('sync')) {
+        $counts['synced'] === null
+            ? $this->warn('Search could not be reached; nothing was re-synced.')
+            : $this->info("Re-synced {$counts['synced']} karigars in search.");
+    }
+})->purpose('Give karigars and employers without a map pin their city centre');

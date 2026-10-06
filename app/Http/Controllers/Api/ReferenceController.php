@@ -44,12 +44,6 @@ class ReferenceController extends Controller
             // Verification screens: business types, the documents each needs,
             // number formats and what can stand in for a missing document.
             'verification' => KycRequirements::reference(),
-            'credit_packs' => collect(config('billing.credit_packs'))
-                ->map(fn (array $pack, string $key) => ['key' => $key] + $pack)
-                ->values(),
-            'boost_tiers' => collect(config('billing.boost_tiers'))
-                ->map(fn (array $tier, string $key) => ['key' => $key] + $tier)
-                ->values(),
         ]);
     }
 

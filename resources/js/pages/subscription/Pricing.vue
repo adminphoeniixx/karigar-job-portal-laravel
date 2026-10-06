@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { AlertTriangle, Check, CreditCard, FileText, Sparkles, Tag, X } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
 interface Plan {
@@ -46,6 +46,13 @@ const props = defineProps<{
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Subscription', href: '/subscription' }] } });
+
+// "Buy Database" on the dashboard lands here with #database.
+onMounted(() => {
+    if (window.location.hash === '#database') {
+        document.getElementById('database')?.scrollIntoView({ behavior: 'smooth' });
+    }
+});
 
 // Job plans and database plans are bought separately; one of each can run at once.
 const sections = computed(() =>
@@ -149,7 +156,7 @@ const subscribe = () => {
             <span>Razorpay test keys are not configured yet. Plans are shown, but checkout will work once the keys are added to <code class="rounded bg-amber-500/20 px-1">.env</code>.</span>
         </div>
 
-        <section v-for="section in sections" :key="section.key" class="flex flex-col gap-4">
+        <section v-for="section in sections" :id="section.key" :key="section.key" class="flex scroll-mt-6 flex-col gap-4">
             <div>
                 <h2 class="text-lg font-bold">{{ section.key === 'database' ? $t('subscription.databasePlans') : $t('subscription.jobPlans') }}</h2>
                 <p class="text-sm text-muted-foreground">{{ section.key === 'database' ? $t('subscription.databasePlansHint') : $t('subscription.jobPlansHint') }}</p>

@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\JobResource;
 use App\Http\Resources\Api\WorkerProfileResource;
 use App\Models\JobListing;
-use App\Models\Setting;
 use App\Support\JobFeed;
+use App\Support\Verification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,7 +21,7 @@ class DashboardController extends Controller
         $user = $request->user();
         $profile = $user->workerProfile()->firstOrCreate([]);
         $profile->setRelation('user', $user);
-        $verificationEnabled = Setting::bool('kyc_verification_enabled', true);
+        $verificationEnabled = Verification::forWorkers();
         $kyc = $verificationEnabled ? $user->kyc : null;
 
         // The top of the karigar's own feed: their categories, nearest first
@@ -30,7 +30,8 @@ class DashboardController extends Controller
             'lat' => ['nullable', 'numeric', 'between:-90,90', 'required_with:lng'],
             'lng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:lat'],
         ]);
-        $latest = JobFeed::for(
+        // Not available for work: no jobs on the home screen either.
+        $latest = $profile->available === false ? collect() : JobFeed::for(
             $user,
             isset($point['lat']) ? (float) $point['lat'] : null,
             isset($point['lng']) ? (float) $point['lng'] : null,
@@ -56,6 +57,9 @@ class DashboardController extends Controller
                 'verification_enabled' => $verificationEnabled,
             ],
             'latest_jobs' => JobResource::collection($latest),
+            // What "Latest jobs near you" is near: the phone, or a place the
+            // karigar picked (see /worker/feed-location).
+            'feed_location' => $profile->feedLocation(),
         ]);
     }
 }

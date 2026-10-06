@@ -75,11 +75,12 @@ class ScoreApplication implements ShouldQueue
     /**
      * Auto-shortlist a strong match (and notify the worker), mirroring the
      * manual shortlist. Admin-controlled: off unless the admin enabled it, and
-     * only for applicants scoring at or above the admin's threshold.
+     * only for applicants scoring at or above the admin's threshold. The
+     * employer can still switch it off on the job.
      */
     private function maybeAutoShortlist(JobApplication $application, int $score): bool
     {
-        if (! Setting::bool(self::ENABLED_KEY, false)) {
+        if (! Setting::bool(self::ENABLED_KEY, false) || ! $application->job->ai_shortlist_enabled) {
             return false;
         }
 
@@ -94,8 +95,9 @@ class ScoreApplication implements ShouldQueue
 
         // Ring the worker to ask if they are still interested and when they
         // could interview. Admin-controlled and separately off by default —
-        // auto-shortlisting is reversible, an unwanted robocall is not.
-        if (app(ScreeningService::class)->autoEnabled()) {
+        // auto-shortlisting is reversible, an unwanted robocall is not. The
+        // employer's switch on the job comes on top of the admin's.
+        if (app(ScreeningService::class)->autoEnabled() && $application->job->ai_call_enabled) {
             PlaceScreeningCall::dispatch($application->id);
         }
 
@@ -106,11 +108,12 @@ class ScoreApplication implements ShouldQueue
      * Reject a poor match on the employer's behalf, mirroring the manual reject
      * (same status, same timestamp, same notification). Admin-controlled and off
      * by default: a wrong auto-reject costs a real worker a real job, so this
-     * never touches an application the employer has already moved on.
+     * never touches an application the employer has already moved on, nor one
+     * on a job where the employer switched the AI shortlist off.
      */
     private function maybeAutoReject(JobApplication $application, int $score): void
     {
-        if (! Setting::bool(self::REJECT_ENABLED_KEY, false)) {
+        if (! Setting::bool(self::REJECT_ENABLED_KEY, false) || ! $application->job->ai_shortlist_enabled) {
             return;
         }
 

@@ -17,7 +17,7 @@ user to have the **employer** role (`403` otherwise).
 | `401` | missing / revoked token |
 | `403` | wrong role, not your job/applicant, not the account owner, suspended account |
 | `404` | not found — **also** what the KYC routes return while admin has verification switched off |
-| `422` | validation (`{ "message", "errors": { field: [msg] } }`) or a business rule (`out_of_credits`, `chat_not_allowed`, plan limits) |
+| `422` | validation (`{ "message", "errors": { field: [msg] } }`) or a business rule (`unlock_limit_reached`, `no_plan`, `chat_not_allowed`, plan limits) |
 | `429` | OTP throttles |
 
 Jobs, applicants, contact-unlock quota, chat and reviews are scoped to the
@@ -90,10 +90,6 @@ One call the app can cache on first launch:
   "hiring_as": ["business", "contractor", "individual"],
   "interview_modes": ["site", "phone", "video"],
   "worker_sorts": ["best_match", "nearest", "rating", "experience", "wage_low"],
-  "credit_packs": [{ "key": "topup_25", "credits": 25, "price": 299, "label": "25 credits" },
-                   { "key": "topup_60", "credits": 60, "price": 649, "label": "60 credits" }],
-  "boost_tiers": [{ "key": "standard", "credits": 1, "days": 3, "label": "Standard boost" },
-                  { "key": "turbo", "credits": 3, "days": 7, "label": "Turbo boost" }],
   "app_languages": [{ "code": "en", "native": "English", "english": "English" }, ...]
 }
 ```
@@ -111,7 +107,8 @@ Everything the home screen needs in one call.
 {
   "greeting": "Sri Sai Constructions",
   "profile": { ...EmployerProfileResource },
-  "credits": { ...CreditSummary },          // home "12 contact credits" card
+  "unlocks": { ...UnlockSummary },          // unlock allowances (§13)
+  "database": { ...DatabaseCard },          // home "Worker Database" card (§13)
   "stats": {
     "active_jobs": 4, "total_applicants": 37, "shortlisted": 9,
     "hired": 5, "interview": 2,
@@ -243,7 +240,9 @@ and emails the employer a confirmation.
   "perks": ["ESI", "PF", "Diwali bonus"],       // any perk; the list is only suggestions
   "contact_mode": "both", "contact_phone": "9876543210",
   "contact_name": "Ramesh Kumar", "contact_designation": "Supervisor",
-  "requires_worker_fee": false, "status": "active"
+  "requires_worker_fee": false,
+  "ai_shortlist_enabled": true, "ai_call_enabled": true,   // optional, both default true
+  "status": "active"
 }
 // 201 → { "message": "Job posted.", "job": { ...EmployerJobResource } }
 ```
@@ -258,7 +257,9 @@ both or neither (a night shift may end before it starts) · `perks.*` any text
 `contact_phone` required for call/both; `contact_name` and
 `contact_designation` ≤100, shown to karigars next to the number) ·
 `requires_worker_fee` boolean (defaults false;
-`worker_fee_amount` required when true) · `expires_at` optional, after today.
+`worker_fee_amount` required when true) · `expires_at` optional, after today ·
+`ai_shortlist_enabled` / `ai_call_enabled` optional booleans (a new job gets
+both `true`; an edit that leaves them out keeps what the job had).
 
 **Posting gate** — `422` before anything is created:
 - `"Subscribe to a plan to post jobs."` — no active plan and the free first post
@@ -275,8 +276,12 @@ What the Post Job form offers:
 ```json
 { "category_skills": { "Weaving": ["Handloom weaving", "Powerloom operation", "Dyeing", ...], ... },
   "perks": ["ESI", "PF", "Food", "Accommodation", ..., "Diwali bonus"],
-  "shifts": ["day", "night", "rotational", "flexible"] }
+  "shifts": ["day", "night", "rotational", "flexible"],
+  "ai": { "shortlist_available": true, "call_available": false } }
 ```
+`ai` says which of the job's AI switches the admin has on platform-wide. Show a
+switch that is `false` here disabled, with "Switched off by the admin". See
+`docs/app-ai-switches-and-karigar-verification.md`.
 Suggest `category_skills[<chosen category>]` as skill chips once a category is
 picked; the employer may still type others. `perks` are the usual ones plus this
 employer's own from earlier jobs.
@@ -295,20 +300,6 @@ one did.
 A draft flipped to `active` fires the same worker notifications as a fresh post.
 ### `POST /employer/jobs/{job}/close` → `{ "message": "Job closed.", "job": {...} }`
 ### `DELETE /employer/jobs/{job}` → `{ "message": "Job deleted." }`
-
-### `POST /employer/jobs/{job}/boost`
-Promote a job (Boost sheet). Paid for out of **purchased** credits only —
-plan allowance does not cover boosts. `standard` = 1 credit / 3 days,
-`turbo` = 3 credits / 7 days (see `boost_tiers` in `/reference`).
-Boosting an already-boosted job extends it instead of shortening it.
-```json
-// body → 200
-{ "tier": "standard" }
-{ "message": "Job boosted for 3 days.", "job": {...}, "credits": { ...CreditSummary } }
-// 422 when short on credits → drives the "out of credits" sheet
-{ "message": "You do not have enough credits to boost this job.",
-  "code": "out_of_credits", "credits": {...} }
-```
 
 ### `GET /employer/jobs/{job}/matches`
 "✨ Matched for this job" — up to 20 **available** workers whose skills or
@@ -330,6 +321,8 @@ inviting twice returns `200` with `"invited": true` and sends nothing.
 { "message": "Invite sent to Ravi.", "invited": true }
 // 200 on a repeat
 { "message": "This worker has already been invited.", "invited": true }
+// 422 when the karigar switched "Available for work" off
+{ "message": "This karigar is not available for work right now.", "code": "worker_unavailable" }
 ```
 
 ---
@@ -433,16 +426,16 @@ Cancel it — the applicant drops back to `shortlisted`.
 → `{ "message": "Interview cancelled.", "applicant": {...} }`
 
 ### `POST /employer/applicants/{application}/unlock`
-Reveal the worker's contact, spending one contact credit — the plan's unlock
-allowance first, then purchased top-up credits.
+Reveal the worker's contact, spending one contact unlock — the job plan's
+allowance first, then the database plan's. There are no bought credits.
 ```json
 // 200
-{ "message": "Contact unlocked.", "applicant": {...}, "credits": { ...CreditSummary } }
+{ "message": "Contact unlocked.", "applicant": {...}, "unlocks": { ...UnlockSummary } }
 // 422 — nothing left
 { "message": "You have reached your plan's contact unlock limit.",
-  "code": "out_of_credits", "credits": {...} }
+  "code": "unlock_limit_reached", "unlocks": {...} }
 ```
-Already unlocked → `200 { "applicant": {...} }` only (no `message`, no `credits`,
+Already unlocked → `200 { "applicant": {...} }` only (no `message`, no `unlocks`,
 nothing charged), so treat both shapes as success.
 
 Unlocks count **karigars, not clicks**, and applicants share one pool with the
@@ -589,7 +582,8 @@ against the karigar's monthly `expected_wage`), `languages[]` (≤10),
     "links": {...}, "meta": {...} },
   "filters": { "q": null, ... },
   "access": { "quota": 25, "accessible": 6, "total": 6, "has_plan": true },
-  "credits": { ...CreditSummary },      // unlocks left for the counter
+  "unlocks": { ...UnlockSummary },      // unlocks left for the counter
+  "database": { ...DatabaseCard },      // plan banner / "Buy Database" button
   "contact_counts": { "database_total": 4, "applicants_total": 3 }   // tab badges, see §7b
 }
 ```
@@ -616,19 +610,19 @@ new unlock.
 ```
 
 ### `POST /employer/workers/{worker}/unlock`
-Reveal a directory karigar's number, spending one contact unlock (plan
-allowance first, then purchased credits). A karigar already unlocked costs
+Reveal a directory karigar's number, spending one contact unlock (the database
+plan's allowance first, then the job plan's). A karigar already unlocked costs
 nothing. After an unlock the employer can also open a chat with the karigar.
 ```json
 // 200
 { "message": "Contact unlocked.",
   "worker": { "id", "user_id", "phone": "9876543210", "email", "contact_unlocked": true },
-  "credits": { ...CreditSummary } }
-// 422 — no active plan / database quota
+  "unlocks": { ...UnlockSummary } }
+// 422 — no active plan / database quota → open the database plans
 { "message": "Subscribe to a plan to unlock karigar contacts.", "code": "no_plan" }
-// 422 — nothing left
+// 422 — nothing left → offer a bigger database plan
 { "message": "You have reached your plan's contact unlock limit.",
-  "code": "out_of_credits", "credits": {...} }
+  "code": "unlock_limit_reached", "unlocks": {...} }
 ```
 
 ---
@@ -827,43 +821,69 @@ Non-participants get `403`.
 
 ---
 
-## 13. Credits & Plans 🔒
+## 13. Plans & Worker Database 🔒
 
-**CreditSummary** (returned by the dashboard, unlock, boost and plan calls):
+**There are no contact credits.** Nothing is bought as credits or top-ups and
+jobs are not boosted. Karigar numbers are unlocked only through plans:
+
+- a **database plan** ("Buy Database") opens the Worker Database: it lets the
+  employer browse so many karigar contacts (`contact_database_limit`, e.g.
+  1,000) and unlock the numbers of some of them each month
+  (`contact_unlock_limit`, e.g. 50). Unlocking = the phone number shows.
+- a **job plan** posts jobs, unlocks applicants, and also opens part of the
+  database.
+
+**DatabaseCard** — the home card that replaced "12 contact credits / Buy".
+Show `title`, `subtitle` and a button labelled `cta` as they are; the button
+always opens the database plans (`GET /employer/plans`, `type: "database"`).
 ```json
-{ "balance": 12, "unmetered": false, "purchased": 12, "plan_limit": 50,
-  "plan_remaining": 0, "unlocks_used": 50, "unlocks_reset_at": "2026-08-28T10:00:00+05:30",
-  "plan": "Starter", "plan_label": "Starter · renews 28 Aug 2026",
-  "database_plan": { "name": "Database Basic", "limit": 30, "used": 2, "remaining": 28,
+// no plan that opens the database
+{ "active": false, "plan": null, "plan_type": null, "contacts": 0,
+  "unlock_limit": 0, "unlocks_used": 0, "unlocks_remaining": 0, "renews_at": null,
+  "title": "Worker Database",
+  "subtitle": "Buy a database plan to see karigar numbers",
+  "cta": "Buy Database" }
+// with Database Basic
+{ "active": true, "plan": "Database Basic", "plan_type": "database",
+  "contacts": 1000, "unlock_limit": 50, "unlocks_used": 12, "unlocks_remaining": 38,
+  "renews_at": "2026-11-06T10:00:00+05:30",
+  "title": "1,000 karigar contacts",
+  "subtitle": "38 of 50 unlocks left · Database Basic",
+  "cta": "View plans" }          // "Upgrade" once unlocks_remaining is 0
+```
+`plan_type: "job"` means no database plan is held and the job plan's own
+database access is shown. `unlocks_remaining: null` = the plan does not meter
+unlocks.
+
+**UnlockSummary** (dashboard, unlock and plan calls):
+```json
+{ "unmetered": false, "plan_limit": 75, "plan_remaining": 40, "unlocks_used": 35,
+  "unlocks_reset_at": "2026-08-28T10:00:00+05:30", "plan": "Basic",
+  "database_plan": { "name": "Database Basic", "limit": 50, "used": 12, "remaining": 38,
                      "renews_at": "2026-10-10T09:00:00+05:30" } | null,
-  "directory_quota": 25 }
+  "directory_quota": 2000 }
 ```
 `plan_limit` / `plan_remaining` / `unlocks_used` add up the job plan and the
 database plan. A Worker Database unlock spends the database plan first, an
-applicant unlock the job plan first, then the other plan, then a purchased
-credit. **Without any plan, unlocks need purchased credits** (`plan_remaining:
-0`); they used to be free.
-Credits come from the plan's contact-unlock allowance plus purchased top-ups.
-Unlocks spend the plan allowance first; boosts always spend purchased credits.
+applicant unlock the job plan first, then the other plan. **Without any plan
+nothing unlocks** (`plan_remaining: 0`).
 The allowance renews every billing cycle, like job posts: `unlocks_used` counts
 karigars first unlocked in the cycle now running, and `unlocks_reset_at` is when
 it next renews (`null` without a subscription). A karigar unlocked once stays
 unlocked across cycles and never costs again.
 `plan_limit: 0` means the plan does not meter unlocks — then `unmetered` is
-`true` and `plan_remaining` is `null`. With no subscription, `plan_label` reads
-"Free plan · unlock worker numbers".
+`true` and `plan_remaining` is `null`.
 
 ### `GET /employer/plans`
 ```json
 {
-  "credits": { ...CreditSummary },
+  "unlocks": { ...UnlockSummary },
+  "database": { ...DatabaseCard },
   "plans": [ { "id", "name", "slug", "type", "price", "currency", "interval",
                "features": {...}, "is_current": false, "purchasable": true } ],
   "current": { "id", "plan", "status", "starts_at", "ends_at" } | null,          // job plan
   "current_database": { "id", "plan", "status", "starts_at", "ends_at" } | null, // database plan
   "job_plan_lapsed": false,
-  "credit_packs": [ { "key": "topup_25", "credits": 25, "price": 299, "label": "25 credits" } ],
-  "boost_tiers": [ { "key": "standard", "credits": 1, "days": 3, "label": "Standard boost" } ],
   "invoices": [ { "id", "invoice_number", "plan", "total", "date", "url" } ],
   "payment": { "configured": true, "key": "rzp_live_xxx", "gst_percent": 18 }
 }
@@ -873,7 +893,10 @@ disable the buy buttons. Razorpay plans are created at checkout, so a new plan
 is buyable straight away. Show every plan `plans` returns, cheapest first,
 using its `feature_list` lines as they are, in two groups by `type`: **job
 plans** (post jobs, see applicants, open the database) and **database plans**
-(the Worker Database only). An account holds at most one of each at a time, so
+(the Worker Database only). "Buy Database" opens this screen on the database
+group — the database plans are seeded as Database Basic ₹299 (1,000 contacts,
+50 unlocks / month), Database Standard ₹599 (3,000 / 125) and Database Pro ₹999
+(10,000 / 300), all before GST and editable in Admin → Plans. An account holds at most one of each at a time, so
 `is_current` can be true on two plans. `job_plan_lapsed: true` means the job
 plan ran out: its jobs are paused and applicants hidden until it renews — show
 a Renew prompt. `invoices[].url` is the token-auth JSON endpoint below;
@@ -917,20 +940,9 @@ the coupon redemption.
 ```json
 // body → 200
 { "razorpay_payment_id": "pay_x", "razorpay_subscription_id": "sub_x", "razorpay_signature": "..." }
-{ "message": "Subscription activated!", "credits": { ...CreditSummary } }
+{ "message": "Subscription activated!", "unlocks": { ...UnlockSummary }, "database": { ...DatabaseCard } }
 ```
 `422 { "message": "Payment verification failed." }` on a bad signature.
-
-### `POST /employer/credits/top-up` — body `{ "pack": "topup_25" }`
-→ `201 { "purchase_id", "razorpay_order_id", "razorpay_key", "amount", "credits", "currency" }`
-
-### `POST /employer/credits/callback`
-```json
-// body → 200
-{ "razorpay_payment_id": "pay_x", "razorpay_order_id": "order_x", "razorpay_signature": "..." }
-{ "message": "25 credits added.", "credits": { ...CreditSummary } }
-```
-Idempotent — replaying the same order does not double-credit.
 
 ---
 
@@ -1024,7 +1036,7 @@ Content is English only for now.
 | GET | `/reference` · `/reference/cities` · `/reference/job-categories` | 2 |
 | GET | `/employer/dashboard` | 3 |
 | GET/PUT/PATCH/POST | `/employer/profile` · `/employer/profile/logo` | 4 |
-| GET/POST/PATCH/DELETE | `/employer/jobs`, `/employer/jobs/{job}`, `/close`, `/boost`, `/matches`, `/invite`, `/employer/jobs/suggest-description` | 5 |
+| GET/POST/PATCH/DELETE | `/employer/jobs`, `/employer/jobs/{job}`, `/close`, `/matches`, `/invite`, `/employer/jobs/suggest-description` | 5 |
 | GET/PATCH/POST/DELETE | `/employer/jobs/{job}/applicants`, `/employer/shortlisted`, `/employer/applicants/{application}` (+ `/status`, `/shortlist`, `/unlock`, `/interview`, `/resume`), `/employer/jobs/{job}/rescore` | 6 |
 | GET/POST | `/employer/applicants/{application}/screening-calls` · `/employer/screening-calls/{call}/confirm` | 6b |
 | GET | `/employer/workers` · `/employer/workers/{worker}` | 7 |
@@ -1033,7 +1045,7 @@ Content is English only for now.
 | GET/POST | `/employer/reviews` · `/employer/applicants/{application}/review` | 10 |
 | GET/POST/PATCH/DELETE | `/employer/team` · `/employer/team/{member}` | 11 |
 | GET/POST | `/conversations` (+ `/{id}`, `/messages`, `/read`) | 12 |
-| GET/POST | `/employer/plans` (+ `/{plan}/subscribe`, `/callback`) · `/employer/credits/top-up` (+ `/callback`) · `/employer/invoices/{subscription}` | 13 |
+| GET/POST | `/employer/plans` (+ `/{plan}/subscribe`, `/callback`) · `/employer/invoices/{subscription}` | 13 |
 | GET/PUT/PATCH/DELETE | `/preferences` · `/auth/sessions` (+ `/{token}`) | 14 |
 | GET | `/legal` · `/legal/{document}` · `/support` (all public) | 15 |
 
@@ -1064,7 +1076,7 @@ Postman collection: `docs/karigar-employer-app.postman_collection.json`.
    php artisan scout:delete-index "App\Models\JobListing"
    php artisan scout:import "App\Models\JobListing"
    ```
-3. Credit packs, boost tiers and GST live in `config/billing.php` — edit there,
-   not in code. Top-ups use the same Razorpay keys as subscriptions.
+3. GST and invoice details live in `config/billing.php`; plan prices and
+   limits in Admin → Plans. Credit packs and boosts are gone.
 4. A queue worker must be running: AI scoring (`ScoreApplication`), push
    notifications and emails are all queued.

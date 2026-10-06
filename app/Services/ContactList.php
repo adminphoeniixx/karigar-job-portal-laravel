@@ -102,7 +102,7 @@ class ContactList
      */
     public function usage(): array
     {
-        $wallet = CreditWallet::for($this->account);
+        $wallet = ContactUnlocks::for($this->account);
         $job = $wallet->subscription(Plan::TYPE_JOB);
         $database = $wallet->subscription(Plan::TYPE_DATABASE);
 
@@ -134,7 +134,6 @@ class ContactList
             'limit' => $wallet->planLimit(),
             'used' => $wallet->unlocksUsed(),
             'remaining' => $wallet->planRemaining(),
-            'purchased' => $wallet->purchased(),
             'resets_at' => ($job ?? $database)?->ends_at?->toIso8601String(),
             'pools' => $wallet->pools(),
             'used_database' => $bySource[WorkerContactUnlock::SOURCE_DIRECTORY],

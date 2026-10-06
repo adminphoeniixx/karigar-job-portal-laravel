@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { ArrowUpRight, Briefcase, CalendarDays, IndianRupee, MapPin, Search, X } from '@lucide/vue';
+import { ArrowUpRight, Briefcase, CalendarDays, IndianRupee, MapPin, PauseCircle, Search, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PageHeader from '@/components/PageHeader.vue';
@@ -24,7 +24,15 @@ interface Job {
 const props = defineProps<{
     jobs: { data: Job[]; links: { url: string | null; label: string; active: boolean }[] };
     filters: Record<string, string | number | null>;
+    // "Available for work" is off: no jobs, only the switch to come back.
+    unavailable?: boolean;
 }>();
+
+const turningOn = ref(false);
+const turnOn = () => {
+    turningOn.value = true;
+    router.patch('/worker/availability', { available: true }, { preserveScroll: true, onFinish: () => (turningOn.value = false) });
+};
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Browse Jobs', href: '/worker/jobs' }] } });
 
@@ -97,6 +105,21 @@ const fmtDate = (iso: string | null): string =>
     <div class="flex flex-col gap-6 p-4 md:p-6">
         <PageHeader :icon="Briefcase" :title="$t('nav.browseJobs')" :description="$t('jobs.browseSubtitle')" />
 
+        <div v-if="unavailable" class="rounded-2xl border border-dashed bg-card px-5 py-16 text-center">
+            <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-600"><PauseCircle class="size-7" /></div>
+            <h3 class="mt-4 text-base font-semibold">{{ $t('jobs.unavailableTitle') }}</h3>
+            <p class="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{{ $t('jobs.unavailableBody') }}</p>
+            <button
+                type="button"
+                class="mt-5 rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-60"
+                :disabled="turningOn"
+                @click="turnOn"
+            >
+                {{ $t('jobs.unavailableCta') }}
+            </button>
+        </div>
+
+        <template v-else>
         <!-- Filters -->
         <div class="rounded-2xl border bg-card p-4 shadow-sm">
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
@@ -184,5 +207,6 @@ const fmtDate = (iso: string | null): string =>
                 v-html="link.label"
             />
         </div>
+        </template>
     </div>
 </template>

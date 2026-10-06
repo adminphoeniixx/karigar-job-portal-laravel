@@ -28,3 +28,15 @@ frankenphp
 .data
 .git
 .github
+
+# The AI screening-call agent is a separate Python service, deployed on its own
+# box; its .venv alone is ~600 MB and its .env holds API keys.
+/services
+**/.env
+**/.venv
+**/__pycache__
+
+# Local-only folders
+/app-mockup
+/.claude
+/tests

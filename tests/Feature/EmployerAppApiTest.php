@@ -176,37 +176,40 @@ it('drops applicants who already applied out of the matches list', function () {
         ->assertJsonPath('total', 0);
 });
 
-it('refuses to boost a job without credits and boosts once topped up', function () {
-    $this->actingAs($this->employer, 'sanctum')
-        ->postJson("/api/v1/employer/jobs/{$this->job->id}/boost", ['tier' => 'standard'])
-        ->assertStatus(422)
-        ->assertJsonPath('code', 'out_of_credits');
-
-    $this->employer->employerProfile->update(['credit_balance' => 5]);
-
-    $this->actingAs($this->employer, 'sanctum')
-        ->postJson("/api/v1/employer/jobs/{$this->job->id}/boost", ['tier' => 'turbo'])
-        ->assertOk()
-        ->assertJsonPath('job.boost.active', true)
-        ->assertJsonPath('job.boost.tier', 'turbo')
-        ->assertJsonPath('credits.purchased', 2);
-
-    expect($this->job->fresh()->isBoosted())->toBeTrue();
-});
-
-it('reports the credit balance on the dashboard and plans screen', function () {
-    $this->employer->employerProfile->update(['credit_balance' => 12]);
-
+it('shows a Buy Database card instead of contact credits', function () {
     $this->actingAs($this->employer, 'sanctum')
         ->getJson('/api/v1/employer/dashboard')
         ->assertOk()
-        ->assertJsonPath('credits.balance', 12);
+        ->assertJsonMissingPath('credits')
+        // The test job plan opens 1,000 contacts and does not meter unlocks.
+        ->assertJsonPath('database.active', true)
+        ->assertJsonPath('database.plan_type', 'job')
+        ->assertJsonPath('database.contacts', 1000)
+        ->assertJsonPath('database.unlocks_remaining', null);
+
+    $this->employer->subscriptions()->delete();
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson('/api/v1/employer/dashboard')
+        ->assertJsonPath('database.active', false)
+        ->assertJsonPath('database.cta', 'Buy Database');
 
     $this->actingAs($this->employer, 'sanctum')
         ->getJson('/api/v1/employer/plans')
         ->assertOk()
-        ->assertJsonPath('credits.purchased', 12)
-        ->assertJsonStructure(['plans', 'credit_packs', 'boost_tiers', 'payment' => ['configured', 'gst_percent']]);
+        ->assertJsonMissingPath('credit_packs')
+        ->assertJsonMissingPath('boost_tiers')
+        ->assertJsonStructure(['plans', 'unlocks', 'database', 'payment' => ['configured', 'gst_percent']]);
+});
+
+it('no longer sells credit top-ups or boosts', function () {
+    $this->actingAs($this->employer, 'sanctum')
+        ->postJson('/api/v1/employer/credits/top-up', ['pack' => 'topup_25'])
+        ->assertNotFound();
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->postJson("/api/v1/employer/jobs/{$this->job->id}/boost", ['tier' => 'standard'])
+        ->assertNotFound();
 });
 
 it('counts a job view for the funnel', function () {

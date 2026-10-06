@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, BadgeCheck, BriefcaseBusiness, Gift, IndianRupee, MapPin, Phone, Settings2, ShieldAlert, Sparkles, Sun, Wallet } from '@lucide/vue';
+import { ArrowLeft, BadgeCheck, Bot, BriefcaseBusiness, Gift, IndianRupee, MapPin, Phone, Settings2, ShieldAlert, Sparkles, Sun, Wallet } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -40,6 +40,8 @@ interface Job {
     perks: string[] | null;
     requires_worker_fee: boolean;
     worker_fee_amount: string | null;
+    ai_shortlist_enabled: boolean;
+    ai_call_enabled: boolean;
 }
 
 const props = defineProps<{
@@ -52,6 +54,8 @@ const props = defineProps<{
     // plus this employer's own from earlier jobs).
     categorySkills: Record<string, string[]>;
     perkOptions: string[];
+    // Which AI switches the admin has on platform-wide; the rest show disabled.
+    aiOptions: { shortlist_available: boolean; call_available: boolean };
 }>();
 
 const isEdit = props.job !== null;
@@ -92,6 +96,8 @@ const form = useForm({
     perks: props.job?.perks ?? [],
     requires_worker_fee: props.job?.requires_worker_fee ?? false,
     worker_fee_amount: props.job?.worker_fee_amount ?? '',
+    ai_shortlist_enabled: props.job?.ai_shortlist_enabled ?? true,
+    ai_call_enabled: props.job?.ai_call_enabled ?? true,
 });
 
 // The chosen category's skills; the employer can still type any other.
@@ -115,6 +121,24 @@ const addPerk = () => {
     }
     newPerk.value = '';
 };
+
+// A switch the admin has off stays visible but disabled, with the reason.
+const aiSwitches = computed(() => [
+    {
+        key: 'ai_shortlist_enabled' as const,
+        title: 'jobForm.aiShortlist',
+        desc: 'jobForm.aiShortlistDesc',
+        available: props.aiOptions.shortlist_available,
+        note: props.aiOptions.shortlist_available ? null : 'jobForm.aiOffByAdmin',
+    },
+    {
+        key: 'ai_call_enabled' as const,
+        title: 'jobForm.aiCall',
+        desc: 'jobForm.aiCallDesc',
+        available: props.aiOptions.call_available && form.ai_shortlist_enabled,
+        note: !props.aiOptions.call_available ? 'jobForm.aiOffByAdmin' : !form.ai_shortlist_enabled ? 'jobForm.aiCallNeedsShortlist' : null,
+    },
+]);
 
 const contactModes = [
     { value: 'apply', label: 'jobForm.applyThroughApp', desc: 'jobForm.applyThroughAppDesc' },
@@ -616,6 +640,28 @@ const submit = () => {
                         <Input id="expires_at" type="date" v-model="form.expires_at" />
                         <InputError :message="form.errors.expires_at" />
                     </div>
+                </div>
+            </section>
+
+            <!-- AI help: the employer's own switches, under the admin's -->
+            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                    <Bot class="size-4 text-orange-500" /> {{ $t('jobForm.aiTitle') }}
+                </h2>
+                <div class="grid gap-3">
+                    <label
+                        v-for="sw in aiSwitches"
+                        :key="sw.key"
+                        class="flex items-start justify-between gap-4 rounded-xl border p-4"
+                        :class="sw.available ? 'cursor-pointer' : 'opacity-60'"
+                    >
+                        <span class="grid gap-1">
+                            <span class="text-sm font-semibold">{{ $t(sw.title) }}</span>
+                            <span class="text-xs text-muted-foreground">{{ $t(sw.desc) }}</span>
+                            <span v-if="sw.note" class="text-xs font-medium text-amber-600">{{ $t(sw.note) }}</span>
+                        </span>
+                        <input v-model="form[sw.key]" type="checkbox" :disabled="!sw.available" class="mt-1 size-5 shrink-0 accent-orange-600" />
+                    </label>
                 </div>
             </section>
 

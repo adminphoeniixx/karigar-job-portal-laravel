@@ -83,7 +83,7 @@ class HelpCentre
             self::faq('screening-call', 'worker', 'Who called me from Super Karigar?',
                 'That is our automated assistant, ringing shortlisted karigars to ask if you are still interested and when you could come for an interview. It says so at the start. Nothing it discusses is fixed until the employer confirms. You can switch these calls off in your profile settings.'),
             self::faq('employer-contact', 'worker', 'When does an employer get my number?',
-                'Only when you apply to their job, or when they spend credits to unlock your profile. Your number is never shown publicly.'),
+                'Only when you apply to their job, or when they unlock your profile with their Worker Database plan. Your number is never shown publicly.'),
         ];
     }
 
@@ -95,8 +95,8 @@ class HelpCentre
         return [
             self::faq('post-job', 'employer', 'How do I post a job?',
                 'My Jobs → Post a job. Fill in the title, the work, the city and the wage. An active plan is needed to post. If you are stuck on the description, tap Suggest with AI and edit what it drafts.'),
-            self::faq('credits', 'employer', 'What are credits for?',
-                'Unlocking a karigar\'s contact details, and boosting a job so it shows higher. Your plan includes an unlock allowance; boosts always use purchased credits. Spending is immediate and cannot be undone, so unlock only the people you mean to call.'),
+            self::faq('database', 'employer', 'How do I see karigar phone numbers?',
+                'Buy a Worker Database plan. Each plan opens a number of karigar contacts to browse, say 1,000, and lets you unlock some of them each month, say 50. Unlocking shows that karigar\'s phone number. An unlock is used straight away and cannot be undone, so unlock only the people you mean to call.'),
             self::faq('ai-score', 'employer', 'What is the AI score on an applicant?',
                 'How well our model thinks that karigar fits this job, judged on their profile, their résumé and the job you wrote. It sorts your applicants so the likely ones are at the top. It is an aid, not a decision — read the summary and look past the number where it matters.'),
             self::faq('screening-calls', 'employer', 'What is a screening call?',

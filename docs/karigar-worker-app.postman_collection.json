@@ -563,6 +563,115 @@
       "name": "Jobs",
       "item": [
         {
+          "name": "Feed location (Jobs near)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/worker/feed-location",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "worker",
+                "feed-location"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search places",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/places?q=Sanganer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "places"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Sanganer"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pick feed location",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/worker/feed-location",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "worker",
+                "feed-location"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 26.82,\n  \"longitude\": 75.8,\n  \"label\": \"Sanganer, Jaipur, Rajasthan\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Back to current location",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/worker/feed-location",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "worker",
+                "feed-location"
+              ]
+            }
+          }
+        },
+        {
           "name": "Browse jobs",
           "request": {
             "method": "GET",

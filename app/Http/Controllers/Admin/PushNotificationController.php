@@ -164,6 +164,12 @@ class PushNotificationController extends Controller
             default => $query,
         };
 
+        // A broadcast to a group skips karigars who switched "Available for
+        // work" off; one picked by name still gets it.
+        if ($data['audience'] !== 'worker') {
+            $query->whereDoesntHave('workerProfile', fn (Builder $p) => $p->where('available', false));
+        }
+
         return $query->pluck('id')->all();
     }
 

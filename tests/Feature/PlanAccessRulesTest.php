@@ -12,7 +12,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WorkerContactUnlock;
 use App\Services\ApplicantAccess;
-use App\Services\CreditWallet;
+use App\Services\ContactUnlocks;
 use App\Services\JobPostingGate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -196,12 +196,9 @@ it('no longer unlocks for free without a plan', function () {
     $this->actingAs($this->employer, 'sanctum')
         ->postJson("/api/v1/employer/applicants/{$apps[0]->id}/unlock")
         ->assertStatus(422)
-        ->assertJsonPath('code', 'out_of_credits');
+        ->assertJsonPath('code', 'unlock_limit_reached');
 
-    CreditWallet::for($this->employer)->add(1);
-
-    $this->actingAs($this->employer, 'sanctum')->postJson("/api/v1/employer/applicants/{$apps[0]->id}/unlock")->assertOk();
-    expect(WorkerContactUnlock::first()->pool)->toBe(WorkerContactUnlock::POOL_CREDIT);
+    expect(WorkerContactUnlock::count())->toBe(0);
 });
 
 // ───────────────────────── PAUSED JOBS ─────────────────────────
@@ -301,9 +298,29 @@ it('opens the Worker Database with a database plan alone, and posts no jobs', fu
         ->postJson("/api/v1/employer/workers/{$karigar->workerProfile->id}/unlock")
         ->assertOk()
         ->assertJsonPath('worker.phone', '9000000301')
-        ->assertJsonPath('credits.database_plan.used', 1);
+        ->assertJsonPath('unlocks.database_plan.used', 1);
 
     expect(WorkerContactUnlock::first()->pool)->toBe(WorkerContactUnlock::POOL_DATABASE);
+});
+
+it('fills the Worker Database card from the database plan', function () {
+    accessSubscribe($this->employer, $this->databasePlan);
+    $karigar = accessKarigar('9000000302');
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson('/api/v1/employer/dashboard')
+        ->assertJsonPath('database.active', true)
+        ->assertJsonPath('database.plan', 'Database Basic')
+        ->assertJsonPath('database.contacts', 2000)
+        ->assertJsonPath('database.unlocks_remaining', 1);
+
+    $this->actingAs($this->employer, 'sanctum')->postJson("/api/v1/employer/workers/{$karigar->workerProfile->id}/unlock")->assertOk();
+
+    // Out of unlocks: the card offers an upgrade. The web dashboard renders
+    // this same array (its page itself needs Postgres for the activity chart).
+    expect(ContactUnlocks::for($this->employer)->database())
+        ->unlocks_remaining->toBe(0)
+        ->cta->toBe('Upgrade');
 });
 
 it('adds a database plan to a job plan, each paying for its own list first', function () {
@@ -325,7 +342,7 @@ it('adds a database plan to a job plan, each paying for its own list first', fun
     expect(WorkerContactUnlock::where('worker_id', $first->id)->value('pool'))->toBe('database')
         ->and(WorkerContactUnlock::where('worker_id', $second->id)->value('pool'))->toBe('job')
         ->and(WorkerContactUnlock::where('worker_id', $apps[0]->worker_id)->value('pool'))->toBe('job')
-        ->and(CreditWallet::for($this->employer)->planRemaining())->toBe(0);
+        ->and(ContactUnlocks::for($this->employer)->planRemaining())->toBe(0);
 });
 
 it('hides database contacts when the database access ends, keeping shortlisted karigars', function () {

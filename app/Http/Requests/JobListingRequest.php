@@ -115,6 +115,10 @@ class JobListingRequest extends FormRequest
             // Who picks up when a karigar calls.
             'contact_name' => ['nullable', 'string', 'max:100'],
             'contact_designation' => ['nullable', 'string', 'max:100'],
+            // The employer's AI switches for this job. Optional: left out, a
+            // new job gets both on and an edit keeps what it had.
+            'ai_shortlist_enabled' => ['sometimes', 'boolean'],
+            'ai_call_enabled' => ['sometimes', 'boolean'],
             'status' => ['required', 'string', 'in:draft,active,closed'],
             'expires_at' => ['nullable', 'date', 'after:today'],
         ];

@@ -28,7 +28,7 @@ class WorkerContactUnlock extends Model
     /** Paid from the database plan's unlock allowance. */
     public const POOL_DATABASE = 'database';
 
-    /** Paid with a purchased credit. */
+    /** Paid with a purchased credit. Credits are no longer sold; only old rows carry it. */
     public const POOL_CREDIT = 'credit';
 
     protected $fillable = ['employer_id', 'worker_id', 'source', 'pool', 'unlocked_by'];

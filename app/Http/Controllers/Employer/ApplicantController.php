@@ -10,7 +10,7 @@ use App\Models\JobListing;
 use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\ShortlistedNotification;
 use App\Services\ApplicantAccess;
-use App\Services\CreditWallet;
+use App\Services\ContactUnlocks;
 use App\Services\Screening\ScreeningService;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\RedirectResponse;
@@ -99,7 +99,7 @@ class ApplicantController extends Controller
                 ],
             ]);
 
-        $wallet = CreditWallet::for($request->user());
+        $wallet = ContactUnlocks::for($request->user());
 
         return Inertia::render('applicants/Index', [
             'job' => $job->only('id', 'title'),
@@ -196,7 +196,7 @@ class ApplicantController extends Controller
             ? 'application_accepted'
             : 'application_rejected';
 
-        TemplatedMailer::send($key, $application->worker->email, [
+        TemplatedMailer::send($key, $application->worker->alertEmail(), [
             'worker_name' => $application->worker->name,
             'employer_name' => $job->employer->name,
             'job_title' => $job->title,
@@ -278,7 +278,7 @@ class ApplicantController extends Controller
         $application->worker->notify(new ShortlistedNotification($application));
 
         $job = $application->job;
-        TemplatedMailer::send('application_shortlisted', $application->worker->email, [
+        TemplatedMailer::send('application_shortlisted', $application->worker->alertEmail(), [
             'worker_name' => $application->worker->name,
             'employer_name' => $job->employer->name,
             'job_title' => $job->title,
@@ -306,7 +306,7 @@ class ApplicantController extends Controller
             return back();
         }
 
-        if (! CreditWallet::for($request->user())->unlockApplication($application, $request->user())) {
+        if (! ContactUnlocks::for($request->user())->unlockApplication($application, $request->user())) {
             return back()->with('toast', [
                 'type' => 'error',
                 'message' => __('You have reached your plan\'s contact unlock limit.'),

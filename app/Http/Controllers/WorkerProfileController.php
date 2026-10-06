@@ -26,6 +26,18 @@ class WorkerProfileController extends Controller
         ]);
     }
 
+    /**
+     * The "Available for work" switch, on its own (the Browse Jobs banner).
+     */
+    public function availability(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['available' => ['required', 'boolean']]);
+
+        $request->user()->workerProfile()->firstOrCreate([])->update(['available' => $data['available']]);
+
+        return back();
+    }
+
     public function update(WorkerProfileUpdateRequest $request): RedirectResponse
     {
         $user = $request->user();

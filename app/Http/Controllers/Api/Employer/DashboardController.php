@@ -12,8 +12,9 @@ use App\Models\ChatMessage;
 use App\Models\JobApplication;
 use App\Models\Setting;
 use App\Services\ApplicantAccess;
-use App\Services\CreditWallet;
+use App\Services\ContactUnlocks;
 use App\Support\EmployerVerification;
+use App\Support\Verification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -62,8 +63,9 @@ class DashboardController extends Controller
         return response()->json([
             'greeting' => $account->name,
             'profile' => new EmployerProfileResource($profile),
-            // Contact-credit card on the home screen.
-            'credits' => CreditWallet::for($account)->summary(),
+            // Unlock allowances, and the "Worker Database" card on the home screen.
+            'unlocks' => ContactUnlocks::for($account)->summary(),
+            'database' => ContactUnlocks::for($account)->database(),
             'stats' => [
                 'active_jobs' => (clone $jobs)->where('status', JobStatus::Active)->count(),
                 'total_applicants' => (clone $applications)->count(),
@@ -84,6 +86,9 @@ class DashboardController extends Controller
             'features' => [
                 'verification_enabled' => Setting::bool('kyc_verification_enabled', true),
                 'employer_verification_required' => EmployerVerification::required(),
+                // Karigars can be verified; when false, hide the "Only
+                // KYC-verified" filter and any karigar badge.
+                'worker_verification_enabled' => Verification::forWorkers(),
             ],
             // Whether a job can go live yet; when not, show `message` and a
             // button to the business-verification screen.

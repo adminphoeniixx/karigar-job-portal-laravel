@@ -7,8 +7,9 @@ use App\Enums\UserRole;
 use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Models\KycDocument;
-use App\Models\Setting;
 use App\Models\User;
+use App\Services\ContactUnlocks;
+use App\Support\Verification;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -154,7 +155,7 @@ class DashboardController extends Controller
         return [
             // The KYC tile drops out entirely while verification is switched off.
             'stats' => array_values(array_filter([
-                Setting::bool('kyc_verification_enabled', true)
+                Verification::forWorkers()
                     ? ['label' => 'KYC Status', 'value' => $kyc?->status->label() ?? 'Not submitted', 'hint' => 'Verification', 'tone' => 'amber']
                     : null,
                 ['label' => 'Available Jobs', 'value' => (string) JobListing::active()->hiring()->count(), 'hint' => 'Near you', 'tone' => 'emerald'],
@@ -163,7 +164,8 @@ class DashboardController extends Controller
             'table' => [
                 'title' => 'Latest jobs',
                 'columns' => ['Title', 'Location', 'Wage', 'Category'],
-                'rows' => JobListing::active()->hiring()->latest()->limit(8)->get()->map(fn ($j) => [
+                // None while the karigar is not available for work.
+                'rows' => ($user->isUnavailableWorker() ? collect() : JobListing::active()->hiring()->latest()->limit(8)->get())->map(fn ($j) => [
                     $j->title,
                     collect([$j->city, $j->state])->filter()->join(', ') ?: '—',
                     $j->wage_min ? '₹'.$j->wage_min : '—',
@@ -186,6 +188,8 @@ class DashboardController extends Controller
                 ['label' => 'Active Jobs', 'value' => (string) $user->jobListings()->where('status', 'active')->count(), 'hint' => 'Live now', 'tone' => 'amber'],
                 ['label' => 'Subscription', 'value' => $sub?->plan->name ?? 'None', 'hint' => $sub ? 'Active' : 'Subscribe', 'tone' => 'violet'],
             ],
+            // The "Worker Database" card, the same one the employer app shows.
+            'database' => ContactUnlocks::for($user)->database(),
             'table' => [
                 'title' => 'Your recent jobs',
                 'columns' => ['Title', 'Status', 'Location', 'Vacancies'],

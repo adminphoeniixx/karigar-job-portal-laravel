@@ -806,40 +806,6 @@
           }
         },
         {
-          "name": "Boost job",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/boost",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "employer",
-                "jobs",
-                "{{job_id}}",
-                "boost"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tier\": \"standard\"\n}"
-            }
-          }
-        },
-        {
           "name": "Matched workers for job",
           "request": {
             "method": "GET",
@@ -1451,7 +1417,7 @@
                 "unlock"
               ]
             },
-            "description": "Spends one contact unlock from the same pool as applicant unlocks; free if this karigar is already unlocked. 422 `no_plan` without a plan, 422 `out_of_credits` when the pool is spent."
+            "description": "Spends one contact unlock from the same pool as applicant unlocks; free if this karigar is already unlocked. 422 `no_plan` without a plan, 422 `unlock_limit_reached` when the pool is spent."
           }
         },
         {
@@ -2168,10 +2134,10 @@
       ]
     },
     {
-      "name": "Credits & Plans",
+      "name": "Plans & Worker Database",
       "item": [
         {
-          "name": "Plans & credit balance",
+          "name": "Plans, unlocks & Worker Database card",
           "request": {
             "method": "GET",
             "header": [
@@ -2258,72 +2224,6 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"razorpay_payment_id\": \"pay_xxx\",\n  \"razorpay_subscription_id\": \"sub_xxx\",\n  \"razorpay_signature\": \"xxx\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Buy credit top-up",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/employer/credits/top-up",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "employer",
-                "credits",
-                "top-up"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"pack\": \"topup_25\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Top-up callback",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/employer/credits/callback",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "employer",
-                "credits",
-                "callback"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"razorpay_payment_id\": \"pay_xxx\",\n  \"razorpay_order_id\": \"order_xxx\",\n  \"razorpay_signature\": \"xxx\"\n}"
             }
           }
         },

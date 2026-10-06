@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\KycStatus;
 use App\Enums\UserRole;
+use App\Support\Verification;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -68,6 +69,25 @@ class User extends Authenticatable implements PasskeyUser
     public function isWorker(): bool
     {
         return $this->role === UserRole::Worker;
+    }
+
+    /**
+     * A karigar who switched "Available for work" off. They get no job alerts,
+     * invites, pushes or emails and see no jobs until they switch it back on;
+     * updates on their own applications still land in the in-app list.
+     */
+    public function isUnavailableWorker(): bool
+    {
+        return $this->isWorker() && $this->workerProfile?->available === false;
+    }
+
+    /**
+     * Where alert emails to this user go: nowhere while a karigar is not
+     * available for work (TemplatedMailer skips a null address).
+     */
+    public function alertEmail(): ?string
+    {
+        return $this->isUnavailableWorker() ? null : $this->email;
     }
 
     public function isEmployer(): bool
@@ -198,12 +218,13 @@ class User extends Authenticatable implements PasskeyUser
 
     /**
      * Whether this user shows a "verified" badge. Always false while the
-     * verification feature is switched off in admin settings, so the badge
-     * disappears everywhere without touching each call site.
+     * verification feature is switched off in admin settings (for everyone, or
+     * for karigars alone), so the badge disappears everywhere without touching
+     * each call site.
      */
     public function isKycVerified(): bool
     {
-        return Setting::bool('kyc_verification_enabled', true)
+        return Verification::enabledFor($this)
             && $this->kyc?->status === KycStatus::Verified;
     }
 

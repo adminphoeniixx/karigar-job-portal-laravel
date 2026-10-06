@@ -157,3 +157,51 @@ it('rejects a threshold outside the allowed range', function () {
 it('keeps a non-admin away from the settings screen', function () {
     $this->actingAs($this->employer)->get('/admin/settings')->assertForbidden();
 });
+
+it('leaves the applicant alone when the employer switched the AI shortlist off on the job', function () {
+    Setting::set(ScoreApplication::ENABLED_KEY, '1');
+    Setting::set(ScoreApplication::THRESHOLD_KEY, '80');
+    $this->job->update(['ai_shortlist_enabled' => false]);
+
+    dispatch_sync(new ScoreApplication($this->application->id));
+    $application = $this->application->fresh();
+
+    // Still scored and ranked; only the automatic decision is skipped.
+    expect($application->ai_score)->toBe(100)
+        ->and($application->shortlisted_at)->toBeNull();
+    Notification::assertNothingSent();
+});
+
+it('does not auto-reject on a job with the AI shortlist off', function () {
+    Setting::set(ScoreApplication::REJECT_ENABLED_KEY, '1');
+    Setting::set(ScoreApplication::REJECT_BELOW_KEY, '40');
+    $this->job->update(['ai_shortlist_enabled' => false, 'skills' => ['Carpentry'], 'city' => 'Delhi']);
+
+    dispatch_sync(new ScoreApplication($this->application->id));
+
+    expect($this->application->fresh()->status)->toBe(ApplicationStatus::Pending);
+});
+
+it('turns both AI switches on for a new job and shows them to the employer', function () {
+    expect($this->job->fresh()->ai_shortlist_enabled)->toBeTrue()
+        ->and($this->job->fresh()->ai_call_enabled)->toBeTrue();
+
+    $this->job->update(['ai_call_enabled' => false]);
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson("/api/v1/employer/jobs/{$this->job->id}")
+        ->assertOk()
+        ->assertJsonPath('data.ai_shortlist_enabled', true)
+        ->assertJsonPath('data.ai_call_enabled', false);
+});
+
+it('tells the job form which AI switches the admin has on', function () {
+    Setting::set(ScoreApplication::ENABLED_KEY, '1');
+    Setting::set('ai_screening_call_enabled', '0');
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson('/api/v1/employer/jobs/form-options')
+        ->assertOk()
+        ->assertJsonPath('ai.shortlist_available', true)
+        ->assertJsonPath('ai.call_available', false);
+});

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Activity, ArrowUpRight } from '@lucide/vue';
+import { Activity, ArrowUpRight, Database } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { dashboard } from '@/routes';
@@ -23,12 +23,23 @@ interface RangeData {
     series: number[][];
 }
 
+// The employer's "Worker Database" card: contacts the plan opens and unlocks left.
+interface DatabaseCard {
+    active: boolean;
+    plan: string | null;
+    contacts: number;
+    unlock_limit: number;
+    unlocks_used: number;
+    unlocks_remaining: number | null;
+}
+
 const props = defineProps<{
     greeting: string;
     role: string;
     stats: Stat[];
     table: Table;
     activity: Record<string, RangeData>;
+    database?: DatabaseCard;
 }>();
 
 const { t } = useI18n();
@@ -162,6 +173,37 @@ const profileHref = computed(
                         <span class="inline-flex rounded-md bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">{{ tr(stat.hint) }}</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Worker Database: bought as its own plan, no credits -->
+            <div v-if="database" class="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-5 shadow-sm">
+                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600">
+                    <Database class="size-5" />
+                </span>
+                <div class="min-w-0 flex-1">
+                    <div class="text-lg font-bold">
+                        {{ database.active ? $t('dashboard.databaseContacts', { count: database.contacts.toLocaleString('en-IN') }) : $t('dashboard.workerDatabase') }}
+                    </div>
+                    <div class="text-sm text-muted-foreground">
+                        <template v-if="!database.active">{{ $t('dashboard.databaseBuyHint') }}</template>
+                        <template v-else>
+                            {{
+                                database.unlocks_remaining === null
+                                    ? $t('dashboard.databaseUnlimited')
+                                    : $t('dashboard.databaseUnlocksLeft', { left: database.unlocks_remaining, limit: database.unlock_limit })
+                            }}
+                            · {{ database.plan }}
+                        </template>
+                    </div>
+                </div>
+                <Link
+                    href="/subscription#database"
+                    class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
+                >
+                    {{
+                        !database.active ? $t('dashboard.buyDatabase') : database.unlocks_remaining === 0 ? $t('dashboard.upgradeDatabase') : $t('dashboard.viewPlans')
+                    }}
+                </Link>
             </div>
 
             <!-- Activity chart -->

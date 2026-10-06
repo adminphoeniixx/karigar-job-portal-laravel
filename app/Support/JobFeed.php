@@ -13,8 +13,9 @@ use Illuminate\Database\Eloquent\Builder;
  * - Category: a job whose category, or one of whose skills, is one of the
  *   karigar's skills (sign-up picks them from the same craft list). A
  *   karigar with no skills sees every job, and `all` lifts the filter.
- * - Location: the phone's position when the app sends it, else the one
- *   saved on the profile. Without either, the profile's city first, then its
+ * - Location: a place the karigar picked to look around (feed location),
+ *   else the phone's position when the app sends it, else the one saved on
+ *   the profile. Without either, the profile's city first, then its
  *   state, then the rest. Jobs with no map pin come after the pinned ones.
  * - Only jobs taking applications: active, and the employer hiring.
  *
@@ -28,8 +29,11 @@ final class JobFeed
     /** @var array{0: float, 1: float}|null */
     private ?array $point;
 
-    /** current | profile | city | none */
+    /** chosen | current | profile | city | none */
     private string $locationSource;
+
+    /** The picked place's name, when the feed is around one. */
+    private ?string $locationLabel = null;
 
     public function __construct(private User $worker, ?float $lat = null, ?float $lng = null, bool $allCategories = false)
     {
@@ -42,7 +46,12 @@ final class JobFeed
             ->values()
             ->all();
 
-        if ($lat !== null && $lng !== null) {
+        if ($profile?->feed_latitude !== null && $profile?->feed_longitude !== null) {
+            // A place the karigar picked wins over where the phone is.
+            $this->point = [(float) $profile->feed_latitude, (float) $profile->feed_longitude];
+            $this->locationSource = 'chosen';
+            $this->locationLabel = $profile->feed_location_label;
+        } elseif ($lat !== null && $lng !== null) {
             $this->point = [$lat, $lng];
             $this->locationSource = 'current';
         } elseif ($profile?->latitude !== null && $profile?->longitude !== null) {
@@ -109,7 +118,7 @@ final class JobFeed
     /**
      * What the feed was built from, for the app to say so.
      *
-     * @return array{type: string, categories: list<string>, location: string}
+     * @return array{type: string, categories: list<string>, location: string, location_label: string|null}
      */
     public function meta(): array
     {
@@ -117,8 +126,10 @@ final class JobFeed
             'type' => 'for_you',
             // Empty: not filtered by category (no skills on the profile, or `all`).
             'categories' => $this->skills,
-            // current | profile | city | none
+            // chosen | current | profile | city | none
             'location' => $this->locationSource,
+            // The picked place's name while `location` is chosen.
+            'location_label' => $this->locationLabel,
         ];
     }
 

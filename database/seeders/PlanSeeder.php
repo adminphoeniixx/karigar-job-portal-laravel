@@ -14,10 +14,12 @@ class PlanSeeder extends Seeder
      * GST; job posts and unlocks are per billing cycle, 0 job posts means
      * unlimited.
      *
-     * The two database plans open only the Worker Database, for employers who
-     * hire without posting or need more of it than their job plan gives. They
-     * run next to a job plan, and their unlocks are spent on database
-     * karigars first.
+     * The database plans ("Buy Database" on the employer home) open only the
+     * Worker Database: a plan lets the employer browse so many karigar
+     * contacts (1,000 on Basic) and reveal the numbers of some of them each
+     * month (50 on Basic). There are no bought credits; unlocks come with
+     * plans only. A database plan runs on its own or next to a job plan, and
+     * its unlocks are spent on database karigars first.
      */
     public function run(): void
     {
@@ -60,15 +62,23 @@ class PlanSeeder extends Seeder
                 'type' => Plan::TYPE_DATABASE,
                 'price' => 299,
                 'interval' => 'monthly',
-                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 30, 'contact_database_limit' => 2000, 'featured' => false],
+                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 50, 'contact_database_limit' => 1000, 'featured' => false],
+            ],
+            [
+                'name' => 'Database Standard',
+                'slug' => 'database-standard',
+                'type' => Plan::TYPE_DATABASE,
+                'price' => 599,
+                'interval' => 'monthly',
+                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 125, 'contact_database_limit' => 3000, 'featured' => true],
             ],
             [
                 'name' => 'Database Pro',
                 'slug' => 'database-pro',
                 'type' => Plan::TYPE_DATABASE,
-                'price' => 799,
+                'price' => 999,
                 'interval' => 'monthly',
-                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 100, 'contact_database_limit' => 10000, 'featured' => false],
+                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 300, 'contact_database_limit' => 10000, 'featured' => false],
             ],
         ];
 

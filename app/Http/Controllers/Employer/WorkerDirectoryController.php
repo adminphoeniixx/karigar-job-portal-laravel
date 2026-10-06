@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\ReviewController;
 use App\Models\WorkerProfile;
 use App\Services\ContactList;
-use App\Services\CreditWallet;
+use App\Services\ContactUnlocks;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -39,7 +39,7 @@ class WorkerDirectoryController extends Controller
         // employer may reach. Numbers stay hidden until the karigar is
         // unlocked, which spends from the same pool as applicant unlocks.
         $quota = $request->user()->contactDatabaseQuota();
-        $wallet = CreditWallet::for($request->user());
+        $wallet = ContactUnlocks::for($request->user());
         $unlockedIds = array_flip($wallet->unlockedWorkerIds());
         $perPage = 15;
         $page = max(1, (int) $request->query('page', 1));
@@ -94,7 +94,7 @@ class WorkerDirectoryController extends Controller
     {
         $worker->load('user:id,name,email');
 
-        $wallet = CreditWallet::for($request->user());
+        $wallet = ContactUnlocks::for($request->user());
         $unlocked = $worker->user !== null && $wallet->contactVisible($worker->user_id);
 
         return Inertia::render('workers/Show', [
@@ -138,7 +138,7 @@ class WorkerDirectoryController extends Controller
             ]);
         }
 
-        if (! CreditWallet::for($request->user())->unlockWorker($worker->user, $request->user())) {
+        if (! ContactUnlocks::for($request->user())->unlockWorker($worker->user, $request->user())) {
             return back()->with('toast', [
                 'type' => 'error',
                 'message' => __('You have reached your plan\'s contact unlock limit.'),
@@ -154,15 +154,14 @@ class WorkerDirectoryController extends Controller
     /**
      * The unlock counter the directory pages show.
      *
-     * @return array{used: int, limit: int, remaining: int|null, purchased: int}
+     * @return array{used: int, limit: int, remaining: int|null}
      */
-    private function unlocks(CreditWallet $wallet): array
+    private function unlocks(ContactUnlocks $wallet): array
     {
         return [
             'used' => $wallet->unlocksUsed(),
             'limit' => $wallet->planLimit(),
             'remaining' => $wallet->planRemaining(),
-            'purchased' => $wallet->purchased(),
         ];
     }
 

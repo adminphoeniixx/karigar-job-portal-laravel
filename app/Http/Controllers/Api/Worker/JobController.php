@@ -11,6 +11,7 @@ use App\Support\JobFeed;
 use App\Support\JobSearch;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Job browsing & detail for the worker app. Search/filter logic is shared
@@ -27,6 +28,15 @@ class JobController extends Controller
     {
         $filters = JobBrowseController::validateFilters($request);
         $all = $request->validate(['all' => ['nullable', 'boolean']])['all'] ?? false;
+
+        // "Available for work" is off: no feed and no search until it is back
+        // on. The app shows `message` with a button to switch it on.
+        if ($request->user()->isUnavailableWorker()) {
+            return JobResource::collection(new LengthAwarePaginator([], 0, 15))->additional([
+                'unavailable' => true,
+                'message' => __('You are not available for work. Switch it on to see jobs.'),
+            ]);
+        }
 
         $searching = collect(['q', 'state', 'city', 'category', 'skill'])
             ->contains(fn (string $key) => filled($filters[$key] ?? null));

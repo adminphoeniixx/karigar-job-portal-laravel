@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Models\WorkerProfile;
 use App\Notifications\JobInviteNotification;
 use App\Notifications\NewJobNotification;
-use App\Services\CreditWallet;
 use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
 use App\Services\JobRepost;
@@ -185,45 +184,6 @@ class JobController extends Controller
     }
 
     /**
-     * Boost a job to the top of worker search, paid for with contact credits.
-     */
-    public function boost(Request $request, JobListing $job): JsonResponse
-    {
-        $this->authorize('update', $job);
-
-        $tiers = config('billing.boost_tiers');
-
-        $data = $request->validate([
-            'tier' => ['required', 'string', 'in:'.implode(',', array_keys($tiers))],
-        ]);
-
-        $tier = $tiers[$data['tier']];
-        $wallet = CreditWallet::for($request->user());
-
-        if (! $wallet->spend((int) $tier['credits'])) {
-            return response()->json([
-                'message' => __('You do not have enough credits to boost this job.'),
-                'code' => 'out_of_credits',
-                'credits' => $wallet->summary(),
-            ], 422);
-        }
-
-        // Stack on top of a running boost instead of shortening it.
-        $from = $job->isBoosted() ? $job->boosted_until : now();
-
-        $job->update([
-            'boost_tier' => $data['tier'],
-            'boosted_until' => $from->copy()->addDays((int) $tier['days']),
-        ]);
-
-        return response()->json([
-            'message' => __('Job boosted for :days days.', ['days' => $tier['days']]),
-            'job' => new EmployerJobResource($job),
-            'credits' => $wallet->summary(),
-        ]);
-    }
-
-    /**
      * Workers who match this job but have not applied — the "✨ Matched for
      * this job" strip on the Manage Job screen.
      */
@@ -290,6 +250,13 @@ class JobController extends Controller
         ]);
 
         $worker = User::where('id', $data['worker_id'])->where('role', 'worker')->firstOrFail();
+
+        if ($worker->isUnavailableWorker()) {
+            return response()->json([
+                'message' => __('This karigar is not available for work right now.'),
+                'code' => 'worker_unavailable',
+            ], 422);
+        }
 
         $invite = JobInvite::firstOrCreate(
             ['job_listing_id' => $job->id, 'worker_id' => $worker->id],
@@ -376,8 +343,11 @@ class JobController extends Controller
             })
             ->get();
 
+        // Nobody matched: every karigar who is available for work.
         if ($workers->isEmpty()) {
-            $workers = User::where('role', 'worker')->get();
+            $workers = User::where('role', 'worker')
+                ->whereDoesntHave('workerProfile', fn ($q) => $q->where('available', false))
+                ->get();
         }
 
         if ($workers->isNotEmpty()) {

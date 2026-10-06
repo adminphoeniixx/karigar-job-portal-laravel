@@ -55,6 +55,10 @@ class EmployerJobResource extends JsonResource
             'reposted_from_id' => $this->reposted_from_id,
             'requires_worker_fee' => $this->requires_worker_fee,
             'worker_fee_amount' => $this->worker_fee_amount,
+            // The employer's AI switches; `ai` in form-options says whether the
+            // admin has the features on at all.
+            'ai_shortlist_enabled' => (bool) ($this->ai_shortlist_enabled ?? true),
+            'ai_call_enabled' => (bool) ($this->ai_call_enabled ?? true),
             'status' => $this->status->value,
             // Never been live. Publishing it (status → active) is checked against
             // the plan's job posts; saving it as a draft never is.

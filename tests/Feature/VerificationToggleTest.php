@@ -76,3 +76,49 @@ it('lets an admin toggle verification from settings', function () {
 
     expect(Setting::bool('kyc_verification_enabled', true))->toBeFalse();
 });
+
+it('switches verification off for karigars alone', function () {
+    Setting::set('kyc_verification_enabled', '1');
+    Setting::set('worker_verification_enabled', '0');
+
+    $employer = User::factory()->create(['role' => UserRole::Employer->value]);
+    $employer->kyc()->create([
+        'pan_number' => 'ABCDE1234G',
+        'aadhaar_number' => '123456789013',
+        'aadhaar_hash' => hash('sha256', '123456789013'),
+        'status' => KycStatus::Verified,
+    ]);
+
+    // The karigar: no KYC screens, no badge, and the app is told so.
+    $this->actingAs($this->worker)->get('/kyc')->assertNotFound();
+    $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/kyc')->assertNotFound();
+    expect($this->worker->fresh()->isKycVerified())->toBeFalse();
+    $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/worker/dashboard')
+        ->assertJsonPath('features.verification_enabled', false)
+        ->assertJsonPath('stats.kyc_status', null);
+
+    // The employer: verification carries on as before.
+    expect($employer->fresh()->isKycVerified())->toBeTrue();
+    $this->actingAs($employer)->get('/kyc')->assertOk();
+});
+
+it('lets the master switch override the karigar one', function () {
+    Setting::set('kyc_verification_enabled', '0');
+    Setting::set('worker_verification_enabled', '1');
+
+    $this->actingAs($this->worker)->get('/kyc')->assertNotFound();
+    expect($this->worker->fresh()->isKycVerified())->toBeFalse();
+});
+
+it('tells the employer app when karigars cannot be verified', function () {
+    Setting::set('kyc_verification_enabled', '1');
+    Setting::set('worker_verification_enabled', '0');
+
+    $employer = User::factory()->create(['role' => UserRole::Employer->value]);
+    $employer->employerProfile()->create(['company_name' => 'Sri Sai Constructions']);
+
+    $this->actingAs($employer, 'sanctum')->getJson('/api/v1/employer/dashboard')
+        ->assertOk()
+        ->assertJsonPath('features.verification_enabled', true)
+        ->assertJsonPath('features.worker_verification_enabled', false);
+});

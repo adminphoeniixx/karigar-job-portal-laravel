@@ -83,6 +83,11 @@ class ScreeningService
             return 'worker_opted_out';
         }
 
+        // Switched "Available for work" off: not looking, so not rung.
+        if ($application->worker?->workerProfile?->available === false) {
+            return 'worker_unavailable';
+        }
+
         // Read from the loaded relation when there is one: the applicants list
         // asks this for every row, and two exists() queries each adds up.
         $calls = $application->relationLoaded('screeningCalls')
@@ -121,6 +126,7 @@ class ScreeningService
             'interview_already_scheduled' => __('An interview is already booked.'),
             'no_phone_number' => __('This worker has no phone number on file.'),
             'worker_opted_out' => __('This worker has opted out of automated calls.'),
+            'worker_unavailable' => __('This worker is not available for work right now.'),
             'call_in_progress' => __('A call is already on its way.'),
             'already_screened' => __('This worker has already been screened.'),
             default => __('This applicant cannot be called right now.'),

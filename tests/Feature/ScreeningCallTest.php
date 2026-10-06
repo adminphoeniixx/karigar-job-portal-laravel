@@ -628,3 +628,15 @@ function postWebhook(array $payload, string $secret = 'test-secret'): TestRespon
         'X-Screening-Signature' => $secret,
     ]);
 }
+
+it('does not call when the employer switched the AI call off on the job', function () {
+    Queue::fake();
+    Setting::set(ScoreApplication::ENABLED_KEY, '1');
+    Setting::set(ScreeningService::ENABLED_KEY, '1');
+    $this->application->job->update(['ai_call_enabled' => false]);
+
+    (new ScoreApplication($this->application->id))->handle(app(AiMatcher::class));
+
+    expect($this->application->refresh()->shortlisted_at)->not->toBeNull();
+    Queue::assertNotPushed(PlaceScreeningCall::class);
+});

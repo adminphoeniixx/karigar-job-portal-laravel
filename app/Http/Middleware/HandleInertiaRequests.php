@@ -3,8 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\Category;
-use App\Models\Setting;
 use App\Support\Chat;
+use App\Support\Verification;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -67,7 +67,7 @@ class HandleInertiaRequests extends Middleware
             // Admin-controlled feature flags; the sidebar and dashboard drop
             // their KYC entries when verification is switched off.
             'features' => [
-                'verification_enabled' => Setting::bool('kyc_verification_enabled', true),
+                'verification_enabled' => Verification::enabledFor($user),
             ],
             'locale' => app()->getLocale(),
             'supportedLocales' => [

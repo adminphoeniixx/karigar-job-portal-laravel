@@ -30,7 +30,7 @@ const props = defineProps<{
     workers: { data: Worker[]; links: { url: string | null; label: string; active: boolean }[] };
     filters: { q?: string; state?: string; city?: string; skill?: string };
     access: { quota: number; accessible: number; total: number; has_plan: boolean };
-    unlocks: { used: number; limit: number; remaining: number | null; purchased: number };
+    unlocks: { used: number; limit: number; remaining: number | null };
     contactCounts: { database_total: number; applicants_total: number };
 }>();
 
@@ -64,8 +64,8 @@ const go = (url: string | null) => {
 
 const num = (n: number) => n.toLocaleString('en-IN');
 
-// Unlocks left: plan allowance plus purchased credits; null = the plan doesn't meter them.
-const unlocksLeft = computed(() => (props.unlocks.remaining === null ? null : props.unlocks.remaining + props.unlocks.purchased));
+// Unlocks left on the plans; null = the plan does not meter them.
+const unlocksLeft = computed(() => props.unlocks.remaining);
 
 const unlocking = ref<number | null>(null);
 const unlock = (w: Worker) => {
@@ -84,8 +84,8 @@ const unlock = (w: Worker) => {
 
         <!-- Access banner -->
         <div v-if="!access.has_plan" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
-            <span class="inline-flex items-center gap-2"><Lock class="size-4 shrink-0" /> Subscribe to a job plan or a database plan to unlock worker contact numbers.</span>
-            <Link href="/subscription" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white">View plans</Link>
+            <span class="inline-flex items-center gap-2"><Lock class="size-4 shrink-0" /> Buy a database plan to unlock worker contact numbers.</span>
+            <Link href="/subscription#database" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white">Buy Database</Link>
         </div>
         <div v-else class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-orange-500/5 px-5 py-4 text-sm">
             <span>
@@ -93,7 +93,7 @@ const unlock = (w: Worker) => {
                 <span v-if="unlocksLeft !== null"><strong>{{ num(unlocksLeft) }}</strong> contact unlocks left.</span>
                 <span v-else>Unlimited contact unlocks.</span>{{ ' ' }}<span class="text-muted-foreground">Unlocking a karigar reveals their number and uses one unlock, same as unlocking an applicant.</span>
             </span>
-            <Link href="/subscription" class="shrink-0 text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">Need more? Upgrade →</Link>
+            <Link href="/subscription#database" class="shrink-0 text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">Need more? Upgrade →</Link>
         </div>
 
         <form class="grid gap-3 rounded-2xl border bg-card p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-5" @submit.prevent="submit">

@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\ReviewResource;
 use App\Models\WorkerProfile;
 use App\Services\ContactList;
-use App\Services\CreditWallet;
+use App\Services\ContactUnlocks;
+use App\Services\Geocoder;
 use App\Support\ReferenceData;
+use App\Support\Verification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -44,9 +46,14 @@ class WorkerDirectoryController extends Controller
             'radius_km' => ['nullable', 'numeric', 'min:1', 'max:500'],
         ]);
 
+        // "Nearest" and the radius filter measure from the employer's own
+        // location when the app sent no point.
+        $point = $this->origin($request, $filters);
+        $search = $point === null ? $filters : ['latitude' => $point[0], 'longitude' => $point[1]] + $filters;
+
         $options = array_filter([
-            'filter_by' => $this->buildFilterBy($filters),
-            'sort_by' => $this->buildSortBy($filters),
+            'filter_by' => $this->buildFilterBy($search),
+            'sort_by' => $this->buildSortBy($search),
         ], fn ($v) => $v !== '');
 
         $search = WorkerProfile::search(trim($filters['q'] ?? '') ?: '*')
@@ -57,17 +64,13 @@ class WorkerDirectoryController extends Controller
         }
 
         $quota = $request->user()->contactDatabaseQuota();
-        $wallet = CreditWallet::for($request->user());
+        $wallet = ContactUnlocks::for($request->user());
         $unlockedIds = array_flip($wallet->unlockedWorkerIds());
         $perPage = 15;
         $page = max(1, (int) $request->query('page', 1));
         $offset = ($page - 1) * $perPage;
 
         $workers = $search->paginate($perPage)->withQueryString();
-
-        $point = isset($filters['latitude'], $filters['longitude'])
-            ? [(float) $filters['latitude'], (float) $filters['longitude']]
-            : null;
 
         $index = 0;
         $workers->getCollection()->transform(function (WorkerProfile $w) use (&$index, $offset, $quota, $point, $unlockedIds) {
@@ -110,7 +113,8 @@ class WorkerDirectoryController extends Controller
                 // A job or database plan that opens the Worker Database.
                 'has_plan' => $quota > 0,
             ],
-            'credits' => $wallet->summary(),
+            'unlocks' => $wallet->summary(),
+            'database' => $wallet->database(),
             'contact_counts' => ContactList::for($request->user())->counts(),
         ]);
     }
@@ -118,13 +122,13 @@ class WorkerDirectoryController extends Controller
     /**
      * A single worker's public profile. Contact is revealed while this
      * employer may see it: unlocked, and a plan still showing it
-     * ({@see CreditWallet::contactVisible()}).
+     * ({@see ContactUnlocks::contactVisible()}).
      */
     public function show(Request $request, WorkerProfile $worker): JsonResponse
     {
         $worker->load('user:id,name,email,phone', 'user.kyc');
 
-        $wallet = CreditWallet::for($request->user());
+        $wallet = ContactUnlocks::for($request->user());
         $unlocked = $worker->user !== null && $wallet->contactVisible($worker->user_id);
 
         $reviews = $worker->user
@@ -180,13 +184,13 @@ class WorkerDirectoryController extends Controller
             ], 422);
         }
 
-        $wallet = CreditWallet::for($request->user());
+        $wallet = ContactUnlocks::for($request->user());
 
         if (! $wallet->unlockWorker($worker->user, $request->user())) {
             return response()->json([
                 'message' => __('You have reached your plan\'s contact unlock limit.'),
-                'code' => 'out_of_credits',
-                'credits' => $wallet->summary(),
+                'code' => 'unlock_limit_reached',
+                'unlocks' => $wallet->summary(),
             ], 422);
         }
 
@@ -199,7 +203,7 @@ class WorkerDirectoryController extends Controller
                 'email' => $worker->user->email,
                 'contact_unlocked' => true,
             ],
-            'credits' => CreditWallet::for($request->user())->summary(),
+            'unlocks' => ContactUnlocks::for($request->user())->summary(),
         ]);
     }
 
@@ -239,7 +243,10 @@ class WorkerDirectoryController extends Controller
             $parts[] = 'expected_wage:<='.(float) $filters['wage_max'];
         }
 
-        if (! empty($filters['verified'])) {
+        // The index keeps the badge as it was when the karigar was last synced,
+        // so with karigar verification off the filter would still narrow the
+        // list by a badge nobody sees: skip it.
+        if (! empty($filters['verified']) && Verification::forWorkers()) {
             $parts[] = 'verified:=true';
         }
 
@@ -290,20 +297,47 @@ class WorkerDirectoryController extends Controller
     }
 
     /**
+     * Where distances are measured from: the point the app sent, else the
+     * employer's own map pin, else the centre of the employer's city. Null
+     * when none is known.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{0: float, 1: float}|null
+     */
+    private function origin(Request $request, array $filters): ?array
+    {
+        if (isset($filters['latitude'], $filters['longitude'])) {
+            return [(float) $filters['latitude'], (float) $filters['longitude']];
+        }
+
+        $profile = $request->user()->employerAccount()->employerProfile;
+
+        if ($profile?->latitude !== null && $profile?->longitude !== null) {
+            return [(float) $profile->latitude, (float) $profile->longitude];
+        }
+
+        return app(Geocoder::class)->cityCentre($profile?->city, $profile?->state, lookup: false);
+    }
+
+    /**
      * Straight-line distance (km, 1 decimal) from the searched point to the
-     * worker, for the "3.2 km" line on the worker card. Null when unknown.
+     * worker, for the "3.2 km" line on the worker card. A karigar without a
+     * map pin is measured from their city's centre. Null when unknown.
      *
      * @param  array{0: float, 1: float}  $point
      */
     private function distanceKm(array $point, WorkerProfile $worker): ?float
     {
-        if ($worker->latitude === null || $worker->longitude === null) {
+        $pin = $worker->latitude !== null && $worker->longitude !== null
+            ? [(float) $worker->latitude, (float) $worker->longitude]
+            : app(Geocoder::class)->cityCentre($worker->city, $worker->state, lookup: false);
+
+        if ($pin === null) {
             return null;
         }
 
         [$lat1, $lng1] = $point;
-        $lat2 = (float) $worker->latitude;
-        $lng2 = (float) $worker->longitude;
+        [$lat2, $lng2] = $pin;
 
         $km = 6371 * acos(min(1.0, cos(deg2rad($lat1)) * cos(deg2rad($lat2))
             * cos(deg2rad($lng2) - deg2rad($lng1))

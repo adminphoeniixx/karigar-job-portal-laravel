@@ -57,6 +57,7 @@ class JobListing extends Model
         'contact_mode', 'contact_phone', 'contact_name', 'contact_designation',
         'shift', 'shift_start', 'shift_end', 'perks', 'reposted_from_id',
         'requires_worker_fee', 'worker_fee_amount',
+        'ai_shortlist_enabled', 'ai_call_enabled',
         'boost_tier', 'boosted_until',
     ];
 
@@ -70,6 +71,8 @@ class JobListing extends Model
             'views_count' => 'integer',
             'boosted_until' => 'datetime',
             'requires_worker_fee' => 'boolean',
+            'ai_shortlist_enabled' => 'boolean',
+            'ai_call_enabled' => 'boolean',
             'worker_fee_amount' => 'decimal:2',
             'status' => JobStatus::class,
             'expires_at' => 'datetime',

@@ -35,12 +35,12 @@ it('reads the plan limits the way the pricing page shows them', function () {
         ->toContain('Unlimited job posts', '500 contact unlocks per month');
 });
 
-it('seeds two database plans that post no jobs', function () {
+it('seeds three database plans that post no jobs', function () {
     $this->seed(PlanSeeder::class);
 
     $plans = Plan::where('type', Plan::TYPE_DATABASE)->orderBy('price')->get();
 
-    expect($plans->pluck('slug')->all())->toBe(['database-basic', 'database-pro'])
-        ->and($plans->first()->featureList())->toContain('Access to 2,000 karigar contacts', '30 contact unlocks per month')
+    expect($plans->pluck('slug')->all())->toBe(['database-basic', 'database-standard', 'database-pro'])
+        ->and($plans->first()->featureList())->toContain('Access to 1,000 karigar contacts', '50 contact unlocks per month')
         ->and(collect($plans->first()->featureList())->contains(fn ($line) => str_contains($line, 'job post')))->toBeFalse();
 });

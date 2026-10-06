@@ -4,12 +4,11 @@ namespace App\Http\Controllers\Api\Employer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
-use App\Models\CreditPurchase;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\Billing\Gst;
 use App\Services\Billing\SubscriptionCheckout;
-use App\Services\CreditWallet;
+use App\Services\ContactUnlocks;
 use App\Services\JobPostingGate;
 use App\Services\RazorpayService;
 use Illuminate\Http\JsonResponse;
@@ -17,14 +16,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * "Credits & Plans" for the employer app — plan catalogue, Razorpay checkout
- * hand-off and one-time credit top-ups. Mirrors the web SubscriptionController
+ * "Plans" for the employer app — the job and database plan catalogue and the
+ * Razorpay checkout hand-off. Nothing is sold as credits: contact unlocks come
+ * with plans only. Mirrors the web SubscriptionController
  * but returns the raw values the mobile Razorpay SDK needs.
  */
 class BillingController extends Controller
 {
     /**
-     * Plans, current subscription, credit balance and past invoices.
+     * Plans, current subscriptions, unlock allowances and past invoices.
      */
     public function index(Request $request, RazorpayService $razorpay): JsonResponse
     {
@@ -33,7 +33,9 @@ class BillingController extends Controller
         $currentDatabase = $account->activeSubscription(Plan::TYPE_DATABASE);
 
         return response()->json([
-            'credits' => CreditWallet::for($account)->summary(),
+            'unlocks' => ContactUnlocks::for($account)->summary(),
+            // The "Worker Database" card; "Buy Database" opens the database plans.
+            'database' => ContactUnlocks::for($account)->database(),
             'plans' => Plan::where('is_active', true)->orderBy('price')->get()->map(fn (Plan $plan) => [
                 'id' => $plan->id,
                 'name' => $plan->name,
@@ -74,20 +76,6 @@ class BillingController extends Controller
             // Paid for a job plan before and holds none now: jobs are paused
             // and applicants hidden until it renews.
             'job_plan_lapsed' => $account->jobPlanLapsed(),
-            'credit_packs' => collect(config('billing.credit_packs'))
-                ->map(fn (array $pack, string $key) => [
-                    'key' => $key,
-                    'credits' => $pack['credits'],
-                    'price' => (float) $pack['price'],
-                    'label' => $pack['label'],
-                ])->values(),
-            'boost_tiers' => collect(config('billing.boost_tiers'))
-                ->map(fn (array $tier, string $key) => [
-                    'key' => $key,
-                    'credits' => $tier['credits'],
-                    'days' => $tier['days'],
-                    'label' => $tier['label'],
-                ])->values(),
             // Job posts used in the current billing period; null without a plan.
             'job_posts' => JobPostingGate::usage($account),
             'invoices' => $account->subscriptions()
@@ -182,85 +170,8 @@ class BillingController extends Controller
 
         return response()->json([
             'message' => __('Subscription activated!'),
-            'credits' => CreditWallet::for($account)->summary(),
-        ]);
-    }
-
-    /**
-     * Buy a one-time credit top-up: returns a Razorpay order for the app.
-     */
-    public function topUp(Request $request, RazorpayService $razorpay): JsonResponse
-    {
-        $account = $request->user()->employerAccount();
-
-        $data = $request->validate([
-            'pack' => ['required', 'string', 'in:'.implode(',', array_keys(config('billing.credit_packs')))],
-        ]);
-
-        if (! $razorpay->configured()) {
-            return response()->json([
-                'message' => __('Payments are not configured yet. Please try again later.'),
-            ], 422);
-        }
-
-        $pack = config("billing.credit_packs.{$data['pack']}");
-
-        $purchase = CreditPurchase::create([
-            'employer_id' => $account->id,
-            'pack' => $data['pack'],
-            'credits' => $pack['credits'],
-            'amount' => $pack['price'],
-        ]);
-
-        $order = $razorpay->createOrder((float) $pack['price'], "credits-{$purchase->id}");
-        $purchase->update(['razorpay_order_id' => $order['id']]);
-
-        return response()->json([
-            'purchase_id' => $purchase->id,
-            'razorpay_order_id' => $order['id'],
-            'razorpay_key' => config('services.razorpay.key'),
-            'amount' => (float) $pack['price'],
-            'credits' => $pack['credits'],
-            'currency' => $order['currency'] ?? 'INR',
-        ], 201);
-    }
-
-    /**
-     * Confirm a top-up payment and credit the wallet.
-     */
-    public function topUpCallback(Request $request, RazorpayService $razorpay): JsonResponse
-    {
-        $data = $request->validate([
-            'razorpay_payment_id' => ['required', 'string'],
-            'razorpay_order_id' => ['required', 'string'],
-            'razorpay_signature' => ['required', 'string'],
-        ]);
-
-        $account = $request->user()->employerAccount();
-
-        $purchase = CreditPurchase::where('razorpay_order_id', $data['razorpay_order_id'])
-            ->where('employer_id', $account->id)
-            ->firstOrFail();
-
-        if (! $razorpay->verifyPaymentSignature($data)) {
-            return response()->json(['message' => __('Payment verification failed.')], 422);
-        }
-
-        if ($purchase->status !== 'paid') {
-            DB::transaction(function () use ($purchase, $data, $account) {
-                $purchase->update([
-                    'status' => 'paid',
-                    'razorpay_payment_id' => $data['razorpay_payment_id'],
-                    'paid_at' => now(),
-                ]);
-
-                CreditWallet::for($account)->add($purchase->credits);
-            });
-        }
-
-        return response()->json([
-            'message' => trans_choice(':count credit added.|:count credits added.', $purchase->credits, ['count' => $purchase->credits]),
-            'credits' => CreditWallet::for($account)->summary(),
+            'unlocks' => ContactUnlocks::for($account)->summary(),
+            'database' => ContactUnlocks::for($account)->database(),
         ]);
     }
 

@@ -70,6 +70,7 @@ class JobListingController extends Controller
             'verificationBlock' => EmployerVerification::blockMessage($account),
             'categorySkills' => $options['category_skills'],
             'perkOptions' => $options['perks'],
+            'aiOptions' => $options['ai'],
         ]);
     }
 
@@ -183,9 +184,12 @@ class JobListingController extends Controller
 
         $workers = (clone $query)->get();
 
-        // If nobody matched on location/skill, fall back to all workers.
+        // If nobody matched on location/skill, fall back to every karigar who
+        // is available for work.
         if ($workers->isEmpty()) {
-            $workers = User::where('role', 'worker')->get();
+            $workers = User::where('role', 'worker')
+                ->whereDoesntHave('workerProfile', fn ($q) => $q->where('available', false))
+                ->get();
         }
 
         if ($workers->isNotEmpty()) {
@@ -207,6 +211,7 @@ class JobListingController extends Controller
                 : null,
             'categorySkills' => $options['category_skills'],
             'perkOptions' => $options['perks'],
+            'aiOptions' => $options['ai'],
         ]);
     }
 

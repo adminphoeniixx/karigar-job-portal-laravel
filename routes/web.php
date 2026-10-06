@@ -90,6 +90,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:worker')->group(function () {
         Route::get('worker/profile', [WorkerProfileController::class, 'edit'])->name('worker.profile.edit');
         Route::patch('worker/profile', [WorkerProfileController::class, 'update'])->name('worker.profile.update');
+        Route::patch('worker/availability', [WorkerProfileController::class, 'availability'])->name('worker.availability');
     });
 
     // Employer profile

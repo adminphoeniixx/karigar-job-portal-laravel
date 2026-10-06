@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\Worker\ApplicationController;
 use App\Http\Controllers\Api\Worker\DashboardController;
+use App\Http\Controllers\Api\Worker\FeedLocationController;
 use App\Http\Controllers\Api\Worker\JobController;
 use App\Http\Controllers\Api\Worker\KycController;
 use App\Http\Controllers\Api\Worker\NotificationController;
@@ -129,6 +130,13 @@ Route::prefix('v1')->group(function () {
             Route::delete('worker/resume', [WorkerResumeController::class, 'destroy'])->name('api.worker.resume.destroy');
             Route::patch('worker/availability', [ProfileController::class, 'availability'])->name('api.worker.availability');
 
+            // Where the job feed looks around: current location, or a place picked.
+            Route::get('worker/feed-location', [FeedLocationController::class, 'show'])->name('api.worker.feedLocation.show');
+            Route::put('worker/feed-location', [FeedLocationController::class, 'update'])->name('api.worker.feedLocation.update');
+            Route::delete('worker/feed-location', [FeedLocationController::class, 'destroy'])->name('api.worker.feedLocation.destroy');
+            Route::get('places', [FeedLocationController::class, 'places'])
+                ->middleware('throttle:30,1')->name('api.places');
+
             // Jobs
             Route::get('jobs', [JobController::class, 'index'])->name('api.jobs');
             Route::get('jobs/{job}', [JobController::class, 'show'])->name('api.jobs.show');
@@ -176,7 +184,6 @@ Route::prefix('v1')->group(function () {
             Route::post('employer/jobs/{job}/close', [EmployerJobController::class, 'close'])->name('api.employer.jobs.close');
             Route::post('employer/jobs/{job}/repost', [EmployerJobController::class, 'repost'])->name('api.employer.jobs.repost');
             Route::delete('employer/jobs/{job}', [EmployerJobController::class, 'destroy'])->name('api.employer.jobs.destroy');
-            Route::post('employer/jobs/{job}/boost', [EmployerJobController::class, 'boost'])->name('api.employer.jobs.boost');
 
             // Matched workers for a job + inviting them to apply
             Route::get('employer/jobs/{job}/matches', [EmployerJobController::class, 'matches'])->name('api.employer.jobs.matches');
@@ -221,14 +228,12 @@ Route::prefix('v1')->group(function () {
             Route::get('employer/reviews', [EmployerReviewController::class, 'received'])->name('api.employer.reviews');
             Route::post('employer/applicants/{application}/review', [EmployerReviewController::class, 'store'])->name('api.employer.reviews.store');
 
-            // Credits & Plans — catalogue, Razorpay checkout hand-off, top-ups
+            // Plans — catalogue (job + database plans), Razorpay checkout hand-off
             Route::get('employer/plans', [BillingController::class, 'index'])->name('api.employer.plans');
             Route::post('employer/plans/callback', [BillingController::class, 'callback'])->name('api.employer.plans.callback');
             Route::post('employer/plans/{plan}/subscribe', [BillingController::class, 'subscribe'])->name('api.employer.plans.subscribe');
             Route::get('employer/invoices/{subscription}', [EmployerInvoiceController::class, 'show'])->name('api.employer.invoices.show');
             Route::get('employer/invoices/{subscription}/pdf', [EmployerInvoiceController::class, 'pdf'])->name('api.employer.invoices.pdf');
-            Route::post('employer/credits/top-up', [BillingController::class, 'topUp'])->name('api.employer.credits.topup');
-            Route::post('employer/credits/callback', [BillingController::class, 'topUpCallback'])->name('api.employer.credits.callback');
 
             // Team members (owner only)
             Route::get('employer/team', [EmployerTeamController::class, 'index'])->name('api.employer.team');

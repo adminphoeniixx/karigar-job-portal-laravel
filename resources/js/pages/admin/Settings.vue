@@ -7,6 +7,7 @@ import PageHeader from '@/components/PageHeader.vue';
 type SettingKey =
     | 'first_post_free_enabled'
     | 'kyc_verification_enabled'
+    | 'worker_verification_enabled'
     | 'employer_verification_required'
     | 'ai_auto_shortlist_enabled'
     | 'ai_auto_reject_enabled'
@@ -37,6 +38,7 @@ defineOptions({ layout: { breadcrumbs: [{ title: 'Settings', href: '/admin/setti
 const form = reactive({
     first_post_free_enabled: props.settings.first_post_free_enabled,
     kyc_verification_enabled: props.settings.kyc_verification_enabled,
+    worker_verification_enabled: props.settings.worker_verification_enabled,
     employer_verification_required: props.settings.employer_verification_required,
     ai_auto_shortlist_enabled: props.settings.ai_auto_shortlist_enabled,
     ai_auto_shortlist_threshold: props.settings.ai_auto_shortlist_threshold,
@@ -69,6 +71,15 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'return 404. Submitted documents are kept, so turning it back on restores them.',
     },
     {
+        key: 'worker_verification_enabled',
+        title: 'Karigar verification',
+        description:
+            'When off, karigars alone are never asked to verify: their KYC screens disappear from ' +
+            'the website and the worker app, the KYC endpoints return 404 for them, and the verified ' +
+            'badge and "Only KYC-verified" filter stop counting karigars. Employers keep verifying ' +
+            'as before. Submitted documents are kept. Has no effect while KYC verification is off.',
+    },
+    {
         key: 'employer_verification_required',
         title: 'Employers must be verified to post jobs',
         description:
@@ -84,7 +95,8 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'Every applicant is always scored by the AI and ranked best-match-first — that never ' +
             'changes. This only controls whether a high scorer is shortlisted automatically. ' +
             'When off, shortlisting stays a manual employer action. When on, any applicant ' +
-            'scoring at or above the threshold below is shortlisted and the karigar is notified.',
+            'scoring at or above the threshold below is shortlisted and the karigar is notified. ' +
+            'Employers can still switch it off on any of their jobs.',
     },
     {
         key: 'ai_auto_reject_enabled',
@@ -103,7 +115,7 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'they are still interested and asks a few first-round screening questions. The employer gets ' +
             'the answers as a summary and decides; nothing is booked on the call. Needs auto-shortlist on and a ' +
             'configured voice provider; without both, nothing is dialled. Karigars who opted out are ' +
-            'never called.',
+            'never called, and employers can switch the call off on any of their jobs.',
     },
 ];
 

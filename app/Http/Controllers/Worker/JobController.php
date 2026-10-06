@@ -7,6 +7,7 @@ use App\Http\Controllers\JobBrowseController;
 use App\Models\JobListing;
 use App\Support\JobSearch;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,9 +21,15 @@ class JobController extends Controller
     {
         $filters = JobBrowseController::validateFilters($request);
 
+        // Not available for work: no jobs, just the switch to come back.
+        $unavailable = $request->user()->isUnavailableWorker();
+
         return Inertia::render('worker/Jobs', [
-            'jobs' => JobSearch::paginate($filters),
+            'jobs' => $unavailable
+                ? new LengthAwarePaginator([], 0, 15)
+                : JobSearch::paginate($filters),
             'filters' => $filters,
+            'unavailable' => $unavailable,
         ]);
     }
 

@@ -130,6 +130,12 @@ Field `avatar` (image, ≤2 MB). → `{ "avatar_url": "https://.../storage/avata
 ### `PATCH /worker/availability`
 `{ "available": false }` → `{ "available": false }`
 
+While `available` is `false` the karigar is left alone: no job alerts, no
+invites, no push and no email. `GET /jobs` comes back empty with
+`"unavailable": true` and the dashboard's `latest_jobs` is empty. Updates on
+their own applications still land in `GET /notifications`. See
+`docs/app-worker-unavailable.md`.
+
 ### Resume
 
 The AI matcher reads the worker's resume when scoring a new application, so an
@@ -177,7 +183,12 @@ publicly reachable. Only an employer the worker has applied to can fetch it.
 ## 4. Jobs 🔒 (worker)
 
 ### `GET /jobs`
-Paginated (15/page). Two modes:
+Paginated (15/page). Two modes, and nothing at all while the karigar is not
+available for work (`"unavailable": true`, empty `data`).
+
+The feed's "nearest first" point can be a place the karigar picked instead of
+the phone's position: see `/worker/feed-location` and `/places` in
+`docs/worker-app-feed-location.md`.
 
 **The karigar's feed** (no `q`, `state`, `city`, `category` or `skill`): jobs in
 the karigar's own categories — a job whose category, or one of whose skills, is

@@ -39,6 +39,7 @@ class WorkerProfile extends Model
         'phone', 'gender', 'skills', 'experience_years', 'education', 'spoken_languages',
         'bio', 'expected_wage', 'wage_type', 'avatar_path', 'city', 'state',
         'latitude', 'longitude', 'travel_radius_km', 'available',
+        'feed_location_label', 'feed_latitude', 'feed_longitude',
         'screening_calls_opted_out',
         'payout_upi', 'razorpayx_fund_account_id',
     ];
@@ -58,6 +59,8 @@ class WorkerProfile extends Model
             'skills' => 'array',
             'spoken_languages' => 'array',
             'available' => 'boolean',
+            'feed_latitude' => 'float',
+            'feed_longitude' => 'float',
             'screening_calls_opted_out' => 'boolean',
             'expected_wage' => 'decimal:2',
             'resume_uploaded_at' => 'datetime',
@@ -111,6 +114,24 @@ class WorkerProfile extends Model
     public function searchableAs(): string
     {
         return 'worker_profiles';
+    }
+
+    /**
+     * Where the karigar chose to see jobs around, or null for "my current
+     * location" (see App\Support\JobFeed).
+     *
+     * @return array{mode: string, label: string|null, latitude: float|null, longitude: float|null}
+     */
+    public function feedLocation(): array
+    {
+        $chosen = $this->feed_latitude !== null && $this->feed_longitude !== null;
+
+        return [
+            'mode' => $chosen ? 'chosen' : 'current',
+            'label' => $chosen ? $this->feed_location_label : null,
+            'latitude' => $chosen ? $this->feed_latitude : null,
+            'longitude' => $chosen ? $this->feed_longitude : null,
+        ];
     }
 
     /**
