@@ -198,8 +198,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('subscription', [SubscriptionController::class, 'pricing'])->name('subscription.pricing');
         Route::post('subscription/{plan}/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
         Route::post('subscription/callback', [SubscriptionController::class, 'callback'])->name('subscription.callback');
-        Route::get('subscription/{subscription}/invoice', [InvoiceController::class, 'show'])->name('subscription.invoice');
-        Route::get('subscription/{subscription}/invoice.pdf', [InvoiceController::class, 'pdf'])->name('subscription.invoice.pdf');
+        Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+        Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
+        // Links in invoice emails sent before invoices had their own table.
+        Route::get('subscription/{subscription}/invoice', [InvoiceController::class, 'legacy'])->name('subscription.invoice');
+        Route::get('subscription/{subscription}/invoice.pdf', [InvoiceController::class, 'legacy'])->name('subscription.invoice.pdf');
     });
 });
 

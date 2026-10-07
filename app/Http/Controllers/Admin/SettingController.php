@@ -111,6 +111,7 @@ class SettingController extends Controller
             'seller_address' => ['required', 'string', 'max:300'],
             'seller_gstin' => ['required', 'string', 'regex:/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/'],
             'sac_code' => ['required', 'string', 'regex:/^\d{4,8}$/'],
+            'invoice_copy_email' => ['nullable', 'email', 'max:150'],
         ], [
             'seller_gstin.regex' => __('That is not a valid GSTIN (15 characters, e.g. 06AAFCP6967R1ZF).'),
             'sac_code.regex' => __('SAC is 4 to 8 digits.'),
@@ -126,6 +127,7 @@ class SettingController extends Controller
         Setting::set(Gst::SELLER_ADDRESS_KEY, trim($data['seller_address']));
         Setting::set(Gst::SELLER_GSTIN_KEY, $data['seller_gstin']);
         Setting::set(Gst::SAC_KEY, $data['sac_code']);
+        Setting::set(Gst::INVOICE_COPY_KEY, trim((string) ($data['invoice_copy_email'] ?? '')));
 
         return back()->with('toast', ['type' => 'success', 'message' => __('Billing settings updated.')]);
     }
@@ -149,6 +151,7 @@ class SettingController extends Controller
             'seller_state' => $seller['state_code'] ? GstStates::label($seller['state_code']) : null,
             'sac_code' => $seller['sac'],
             'invoice_prefix' => config('billing.invoice_prefix', 'KRG'),
+            'invoice_copy_email' => Gst::invoiceCopyTo() ?? '',
             'plans' => Plan::orderBy('price')->get()->map(fn (Plan $plan) => [
                 'name' => $plan->name,
                 'price' => (float) $plan->price,

@@ -2,7 +2,7 @@
 
 namespace App\Services\Billing;
 
-use App\Models\Subscription;
+use App\Models\Invoice;
 use App\Support\TemplatedMailer;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Throwable;
@@ -14,11 +14,11 @@ use Throwable;
  */
 class InvoiceDocument
 {
-    public function __construct(private Subscription $subscription) {}
+    public function __construct(private Invoice $invoice) {}
 
-    public static function for(Subscription $subscription): self
+    public static function for(Invoice $invoice): self
     {
-        return new self($subscription->loadMissing('plan', 'coupon', 'employer.employerProfile'));
+        return new self($invoice->loadMissing('subscription.plan', 'subscription.coupon', 'employer.employerProfile'));
     }
 
     /**
@@ -26,48 +26,52 @@ class InvoiceDocument
      */
     public function data(): array
     {
-        $s = $this->subscription;
-        $account = $s->employer;
+        $i = $this->invoice;
+        $s = $i->subscription;
+        $account = $i->employer;
         $profile = $account->employerProfile;
         $money = fn ($v) => $v !== null ? (float) $v : null;
+        $local = fn ($at) => $at?->timezone(config('app.display_timezone'))->format('d M Y');
 
         return [
             'invoice' => [
-                'number' => $s->invoice_number,
-                'date' => $s->invoiced_at?->format('d M Y'),
+                'number' => $i->number,
+                'date' => $local($i->issued_at),
+                // 1 is the first payment; 2 onwards are monthly/yearly renewals.
+                'cycle' => $i->cycle,
                 'plan' => [
-                    'name' => $s->plan->name,
+                    'name' => $i->plan_name,
                     'interval' => $s->plan->interval,
                     // What the plan cost on this invoice, not what it costs now.
-                    'price' => (float) $s->subtotal_amount + (float) ($s->discount_amount ?? 0),
+                    'price' => (float) $i->subtotal_amount + (float) ($i->discount_amount ?? 0),
                 ],
-                'coupon_code' => $s->coupon?->code,
-                'discount' => $money($s->discount_amount),
-                'subtotal' => $money($s->subtotal_amount),
-                'gst_percent' => $money($s->gst_percent),
-                'gst_amount' => $money($s->gst_amount),
+                'coupon_code' => $i->discount_amount > 0 ? $s->coupon?->code : null,
+                'discount' => $money($i->discount_amount),
+                'subtotal' => $money($i->subtotal_amount),
+                'gst_percent' => $money($i->gst_percent),
+                'gst_amount' => $money($i->gst_amount),
                 // Older invoices predate the split; they print the GST as one line.
-                'cgst_amount' => $money($s->cgst_amount),
-                'sgst_amount' => $money($s->sgst_amount),
-                'igst_amount' => $money($s->igst_amount),
-                'place_of_supply' => $s->place_of_supply,
-                'sac' => $s->sac_code,
-                'total' => $money($s->total_amount),
+                'cgst_amount' => $money($i->cgst_amount),
+                'sgst_amount' => $money($i->sgst_amount),
+                'igst_amount' => $money($i->igst_amount),
+                'place_of_supply' => $i->place_of_supply,
+                'sac' => $i->sac_code,
+                'total' => $money($i->total_amount),
                 'period' => [
-                    'from' => $s->starts_at?->format('d M Y'),
-                    'to' => $s->ends_at?->format('d M Y'),
+                    'from' => $local($i->period_start),
+                    'to' => $local($i->period_end),
                 ],
-                'payment_ref' => $s->razorpay_subscription_id,
+                'payment_ref' => $i->razorpay_payment_id ?: $s->razorpay_subscription_id,
             ],
             // The GSTIN the invoice was issued under, even if it has changed since.
-            'seller' => [...Gst::seller(), 'gstin' => $s->seller_gstin ?: Gst::seller()['gstin']],
+            'seller' => [...Gst::seller(), 'gstin' => $i->seller_gstin ?: Gst::seller()['gstin']],
             'buyer' => [
                 'name' => $profile?->company_name ?: $account->name,
                 'address' => trim(implode(', ', array_filter([
                     $profile?->address, $profile?->city, $profile?->state,
                 ]))),
                 'gstin' => $profile?->gstin,
-                'email' => $account->email,
+                'email' => $account->contactEmail(),
                 'phone' => $account->phone ?? $profile?->phone,
             ],
         ];
@@ -75,7 +79,7 @@ class InvoiceDocument
 
     public function filename(): string
     {
-        return "Invoice-{$this->subscription->invoice_number}.pdf";
+        return $this->invoice->filename();
     }
 
     /**
@@ -90,13 +94,17 @@ class InvoiceDocument
     }
 
     /**
-     * Email the invoice to the employer, PDF attached. Sent once, when the
+     * Email the invoice to the employer, PDF attached, and a copy to the
+     * address set in Admin → Settings → Billing & GST. Sent once, when the
      * payment that created the invoice lands. A PDF that fails to render still
      * lets the email go, with the link to the invoice page in it.
+     *
+     * The copy goes even when the employer has no real inbox (a phone-OTP
+     * account), so the company still has every invoice it issued.
      */
     public function email(): void
     {
-        $s = $this->subscription;
+        $i = $this->invoice;
         $data = $this->data();
 
         try {
@@ -108,17 +116,27 @@ class InvoiceDocument
 
         $inr = fn ($v) => '₹'.number_format((float) $v, 2);
 
-        TemplatedMailer::send('payment_received', $s->employer->email, [
+        $fields = [
             'employer_name' => $data['buyer']['name'],
-            'plan_name' => $s->plan->name,
-            'invoice_number' => (string) $s->invoice_number,
+            'plan_name' => $i->plan_name,
+            'invoice_number' => $i->number,
             'invoice_date' => (string) $data['invoice']['date'],
-            'amount_before_tax' => $inr($s->subtotal_amount),
+            'amount_before_tax' => $inr($i->subtotal_amount),
             'gst_breakup' => $this->gstLine(),
-            'total_paid' => $inr($s->total_amount),
+            'total_paid' => $inr($i->total_amount),
             'valid_until' => $data['invoice']['period']['to'] ?? '—',
-            'action_url' => route('subscription.invoice', $s),
-        ], $attachments);
+            'action_url' => route('invoices.show', $i),
+        ];
+
+        $to = $i->employer->contactEmail();
+
+        TemplatedMailer::send('payment_received', $to, $fields, $attachments);
+
+        $copyTo = Gst::invoiceCopyTo();
+
+        if ($copyTo !== null && strcasecmp($copyTo, (string) $to) !== 0) {
+            TemplatedMailer::send('payment_received', $copyTo, $fields, $attachments);
+        }
     }
 
     /**
@@ -126,7 +144,7 @@ class InvoiceDocument
      */
     private function gstLine(): string
     {
-        $s = $this->subscription;
+        $s = $this->invoice;
         $inr = fn ($v) => '₹'.number_format((float) $v, 2);
         $rate = (float) $s->gst_percent;
         $half = rtrim(rtrim(number_format($rate / 2, 2), '0'), '.');

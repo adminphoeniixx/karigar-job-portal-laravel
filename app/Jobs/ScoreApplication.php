@@ -54,7 +54,7 @@ class ScoreApplication implements ShouldQueue
             return;
         }
 
-        $result = $matcher->score($application->job, $application->worker);
+        $result = $matcher->score($application->job, $application->worker, $application);
 
         $application->forceFill([
             'ai_score' => $result['score'],

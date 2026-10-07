@@ -88,7 +88,7 @@ class ApplicantResource extends JsonResource
                 'verified' => $worker->isKycVerified(),
                 // Only revealed once the contact has been unlocked.
                 'phone' => $this->contact_unlocked ? ($profile?->phone ?? $worker->phone) : null,
-                'email' => $this->contact_unlocked ? $worker->email : null,
+                'email' => $this->contact_unlocked ? $worker->contactEmail() : null,
             ] : null,
         ];
     }

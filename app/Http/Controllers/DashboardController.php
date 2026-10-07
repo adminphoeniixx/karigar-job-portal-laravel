@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\ApplicationStatus;
 use App\Enums\UserRole;
 use App\Models\JobApplication;
-use App\Models\JobListing;
 use App\Models\KycDocument;
 use App\Models\User;
 use App\Services\ContactUnlocks;
+use App\Support\JobFeed;
 use App\Support\Verification;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Database\Query\Builder;
@@ -151,6 +151,9 @@ class DashboardController extends Controller
     private function worker(User $user): array
     {
         $kyc = $user->kyc;
+        // The same list the app opens with: own trades, nearest first. Empty
+        // while the karigar is not available for work.
+        $feed = $user->isUnavailableWorker() ? null : JobFeed::for($user)->query();
 
         return [
             // The KYC tile drops out entirely while verification is switched off.
@@ -158,17 +161,16 @@ class DashboardController extends Controller
                 Verification::forWorkers()
                     ? ['label' => 'KYC Status', 'value' => $kyc?->status->label() ?? 'Not submitted', 'hint' => 'Verification', 'tone' => 'amber']
                     : null,
-                ['label' => 'Available Jobs', 'value' => (string) JobListing::active()->hiring()->count(), 'hint' => 'Near you', 'tone' => 'emerald'],
+                ['label' => 'Available Jobs', 'value' => (string) ($feed ? (clone $feed)->reorder()->count() : 0), 'hint' => 'Near you', 'tone' => 'emerald'],
                 ['label' => 'Profile', 'value' => $user->workerProfile?->skills ? 'Active' : 'Incomplete', 'hint' => 'Skills', 'tone' => 'violet'],
             ])),
             'table' => [
-                'title' => 'Latest jobs',
+                'title' => 'Jobs for you',
                 'columns' => ['Title', 'Location', 'Wage', 'Category'],
-                // None while the karigar is not available for work.
-                'rows' => ($user->isUnavailableWorker() ? collect() : JobListing::active()->hiring()->latest()->limit(8)->get())->map(fn ($j) => [
+                'rows' => ($feed ? $feed->limit(8)->get() : collect())->map(fn ($j) => [
                     $j->title,
                     collect([$j->city, $j->state])->filter()->join(', ') ?: '—',
-                    $j->wage_min ? '₹'.$j->wage_min : '—',
+                    $j->wage_min ? '₹'.number_format((float) $j->wage_min).'/month' : '—',
                     $j->category ?? '—',
                 ]),
             ],

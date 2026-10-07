@@ -21,7 +21,7 @@ class WorkerProfileResource extends JsonResource
             'name' => $this->user?->name,
             // Hide the phone-OTP placeholder (<phone>@phone.karigar) so the app
             // shows the email field as empty until the worker sets a real one.
-            'email' => str_ends_with((string) $this->user?->email, '@phone.karigar') ? null : $this->user?->email,
+            'email' => $this->user?->contactEmail(),
             'phone' => $this->phone ?? $this->user?->phone,
             'gender' => $this->gender,
             'skills' => $this->skills ?? [],

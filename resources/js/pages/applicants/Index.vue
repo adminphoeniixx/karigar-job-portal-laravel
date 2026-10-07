@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { CalendarClock, Check, ChevronDown, FileText, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, PhoneCall, Send, Sparkles, Star, TriangleAlert, Unlock, Users, X } from '@lucide/vue';
+import { CalendarClock, Check, ChevronDown, FileText, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, PhoneCall, Send, Sparkles, Star, TriangleAlert, Users, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import { rupees } from '@/lib/utils';
 
 interface TrackStep { key: string; state: string; at: string | null; result: string | null }
 
@@ -224,7 +225,7 @@ const submitReview = () => {
     <div class="flex flex-col gap-6 p-4 md:p-6">
         <PageHeader :icon="Users" :title="$t('applicants.title')" :description="job.title">
             <template #action>
-                <div class="rounded-xl border bg-card px-4 py-2 text-sm">
+                <div class="flex gap-1 rounded-xl border bg-card px-4 py-2 text-sm">
                     <span class="text-muted-foreground">{{ $t('applicants.contactUnlocks') }}:</span>
                     <span class="font-semibold">{{ contactUnlocks.used }}<span v-if="contactUnlocks.limit"> / {{ contactUnlocks.limit }}</span></span>
                 </div>
@@ -368,12 +369,12 @@ const submitReview = () => {
                 </p>
 
                 <p v-if="a.cover_note" class="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">{{ a.cover_note }}</p>
-                <p v-if="a.expected_wage" class="mt-2 text-sm"><span class="text-muted-foreground">{{ $t('applicants.expectedWage') }}:</span> <span class="font-medium">₹{{ a.expected_wage }}</span></p>
+                <p v-if="a.expected_wage" class="mt-2 text-sm"><span class="text-muted-foreground">{{ $t('applicants.expectedWage') }}:</span> <span class="font-medium">₹{{ rupees(a.expected_wage) }}</span></p>
 
                 <!-- Contact -->
                 <div class="mt-3">
                     <div v-if="a.contact_unlocked" class="flex flex-wrap gap-4 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 text-sm">
-                        <span class="inline-flex items-center gap-1.5"><Mail class="size-4 text-orange-600" /> {{ a.worker.email }}</span>
+                        <span v-if="a.worker.email" class="inline-flex items-center gap-1.5"><Mail class="size-4 text-orange-600" /> {{ a.worker.email }}</span>
                         <span v-if="a.worker.phone" class="inline-flex items-center gap-1.5"><Phone class="size-4 text-orange-600" /> {{ a.worker.phone }}</span>
                     </div>
                     <button
@@ -453,7 +454,7 @@ const submitReview = () => {
                             class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700"
                             @click="releasePayment(a.escrow.id, a.worker.name)"
                         >
-                            <Send class="size-3.5" /> Release ₹{{ a.escrow.payout_amount }}
+                            <Send class="size-3.5" /> Release ₹{{ rupees(a.escrow.payout_amount) }}
                         </button>
                         <span
                             v-else-if="a.escrow"
@@ -464,7 +465,6 @@ const submitReview = () => {
                         </span>
                     </template>
 
-                    <Unlock v-if="a.contact_unlocked" class="ml-auto size-4 text-orange-500" />
 
                     <button
                         class="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-500/10 dark:text-orange-300"

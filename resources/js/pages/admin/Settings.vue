@@ -29,6 +29,7 @@ const props = defineProps<{
         seller_state: string | null;
         sac_code: string;
         invoice_prefix: string;
+        invoice_copy_email: string;
         plans: { name: string; price: number; interval: string }[];
     };
 }>();
@@ -152,6 +153,7 @@ const billing = useForm({
     seller_address: props.billing.seller_address,
     seller_gstin: props.billing.seller_gstin,
     sac_code: props.billing.sac_code,
+    invoice_copy_email: props.billing.invoice_copy_email,
 });
 
 const saveBilling = () => {
@@ -364,6 +366,12 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                         buyers there pay CGST + SGST, everyone else IGST.
                     </span>
                 </label>
+                <label class="text-sm font-medium sm:col-span-2">
+                    Send a copy of every invoice to
+                    <input v-model="billing.invoice_copy_email" type="email" placeholder="accounts@example.com" :class="inputClass" />
+                    <span v-if="billing.errors.invoice_copy_email" class="mt-1 block text-xs text-rose-600">{{ billing.errors.invoice_copy_email }}</span>
+                    <span v-else class="mt-1 block text-xs font-normal text-muted-foreground">Optional. Gets the same email and PDF the employer gets, for your own records.</span>
+                </label>
             </div>
 
             <div class="mt-5 overflow-x-auto rounded-xl border">
@@ -392,7 +400,7 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                 </table>
             </div>
             <p class="mt-2 text-xs text-muted-foreground">
-                Invoices are numbered {{ props.billing.invoice_prefix }}-YYYY-##### and emailed to the employer on payment. Plan prices and limits are edited under Plans.
+                Every payment, renewals included, gets its own invoice, numbered {{ props.billing.invoice_prefix }}/YY-YY/00001 onwards in each financial year and emailed to the employer. Plan prices and limits are edited under Plans.
             </p>
 
             <div class="mt-5 flex justify-end border-t pt-4">

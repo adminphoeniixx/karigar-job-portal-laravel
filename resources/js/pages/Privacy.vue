@@ -230,7 +230,7 @@ const sections = computed(() => [
                     Your public profile — trade, skills, experience, city, photo — is visible to
                     employers searching for workers. <strong>Your phone number is not.</strong> An
                     employer only gets your contact details when you apply to their job, or when
-                    they spend credits to unlock your profile. Karigars see an employer's company
+                    they use their plan to unlock your profile. Karigars see an employer's company
                     details and the jobs they post.
                 </p>
 

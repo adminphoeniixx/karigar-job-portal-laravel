@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { AlertTriangle, Check, CreditCard, FileText, Sparkles, Tag, X } from '@lucide/vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { AlertTriangle, Check, CreditCard, FileText, Mail, Sparkles, Tag, X } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -31,6 +31,7 @@ interface InvoiceRow {
     id: number;
     invoice_number: string;
     plan: string;
+    renewal: boolean;
     total: string | null;
     date: string | null;
 }
@@ -43,6 +44,7 @@ const props = defineProps<{
     couponResult: CouponResult | null;
     gstPercent: number;
     invoices: InvoiceRow[];
+    billingEmail: string | null;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Subscription', href: '/subscription' }] } });
@@ -123,13 +125,22 @@ const selectedDiscount = computed(() => (selected.value ? discountFor(selected.v
 
 const subscribing = ref(false);
 
+// The tax invoice is emailed; a phone-OTP account has no real address yet, so
+// the popup asks for one before the payment.
+const invoiceEmail = ref('');
+const page = usePage();
+const emailError = computed(() => (page.props.errors as Record<string, string | undefined>).email);
+
 const subscribe = () => {
     const plan = selected.value;
     if (!plan) return;
     // Only send the coupon when it actually discounts this plan (server re-validates).
-    const payload = discountFor(plan) > 0 && props.couponResult?.valid ? { coupon: props.couponResult.code } : {};
+    const payload: Record<string, string> = discountFor(plan) > 0 && props.couponResult?.valid ? { coupon: props.couponResult.code } : {};
+    if (!props.billingEmail) payload.email = invoiceEmail.value.trim();
     subscribing.value = true;
     router.post(`/subscription/${plan.id}/subscribe`, payload, {
+        preserveState: true,
+        preserveScroll: true,
         onFinish: () => (subscribing.value = false),
     });
 };
@@ -169,11 +180,12 @@ const subscribe = () => {
                     :class="plan.features?.featured ? 'border-orange-500/40 ring-2 ring-orange-500/20' : ''"
                 >
                     <div v-if="plan.features?.featured" class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/15 blur-2xl"></div>
-                    <div class="relative flex items-center justify-between">
+                    <!-- Hangs from the top edge so a long plan name keeps the full width -->
+                    <span v-if="plan.features?.featured" class="absolute right-6 top-0 inline-flex items-center gap-1 rounded-b-lg bg-primary px-2.5 py-0.5 text-xs font-semibold text-white">
+                        <Sparkles class="size-3" /> {{ $t('subscription.popular') }}
+                    </span>
+                    <div class="relative">
                         <h3 class="text-lg font-bold">{{ plan.name }}</h3>
-                        <span v-if="plan.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-white">
-                            <Sparkles class="size-3" /> {{ $t('subscription.popular') }}
-                        </span>
                     </div>
                     <div class="relative mt-3 flex items-end gap-1">
                         <span
@@ -219,11 +231,13 @@ const subscribe = () => {
                 <div v-for="inv in invoices" :key="inv.id" class="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 text-sm">
                     <div>
                         <div class="font-semibold">{{ inv.invoice_number }}</div>
-                        <div class="text-xs text-muted-foreground">{{ inv.plan }} plan · {{ inv.date }}</div>
+                        <div class="text-xs text-muted-foreground">
+                            {{ inv.plan }} plan<template v-if="inv.renewal"> · {{ $t('subscription.renewal') }}</template> · {{ inv.date }}
+                        </div>
                     </div>
                     <div class="flex items-center gap-4">
-                        <span class="font-bold tabular-nums">₹{{ inv.total }}</span>
-                        <Link :href="`/subscription/${inv.id}/invoice`" class="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">{{ $t('subscription.viewInvoice') }}</Link>
+                        <span class="font-bold tabular-nums">{{ money(Number(inv.total)) }}</span>
+                        <Link :href="`/invoices/${inv.id}`" class="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">{{ $t('subscription.viewInvoice') }}</Link>
                     </div>
                 </div>
             </div>
@@ -304,8 +318,35 @@ const subscribe = () => {
                 </div>
             </div>
 
+            <!-- Where the GST invoice goes -->
+            <div class="mt-5">
+                <template v-if="billingEmail">
+                    <p class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Mail class="size-3.5 shrink-0 text-orange-500" /> {{ $t('subscription.invoiceEmailTo') }}
+                        <span class="font-medium text-foreground">{{ billingEmail }}</span>
+                    </p>
+                </template>
+                <template v-else>
+                    <label for="invoice-email" class="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                        <Mail class="size-4 text-orange-500" /> {{ $t('subscription.invoiceEmail') }}
+                    </label>
+                    <input
+                        id="invoice-email"
+                        v-model="invoiceEmail"
+                        type="email"
+                        required
+                        autocomplete="email"
+                        placeholder="you@company.com"
+                        class="h-10 w-full rounded-xl border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                        @keyup.enter="subscribe"
+                    />
+                    <p v-if="emailError" class="mt-1.5 text-xs font-medium text-rose-500">{{ emailError }}</p>
+                    <p v-else class="mt-1.5 text-xs text-muted-foreground">{{ $t('subscription.invoiceEmailHint') }}</p>
+                </template>
+            </div>
+
             <button
-                :disabled="subscribing"
+                :disabled="subscribing || (!billingEmail && !invoiceEmail.trim())"
                 class="mt-5 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
                 @click="subscribe"
             >

@@ -292,6 +292,9 @@ export default {
         noMessages: 'No messages yet',
         read: 'Read',
         startedFrom: 'Job:',
+        send: 'Send',
+        subtitleWorker: 'Your chats with employers',
+        emptyHintWorker: 'Employers who reply to your applications show up here.',
     },
     shortlist: {
         title: 'Shortlisted',
@@ -348,6 +351,10 @@ export default {
         securePayment: 'Secure payment via Razorpay. You can cancel anytime.',
         taxInvoices: 'Tax invoices',
         viewInvoice: 'View invoice →',
+        invoiceEmail: 'Email for your GST invoice',
+        invoiceEmailHint: 'We email the tax invoice here after every payment.',
+        invoiceEmailTo: 'Tax invoice will be emailed to',
+        renewal: 'Renewal',
         saveAmount: 'Save',
     },
     resume: {
@@ -412,6 +419,7 @@ export default {
         incomplete: 'Incomplete',
         skillsHint: 'Skills',
         latestJobs: 'Latest jobs',
+        jobsForYou: 'Jobs for you',
         totalPosted: 'Total posted',
         liveNow: 'Live now',
         none: 'None',

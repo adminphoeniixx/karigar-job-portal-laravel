@@ -26,6 +26,9 @@
         <!-- Calls run on the stub transport: the guards, ring push and call log
              are exercised without an Agora account. -->
         <env name="CALL_PROVIDER" value="stub"/>
+        <env name="SCREENING_PROVIDER" value="stub"/>
+        <env name="RAZORPAY_KEY" value=""/>
+        <env name="RAZORPAY_SECRET" value=""/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="DB_URL" value=""/>

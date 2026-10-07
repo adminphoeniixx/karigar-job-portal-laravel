@@ -289,7 +289,7 @@ class ContactList
             'name' => $worker->name,
             'avatar_url' => $profile?->avatar_url,
             'phone' => $profile?->phone ?: $worker->phone,
-            'email' => $worker->email,
+            'email' => $worker->contactEmail(),
             'city' => $profile?->city,
             'state' => $profile?->state,
             'skills' => $profile?->skills ?? [],

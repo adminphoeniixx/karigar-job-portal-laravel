@@ -7,6 +7,7 @@ import CompanyDetails from '@/components/CompanyDetails.vue';
 import JobMap from '@/components/JobMap.vue';
 import PublicNav from '@/components/PublicNav.vue';
 import ResumeUpload, { type Resume } from '@/components/ResumeUpload.vue';
+import { rupees, wageText } from '@/lib/utils';
 
 interface Job {
     id: number;
@@ -62,9 +63,7 @@ const statusStyles: Record<string, string> = {
 };
 
 const wage = computed(() => {
-    if (!props.job.wage_min && !props.job.wage_max) return 'Not disclosed';
-    const range = [props.job.wage_min, props.job.wage_max].filter(Boolean).join('–');
-    return `₹${range}${props.job.wage_type ? ' / ' + props.job.wage_type : ''}`;
+    return wageText(props.job.wage_min, props.job.wage_max, props.job.wage_type) ?? 'Not disclosed';
 });
 
 const canCall = props.job.contact_mode !== 'apply' && !!props.job.contact_phone;
@@ -158,7 +157,7 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                 <div class="py-7 pl-6 pr-6">
                     <div class="label-rule text-muted-foreground">{{ $t('jobs.interested') }}</div>
                     <div class="mt-2 text-sm font-semibold">
-                        <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1.5 text-amber-700"><Wallet class="size-4" /> ₹{{ job.worker_fee_amount }}</span>
+                        <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1.5 text-amber-700"><Wallet class="size-4" /> ₹{{ rupees(job.worker_fee_amount) }}</span>
                         <span v-else class="inline-flex items-center gap-1.5 text-primary"><BadgeCheck class="size-4" /> {{ $t('jobs.noFee') }}</span>
                     </div>
                 </div>

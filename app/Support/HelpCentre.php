@@ -102,7 +102,7 @@ class HelpCentre
             self::faq('screening-calls', 'employer', 'What is a screening call?',
                 'We ring the applicant, ask whether they are still interested, and collect an interview time they could attend. You then confirm or move that time — nothing is booked without you. Calls only go out in daytime hours, and a karigar who has opted out is never called.'),
             self::faq('invoice', 'employer', 'Where are my invoices?',
-                'Credits & Plans → Invoices. Every payment has a GST invoice you can open and share. Add your GSTIN in your business profile before you pay if you need it printed on them.'),
+                'Subscription → Tax invoices. Every payment has a GST invoice you can open and share. Add your GSTIN in your business profile before you pay if you need it printed on them.'),
             self::faq('team', 'employer', 'Can my colleague use the same account?',
                 'Add them as a team member instead of sharing a login — Settings → Team. They get their own sign-in and see the same jobs and applicants. Only the account owner can change the plan.'),
         ];

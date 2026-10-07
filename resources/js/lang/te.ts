@@ -292,6 +292,9 @@ export default {
         noMessages: 'ఇంకా సందేశాలు లేవు',
         read: 'చదివారు',
         startedFrom: 'ఉద్యోగం:',
+        send: 'పంపండి',
+        subtitleWorker: 'యజమానులతో మీ చాట్‌లు',
+        emptyHintWorker: 'మీ దరఖాస్తులకు జవాబిచ్చే యజమానులు ఇక్కడ కనిపిస్తారు.',
     },
     shortlist: {
         title: 'షార్ట్‌లిస్ట్',
@@ -348,6 +351,10 @@ export default {
         securePayment: 'Razorpay ద్వారా సురక్షిత చెల్లింపు. ఎప్పుడైనా రద్దు చేయవచ్చు.',
         taxInvoices: 'పన్ను ఇన్వాయిస్‌లు',
         viewInvoice: 'ఇన్వాయిస్ చూడండి →',
+        invoiceEmail: 'GST ఇన్వాయిస్ కోసం ఈమెయిల్',
+        invoiceEmailHint: 'ప్రతి చెల్లింపు తర్వాత పన్ను ఇన్వాయిస్ ఈ ఈమెయిల్‌కు పంపబడుతుంది.',
+        invoiceEmailTo: 'పన్ను ఇన్వాయిస్ ఈ ఈమెయిల్‌కు పంపబడుతుంది:',
+        renewal: 'రెన్యూవల్',
         saveAmount: 'ఆదా',
     },
     resume: {
@@ -412,6 +419,7 @@ export default {
         incomplete: 'అసంపూర్ణం',
         skillsHint: 'నైపుణ్యాలు',
         latestJobs: 'కొత్త ఉద్యోగాలు',
+        jobsForYou: 'మీ కోసం ఉద్యోగాలు',
         totalPosted: 'మొత్తం పోస్ట్‌లు',
         liveNow: 'ఇప్పుడు లైవ్',
         none: 'ఏదీ లేదు',

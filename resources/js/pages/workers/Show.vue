@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeft, BadgeCheck, Briefcase, KeyRound, Mail, MapPin, Phone, Star, UserRound } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
+import { wageText } from '@/lib/utils';
 
 interface Review {
     rating: number;
@@ -88,7 +89,7 @@ const unlock = () => {
                         </div>
                         <div class="rounded-xl border p-3">
                             <div class="text-xs text-muted-foreground">Expected wage</div>
-                            <div class="font-semibold">{{ worker.expected_wage ? '₹' + worker.expected_wage + (worker.wage_type ? ' / ' + worker.wage_type : '') : '—' }}</div>
+                            <div class="font-semibold">{{ wageText(worker.expected_wage, null, worker.wage_type) ?? '—' }}</div>
                         </div>
                     </div>
                 </div>
@@ -114,7 +115,7 @@ const unlock = () => {
                 <div class="rounded-2xl border bg-card p-6 shadow-sm">
                     <h2 class="text-sm font-semibold">Contact</h2>
                     <div v-if="worker.contact_unlocked" class="mt-3 space-y-2 text-sm">
-                        <p class="inline-flex items-center gap-2"><Mail class="size-4 text-orange-600" /> {{ worker.email }}</p>
+                        <p v-if="worker.email" class="inline-flex items-center gap-2"><Mail class="size-4 text-orange-600" /> {{ worker.email }}</p>
                         <p v-if="worker.phone" class="inline-flex items-center gap-2"><Phone class="size-4 text-orange-600" /> {{ worker.phone }}</p>
                     </div>
                     <div v-else-if="worker.can_unlock" class="mt-3">

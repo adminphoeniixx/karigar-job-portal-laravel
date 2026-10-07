@@ -131,7 +131,7 @@ endpoints `404` in that state).
 ### `GET /employer/profile` → `{ "data": EmployerProfileResource }`
 ```json
 {
-  "id": 3, "name": "Anil Sharma", "company_name": "Sri Sai Constructions",
+  "id": 3, "name": "Anil Sharma", "email": "anil@sri-sai.in", "company_name": "Sri Sai Constructions",
   "hiring_as": "business", "industry": "Construction & Real Estate",
   "company_size": "11–50", "hiring_categories": ["Plumbing", "Electrical"],
   "gstin": "22ABCDE1234F1Z5", "phone": "9876543210", "about": "...",
@@ -141,6 +141,7 @@ endpoints `404` in that state).
   "rating": { "average": 4.6, "count": 18 }, "completion": 88
 }
 ```
+`email` is `null` for a phone-OTP account that has not added one yet.
 `completion` is a 0–100 score over company_name, phone, about, address, city,
 state, latitude, gstin, industry and hiring_categories — the dashboard nudge.
 
@@ -899,15 +900,20 @@ group — the database plans are seeded as Database Basic ₹299 (1,000 contacts
 (10,000 / 300), all before GST and editable in Admin → Plans. An account holds at most one of each at a time, so
 `is_current` can be true on two plans. `job_plan_lapsed: true` means the job
 plan ran out: its jobs are paused and applicants hidden until it renews — show
-a Renew prompt. `invoices[].url` is the token-auth JSON endpoint below;
+a Renew prompt. `invoices` has **one entry per payment**, renewals included
+(`cycle`: 1 = first payment, 2+ = renewals), newest first. `invoices[].id` is the
+**invoice** id. `invoices[].url` is the token-auth JSON endpoint below;
 `invoices[].web_url` is the printable web page, for "open in browser" / share.
+`billing_email` is where the invoice emails go: `null` means the employer has
+no real email (phone-OTP sign-up) and gets no invoice email until they add one.
+Ask for it at checkout (`email` on subscribe) or on the profile.
 
-### `GET /employer/invoices/{subscription}`
+### `GET /employer/invoices/{invoice}` · `GET /employer/invoices/{invoice}/pdf`
 The tax invoice as data, so the app lays it out natively (and can print or share
 from there) instead of opening a session-authenticated web page.
 ```json
 {
-  "invoice": { "number": "KRG-2026-00001", "date": "28 Jul 2026",
+  "invoice": { "number": "KRG/26-27/00001", "date": "28 Jul 2026", "cycle": 1,
                "plan": { "name": "Starter", "interval": "monthly", "price": 399 },
                "coupon_code": "FIRST20", "discount": 100, "subtotal": 399,
                "gst_percent": 18, "gst_amount": 71.82, "total": 470.82,
@@ -917,22 +923,27 @@ from there) instead of opening a session-authenticated web page.
   "buyer": { "name", "address", "gstin", "email", "phone" }
 }
 ```
-`403` for another account's invoice, `404` before the subscription is paid (no
-invoice number yet). Team members read the **owner's** invoices, matching the
-rest of billing.
+`{invoice}` is the id from `invoices[]` (an invoice id, no longer a
+subscription id). Numbers run `KRG/YY-YY/00001` per financial year; invoices
+issued before 7 Oct 2026 keep their old `KRG-2026-000NN` numbers. `403` for
+another account's invoice. Team members read the **owner's** invoices, matching
+the rest of billing.
 
 ### `POST /employer/plans/{plan}/subscribe`
 **Owner only** (`403` for team members). Creates the Razorpay subscription; the
 app then opens Razorpay checkout with `razorpay_subscription_id` + `razorpay_key`.
 ```json
-// body (optional) → 201
-{ "coupon": "FIRST20" }
+// body (all optional) → 201
+{ "coupon": "FIRST20", "email": "accounts@firm.in" }
 { "subscription_id": 12, "razorpay_subscription_id": "sub_xxx", "razorpay_key": "rzp_...",
   "plan": { "id", "name", "price" },
   "amounts": { "discount": 100, "subtotal": 399, "gst_percent": 18, "gst": 71.82, "total": 470.82 } }
 ```
-`422` when payments are unconfigured, the plan has no Razorpay plan id, or the
-coupon is invalid/expired (the message says which).
+`email` is where the GST invoice goes; it becomes the account's email (the same
+one `PUT /employer/profile` edits). Send it when `billing_email` is `null`.
+`422` when payments are unconfigured, the plan has no Razorpay plan id, the
+coupon is invalid/expired, or the email is taken by another account (the message
+says which).
 
 ### `POST /employer/plans/callback`
 Verify the checkout signature and activate — issues the tax invoice and records
@@ -1045,7 +1056,7 @@ Content is English only for now.
 | GET/POST | `/employer/reviews` · `/employer/applicants/{application}/review` | 10 |
 | GET/POST/PATCH/DELETE | `/employer/team` · `/employer/team/{member}` | 11 |
 | GET/POST | `/conversations` (+ `/{id}`, `/messages`, `/read`) | 12 |
-| GET/POST | `/employer/plans` (+ `/{plan}/subscribe`, `/callback`) · `/employer/invoices/{subscription}` | 13 |
+| GET/POST | `/employer/plans` (+ `/{plan}/subscribe`, `/callback`) · `/employer/invoices/{invoice}` | 13 |
 | GET/PUT/PATCH/DELETE | `/preferences` · `/auth/sessions` (+ `/{token}`) | 14 |
 | GET | `/legal` · `/legal/{document}` · `/support` (all public) | 15 |
 

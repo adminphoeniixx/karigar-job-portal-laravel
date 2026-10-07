@@ -4,6 +4,7 @@ namespace App\Services\Billing;
 
 use App\Models\EmployerProfile;
 use App\Models\Setting;
+use App\Models\Subscription;
 use App\Support\GstStates;
 
 /**
@@ -37,6 +38,8 @@ class Gst
 
     public const SAC_KEY = 'billing_sac_code';
 
+    public const INVOICE_COPY_KEY = 'billing_invoice_copy_email';
+
     /**
      * SAC for online advertising and job-listing services. The admin can
      * change it; check it with the company's CA.
@@ -46,6 +49,17 @@ class Gst
     public static function enabled(): bool
     {
         return Setting::bool(self::ENABLED_KEY, true);
+    }
+
+    /**
+     * Where a copy of every invoice goes, for the company's own books. Null
+     * when nobody has set one.
+     */
+    public static function invoiceCopyTo(): ?string
+    {
+        $email = trim((string) Setting::get(self::INVOICE_COPY_KEY));
+
+        return $email !== '' ? $email : null;
     }
 
     /**
@@ -122,6 +136,60 @@ class Gst
             'place_of_supply' => $buyerState !== null ? GstStates::label($buyerState) : null,
             'seller_gstin' => $seller['gstin'],
             'sac' => $seller['sac'],
+        ];
+    }
+
+    /**
+     * The amounts on one payment's invoice. Without the amount Razorpay
+     * actually took, or when it matches, that is the breakup captured when the
+     * subscription was opened. A renewal can charge something else (a coupon
+     * that only covered the first month): then the GST is worked back out of
+     * what was paid, at the subscription's rate and with its CGST+SGST or
+     * IGST split.
+     *
+     * @return array<string, mixed>
+     */
+    public static function invoiceColumns(Subscription $subscription, ?float $paid = null): array
+    {
+        $s = $subscription;
+        $orNull = fn ($v) => $v !== null ? (float) $v : null;
+        $columns = [
+            'discount_amount' => $s->discount_amount,
+            'subtotal_amount' => (float) $s->subtotal_amount,
+            'gst_percent' => (float) $s->gst_percent,
+            'gst_amount' => (float) $s->gst_amount,
+            // Null on subscriptions from before the split: one GST line.
+            'cgst_amount' => $orNull($s->cgst_amount),
+            'sgst_amount' => $orNull($s->sgst_amount),
+            'igst_amount' => $orNull($s->igst_amount),
+            'total_amount' => (float) $s->total_amount,
+            'place_of_supply' => $s->place_of_supply,
+            'seller_gstin' => $s->seller_gstin,
+            'sac_code' => $s->sac_code,
+        ];
+
+        if ($paid === null || abs($paid - (float) $s->total_amount) < 0.01) {
+            return $columns;
+        }
+
+        $rate = (float) $s->gst_percent;
+        $taxable = round($paid * 100 / (100 + $rate), 2);
+        $gst = round($paid - $taxable, 2);
+        $intra = (float) $s->cgst_amount > 0;
+        $cgst = $intra ? round($gst / 2, 2) : 0.0;
+        $split = $s->cgst_amount !== null || $s->igst_amount !== null;
+        $listPrice = (float) $s->subtotal_amount + (float) ($s->discount_amount ?? 0);
+        $discount = round($listPrice - $taxable, 2);
+
+        return [
+            ...$columns,
+            'discount_amount' => $discount > 0 ? $discount : null,
+            'subtotal_amount' => $taxable,
+            'gst_amount' => $gst,
+            'cgst_amount' => $split ? $cgst : null,
+            'sgst_amount' => $split ? ($intra ? round($gst - $cgst, 2) : 0.0) : null,
+            'igst_amount' => $split ? ($intra ? 0.0 : $gst) : null,
+            'total_amount' => round($paid, 2),
         ];
     }
 

@@ -115,9 +115,6 @@ const mainNavItems = computed(() => {
     return items;
 });
 
-const planLabel = computed(
-    () => ({ worker: t('auth.worker'), employer: t('auth.employer'), admin: 'Admin' })[role.value] ?? 'Member',
-);
 </script>
 
 <template>
@@ -139,14 +136,15 @@ const planLabel = computed(
         </SidebarContent>
 
         <SidebarFooter>
-            <!-- Plan badge (Velocity-style) -->
+            <!-- Plan badge: only employers buy plans -->
             <Link
-                :href="role === 'employer' ? '/subscription' : dashboard()"
+                v-if="role === 'employer'"
+                href="/subscription"
                 class="mx-2 mb-1 flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-white shadow-md transition hover:opacity-95 group-data-[collapsible=icon]:hidden"
             >
                 <Crown class="size-5 shrink-0" />
                 <div class="leading-tight">
-                    <div class="text-sm font-semibold">{{ planLabel }} {{ t('nav.plan') }}</div>
+                    <div class="text-sm font-semibold">{{ t('auth.employer') }} {{ t('nav.plan') }}</div>
                     <div class="text-[11px] text-white/80">{{ t('nav.manageAccount') }}</div>
                 </div>
             </Link>

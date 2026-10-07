@@ -203,7 +203,7 @@ class MessageController extends Controller
                 'body' => $m->body,
                 'mine' => $m->sender_id === $user->id,
                 'sender' => $m->sender?->name,
-                'at' => $m->created_at?->format('d M, h:i A'),
+                'at' => $m->created_at?->timezone(config('app.display_timezone'))->format('d M, h:i A'),
                 'read' => $m->read_at !== null,
             ])
             ->all();

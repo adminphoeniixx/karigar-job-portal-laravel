@@ -208,7 +208,7 @@ const sections = computed(() => [
                 <ul>
                     <li>
                         <strong>Settle anything open.</strong> An active subscription, unused
-                        credits, or money held for a job are not refunded by deleting your account.
+                        unlocks, or money held for a job are not refunded by deleting your account.
                         Sort that out with us first.
                     </li>
                     <li>

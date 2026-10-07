@@ -418,14 +418,17 @@ it('returns an invoice as data the app can render', function () {
         'status' => 'active',
         'subtotal_amount' => 399, 'gst_percent' => 18, 'gst_amount' => 71.82,
         'total_amount' => 470.82,
-        'invoice_number' => 'KRG-2026-00001', 'invoiced_at' => now(),
         'starts_at' => now(), 'ends_at' => now()->addMonth(),
+    ]);
+    $invoice = $subscription->invoices()->create([
+        'employer_id' => $this->employer->id, 'cycle' => 1, 'number' => 'KRG/26-27/00001', 'issued_at' => now(),
+        'plan_name' => 'Starter', 'subtotal_amount' => 399, 'gst_percent' => 18, 'gst_amount' => 71.82, 'total_amount' => 470.82,
     ]);
 
     $this->actingAs($this->employer, 'sanctum')
-        ->getJson("/api/v1/employer/invoices/{$subscription->id}")
+        ->getJson("/api/v1/employer/invoices/{$invoice->id}")
         ->assertOk()
-        ->assertJsonPath('invoice.number', 'KRG-2026-00001')
+        ->assertJsonPath('invoice.number', 'KRG/26-27/00001')
         ->assertJsonPath('invoice.total', 470.82)
         ->assertJsonPath('invoice.plan.name', 'Starter')
         ->assertJsonPath('buyer.name', 'Sri Sai Constructions');
@@ -434,7 +437,8 @@ it('returns an invoice as data the app can render', function () {
     $this->actingAs($this->employer, 'sanctum')
         ->getJson('/api/v1/employer/plans')
         ->assertOk()
-        ->assertJsonPath('invoices.0.url', route('api.employer.invoices.show', $subscription));
+        ->assertJsonPath('invoices.0.url', route('api.employer.invoices.show', $invoice))
+        ->assertJsonPath('invoices.0.invoice_number', 'KRG/26-27/00001');
 });
 
 it('keeps another employer out of an invoice', function () {
@@ -447,10 +451,13 @@ it('keeps another employer out of an invoice', function () {
         'employer_id' => $this->employer->id,
         'plan_id' => $plan->id,
         'status' => 'active',
-        'invoice_number' => 'KRG-2026-00002', 'invoiced_at' => now(),
+    ]);
+    $invoice = $subscription->invoices()->create([
+        'employer_id' => $this->employer->id, 'cycle' => 1, 'number' => 'KRG/26-27/00002', 'issued_at' => now(),
+        'plan_name' => 'Starter', 'subtotal_amount' => 399, 'total_amount' => 470.82,
     ]);
 
     $this->actingAs($other, 'sanctum')
-        ->getJson("/api/v1/employer/invoices/{$subscription->id}")
+        ->getJson("/api/v1/employer/invoices/{$invoice->id}")
         ->assertForbidden();
 });

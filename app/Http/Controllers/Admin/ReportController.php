@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Invoice;
 use App\Models\JobApplication;
 use App\Models\JobListing;
-use App\Models\Subscription;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,8 +26,8 @@ class ReportController extends Controller
 
         $jobs = $this->jobQuery($filters, $from, $to);
 
-        $revenue = Subscription::whereNotNull('invoice_number')
-            ->whereBetween('invoiced_at', [$from, $to]);
+        // Every invoiced payment, renewals included.
+        $revenue = Invoice::whereBetween('issued_at', [$from, $to]);
 
         $monthly = $this->monthlyTrend($filters, $from, $to);
 
@@ -200,18 +200,20 @@ class ReportController extends Controller
      */
     private function exportRevenue($out, CarbonInterface $from, CarbonInterface $to): void
     {
-        fputcsv($out, ['Invoice', 'Date', 'Employer', 'Plan', 'Subtotal', 'GST', 'Total']);
+        fputcsv($out, ['Invoice', 'Date', 'Employer', 'Buyer GSTIN', 'Plan', 'Payment', 'Place of supply', 'Taxable', 'CGST', 'SGST', 'IGST', 'GST', 'Total']);
 
-        Subscription::whereNotNull('invoice_number')
-            ->whereBetween('invoiced_at', [$from, $to])
-            ->with('employer:id,name', 'plan:id,name')
-            ->orderBy('invoiced_at')
-            ->chunk(500, function ($subs) use ($out) {
-                foreach ($subs as $s) {
+        Invoice::whereBetween('issued_at', [$from, $to])
+            ->with('employer:id,name', 'employer.employerProfile:id,user_id,company_name,gstin')
+            ->orderBy('issued_at')
+            ->orderBy('id')
+            ->chunk(500, function ($invoices) use ($out) {
+                foreach ($invoices as $i) {
                     fputcsv($out, [
-                        $s->invoice_number, $s->invoiced_at?->format('Y-m-d'),
-                        $s->employer?->name, $s->plan?->name,
-                        $s->subtotal_amount, $s->gst_amount, $s->total_amount,
+                        $i->number, $i->issued_at->timezone(config('app.display_timezone'))->format('Y-m-d'),
+                        $i->employer?->employerProfile?->company_name ?: $i->employer?->name,
+                        $i->employer?->employerProfile?->gstin,
+                        $i->plan_name, $i->cycle > 1 ? 'Renewal' : 'First payment', $i->place_of_supply,
+                        $i->subtotal_amount, $i->cgst_amount, $i->sgst_amount, $i->igst_amount, $i->gst_amount, $i->total_amount,
                     ]);
                 }
             });

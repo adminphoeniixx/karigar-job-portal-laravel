@@ -30,6 +30,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import BrandWordmark from '@/components/BrandWordmark.vue';
 import CompanyDetails from '@/components/CompanyDetails.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
+import { wageText } from '@/lib/utils';
 
 interface Job {
     id: number;
@@ -155,9 +156,7 @@ const testimonials = [
 ];
 
 const wage = (j: Job) => {
-    if (!j.wage_min && !j.wage_max) return 'Negotiable';
-    const range = [j.wage_min, j.wage_max].filter(Boolean).join('–');
-    return `₹${range}${j.wage_type ? ' / ' + j.wage_type : ''}`;
+    return wageText(j.wage_min, j.wage_max, j.wage_type) ?? 'Negotiable';
 };
 </script>
 

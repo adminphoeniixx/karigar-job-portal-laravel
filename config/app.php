@@ -68,6 +68,14 @@ return [
     'timezone' => 'UTC',
 
     /*
+    | Timestamps are kept in UTC; this is only the zone they are written out
+    | in when the server turns one into text for a person to read (a chat
+    | time, an invoice date). Every user is in India.
+    */
+
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Asia/Kolkata'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------

@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Billing\Gst;
+use App\Services\Billing\InvoiceDocument;
 use App\Services\Billing\SubscriptionCheckout;
 use App\Services\RazorpayService;
 use Database\Seeders\EmailTemplateSeeder;
@@ -153,13 +154,59 @@ it('emails the invoice with the PDF once the payment lands, and only once', func
 
     Mail::assertQueued(TemplatedMail::class, 1);
     Mail::assertQueued(TemplatedMail::class, function (TemplatedMail $mail) use ($subscription) {
-        $pdf = base64_decode($mail->files["Invoice-{$subscription->fresh()->invoice_number}.pdf"] ?? '');
+        $pdf = base64_decode($mail->files[$subscription->invoices()->first()->filename()] ?? '');
 
         return $mail->hasTo('owner@example.com')
             && str_starts_with($pdf, '%PDF')
             && str_contains($mail->bodyHtml, 'CGST 9% ₹44.91 + SGST 9% ₹44.91')
             && str_contains($mail->bodyHtml, '₹588.82');
     });
+});
+
+it('sends a copy of the invoice to the address set in billing settings', function () {
+    Mail::fake();
+    $this->seed(EmailTemplateSeeder::class);
+    Setting::set(Gst::INVOICE_COPY_KEY, 'accounts@example.com');
+
+    // A phone-OTP employer has no inbox; the company copy still goes out.
+    $otpEmployer = User::factory()->create(['role' => UserRole::Employer->value, 'email' => '9000000009@phone.karigar']);
+
+    foreach ([$this->employer, $otpEmployer] as $i => $employer) {
+        $employer->subscriptions()->create([
+            'plan_id' => $this->plan->id, 'razorpay_subscription_id' => "sub_copy_$i",
+            'status' => SubscriptionStatus::Created, ...Gst::subscriptionColumns(Gst::quote(499)),
+        ])->activateWithInvoice();
+    }
+
+    Mail::assertQueued(TemplatedMail::class, 3);
+    Mail::assertQueued(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo('owner@example.com'));
+    Mail::assertQueued(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo('accounts@example.com') && count($mail->files) === 1);
+    Mail::assertNotQueued(TemplatedMail::class, fn (TemplatedMail $mail) => $mail->hasTo('9000000009@phone.karigar'));
+});
+
+it('dates the invoice in India time, not UTC', function () {
+    Mail::fake();
+    $this->travelTo(Carbon\Carbon::parse('2026-10-06 20:00:00', 'UTC')); // 1:30 AM on 7 Oct in India
+
+    $subscription = $this->employer->subscriptions()->create([
+        'plan_id' => $this->plan->id, 'razorpay_subscription_id' => 'sub_late',
+        'status' => SubscriptionStatus::Created, ...Gst::subscriptionColumns(Gst::quote(499)),
+    ]);
+    $subscription->activateWithInvoice();
+
+    expect(InvoiceDocument::for($subscription->invoices()->first())->data()['invoice']['date'])->toBe('07 Oct 2026');
+});
+
+it('rejects an invoice copy address that is not an email', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin->value]);
+
+    $this->actingAs($admin)->patch('/admin/settings/billing', [
+        'gst_enabled' => true, 'gst_percent' => 18, 'seller_name' => 'Phoeniixx Designs Pvt Ltd',
+        'seller_address' => 'Gurugram, Haryana 122001', 'seller_gstin' => '06AAFCP6967R1ZF', 'sac_code' => '998365',
+        'invoice_copy_email' => 'not-an-email',
+    ])->assertSessionHasErrors('invoice_copy_email');
+
+    expect(Gst::invoiceCopyTo())->toBeNull();
 });
 
 // ───────────────────────── DRAFTS AND THE POSTING LIMIT ─────────────────────────
@@ -234,4 +281,34 @@ it('does not spend the free first post on a draft', function () {
         ->assertCreated();
 
     expect($this->employer->employerProfile->fresh()->free_post_used_at)->not->toBeNull();
+});
+
+it('stops the old plan renewing when a new plan of the same type is bought', function () {
+    Mail::fake();
+    $razorpay = Mockery::mock(RazorpayService::class);
+    $razorpay->shouldReceive('cancelSubscription')->once()->with('sub_old');
+    app()->instance(RazorpayService::class, $razorpay);
+
+    $old = subscribeActive($this->employer, $this->plan);
+    $old->update(['razorpay_subscription_id' => 'sub_old']);
+
+    $standard = Plan::create([
+        'name' => 'Standard', 'slug' => 'standard', 'price' => 999, 'currency' => 'INR', 'interval' => 'monthly',
+        'features' => ['job_post_limit' => 10], 'is_active' => true,
+    ]);
+    $database = Plan::create([
+        'name' => 'Database Basic', 'slug' => 'database-basic', 'type' => Plan::TYPE_DATABASE, 'price' => 299,
+        'currency' => 'INR', 'interval' => 'monthly', 'features' => [], 'is_active' => true,
+    ]);
+    $databaseSub = subscribeActive($this->employer, $database);
+
+    $new = Subscription::create([
+        'employer_id' => $this->employer->id, 'plan_id' => $standard->id,
+        'status' => SubscriptionStatus::Created->value, 'razorpay_subscription_id' => 'sub_new',
+    ]);
+    $new->activateWithInvoice();
+
+    expect($old->fresh()->status)->toBe(SubscriptionStatus::Cancelled)
+        ->and($databaseSub->fresh()->status)->toBe(SubscriptionStatus::Active)
+        ->and($this->employer->activeSubscription()->id)->toBe($new->id);
 });

@@ -94,7 +94,7 @@ class ApplicantController extends Controller
                     'state' => $a->worker->workerProfile?->state,
                     'experience_years' => $a->worker->workerProfile?->experience_years,
                     // Contact details are only revealed once unlocked.
-                    'email' => $a->contact_unlocked ? $a->worker->email : null,
+                    'email' => $a->contact_unlocked ? $a->worker->contactEmail() : null,
                     'phone' => $a->contact_unlocked ? ($a->worker->workerProfile?->phone ?: $a->worker->phone) : null,
                 ],
             ]);
@@ -244,7 +244,7 @@ class ApplicantController extends Controller
                     'city' => $a->worker->workerProfile?->city,
                     'state' => $a->worker->workerProfile?->state,
                     'experience_years' => $a->worker->workerProfile?->experience_years,
-                    'email' => $a->contact_unlocked ? $a->worker->email : null,
+                    'email' => $a->contact_unlocked ? $a->worker->contactEmail() : null,
                     'phone' => $a->contact_unlocked ? ($a->worker->workerProfile?->phone ?: $a->worker->phone) : null,
                 ],
             ]);

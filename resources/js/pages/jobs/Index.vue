@@ -156,7 +156,7 @@ const destroy = (id: number) => {
                                         <Phone class="size-2.5" /> {{ job.contact_mode === 'call' ? $t('myJobs.directCall') : $t('myJobs.callApply') }}
                                     </span>
                                 </div>
-                                <div class="text-xs text-muted-foreground"><Users class="mr-0.5 inline size-3" /> {{ job.vacancies }} {{ $t('jobs.vacancies').toLowerCase() }}</div>
+                                <div class="text-xs text-muted-foreground"><Users class="mr-0.5 inline size-3" /> {{ $t('jobs.vacancies') }}: {{ job.vacancies }}</div>
                             </td>
                             <td class="px-5 py-3.5 text-muted-foreground">
                                 <span class="inline-flex items-center gap-1">

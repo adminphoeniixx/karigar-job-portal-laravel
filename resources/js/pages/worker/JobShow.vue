@@ -6,6 +6,7 @@ import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import JobMap from '@/components/JobMap.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import ResumeUpload, { type Resume } from '@/components/ResumeUpload.vue';
+import { rupees, wageText } from '@/lib/utils';
 
 interface TrackStep { key: string; state: string; at: string | null; result: string | null }
 
@@ -66,9 +67,7 @@ const statusPill: Record<string, string> = {
 };
 
 const wage = (() => {
-    if (!props.job.wage_min && !props.job.wage_max) return 'Not disclosed';
-    const range = [props.job.wage_min, props.job.wage_max].filter(Boolean).join('–');
-    return `₹${range}${props.job.wage_type ? ' / ' + props.job.wage_type : ''}`;
+    return wageText(props.job.wage_min, props.job.wage_max, props.job.wage_type) ?? 'Not disclosed';
 })();
 
 const canCall = props.job.contact_mode !== 'apply' && !!props.job.contact_phone;
@@ -146,7 +145,7 @@ const fmtDate = (iso: string | null): string =>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><Clock class="size-4" /> {{ $t('jobs.posted') }} {{ fmtDate(job.created_at) }}</span>
                         <span v-if="job.shift" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Sun class="size-3.5" /> {{ $t(shiftLabel[job.shift]) }}<template v-if="shiftHours"> · {{ shiftHours }}</template></span>
                         <span v-if="experienceRange || freshersWelcome" class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-600 dark:text-sky-300">{{ $t('jobs.experience') }}: {{ freshersWelcome ? $t('jobs.freshersWelcome') : `${experienceRange} ${$t('jobs.yrs')}` }}</span>
-                        <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Wallet class="size-3.5" /> {{ $t('jobs.joiningFee') }}: ₹{{ job.worker_fee_amount }}</span>
+                        <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Wallet class="size-3.5" /> {{ $t('jobs.joiningFee') }}: ₹{{ rupees(job.worker_fee_amount) }}</span>
                         <span v-else class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300"><BadgeCheck class="size-3.5" /> {{ $t('jobs.noFee') }}</span>
                         <span v-if="job.expires_at" class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 dark:text-rose-300">{{ $t('jobs.applyBy') }} {{ fmtDate(job.expires_at) }}</span>
                     </div>

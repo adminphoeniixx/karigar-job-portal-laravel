@@ -3,12 +3,16 @@
 namespace App\Models;
 
 use App\Enums\SubscriptionStatus;
+use App\Services\Billing\Gst;
 use App\Services\Billing\InvoiceDocument;
+use App\Services\RazorpayService;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Throwable;
 
 /**
  * @property int $id
@@ -26,6 +30,8 @@ class Subscription extends Model
         'employer_id', 'plan_id', 'coupon_id', 'discount_amount',
         'subtotal_amount', 'gst_percent', 'gst_amount', 'total_amount',
         'cgst_amount', 'sgst_amount', 'igst_amount', 'place_of_supply', 'seller_gstin', 'sac_code',
+        // The single invoice a subscription carried before the invoices table;
+        // only old rows have them, and billing:backfill-invoices copies them over.
         'invoice_number', 'invoiced_at',
         'razorpay_subscription_id', 'razorpay_customer_id',
         'status', 'starts_at', 'ends_at',
@@ -50,13 +56,14 @@ class Subscription extends Model
     }
 
     /**
-     * Mark the subscription paid/active and issue its tax invoice number.
+     * The first payment landed: mark the subscription active and issue its
+     * first tax invoice.
      *
-     * The app's payment callback and Razorpay's webhook both call this for the
-     * same payment, in either order; the invoice is issued, and emailed, only
-     * by whichever gets here first.
+     * The app's payment callback and Razorpay's webhooks all call this for the
+     * same payment, in any order; only the first one issues the invoice, so
+     * the email goes once and an older plan is retired once.
      */
-    public function activateWithInvoice(): void
+    public function activateWithInvoice(?string $paymentId = null): void
     {
         $this->fill([
             'status' => SubscriptionStatus::Active,
@@ -64,35 +71,90 @@ class Subscription extends Model
             'ends_at' => $this->plan->interval === 'yearly' ? now()->addYear() : now()->addMonth(),
         ]);
 
-        $issuing = false;
-
-        if ($this->invoice_number === null) {
-            $number = sprintf(
-                '%s-%s-%05d',
-                config('billing.invoice_prefix', 'KRG'),
-                now()->format('Y'),
-                $this->id,
-            );
-
-            // Claimed with a conditional update rather than read-then-write, so
-            // a callback and a webhook racing each other cannot both issue it.
-            $issuing = static::whereKey($this->id)
-                ->whereNull('invoice_number')
-                ->update(['invoice_number' => $number, 'invoiced_at' => now()]) === 1;
-
-            $this->invoice_number = $number;
-            $this->invoiced_at ??= now();
-        }
-
         $this->save();
 
-        if ($issuing) {
-            InvoiceDocument::for($this)->email();
+        $invoice = Invoice::issue(
+            $this,
+            cycle: 1,
+            amounts: Gst::invoiceColumns($this),
+            paymentId: $paymentId,
+            periodStart: $this->starts_at,
+            periodEnd: $this->ends_at,
+        );
+
+        if ($invoice !== null) {
+            InvoiceDocument::for($invoice)->email();
+            $this->retireOlderPlans();
         }
 
         // A renewed job plan puts the employer's paused jobs back in search.
         if (! $this->plan->isDatabase()) {
             JobListing::syncSearchFor($this->employer);
+        }
+    }
+
+    /**
+     * Razorpay charged a renewal: carry the plan on to the end of the new
+     * cycle and invoice that payment. `$cycle` is Razorpay's paid_count, so a
+     * webhook delivered twice invoices the payment once.
+     */
+    public function renew(
+        int $cycle,
+        ?string $paymentId = null,
+        ?float $amountPaid = null,
+        ?CarbonInterface $periodStart = null,
+        ?CarbonInterface $periodEnd = null,
+    ): void {
+        $periodStart ??= $this->ends_at ?? now();
+        $periodEnd ??= $this->plan->interval === 'yearly'
+            ? $periodStart->copy()->addYear()
+            : $periodStart->copy()->addMonth();
+
+        $this->update([
+            'status' => SubscriptionStatus::Active,
+            'ends_at' => $periodEnd,
+        ]);
+
+        $invoice = Invoice::issue(
+            $this,
+            cycle: $cycle,
+            amounts: Gst::invoiceColumns($this, $amountPaid),
+            paymentId: $paymentId,
+            periodStart: $periodStart,
+            periodEnd: $periodEnd,
+        );
+
+        $invoice && InvoiceDocument::for($invoice)->email();
+
+        if (! $this->plan->isDatabase()) {
+            JobListing::syncSearchFor($this->employer);
+        }
+    }
+
+    /**
+     * Switching plans: the account holds one plan of each type, so a plan
+     * bought while another of its type still runs replaces it. The old one
+     * is stopped at Razorpay, or it would keep charging every month next to
+     * the new one.
+     */
+    private function retireOlderPlans(): void
+    {
+        $older = static::where('employer_id', $this->employer_id)
+            ->whereKeyNot($this->id)
+            ->entitled()
+            ->ofType($this->plan->type)
+            ->get();
+
+        foreach ($older as $subscription) {
+            if ($subscription->razorpay_subscription_id) {
+                try {
+                    app(RazorpayService::class)->cancelSubscription($subscription->razorpay_subscription_id);
+                } catch (Throwable $e) {
+                    report($e);
+                }
+            }
+
+            $subscription->update(['status' => SubscriptionStatus::Cancelled]);
         }
     }
 
@@ -115,6 +177,16 @@ class Subscription extends Model
     public function scopeOfType(Builder $query, string $type): void
     {
         $query->whereHas('plan', fn (Builder $p) => $p->where('type', $type));
+    }
+
+    /**
+     * One per payment: the first, then each renewal.
+     *
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 
     /**

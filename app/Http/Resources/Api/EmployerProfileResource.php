@@ -19,6 +19,8 @@ class EmployerProfileResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->user?->name,
+            // Null until the employer adds a real one; tax invoices go here.
+            'email' => $this->user?->contactEmail(),
             'company_name' => $this->company_name,
             'hiring_as' => $this->hiring_as,
             'industry' => $this->industry,

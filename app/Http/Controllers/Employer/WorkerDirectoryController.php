@@ -69,7 +69,7 @@ class WorkerDirectoryController extends Controller
                 'wage_type' => $w->wage_type,
                 'rating' => $w->user?->averageRating() ?? 0.0,
                 'phone' => $unlocked ? $w->phone : null,
-                'email' => $unlocked ? $w->user?->email : null,
+                'email' => $unlocked ? $w->user?->contactEmail() : null,
                 'locked' => ! $unlocked,
                 'can_unlock' => ! $paidFor && $inQuota,
             ];
@@ -112,7 +112,7 @@ class WorkerDirectoryController extends Controller
                 'wage_type' => $worker->wage_type,
                 'available' => $worker->available,
                 'phone' => $unlocked ? $worker->phone : null,
-                'email' => $unlocked ? $worker->user?->email : null,
+                'email' => $unlocked ? $worker->user?->contactEmail() : null,
                 'contact_unlocked' => $unlocked,
                 'can_unlock' => $worker->user !== null && ! $wallet->hasUnlocked($worker->user_id) && $request->user()->contactDatabaseQuota() > 0,
             ],

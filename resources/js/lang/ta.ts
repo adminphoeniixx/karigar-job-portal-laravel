@@ -292,6 +292,9 @@ export default {
         noMessages: 'இன்னும் செய்திகள் இல்லை',
         read: 'படிக்கப்பட்டது',
         startedFrom: 'வேலை:',
+        send: 'அனுப்பு',
+        subtitleWorker: 'முதலாளிகளுடன் உங்கள் உரையாடல்கள்',
+        emptyHintWorker: 'உங்கள் விண்ணப்பங்களுக்கு பதிலளிக்கும் முதலாளிகள் இங்கே தெரிவார்கள்.',
     },
     shortlist: {
         title: 'தேர்வுப்பட்டியல்',
@@ -348,6 +351,10 @@ export default {
         securePayment: 'Razorpay மூலம் பாதுகாப்பான பணம் செலுத்துதல். எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்.',
         taxInvoices: 'வரி இன்வாய்ஸ்கள்',
         viewInvoice: 'இன்வாய்ஸ் காண்க →',
+        invoiceEmail: 'GST இன்வாய்ஸுக்கான மின்னஞ்சல்',
+        invoiceEmailHint: 'ஒவ்வொரு பணம் செலுத்திய பிறகும் வரி இன்வாய்ஸ் இந்த மின்னஞ்சலுக்கு அனுப்பப்படும்.',
+        invoiceEmailTo: 'வரி இன்வாய்ஸ் இந்த மின்னஞ்சலுக்கு அனுப்பப்படும்:',
+        renewal: 'புதுப்பித்தல்',
         saveAmount: 'சேமிப்பு',
     },
     resume: {
@@ -412,6 +419,7 @@ export default {
         incomplete: 'முழுமையற்றது',
         skillsHint: 'திறன்கள்',
         latestJobs: 'புதிய வேலைகள்',
+        jobsForYou: 'உங்களுக்கான வேலைகள்',
         totalPosted: 'மொத்த பதிவுகள்',
         liveNow: 'இப்போது நேரலை',
         none: 'எதுவும் இல்லை',

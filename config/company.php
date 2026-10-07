@@ -17,7 +17,7 @@ return [
 
     'legal_name' => env('COMPANY_LEGAL_NAME', 'Phoeniixx Designs Private Limited'),
 
-    'address' => env('COMPANY_ADDRESS', '02-124, Blue One Square, Delhi-Jaipur Expressway, Phase IV'),
+    'address' => env('COMPANY_ADDRESS', '02-124, Blue One Square, 246, Udyog Vihar Phase IV, Gurugram, Haryana 122016'),
 
     'gstin' => env('COMPANY_GSTIN', '06AAFCP6967R1ZF'),
 

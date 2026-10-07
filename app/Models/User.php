@@ -90,6 +90,15 @@ class User extends Authenticatable implements PasskeyUser
         return $this->isUnavailableWorker() ? null : $this->email;
     }
 
+    /**
+     * The email to show other people: null for the <phone>@phone.karigar
+     * placeholder an OTP sign-up is given, which reaches nobody.
+     */
+    public function contactEmail(): ?string
+    {
+        return str_ends_with((string) $this->email, '@phone.karigar') ? null : $this->email;
+    }
+
     public function isEmployer(): bool
     {
         return $this->role === UserRole::Employer;
@@ -242,6 +251,16 @@ class User extends Authenticatable implements PasskeyUser
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class, 'employer_id');
+    }
+
+    /**
+     * Tax invoices issued to this employer account, one per payment.
+     *
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class, 'employer_id');
     }
 
     /**

@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { BriefcaseBusiness, Mail, MapPin, Phone, Star, UsersRound, X } from '@lucide/vue';
 import PageHeader from '@/components/PageHeader.vue';
+import { rupees } from '@/lib/utils';
 
 interface Entry {
     id: number;
@@ -65,7 +66,7 @@ const remove = (id: number) => {
                                 <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                     <span class="inline-flex items-center gap-1"><MapPin class="size-3" /> {{ [a.worker.city, a.worker.state].filter(Boolean).join(', ') || '—' }}</span>
                                     <span v-if="a.worker.experience_years != null">{{ a.worker.experience_years }} {{ $t('applicants.yrsExp') }}</span>
-                                    <span v-if="a.expected_wage">Expects ₹{{ a.expected_wage }}</span>
+                                    <span v-if="a.expected_wage">Expects ₹{{ rupees(a.expected_wage) }}</span>
                                 </div>
                             </div>
                         </div>

@@ -136,7 +136,7 @@ it('signs the dispatch with a short-lived token carrying sip admin', function ()
             && hash_equals($expected, $signature)
             && $body['iss'] === 'APIkey123'
             // Without sip.admin LiveKit refuses the dial rather than placing it.
-            && $body['video']['sip']['admin'] === true
+            && $body['sip']['admin'] === true
             && $body['exp'] - $body['iat'] <= 60;
     });
 });

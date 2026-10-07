@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n';
 import PublicNav from '@/components/PublicNav.vue';
 import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
+import { wageText } from '@/lib/utils';
 
 const { t } = useI18n();
 
@@ -75,9 +76,7 @@ const clearAll = () => {
 };
 
 const wage = (j: Job) => {
-    if (!j.wage_min && !j.wage_max) return t('jobs.negotiable');
-    const range = [j.wage_min, j.wage_max].filter(Boolean).join('–');
-    return `₹${range}${j.wage_type ? ' / ' + j.wage_type : ''}`;
+    return wageText(j.wage_min, j.wage_max, j.wage_type) ?? t('jobs.negotiable');
 };
 
 // Ruled fields, matching the landing's search: a bottom border, no box.

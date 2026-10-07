@@ -232,8 +232,8 @@ Route::prefix('v1')->group(function () {
             Route::get('employer/plans', [BillingController::class, 'index'])->name('api.employer.plans');
             Route::post('employer/plans/callback', [BillingController::class, 'callback'])->name('api.employer.plans.callback');
             Route::post('employer/plans/{plan}/subscribe', [BillingController::class, 'subscribe'])->name('api.employer.plans.subscribe');
-            Route::get('employer/invoices/{subscription}', [EmployerInvoiceController::class, 'show'])->name('api.employer.invoices.show');
-            Route::get('employer/invoices/{subscription}/pdf', [EmployerInvoiceController::class, 'pdf'])->name('api.employer.invoices.pdf');
+            Route::get('employer/invoices/{invoice}', [EmployerInvoiceController::class, 'show'])->name('api.employer.invoices.show');
+            Route::get('employer/invoices/{invoice}/pdf', [EmployerInvoiceController::class, 'pdf'])->name('api.employer.invoices.pdf');
 
             // Team members (owner only)
             Route::get('employer/team', [EmployerTeamController::class, 'index'])->name('api.employer.team');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coupon;
+use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class SubscriptionController extends Controller
 {
@@ -27,19 +29,21 @@ class SubscriptionController extends Controller
             'currentDatabase' => $request->user()->activeSubscription(Plan::TYPE_DATABASE)?->load('plan'),
             'razorpayConfigured' => app(RazorpayService::class)->configured(),
             'gstPercent' => Gst::percent(),
-            // Paid subscriptions with an issued tax invoice.
-            'invoices' => $request->user()->subscriptions()
-                ->whereNotNull('invoice_number')
-                ->with('plan:id,name')
-                ->orderByDesc('invoiced_at')
+            // One tax invoice per payment, renewals included.
+            'invoices' => $request->user()->invoices()
+                ->latest('issued_at')
+                ->latest('id')
                 ->get()
-                ->map(fn (Subscription $s) => [
-                    'id' => $s->id,
-                    'invoice_number' => $s->invoice_number,
-                    'plan' => $s->plan->name,
-                    'total' => $s->total_amount,
-                    'date' => $s->invoiced_at?->format('d M Y'),
+                ->map(fn (Invoice $invoice) => [
+                    'id' => $invoice->id,
+                    'invoice_number' => $invoice->number,
+                    'plan' => $invoice->plan_name,
+                    'renewal' => $invoice->cycle > 1,
+                    'total' => $invoice->total_amount,
+                    'date' => $invoice->issued_at->timezone(config('app.display_timezone'))->format('d M Y'),
                 ]),
+            // Where the invoice email goes; the checkout asks for one when null.
+            'billingEmail' => $request->user()->contactEmail(),
             // Partial-reloaded when the employer applies a coupon (?coupon=CODE).
             'couponResult' => $this->previewCoupon($request->query('coupon'), $request->user()),
         ]);
@@ -56,7 +60,14 @@ class SubscriptionController extends Controller
 
         $data = $request->validate([
             'coupon' => ['nullable', 'string', 'max:60'],
+            'email' => SubscriptionCheckout::emailRules($request->user()),
         ]);
+
+        SubscriptionCheckout::saveBillingEmail($request->user(), $data['email'] ?? null);
+
+        if ($request->user()->contactEmail() === null) {
+            return back()->withErrors(['email' => __('Enter the email your GST invoice should go to.')]);
+        }
 
         // Resolve + fully validate any coupon for this exact plan.
         $coupon = null;
@@ -76,7 +87,16 @@ class SubscriptionController extends Controller
             $discount = $coupon->discountFor((float) $plan->price);
         }
 
-        $subscription = $checkout->start($request->user(), $plan, $coupon, $discount);
+        try {
+            $subscription = $checkout->start($request->user(), $plan, $coupon, $discount);
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => __('Could not start the payment. Please try again in a few minutes.'),
+            ]);
+        }
 
         return Inertia::render('subscription/Checkout', [
             'razorpayKey' => config('services.razorpay.key'),
@@ -108,7 +128,7 @@ class SubscriptionController extends Controller
             ]);
         }
 
-        $subscription->activateWithInvoice();
+        $subscription->activateWithInvoice($data['razorpay_payment_id']);
 
         $this->recordRedemption($subscription);
 

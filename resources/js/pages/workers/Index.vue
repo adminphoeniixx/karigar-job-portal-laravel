@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import WorkerDatabaseTabs from '@/components/WorkerDatabaseTabs.vue';
 import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
+import { wageText } from '@/lib/utils';
 
 interface Worker {
     id: number;
@@ -139,7 +140,7 @@ const unlock = (w: Worker) => {
                 </div>
                 <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                     <span v-if="w.experience_years != null">{{ w.experience_years }} yrs exp</span>
-                    <span v-if="w.expected_wage" class="font-medium text-foreground">₹{{ w.expected_wage }}{{ w.wage_type ? ' / ' + w.wage_type : '' }}</span>
+                    <span v-if="w.expected_wage" class="font-medium text-foreground">{{ wageText(w.expected_wage, null, w.wage_type) }}</span>
                 </div>
 
                 <!-- Contact / actions -->

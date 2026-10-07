@@ -292,6 +292,9 @@ export default {
         noMessages: 'હજી કોઈ સંદેશો નથી',
         read: 'વંચાયું',
         startedFrom: 'નોકરી:',
+        send: 'મોકલો',
+        subtitleWorker: 'નોકરીદાતાઓ સાથે તમારી વાતચીત',
+        emptyHintWorker: 'તમારી અરજીનો જવાબ આપનાર નોકરીદાતાઓ અહીં દેખાશે.',
     },
     shortlist: {
         title: 'શોર્ટલિસ્ટ',
@@ -348,6 +351,10 @@ export default {
         securePayment: 'Razorpay દ્વારા સુરક્ષિત ચુકવણી. ગમે ત્યારે રદ કરી શકો.',
         taxInvoices: 'ટેક્સ ઇન્વૉઇસ',
         viewInvoice: 'ઇન્વૉઇસ જુઓ →',
+        invoiceEmail: 'GST ઇન્વૉઇસ માટે ઇમેઇલ',
+        invoiceEmailHint: 'દરેક ચુકવણી પછી ટેક્સ ઇન્વૉઇસ આ ઇમેઇલ પર મોકલાશે.',
+        invoiceEmailTo: 'ટેક્સ ઇન્વૉઇસ આ ઇમેઇલ પર મોકલાશે:',
+        renewal: 'રિન્યુઅલ',
         saveAmount: 'બચત',
     },
     resume: {
@@ -412,6 +419,7 @@ export default {
         incomplete: 'અધૂરી',
         skillsHint: 'કૌશલ્યો',
         latestJobs: 'નવી નોકરીઓ',
+        jobsForYou: 'તમારા માટે નોકરીઓ',
         totalPosted: 'કુલ પોસ્ટ',
         liveNow: 'હમણાં લાઇવ',
         none: 'કંઈ નહીં',

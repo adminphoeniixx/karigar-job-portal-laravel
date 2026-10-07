@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Employer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
+use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\Billing\Gst;
@@ -14,6 +15,7 @@ use App\Services\RazorpayService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * "Plans" for the employer app — the job and database plan catalogue and the
@@ -78,22 +80,27 @@ class BillingController extends Controller
             'job_plan_lapsed' => $account->jobPlanLapsed(),
             // Job posts used in the current billing period; null without a plan.
             'job_posts' => JobPostingGate::usage($account),
-            'invoices' => $account->subscriptions()
-                ->whereNotNull('invoice_number')
-                ->with('plan:id,name')
-                ->orderByDesc('invoiced_at')
+            // One per payment, renewals included, newest first.
+            'invoices' => $account->invoices()
+                ->latest('issued_at')
+                ->latest('id')
                 ->get()
-                ->map(fn (Subscription $s) => [
-                    'id' => $s->id,
-                    'invoice_number' => $s->invoice_number,
-                    'plan' => $s->plan->name,
-                    'total' => (float) $s->total_amount,
-                    'date' => $s->invoiced_at?->format('d M Y'),
+                ->map(fn (Invoice $invoice) => [
+                    'id' => $invoice->id,
+                    'invoice_number' => $invoice->number,
+                    'plan' => $invoice->plan_name,
+                    // 1 is the first payment, 2 onwards renewals.
+                    'cycle' => $invoice->cycle,
+                    'total' => (float) $invoice->total_amount,
+                    'date' => $invoice->issued_at->timezone(config('app.display_timezone'))->format('d M Y'),
                     // Invoice data the app renders itself; `web_url` is the
                     // printable session page, for opening in a browser.
-                    'url' => route('api.employer.invoices.show', $s),
-                    'web_url' => route('subscription.invoice', $s),
+                    'url' => route('api.employer.invoices.show', $invoice),
+                    'web_url' => route('invoices.show', $invoice),
                 ]),
+            // Where invoice emails go; null means the employer gets none
+            // until they add one (send `email` with subscribe, or on the profile).
+            'billing_email' => $account->contactEmail(),
             'payment' => [
                 'configured' => $razorpay->configured(),
                 'key' => config('services.razorpay.key'),
@@ -117,7 +124,15 @@ class BillingController extends Controller
             ], 422);
         }
 
-        $data = $request->validate(['coupon' => ['nullable', 'string', 'max:60']]);
+        // `email`: where the GST invoice goes. Optional here so older app
+        // builds keep working; without it a phone-OTP employer gets no
+        // invoice email (see `billing_email` on GET /employer/plans).
+        $data = $request->validate([
+            'coupon' => ['nullable', 'string', 'max:60'],
+            'email' => SubscriptionCheckout::emailRules($account),
+        ]);
+
+        SubscriptionCheckout::saveBillingEmail($account, $data['email'] ?? null);
 
         $coupon = null;
         $discount = 0.0;
@@ -133,7 +148,16 @@ class BillingController extends Controller
             $discount = $coupon->discountFor((float) $plan->price);
         }
 
-        $subscription = $checkout->start($account, $plan, $coupon, $discount);
+        try {
+            $subscription = $checkout->start($account, $plan, $coupon, $discount);
+        } catch (Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'message' => __('Could not start the payment. Please try again in a few minutes.'),
+                'code' => 'checkout_failed',
+            ], 502);
+        }
 
         return response()->json([
             'subscription_id' => $subscription->id,
@@ -165,7 +189,7 @@ class BillingController extends Controller
             return response()->json(['message' => __('Payment verification failed.')], 422);
         }
 
-        $subscription->activateWithInvoice();
+        $subscription->activateWithInvoice($data['razorpay_payment_id']);
         $this->recordRedemption($subscription);
 
         return response()->json([

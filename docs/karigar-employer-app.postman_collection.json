@@ -85,7 +85,7 @@
       "type": "string"
     },
     {
-      "key": "subscription_id",
+      "key": "invoice_id",
       "value": "1",
       "type": "string"
     }
@@ -2190,7 +2190,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"coupon\": \"\"\n}"
+              "raw": "{\n  \"coupon\": \"\",\n  \"email\": \"accounts@example.com\"\n}"
             }
           }
         },
@@ -2238,7 +2238,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/employer/invoices/{{subscription_id}}",
+              "raw": "{{base_url}}/api/v1/employer/invoices/{{invoice_id}}",
               "host": [
                 "{{base_url}}"
               ],
@@ -2247,7 +2247,7 @@
                 "v1",
                 "employer",
                 "invoices",
-                "{{subscription_id}}"
+                "{{invoice_id}}"
               ]
             },
             "description": "The tax invoice as data, so the app lays it out natively instead of opening the session-authenticated web page. Ids come from `invoices[].id` on the plans call. 403 for another account's invoice, 404 before the subscription is paid. Team members read the owner's invoices."

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -34,10 +35,10 @@ class AiMatcher
      *
      * @return Score
      */
-    public function score(JobListing $job, User $worker): array
+    public function score(JobListing $job, User $worker, ?JobApplication $application = null): array
     {
         $jobText = $this->jobText($job);
-        $candidateText = $this->candidateText($worker);
+        $candidateText = $this->candidateText($worker, $application);
 
         if (! $this->configured()) {
             return $this->heuristic($job, $worker);
@@ -100,14 +101,16 @@ class AiMatcher
         ]);
     }
 
-    private function candidateText(User $worker): string
+    private function candidateText(User $worker, ?JobApplication $application = null): string
     {
         $profile = $worker->workerProfile;
         $skills = is_array($profile?->skills) ? implode(', ', $profile->skills) : '—';
         $langs = is_array($profile?->spoken_languages) ? implode(', ', $profile->spoken_languages) : '—';
         $location = trim(implode(', ', array_filter([$profile?->city, $profile?->state]))) ?: '—';
-        $wage = $profile?->expected_wage !== null
-            ? '₹'.number_format((float) $profile->expected_wage).($profile->wage_type ? ' / '.$profile->wage_type : '')
+        // The wage asked on this application beats the profile's general one.
+        $expected = $application?->expected_wage ?? $profile?->expected_wage;
+        $wage = $expected !== null
+            ? '₹'.number_format((float) $expected).' / '.($profile?->wage_type ?: 'monthly')
             : '—';
 
         $lines = [
@@ -120,6 +123,10 @@ class AiMatcher
             "Languages: {$langs}",
             'Bio: '.(trim((string) $profile?->bio) ?: '—'),
         ];
+
+        if (trim((string) $application?->cover_note) !== '') {
+            $lines[] = 'Cover note on this application: '.trim((string) $application->cover_note);
+        }
 
         // An uploaded resume is richer than the profile fields, so hand the model
         // its text too and tell it to prefer the resume where the two disagree.

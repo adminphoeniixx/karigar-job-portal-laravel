@@ -63,6 +63,8 @@
                     <div class="label">Place of supply</div>
                     <div style="margin-top: 4px;">{{ $invoice['place_of_supply'] }}</div>
                 @endif
+                {{-- Rule 46 asks every tax invoice to say whether reverse charge applies. --}}
+                <div class="muted small" style="margin-top: 2px;">Reverse charge: No</div>
                 <div class="label" style="margin-top: 8px;">Payment reference</div>
                 <div style="margin-top: 4px;">{{ $invoice['payment_ref'] ?: '—' }}</div>
                 @if ($invoice['period']['from'])

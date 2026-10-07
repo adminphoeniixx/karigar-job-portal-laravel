@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Bookmark, MapPin, Trash2 } from '@lucide/vue';
 import PageHeader from '@/components/PageHeader.vue';
+import { wageText } from '@/lib/utils';
 
 interface Saved {
     id: number;
@@ -29,8 +30,7 @@ const remove = (jobId: number) => {
 };
 
 const wage = (j: Saved['job']) => {
-    if (!j.wage_min && !j.wage_max) return 'Not disclosed';
-    return `₹${[j.wage_min, j.wage_max].filter(Boolean).join('–')}${j.wage_type ? ' / ' + j.wage_type : ''}`;
+    return wageText(j.wage_min, j.wage_max, j.wage_type) ?? 'Not disclosed';
 };
 </script>
 

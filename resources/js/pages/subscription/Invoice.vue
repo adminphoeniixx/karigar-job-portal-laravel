@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft, Download, Printer } from '@lucide/vue';
 import { computed } from 'vue';
 
@@ -25,7 +25,8 @@ interface Invoice {
 const props = defineProps<{
     invoice: Invoice;
     seller: { name: string; address: string; gstin: string; email: string };
-    buyer: { name: string; address: string; gstin: string | null; email: string; phone: string | null };
+    buyer: { name: string; address: string; gstin: string | null; email: string | null; phone: string | null };
+    pdfUrl: string;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Subscription', href: '/subscription' }, { title: 'Invoice', href: '#' }] } });
@@ -38,10 +39,6 @@ const halfRate = computed(() => Number(props.invoice.gst_percent ?? 0) / 2);
 const inr = (v: string | number | null) => (v == null ? '—' : '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 }));
 
 const printInvoice = () => window.print();
-
-// This page is /subscription/{id}/invoice; the PDF sits beside it.
-const page = usePage();
-const pdfHref = computed(() => page.url.split('?')[0] + '.pdf');
 </script>
 
 <template>
@@ -54,7 +51,7 @@ const pdfHref = computed(() => page.url.split('?')[0] + '.pdf');
             </Link>
             <div class="flex items-center gap-2">
                 <a
-                    :href="pdfHref"
+                    :href="pdfUrl"
                     class="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted"
                 >
                     <Download class="size-4" /> PDF
@@ -101,6 +98,7 @@ const pdfHref = computed(() => page.url.split('?')[0] + '.pdf');
                     <div v-if="invoice.place_of_supply" class="mt-2 text-xs text-muted-foreground">
                         Place of supply: <span class="font-medium text-foreground">{{ invoice.place_of_supply }}</span>
                     </div>
+                    <div class="mt-1 text-xs text-muted-foreground">Reverse charge: No</div>
                     <div v-if="invoice.period.from" class="mt-2 text-xs text-muted-foreground">
                         Service period: {{ invoice.period.from }} — {{ invoice.period.to }}
                     </div>

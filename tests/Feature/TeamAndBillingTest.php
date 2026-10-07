@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Billing\InvoiceNumber;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -122,17 +123,18 @@ it('issues a GST tax invoice when a subscription is activated', function () {
         'status' => SubscriptionStatus::Created->value,
     ]);
 
-    $subscription->activateWithInvoice();
+    $subscription->activateWithInvoice('pay_first');
 
     $subscription->refresh();
+    $year = substr(InvoiceNumber::financialYear(now()), 2);
     expect($subscription->status)->toBe(SubscriptionStatus::Active)
-        ->and($subscription->invoice_number)->toBe(sprintf('KRG-%s-%05d', now()->format('Y'), $subscription->id))
-        ->and($subscription->invoiced_at)->not->toBeNull();
+        ->and($subscription->invoices)->toHaveCount(1)
+        ->and($subscription->invoices->first()->number)->toBe("KRG/{$year}/00001")
+        ->and($subscription->invoices->first()->razorpay_payment_id)->toBe('pay_first');
 
-    // Re-activation (e.g. webhook retries) keeps the same invoice number.
-    $number = $subscription->invoice_number;
-    $subscription->activateWithInvoice();
-    expect($subscription->fresh()->invoice_number)->toBe($number);
+    // Re-activation (the webhook after the callback) issues nothing new.
+    $subscription->activateWithInvoice('pay_first');
+    expect($subscription->invoices()->count())->toBe(1);
 });
 
 it('shows the tax invoice to its owner only', function () {
@@ -142,16 +144,24 @@ it('shows the tax invoice to its owner only', function () {
         'status' => SubscriptionStatus::Created->value,
     ]);
     $subscription->activateWithInvoice();
+    $invoice = $subscription->invoices()->first();
 
     $this->actingAs($this->owner)
-        ->get("/subscription/{$subscription->id}/invoice")
+        ->get("/invoices/{$invoice->id}")
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('subscription/Invoice')
-            ->where('invoice.number', $subscription->invoice_number)
-            ->where('invoice.total', 588.82));
+            ->where('invoice.number', $invoice->number)
+            ->where('invoice.total', 588.82)
+            ->where('pdfUrl', route('invoices.pdf', $invoice)));
+
+    // Links in emails sent before invoices had their own table still work.
+    $this->actingAs($this->owner)
+        ->get("/subscription/{$subscription->id}/invoice")
+        ->assertRedirect(route('invoices.show', $invoice));
 
     $other = User::factory()->create(['role' => UserRole::Employer->value]);
+    $this->actingAs($other)->get("/invoices/{$invoice->id}")->assertForbidden();
     $this->actingAs($other)->get("/subscription/{$subscription->id}/invoice")->assertForbidden();
 });
 

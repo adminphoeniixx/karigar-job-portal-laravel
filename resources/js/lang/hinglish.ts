@@ -292,6 +292,9 @@ export default {
         noMessages: 'Abhi koi message nahi',
         read: 'Padha gaya',
         startedFrom: 'Naukri:',
+        send: 'Bhejein',
+        subtitleWorker: 'Employers ke saath aapki baatcheet',
+        emptyHintWorker: 'Jo employers aapki application pe reply karenge, wo yahan dikhenge.',
     },
     shortlist: {
         title: 'Shortlist',
@@ -348,6 +351,10 @@ export default {
         securePayment: 'Razorpay se secure payment. Kabhi bhi cancel kar sakte hain.',
         taxInvoices: 'Tax invoices',
         viewInvoice: 'Invoice dekhein →',
+        invoiceEmail: 'GST invoice ke liye email',
+        invoiceEmailHint: 'Har payment ke baad tax invoice isi email pe bheja jayega.',
+        invoiceEmailTo: 'Tax invoice is email pe bheja jayega:',
+        renewal: 'Renewal',
         saveAmount: 'Bachat',
     },
     resume: {
@@ -412,6 +419,7 @@ export default {
         incomplete: 'Adhoori',
         skillsHint: 'Skills',
         latestJobs: 'Nayi naukriyan',
+        jobsForYou: 'Aapke liye jobs',
         totalPosted: 'Total posted',
         liveNow: 'Abhi live',
         none: 'Koi nahi',

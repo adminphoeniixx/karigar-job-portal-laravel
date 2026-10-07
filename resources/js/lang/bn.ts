@@ -292,6 +292,9 @@ export default {
         noMessages: 'এখনও কোনো বার্তা নেই',
         read: 'পড়া হয়েছে',
         startedFrom: 'কাজ:',
+        send: 'পাঠান',
+        subtitleWorker: 'নিয়োগকর্তাদের সঙ্গে আপনার চ্যাট',
+        emptyHintWorker: 'যে নিয়োগকর্তারা আপনার আবেদনে উত্তর দেবেন, তারা এখানে দেখাবে।',
     },
     shortlist: {
         title: 'শর্টলিস্ট',
@@ -348,6 +351,10 @@ export default {
         securePayment: 'Razorpay-এর মাধ্যমে নিরাপদ পেমেন্ট। যেকোনো সময় বাতিল করতে পারেন।',
         taxInvoices: 'ট্যাক্স ইনভয়েস',
         viewInvoice: 'ইনভয়েস দেখুন →',
+        invoiceEmail: 'GST ইনভয়েসের জন্য ইমেল',
+        invoiceEmailHint: 'প্রতিটি পেমেন্টের পরে ট্যাক্স ইনভয়েস এই ইমেলে পাঠানো হবে।',
+        invoiceEmailTo: 'ট্যাক্স ইনভয়েস এই ইমেলে পাঠানো হবে:',
+        renewal: 'রিনিউয়াল',
         saveAmount: 'সাশ্রয়',
     },
     resume: {
@@ -412,6 +419,7 @@ export default {
         incomplete: 'অসম্পূর্ণ',
         skillsHint: 'দক্ষতা',
         latestJobs: 'নতুন কাজ',
+        jobsForYou: 'আপনার জন্য কাজ',
         totalPosted: 'মোট পোস্ট',
         liveNow: 'এখন লাইভ',
         none: 'কিছু নেই',

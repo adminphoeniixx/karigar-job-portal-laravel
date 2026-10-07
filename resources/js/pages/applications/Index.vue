@@ -88,14 +88,19 @@ const withdraw = (id: number) => {
                             <td class="px-5 py-3.5 text-muted-foreground">{{ a.job.employer.name }}</td>
                             <td class="px-5 py-3.5 whitespace-nowrap text-muted-foreground">{{ fmtDate(a.created_at) }}</td>
                             <td class="px-5 py-3.5">
+                                <!-- One pill: "Shortlisted" while the employer decides, then the decision itself. -->
                                 <div class="flex items-center gap-1.5">
                                     <span
-                                        v-if="a.shortlisted_at"
+                                        v-if="a.shortlisted_at && a.status === 'pending'"
                                         class="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300"
                                     >
                                         <Star class="size-3" fill="currentColor" /> {{ $t('applications.shortlisted') }}
                                     </span>
-                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[a.status]">
+                                    <span
+                                        v-else
+                                        class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset"
+                                        :class="statusPill[a.status]"
+                                    >
                                         {{ $t(`status.${a.status}`) }}
                                     </span>
                                 </div>

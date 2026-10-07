@@ -56,6 +56,7 @@ const backendKeys: Record<string, string> = {
     'Incomplete': 'dashboard.incomplete',
     'Skills': 'dashboard.skillsHint',
     'Latest jobs': 'dashboard.latestJobs',
+    'Jobs for you': 'dashboard.jobsForYou',
     'My Jobs': 'nav.myJobs',
     'Total posted': 'dashboard.totalPosted',
     'Active Jobs': 'dashboard.activeJobs',

@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\RazorpayService;
+use Illuminate\Validation\Rule;
 
 /**
  * Opens a subscription at Razorpay and records it with its GST breakup. The
@@ -36,6 +37,31 @@ class SubscriptionCheckout
             'razorpay_subscription_id' => $remote['id'],
             'status' => SubscriptionStatus::Created,
         ]);
+    }
+
+    /**
+     * Rules for the email an employer gives at checkout for their invoices.
+     * It becomes the account's email, the same one the profile page edits.
+     *
+     * @return array<int, mixed>
+     */
+    public static function emailRules(User $account): array
+    {
+        return ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($account->id)];
+    }
+
+    /**
+     * Save the invoice email given at checkout. A phone-OTP account starts
+     * with a placeholder address that reaches nobody, and the tax invoice
+     * would never be sent.
+     */
+    public static function saveBillingEmail(User $account, ?string $email): void
+    {
+        $email = trim((string) $email);
+
+        if ($email !== '' && strcasecmp($email, (string) $account->email) !== 0) {
+            $account->update(['email' => $email]);
+        }
     }
 
     /**

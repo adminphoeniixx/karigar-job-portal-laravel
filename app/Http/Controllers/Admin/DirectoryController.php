@@ -51,7 +51,7 @@ class DirectoryController extends Controller
                 'plan' => $u->activeSubscription()?->plan->name,
                 'kyc' => $u->kyc?->status->value,
                 'suspended' => $u->suspended_at !== null,
-                'joined' => $u->created_at?->format('d M Y'),
+                'joined' => $u->created_at?->timezone(config('app.display_timezone'))->format('d M Y'),
             ]);
 
         return Inertia::render('admin/Employers', [
@@ -99,7 +99,7 @@ class DirectoryController extends Controller
                 'available' => (bool) ($u->workerProfile?->available ?? false),
                 'kyc' => $u->kyc?->status->value,
                 'suspended' => $u->suspended_at !== null,
-                'joined' => $u->created_at?->format('d M Y'),
+                'joined' => $u->created_at?->timezone(config('app.display_timezone'))->format('d M Y'),
             ]);
 
         return Inertia::render('admin/Karigars', [

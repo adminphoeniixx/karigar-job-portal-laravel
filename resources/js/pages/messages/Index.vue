@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, BriefcaseBusiness, MessageSquare, Send } from '@lucide/vue';
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 interface Counterpart {
     id: number | null;
@@ -40,6 +40,9 @@ const props = defineProps<{ conversations: Thread[]; active: Active | null }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Messages', href: '/messages' }] } });
 
+const page = usePage();
+const isWorker = computed(() => page.props.auth.user?.role === 'worker');
+
 const form = useForm({ body: '' });
 const scroller = ref<HTMLElement | null>(null);
 
@@ -72,13 +75,22 @@ const onKeydown = (e: KeyboardEvent) => {
 
 // No websockets yet — poll the open thread and the unread badges.
 let poller: ReturnType<typeof setInterval> | undefined;
+// One poll at a time: on a slow server a reload can outlast the interval, and
+// unguarded they pile up until they hold every worker the server has.
+let polling = false;
 
 onMounted(() => {
     scrollToBottom();
     poller = setInterval(() => {
-        if (form.processing) return;
+        if (form.processing || polling || document.hidden) return;
+        polling = true;
         // reload() already preserves scroll and component state.
-        router.reload({ only: ['conversations', 'active', 'chatUnread'] });
+        router.reload({
+            only: ['conversations', 'active', 'chatUnread'],
+            onFinish: () => {
+                polling = false;
+            },
+        });
     }, 10000);
 });
 
@@ -102,7 +114,7 @@ watch(() => props.active?.id, scrollToBottom);
                     <h2 class="flex items-center gap-2 font-semibold">
                         <MessageSquare class="size-4 text-orange-600" /> {{ $t('chat.title') }}
                     </h2>
-                    <p class="mt-0.5 text-xs text-muted-foreground">{{ $t('chat.subtitle') }}</p>
+                    <p class="mt-0.5 text-xs text-muted-foreground">{{ isWorker ? $t('chat.subtitleWorker') : $t('chat.subtitle') }}</p>
                 </div>
 
                 <div v-if="conversations.length" class="min-h-0 flex-1 overflow-y-auto">
@@ -143,7 +155,7 @@ watch(() => props.active?.id, scrollToBottom);
                 <div v-else class="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
                     <MessageSquare class="size-8 text-muted-foreground/50" />
                     <p class="text-sm font-medium">{{ $t('chat.empty') }}</p>
-                    <p class="text-xs text-muted-foreground">{{ $t('chat.emptyHint') }}</p>
+                    <p class="text-xs text-muted-foreground">{{ isWorker ? $t('chat.emptyHintWorker') : $t('chat.emptyHint') }}</p>
                 </div>
             </aside>
 
@@ -200,6 +212,8 @@ watch(() => props.active?.id, scrollToBottom);
                     />
                     <button
                         type="submit"
+                        :aria-label="$t('chat.send')"
+                        :title="$t('chat.send')"
                         :disabled="form.processing || !form.body.trim()"
                         class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-600 text-white transition hover:bg-orange-700 disabled:opacity-40"
                     >

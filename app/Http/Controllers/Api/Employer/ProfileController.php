@@ -36,7 +36,12 @@ class ProfileController extends Controller
             $account->update(['name' => $request->validated('name')]);
         }
 
-        $profile->fill($request->safe()->except('name', 'logo'));
+        // The email is the account's too: invoices and other mail go there.
+        if ($request->filled('email')) {
+            $account->update(['email' => $request->validated('email')]);
+        }
+
+        $profile->fill($request->safe()->except('name', 'logo', 'email'));
 
         if ($request->hasFile('logo')) {
             if ($profile->logo_path) {

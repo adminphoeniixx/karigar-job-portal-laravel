@@ -7,6 +7,7 @@ use App\Models\Subscription;
 use App\Services\RazorpayService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 
 class RazorpayWebhookController extends Controller
 {
@@ -32,15 +33,27 @@ class RazorpayWebhookController extends Controller
             return response('not found', 200);
         }
 
-        match ($event) {
-            'subscription.activated', 'subscription.charged', 'subscription.authenticated' => tap($subscription)->activateWithInvoice()->update([
-                'ends_at' => isset($entity['current_end'])
-                    ? now()->createFromTimestamp($entity['current_end'])
-                    : $subscription->ends_at,
+        $payment = $request->input('payload.payment.entity', []);
+        $paymentId = $payment['id'] ?? null;
+        // Razorpay counts the payments taken on the subscription; the first is 1.
+        $paidCount = (int) ($entity['paid_count'] ?? 0);
+        $time = fn (string $key) => isset($entity[$key]) ? Carbon::createFromTimestamp($entity[$key]) : null;
+
+        match (true) {
+            // A renewal: every charge after the first gets its own invoice.
+            $event === 'subscription.charged' && $paidCount > 1 => $subscription->renew(
+                cycle: $paidCount,
+                paymentId: $paymentId,
+                amountPaid: isset($payment['amount']) ? $payment['amount'] / 100 : null,
+                periodStart: $time('current_start'),
+                periodEnd: $time('current_end'),
+            ),
+            in_array($event, ['subscription.activated', 'subscription.charged', 'subscription.authenticated'], true) => tap($subscription)->activateWithInvoice($paymentId)->update([
+                'ends_at' => $time('current_end') ?? $subscription->ends_at,
             ]),
-            'subscription.halted' => $subscription->update(['status' => SubscriptionStatus::Halted]),
-            'subscription.cancelled' => $subscription->update(['status' => SubscriptionStatus::Cancelled]),
-            'subscription.completed' => $subscription->update(['status' => SubscriptionStatus::Completed]),
+            $event === 'subscription.halted' => $subscription->update(['status' => SubscriptionStatus::Halted]),
+            $event === 'subscription.cancelled' => $subscription->update(['status' => SubscriptionStatus::Cancelled]),
+            $event === 'subscription.completed' => $subscription->update(['status' => SubscriptionStatus::Completed]),
             default => null,
         };
 

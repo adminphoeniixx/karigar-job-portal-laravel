@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Plan;
 use Razorpay\Api\Api;
+use Razorpay\Api\Errors\BadRequestError;
 use RuntimeException;
 use Throwable;
 
@@ -105,9 +106,55 @@ class RazorpayService
             $payload['offer_id'] = $offerId;
         }
 
-        $subscription = $this->api()->subscription->create($payload);
+        try {
+            $subscription = $this->api()->subscription->create($payload);
+        } catch (BadRequestError $e) {
+            // A plan id saved under other keys (a test → live switch, or
+            // another environment on this database) does not exist in this
+            // Razorpay account: make the plan here and try once more.
+            if (! str_contains($e->getMessage(), 'could not be found')) {
+                throw $e;
+            }
+
+            $payload['plan_id'] = $this->createPlan($plan);
+            $subscription = $this->api()->subscription->create($payload);
+        }
 
         return $subscription->toArray();
+    }
+
+    /**
+     * Stop a subscription renewing. At cycle end the employer keeps the days
+     * already paid for; Razorpay just never charges it again.
+     */
+    public function cancelSubscription(string $subscriptionId, bool $atCycleEnd = true): void
+    {
+        $this->api()->subscription->fetch($subscriptionId)->cancel(['cancel_at_cycle_end' => $atCycleEnd ? 1 : 0]);
+    }
+
+    /**
+     * Every payment Razorpay has taken on a subscription, oldest first. The
+     * position is the cycle: the first is the checkout payment, the rest are
+     * renewals. Read from the invoices Razorpay raises for each charge.
+     *
+     * @return list<array{payment_id: ?string, amount: float, paid_at: ?int, start: ?int, end: ?int}>
+     */
+    public function subscriptionCharges(string $subscriptionId): array
+    {
+        $items = $this->api()->invoice->all(['subscription_id' => $subscriptionId, 'count' => 100])->toArray()['items'] ?? [];
+
+        return collect($items)
+            ->filter(fn (array $invoice) => ($invoice['status'] ?? null) === 'paid')
+            ->sortBy(fn (array $invoice) => [$invoice['paid_at'] ?? 0, $invoice['billing_start'] ?? 0])
+            ->map(fn (array $invoice) => [
+                'payment_id' => $invoice['payment_id'] ?? null,
+                'amount' => ((int) ($invoice['amount_paid'] ?? $invoice['amount'] ?? 0)) / 100,
+                'paid_at' => $invoice['paid_at'] ?? null,
+                'start' => $invoice['billing_start'] ?? null,
+                'end' => $invoice['billing_end'] ?? null,
+            ])
+            ->values()
+            ->all();
     }
 
     /**

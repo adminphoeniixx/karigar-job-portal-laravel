@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import WorkerDatabaseTabs from '@/components/WorkerDatabaseTabs.vue';
 import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
+import { wageText } from '@/lib/utils';
 
 interface Contact {
     worker_id: number;
@@ -279,7 +280,7 @@ const field = 'rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline
                         <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span class="inline-flex items-center gap-1"><MapPin class="size-3" /> {{ [c.city, c.state].filter(Boolean).join(', ') || '—' }}</span>
                             <span v-if="c.experience_years != null">{{ c.experience_years }} yrs exp</span>
-                            <span v-if="c.expected_wage">₹{{ c.expected_wage }}{{ c.wage_type ? ' / ' + c.wage_type : '' }}</span>
+                            <span v-if="c.expected_wage">{{ wageText(c.expected_wage, null, c.wage_type) }}</span>
                         </div>
                         <div v-if="c.skills.length" class="mt-2 flex flex-wrap gap-1.5">
                             <span v-for="s in c.skills.slice(0, 4)" :key="s" class="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">{{ s }}</span>
