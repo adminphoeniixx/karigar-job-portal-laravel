@@ -179,9 +179,11 @@ const formatDate = (iso: string | null) =>
 <template>
     <Head title="Push Notifications" />
 
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="Bell" title="Push Notifications" description="Send a push notification to karigars' phones" />
 
+        <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div class="flex flex-col gap-6">
         <!-- Draft with AI -->
         <section class="flex flex-col gap-4 rounded-2xl border bg-card p-5 shadow-sm">
             <div class="flex items-center gap-2">
@@ -387,6 +389,7 @@ const formatDate = (iso: string | null) =>
                 </button>
             </div>
         </form>
+        </div>
 
         <!-- History -->
         <div>
@@ -425,6 +428,7 @@ const formatDate = (iso: string | null) =>
                     No broadcasts sent yet.
                 </div>
             </div>
+        </div>
         </div>
     </div>
 </template>

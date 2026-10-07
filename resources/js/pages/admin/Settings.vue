@@ -7,6 +7,7 @@ import PageHeader from '@/components/PageHeader.vue';
 type AppName = 'worker' | 'employer';
 type Platform = 'android' | 'ios';
 type AppVersion = { latest: string | null; min: string | null; store_url: string | null };
+type AppSettings = { update_message: string; maintenance: boolean; maintenance_message: string; maintenance_until: string };
 
 type SettingKey =
     | 'first_post_free_enabled'
@@ -38,10 +39,7 @@ const props = defineProps<{
     };
     apps: {
         versions: Record<AppName, Record<Platform, AppVersion>>;
-        update_message: string;
-        maintenance: boolean;
-        maintenance_message: string;
-        maintenance_until: string;
+        settings: Record<AppName, AppSettings>;
     };
 }>();
 
@@ -174,12 +172,10 @@ const saveBilling = () => {
 // ── Mobile apps: update check + maintenance ─────────────────────────
 const appNames: AppName[] = ['worker', 'employer'];
 const platforms: Platform[] = ['android', 'ios'];
+const appLabel = (app: AppName) => (app === 'worker' ? 'Worker app' : 'Employer app');
 const apps = useForm({
     versions: JSON.parse(JSON.stringify(props.apps.versions)) as Record<AppName, Record<Platform, AppVersion>>,
-    update_message: props.apps.update_message,
-    maintenance: props.apps.maintenance,
-    maintenance_message: props.apps.maintenance_message,
-    maintenance_until: props.apps.maintenance_until,
+    settings: JSON.parse(JSON.stringify(props.apps.settings)) as Record<AppName, AppSettings>,
 });
 const appErrors = computed(() => apps.errors as Record<string, string | undefined>);
 
@@ -217,23 +213,34 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
 <template>
     <Head title="Settings" />
 
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader
             :icon="SettingsIcon"
             title="Settings"
             description="App-wide feature toggles, and GST on what we sell."
         />
 
-        <div class="rounded-2xl border bg-card p-5 shadow-sm">
+        <section class="flex flex-col gap-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-lg font-semibold">Features</h2>
+                <button
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
+                    @click="save"
+                >
+                    <Check class="size-4" /> Save
+                </button>
+            </div>
+
+            <div class="grid gap-4 lg:grid-cols-2">
             <div
-                v-for="(toggle, index) in toggles"
+                v-for="toggle in toggles"
                 :key="toggle.key"
-                :class="index > 0 ? 'mt-5 border-t pt-5' : ''"
+                class="rounded-2xl border bg-card p-5 shadow-sm md:p-6"
             >
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h3 class="font-semibold">{{ toggle.title }}</h3>
-                        <p class="mt-1 text-sm text-muted-foreground">{{ toggle.description }}</p>
+                        <h3 class="text-base font-semibold">{{ toggle.title }}</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">{{ toggle.description }}</p>
                     </div>
 
                     <button
@@ -306,8 +313,8 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
             </div>
 
             <!-- Applicants arrive in batches (ApplicantAccess). -->
-            <div class="mt-5 border-t pt-5">
-                <h3 class="flex items-center gap-2 font-semibold"><Layers class="size-4 text-primary" /> Applicants in batches</h3>
+            <div class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                <h3 class="flex items-center gap-2 text-base font-semibold"><Layers class="size-4 text-primary" /> Applicants in batches</h3>
                 <p class="mt-1 text-sm text-muted-foreground">
                     An employer sees a job's applicants a batch at a time, oldest first. The next batch opens once every
                     applicant shown so far is shortlisted, hired or rejected. Shortlisted and hired applicants always stay
@@ -325,7 +332,9 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                 </div>
             </div>
 
-            <div class="mt-5 flex justify-end border-t pt-4">
+            </div>
+
+            <div class="flex justify-end">
                 <button
                     class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
                     @click="save"
@@ -333,12 +342,12 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                     <Check class="size-4" /> Save
                 </button>
             </div>
-        </div>
+        </section>
 
-        <div class="rounded-2xl border bg-card p-5 shadow-sm">
+        <div class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
             <div class="flex items-start justify-between gap-4">
                 <div>
-                    <h2 class="flex items-center gap-2 font-semibold"><Receipt class="size-4 text-primary" /> Billing &amp; GST</h2>
+                    <h2 class="flex items-center gap-2 text-lg font-semibold"><Receipt class="size-4 text-primary" /> Billing &amp; GST</h2>
                     <p class="mt-1 text-sm text-muted-foreground">
                         GST is added on top of every plan price and collected in the same Razorpay payment. A buyer in
                         the seller's state pays CGST + SGST (half each); any other state pays IGST. The buyer's state is
@@ -362,7 +371,8 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                 </button>
             </div>
 
-            <div class="mt-5 grid gap-4 border-t pt-5 sm:grid-cols-2">
+            <div class="mt-5 grid items-start gap-6 border-t pt-5 xl:grid-cols-2">
+            <div class="grid gap-4 sm:grid-cols-2">
                 <label class="text-sm font-medium">
                     GST rate (%)
                     <input v-model.number="billing.gst_percent" type="number" min="0" max="28" step="0.01" :class="inputClass" :disabled="!billing.gst_enabled" />
@@ -401,7 +411,8 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                 </label>
             </div>
 
-            <div class="mt-5 overflow-x-auto rounded-xl border">
+            <div>
+            <div class="overflow-x-auto rounded-xl border">
                 <table class="w-full text-sm">
                     <thead class="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
@@ -429,6 +440,8 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
             <p class="mt-2 text-xs text-muted-foreground">
                 Every payment, renewals included, gets its own invoice, numbered {{ props.billing.invoice_prefix }}/YY-YY/00001 onwards in each financial year and emailed to the employer. Plan prices and limits are edited under Plans.
             </p>
+            </div>
+            </div>
 
             <div class="mt-5 flex justify-end border-t pt-4">
                 <button
@@ -441,8 +454,8 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
             </div>
         </div>
 
-        <div class="rounded-2xl border bg-card p-5 shadow-sm">
-            <h2 class="flex items-center gap-2 font-semibold"><Smartphone class="size-4 text-primary" /> Mobile apps</h2>
+        <div class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+            <h2 class="flex items-center gap-2 text-lg font-semibold"><Smartphone class="size-4 text-primary" /> Mobile apps</h2>
             <p class="mt-1 text-sm text-muted-foreground">
                 The apps check these on launch. Below the minimum version an app must update before it can be used;
                 below the latest it only offers the update. Blank means no check.
@@ -453,8 +466,8 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                     <thead class="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
                             <th class="px-3 py-2 font-medium">App</th>
-                            <th class="px-3 py-2 font-medium">Latest</th>
-                            <th class="px-3 py-2 font-medium">Minimum</th>
+                            <th class="w-44 px-3 py-2 font-medium">Latest</th>
+                            <th class="w-44 px-3 py-2 font-medium">Minimum</th>
                             <th class="px-3 py-2 font-medium">Store link</th>
                         </tr>
                     </thead>
@@ -463,18 +476,18 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                             <tr v-for="platform in platforms" :key="`${app}-${platform}`">
                                 <td class="whitespace-nowrap px-3 py-2 font-medium">{{ app === 'worker' ? 'Worker' : 'Employer' }} · {{ platform === 'ios' ? 'iOS' : 'Android' }}</td>
                                 <td class="px-3 py-2">
-                                    <input v-model="apps.versions[app][platform].latest" placeholder="1.4.2" :class="[inputClass, 'mt-0 w-24']" />
+                                    <input v-model="apps.versions[app][platform].latest" placeholder="1.4.2" :class="[inputClass, 'mt-0 w-full min-w-24']" />
                                     <span v-if="appErrors[`versions.${app}.${platform}.latest`]" class="mt-1 block text-xs text-rose-600">{{ appErrors[`versions.${app}.${platform}.latest`] }}</span>
                                 </td>
                                 <td class="px-3 py-2">
-                                    <input v-model="apps.versions[app][platform].min" placeholder="1.2.0" :class="[inputClass, 'mt-0 w-24']" />
+                                    <input v-model="apps.versions[app][platform].min" placeholder="1.2.0" :class="[inputClass, 'mt-0 w-full min-w-24']" />
                                     <span v-if="appErrors[`versions.${app}.${platform}.min`]" class="mt-1 block text-xs text-rose-600">{{ appErrors[`versions.${app}.${platform}.min`] }}</span>
                                 </td>
                                 <td class="px-3 py-2">
                                     <input
                                         v-model="apps.versions[app][platform].store_url"
                                         :placeholder="platform === 'ios' ? 'https://apps.apple.com/…' : 'https://play.google.com/store/apps/details?id=…'"
-                                        :class="[inputClass, 'mt-0 min-w-56']"
+                                        :class="[inputClass, 'mt-0 w-full min-w-56']"
                                     />
                                     <span v-if="appErrors[`versions.${app}.${platform}.store_url`]" class="mt-1 block text-xs text-rose-600">{{ appErrors[`versions.${app}.${platform}.store_url`] }}</span>
                                 </td>
@@ -484,29 +497,52 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                 </table>
             </div>
 
-            <label class="mt-4 block text-sm font-medium">
-                Update message (optional)
-                <input v-model="apps.update_message" placeholder="New: apply with one tap, faster job feed." :class="inputClass" />
-            </label>
+            <!-- Each app has its own update message and maintenance switch. -->
+            <div class="mt-5 grid items-start gap-5 lg:grid-cols-2">
+                <div
+                    v-for="app in appNames"
+                    :key="app"
+                    class="rounded-xl border p-4"
+                    :class="apps.settings[app].maintenance ? 'border-rose-500/40 bg-rose-500/5' : ''"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <h3 class="text-base font-semibold">{{ appLabel(app) }}</h3>
+                        <span
+                            class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                            :class="apps.settings[app].maintenance ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'"
+                        >
+                            {{ apps.settings[app].maintenance ? 'In maintenance' : 'Live' }}
+                        </span>
+                    </div>
 
-            <div class="mt-5 rounded-xl border p-4" :class="apps.maintenance ? 'border-rose-500/40 bg-rose-500/5' : ''">
-                <label class="flex items-center gap-2 text-sm font-semibold">
-                    <input v-model="apps.maintenance" type="checkbox" class="size-4 accent-rose-600" />
-                    Maintenance mode for both apps
-                </label>
-                <p class="mt-1 text-xs text-muted-foreground">
-                    While on, the apps show a maintenance screen and their requests are refused. This website and the
-                    admin panel keep working.
-                </p>
-                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                    <label class="text-sm font-medium sm:col-span-2">
-                        Message for users
-                        <input v-model="apps.maintenance_message" placeholder="We are improving Super Karigar. Back soon." :class="inputClass" />
+                    <label class="mt-3 block text-sm font-medium">
+                        Update message (optional)
+                        <input v-model="apps.settings[app].update_message" placeholder="New: apply with one tap, faster job feed." :class="inputClass" />
+                        <span v-if="appErrors[`settings.${app}.update_message`]" class="mt-1 block text-xs text-rose-600">{{ appErrors[`settings.${app}.update_message`] }}</span>
+                        <span v-else class="mt-1 block text-xs font-normal text-muted-foreground">Shown with the update prompt in the {{ app }} app.</span>
                     </label>
-                    <label class="text-sm font-medium">
-                        Back by (optional, India time)
-                        <input v-model="apps.maintenance_until" type="datetime-local" :class="inputClass" />
-                    </label>
+
+                    <div class="mt-4 border-t pt-4">
+                        <label class="flex items-center gap-2 text-sm font-semibold">
+                            <input v-model="apps.settings[app].maintenance" type="checkbox" class="size-4 accent-rose-600" />
+                            Maintenance mode
+                        </label>
+                        <p class="mt-1 text-xs text-muted-foreground">
+                            While on, the {{ app }} app shows a maintenance screen and its requests are refused. The
+                            {{ app === 'worker' ? 'employer' : 'worker' }} app, this website and the admin panel keep working.
+                        </p>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                            <label class="text-sm font-medium sm:col-span-2">
+                                Message for users
+                                <input v-model="apps.settings[app].maintenance_message" placeholder="We are improving Super Karigar. Back soon." :class="inputClass" />
+                            </label>
+                            <label class="text-sm font-medium">
+                                Back by (optional, India time)
+                                <input v-model="apps.settings[app].maintenance_until" type="datetime-local" :class="inputClass" />
+                                <span v-if="appErrors[`settings.${app}.maintenance_until`]" class="mt-1 block text-xs text-rose-600">{{ appErrors[`settings.${app}.maintenance_until`] }}</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
 

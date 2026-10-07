@@ -55,7 +55,7 @@ const save = (p: Plan) => {
 <template>
     <Head title="Plans" />
 
-    <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="Layers" title="Plans & Limits" description="Price and what each plan grants. A new price reaches Razorpay by itself on the next checkout; running subscriptions keep the price they signed up at." />
 
         <div v-for="p in plans" :key="p.id" class="rounded-2xl border bg-card p-5 shadow-sm">

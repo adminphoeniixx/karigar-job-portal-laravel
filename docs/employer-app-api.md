@@ -983,10 +983,13 @@ Launch check, public. → `{ "app", "platform", "installed_version", "latest_ver
 version is below the admin's minimum: block the app until updated. Versions are set in
 Admin → Settings → Mobile apps; unset values come back `null`. `422` for an unknown app/platform.
 
-### `GET /app/maintenance`
-Launch check, public. → `{ "maintenance": bool, "message": string|null, "until": ISO 8601|null }`.
-While on, **every other endpoint returns `503`** with that body plus `"code": "maintenance"`, except
-`/app/*`, `/legal`, `/legal/{document}` and `/support`.
+### `GET /app/maintenance?app=employer`
+Launch check, public. → `{ "app": "employer", "maintenance": bool, "message": string|null, "until": ISO 8601|null }`.
+`app` is required (`422` without it). Each app has its own switch: the employer app can be in maintenance
+while the other keeps working. While on, **every other endpoint returns `503`** with that body plus
+`"code": "maintenance"`, except `/app/*`, `/legal`, `/legal/{document}` and `/support`.
+**Send `X-App: employer` on every API call** so the server knows which app is calling (it falls back to
+the `role` sent to `/auth/otp/verify`, then the signed-in user's account).
 
 ### `GET /legal`
 The two documents without their bodies, for the settings row.

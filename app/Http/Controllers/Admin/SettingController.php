@@ -48,13 +48,15 @@ class SettingController extends Controller
             'billing' => $this->billing(),
             'apps' => [
                 'versions' => MobileApps::versions(),
-                'update_message' => (string) Setting::get(MobileApps::UPDATE_MESSAGE_KEY),
-                'maintenance' => MobileApps::underMaintenance(),
-                'maintenance_message' => (string) Setting::get(MobileApps::MAINTENANCE_MESSAGE_KEY),
-                // datetime-local wants "2026-10-07T22:00" in the admin's own time.
-                'maintenance_until' => filled($until = Setting::get(MobileApps::MAINTENANCE_UNTIL_KEY))
-                    ? Carbon::parse($until)->timezone(config('app.display_timezone'))->format('Y-m-d\TH:i')
-                    : '',
+                'settings' => collect(MobileApps::appSettings())->map(fn (array $row) => [
+                    'update_message' => (string) $row['update_message'],
+                    'maintenance' => $row['maintenance'],
+                    'maintenance_message' => (string) $row['maintenance_message'],
+                    // datetime-local wants "2026-10-07T22:00" in the admin's own time.
+                    'maintenance_until' => $row['maintenance_until'] !== null
+                        ? Carbon::parse($row['maintenance_until'])->timezone(config('app.display_timezone'))->format('Y-m-d\TH:i')
+                        : '',
+                ])->all(),
             ],
         ]);
     }
@@ -150,14 +152,14 @@ class SettingController extends Controller
     public function updateApps(Request $request): RedirectResponse
     {
         $version = ['nullable', 'string', 'max:20', 'regex:/^\d+(\.\d+){0,3}$/'];
-        $rules = [
-            'update_message' => ['nullable', 'string', 'max:300'],
-            'maintenance' => ['required', 'boolean'],
-            'maintenance_message' => ['nullable', 'string', 'max:300'],
-            'maintenance_until' => ['nullable', 'date'],
-        ];
+        $rules = [];
 
         foreach (MobileApps::APPS as $app) {
+            $rules["settings.$app.update_message"] = ['nullable', 'string', 'max:300'];
+            $rules["settings.$app.maintenance"] = ['required', 'boolean'];
+            $rules["settings.$app.maintenance_message"] = ['nullable', 'string', 'max:300'];
+            $rules["settings.$app.maintenance_until"] = ['nullable', 'date'];
+
             foreach (MobileApps::PLATFORMS as $platform) {
                 $rules["versions.$app.$platform.latest"] = $version;
                 $rules["versions.$app.$platform.min"] = $version;
@@ -179,12 +181,18 @@ class SettingController extends Controller
             }
         }
 
-        MobileApps::saveVersions($data['versions'] ?? [], $data['update_message'] ?? null);
-        MobileApps::saveMaintenance($data['maintenance'], $data['maintenance_message'] ?? null, $data['maintenance_until'] ?? null);
+        MobileApps::saveVersions($data['versions'] ?? []);
+        MobileApps::saveAppSettings($data['settings']);
+
+        $down = array_values(array_filter(MobileApps::APPS, fn (string $app) => (bool) $data['settings'][$app]['maintenance']));
 
         return back()->with('toast', [
             'type' => 'success',
-            'message' => $data['maintenance'] ? __('Saved. The apps are now in maintenance.') : __('App settings saved.'),
+            'message' => match (count($down)) {
+                0 => __('App settings saved.'),
+                1 => $down[0] === 'worker' ? __('Saved. The worker app is now in maintenance.') : __('Saved. The employer app is now in maintenance.'),
+                default => __('Saved. Both apps are now in maintenance.'),
+            },
         ]);
     }
 

@@ -155,7 +155,7 @@ const timeAgo = (iso: string) => {
 <template>
     <Head title="Admin Overview" />
 
-    <div class="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-5 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="Gauge" title="Platform Overview" description="Live health of the Super Karigar marketplace" />
 
         <!-- Primary KPI tiles -->

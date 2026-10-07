@@ -70,7 +70,7 @@ const roleBadge: Record<string, string> = {
 <template>
     <Head title="Users" />
 
-    <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="UsersIcon" title="User Management" description="Search, suspend, or reinstate accounts" />
 
         <!-- Filters -->

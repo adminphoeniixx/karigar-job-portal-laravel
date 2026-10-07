@@ -139,141 +139,145 @@ const submit = () => {
 <template>
     <Head title="My Profile" />
 
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="UserRound" :title="$t('profile.workerTitle')" :description="$t('profile.workerSubtitle')" />
 
-        <form class="space-y-5" @submit.prevent="submit">
-            <!-- Avatar + basics -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-                    <div class="relative">
-                        <div class="flex size-24 items-center justify-center overflow-hidden rounded-2xl bg-primary text-3xl font-bold text-white shadow-lg shadow-orange-500/25">
-                            <img v-if="preview" :src="preview" alt="Avatar" class="size-full object-cover" @error="preview = null" />
-                            <span v-else>{{ initial }}</span>
+        <form class="grid items-start gap-5 lg:grid-cols-2" @submit.prevent="submit">
+            <div class="flex flex-col gap-5">
+                <!-- Avatar + basics -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                        <div class="relative">
+                            <div class="flex size-24 items-center justify-center overflow-hidden rounded-2xl bg-primary text-3xl font-bold text-white shadow-lg shadow-orange-500/25">
+                                <img v-if="preview" :src="preview" alt="Avatar" class="size-full object-cover" @error="preview = null" />
+                                <span v-else>{{ initial }}</span>
+                            </div>
+                            <label class="absolute -bottom-2 -right-2 flex size-9 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-orange-500 text-white shadow-md transition hover:bg-orange-600">
+                                <Camera class="size-4" />
+                                <input type="file" accept="image/*" class="hidden" @change="onAvatar" />
+                            </label>
                         </div>
-                        <label class="absolute -bottom-2 -right-2 flex size-9 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-orange-500 text-white shadow-md transition hover:bg-orange-600">
-                            <Camera class="size-4" />
-                            <input type="file" accept="image/*" class="hidden" @change="onAvatar" />
-                        </label>
+                        <div class="flex-1 space-y-4">
+                            <div class="grid gap-2">
+                                <Label for="email">{{ $t('profile.email') }}</Label>
+                                <Input id="email" type="email" v-model="form.email" placeholder="you@example.com" />
+                                <p class="text-xs text-muted-foreground">{{ $t('profile.emailHint') }}</p>
+                                <InputError :message="form.errors.email" />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="phone">{{ $t('common.phone') }}</Label>
+                                <Input id="phone" v-model="form.phone" placeholder="+91…" />
+                                <InputError :message="form.errors.phone" />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="skills">{{ $t('profile.skills') }}</Label>
+                                <SkillTagInput id="skills" v-model="form.skills" :suggestions="commonSkills" placeholder="e.g. Weaving — type or pick, it becomes a tag" />
+                                <InputError :message="form.errors.skills" />
+                            </div>
+                            <InputError :message="form.errors.avatar" />
+                        </div>
                     </div>
-                    <div class="flex-1 space-y-4">
+                </section>
+
+                <!-- Location -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <MapPin class="size-4 text-orange-500" /> {{ $t('common.location') }}
+                    </h2>
+                    <div class="grid gap-4 sm:grid-cols-2">
                         <div class="grid gap-2">
-                            <Label for="email">{{ $t('profile.email') }}</Label>
-                            <Input id="email" type="email" v-model="form.email" placeholder="you@example.com" />
-                            <p class="text-xs text-muted-foreground">{{ $t('profile.emailHint') }}</p>
-                            <InputError :message="form.errors.email" />
+                            <Label for="state">{{ $t('jobs.filters.state') }}</Label>
+                            <select id="state" v-model="form.state" :class="selectClass">
+                                <option value="">{{ $t('jobForm.selectState') }}</option>
+                                <option v-for="st in indianStates" :key="st" :value="st">{{ st }}</option>
+                            </select>
+                            <InputError :message="form.errors.state" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="phone">{{ $t('common.phone') }}</Label>
-                            <Input id="phone" v-model="form.phone" placeholder="+91…" />
-                            <InputError :message="form.errors.phone" />
+                            <Label for="city">{{ $t('jobs.filters.city') }}</Label>
+                            <select id="city" v-model="form.city" :disabled="!form.state" :class="selectClass" class="disabled:opacity-50">
+                                <option value="">{{ form.state ? $t('jobForm.selectCity') : $t('jobForm.selectStateFirst') }}</option>
+                                <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
+                            </select>
+                            <InputError :message="form.errors.city" />
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-2">
+                        <Label>{{ $t('profile.locationOnMap') }}</Label>
+                        <p class="text-xs text-muted-foreground">
+                            {{ locating ? $t('jobForm.locating') : $t('profile.mapHint') }}
+                        </p>
+                        <JobMap :lat="mapLat" :lng="mapLng" editable height="280px" @move="setPoint" />
+                        <InputError :message="form.errors.latitude || form.errors.longitude" />
+                    </div>
+                </section>
+            </div>
+
+            <div class="flex flex-col gap-5">
+                <!-- Work details -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <IndianRupee class="size-4 text-orange-500" /> Work & rate
+                    </h2>
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div class="grid gap-2">
+                            <Label for="experience_years">{{ $t('profile.experienceYears') }}</Label>
+                            <Input id="experience_years" type="number" min="0" v-model="form.experience_years" />
+                            <InputError :message="form.errors.experience_years" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="skills">{{ $t('profile.skills') }}</Label>
-                            <SkillTagInput id="skills" v-model="form.skills" :suggestions="commonSkills" placeholder="e.g. Weaving — type or pick, it becomes a tag" />
-                            <InputError :message="form.errors.skills" />
+                            <Label for="expected_wage">{{ $t('profile.expectedWageLabel') }}</Label>
+                            <Input id="expected_wage" type="number" min="0" step="0.01" v-model="form.expected_wage" />
+                            <InputError :message="form.errors.expected_wage" />
                         </div>
-                        <InputError :message="form.errors.avatar" />
+                        <div class="grid gap-2">
+                            <Label for="wage_type">Wage type</Label>
+                            <select id="wage_type" v-model="form.wage_type" :class="selectClass" disabled>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                            <InputError :message="form.errors.wage_type" />
+                        </div>
                     </div>
-                </div>
-            </section>
 
-            <!-- Work details -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <IndianRupee class="size-4 text-orange-500" /> Work & rate
-                </h2>
-                <div class="grid gap-4 sm:grid-cols-3">
-                    <div class="grid gap-2">
-                        <Label for="experience_years">{{ $t('profile.experienceYears') }}</Label>
-                        <Input id="experience_years" type="number" min="0" v-model="form.experience_years" />
-                        <InputError :message="form.errors.experience_years" />
+                    <div class="mt-4 grid gap-2">
+                        <Label for="bio">{{ $t('profile.bio') }}</Label>
+                        <textarea id="bio" v-model="form.bio" rows="4" :class="textareaClass" :placeholder="$t('profile.bioPlaceholder')" />
+                        <InputError :message="form.errors.bio" />
                     </div>
-                    <div class="grid gap-2">
-                        <Label for="expected_wage">{{ $t('profile.expectedWageLabel') }}</Label>
-                        <Input id="expected_wage" type="number" min="0" step="0.01" v-model="form.expected_wage" />
-                        <InputError :message="form.errors.expected_wage" />
+
+                    <label class="mt-4 flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
+                        <Checkbox id="available" v-model="form.available" />
+                        <span>
+                            <span class="text-sm font-medium">{{ $t('profile.availableForWork') }}</span>
+                            <span class="block text-xs text-muted-foreground">{{ $t('profile.availableHint') }}</span>
+                        </span>
+                    </label>
+
+                    <!-- Phrased as consent, not as a refusal: the checkbox reads
+                         "allow", so leaving it ticked is the worker agreeing. -->
+                    <label class="mt-3 flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
+                        <Checkbox
+                            id="screening_calls"
+                            :model-value="!form.screening_calls_opted_out"
+                            @update:model-value="(value: boolean | 'indeterminate') => { form.screening_calls_opted_out = value !== true; }"
+                        />
+                        <span>
+                            <span class="text-sm font-medium">{{ $t('profile.screeningCalls') }}</span>
+                            <span class="block text-xs text-muted-foreground">{{ $t('profile.screeningCallsHint') }}</span>
+                        </span>
+                    </label>
+
+                    <div class="mt-4">
+                        <Label for="payout_upi">{{ $t('profile.payoutUpi') }}</Label>
+                        <Input id="payout_upi" v-model="form.payout_upi" placeholder="name@bank" />
+                        <p class="mt-1 text-xs text-muted-foreground">{{ $t('profile.payoutHint') }}</p>
+                        <InputError :message="form.errors.payout_upi" />
                     </div>
-                    <div class="grid gap-2">
-                        <Label for="wage_type">Wage type</Label>
-                        <select id="wage_type" v-model="form.wage_type" :class="selectClass" disabled>
-                            <option value="monthly">Monthly</option>
-                        </select>
-                        <InputError :message="form.errors.wage_type" />
-                    </div>
-                </div>
+                </section>
+            </div>
 
-                <div class="mt-4 grid gap-2">
-                    <Label for="bio">{{ $t('profile.bio') }}</Label>
-                    <textarea id="bio" v-model="form.bio" rows="4" :class="textareaClass" :placeholder="$t('profile.bioPlaceholder')" />
-                    <InputError :message="form.errors.bio" />
-                </div>
-
-                <label class="mt-4 flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
-                    <Checkbox id="available" v-model="form.available" />
-                    <span>
-                        <span class="text-sm font-medium">{{ $t('profile.availableForWork') }}</span>
-                        <span class="block text-xs text-muted-foreground">{{ $t('profile.availableHint') }}</span>
-                    </span>
-                </label>
-
-                <!-- Phrased as consent, not as a refusal: the checkbox reads
-                     "allow", so leaving it ticked is the worker agreeing. -->
-                <label class="mt-3 flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
-                    <Checkbox
-                        id="screening_calls"
-                        :model-value="!form.screening_calls_opted_out"
-                        @update:model-value="(value: boolean | 'indeterminate') => { form.screening_calls_opted_out = value !== true; }"
-                    />
-                    <span>
-                        <span class="text-sm font-medium">{{ $t('profile.screeningCalls') }}</span>
-                        <span class="block text-xs text-muted-foreground">{{ $t('profile.screeningCallsHint') }}</span>
-                    </span>
-                </label>
-
-                <div class="mt-4">
-                    <Label for="payout_upi">{{ $t('profile.payoutUpi') }}</Label>
-                    <Input id="payout_upi" v-model="form.payout_upi" placeholder="name@bank" />
-                    <p class="mt-1 text-xs text-muted-foreground">{{ $t('profile.payoutHint') }}</p>
-                    <InputError :message="form.errors.payout_upi" />
-                </div>
-            </section>
-
-            <!-- Location -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <MapPin class="size-4 text-orange-500" /> {{ $t('common.location') }}
-                </h2>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="grid gap-2">
-                        <Label for="state">{{ $t('jobs.filters.state') }}</Label>
-                        <select id="state" v-model="form.state" :class="selectClass">
-                            <option value="">{{ $t('jobForm.selectState') }}</option>
-                            <option v-for="st in indianStates" :key="st" :value="st">{{ st }}</option>
-                        </select>
-                        <InputError :message="form.errors.state" />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="city">{{ $t('jobs.filters.city') }}</Label>
-                        <select id="city" v-model="form.city" :disabled="!form.state" :class="selectClass" class="disabled:opacity-50">
-                            <option value="">{{ form.state ? $t('jobForm.selectCity') : $t('jobForm.selectStateFirst') }}</option>
-                            <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
-                        </select>
-                        <InputError :message="form.errors.city" />
-                    </div>
-                </div>
-
-                <div class="mt-4 grid gap-2">
-                    <Label>{{ $t('profile.locationOnMap') }}</Label>
-                    <p class="text-xs text-muted-foreground">
-                        {{ locating ? $t('jobForm.locating') : $t('profile.mapHint') }}
-                    </p>
-                    <JobMap :lat="mapLat" :lng="mapLng" editable height="280px" @move="setPoint" />
-                    <InputError :message="form.errors.latitude || form.errors.longitude" />
-                </div>
-            </section>
-
-            <div class="flex justify-end">
+            <div class="flex justify-end lg:col-span-2">
                 <button
                     type="submit"
                     :disabled="form.processing"

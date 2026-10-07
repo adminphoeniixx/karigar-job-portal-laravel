@@ -83,6 +83,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -121,10 +125,14 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/app/maintenance",
+              "raw": "{{base_url}}/api/v1/app/maintenance?app=worker",
               "host": [
                 "{{base_url}}"
               ],
@@ -133,6 +141,12 @@
                 "v1",
                 "app",
                 "maintenance"
+              ],
+              "query": [
+                {
+                  "key": "app",
+                  "value": "worker"
+                }
               ]
             }
           }
@@ -157,6 +171,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -209,6 +227,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -239,6 +261,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -263,6 +289,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -291,6 +321,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -327,6 +361,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -354,6 +392,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -387,6 +429,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -416,6 +462,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -444,6 +494,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -473,6 +527,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -513,6 +571,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -547,6 +609,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -572,6 +638,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -607,6 +677,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -637,6 +711,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -661,6 +739,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -694,6 +776,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -722,6 +808,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -746,6 +836,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -811,6 +905,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -840,6 +938,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -875,6 +977,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -904,6 +1010,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -933,6 +1043,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -957,6 +1071,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -987,6 +1105,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1010,6 +1132,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -1094,6 +1220,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1117,6 +1247,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1142,6 +1276,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1170,6 +1308,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -1202,6 +1344,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -1235,6 +1381,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1263,6 +1413,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -1298,6 +1452,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1337,6 +1495,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "body": {
@@ -1369,6 +1531,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1396,6 +1562,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1423,6 +1593,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1451,6 +1625,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1480,6 +1658,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1510,6 +1692,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1537,6 +1723,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1564,6 +1754,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1588,6 +1782,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1619,6 +1817,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1643,6 +1845,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1668,6 +1874,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {
@@ -1693,6 +1903,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
               }
             ],
             "url": {

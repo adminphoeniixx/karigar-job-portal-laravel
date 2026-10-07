@@ -29,7 +29,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="px-4 py-6">
+    <div class="p-4 md:p-6 lg:p-8">
         <Heading
             title="Settings"
             description="Manage your profile and account settings"
@@ -61,8 +61,8 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 
             <Separator class="my-6 lg:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div class="flex-1">
+                <section class="max-w-4xl space-y-12">
                     <slot />
                 </section>
             </div>

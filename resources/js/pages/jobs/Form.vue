@@ -287,7 +287,7 @@ const submit = () => {
 <template>
     <Head :title="isEdit ? 'Edit Job' : 'Post a Job'" />
 
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="BriefcaseBusiness" :title="isEdit ? $t('jobForm.editTitle') : $t('jobForm.postTitle')" :description="$t('jobForm.subtitle')">
             <template #action>
                 <Link href="/employer/jobs" class="inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted">
@@ -314,360 +314,365 @@ const submit = () => {
             <span>{{ $t('jobForm.freePost') }}</span>
         </div>
 
-        <form class="space-y-5" @submit.prevent="submit">
-            <!-- Basics -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <BriefcaseBusiness class="size-4 text-orange-500" /> {{ $t('jobForm.details') }}
-                </h2>
-                <div class="space-y-4">
-                    <div class="grid gap-2">
-                        <Label for="title">{{ $t('jobForm.titleLabel') }}</Label>
-                        <Input id="title" v-model="form.title" required placeholder="e.g. Experienced plumber needed" />
-                        <InputError :message="form.errors.title" />
-                    </div>
+        <form class="grid items-start gap-5 lg:grid-cols-2" @submit.prevent="submit">
+            <div class="flex flex-col gap-5">
+                <!-- Basics -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <BriefcaseBusiness class="size-4 text-orange-500" /> {{ $t('jobForm.details') }}
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="grid gap-2">
+                            <Label for="title">{{ $t('jobForm.titleLabel') }}</Label>
+                            <Input id="title" v-model="form.title" required placeholder="e.g. Experienced plumber needed" />
+                            <InputError :message="form.errors.title" />
+                        </div>
 
-                    <div class="grid gap-2">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <Label for="description">{{ $t('jobs.description') }}</Label>
-                            <div class="flex items-center gap-2">
-                                <div class="inline-flex rounded-lg border p-0.5 text-xs font-semibold">
+                        <div class="grid gap-2">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <Label for="description">{{ $t('jobs.description') }}</Label>
+                                <div class="flex items-center gap-2">
+                                    <div class="inline-flex rounded-lg border p-0.5 text-xs font-semibold">
+                                        <button
+                                            v-for="lang in (['en', 'hi'] as const)"
+                                            :key="lang"
+                                            type="button"
+                                            class="rounded-md px-2 py-0.5 transition"
+                                            :class="aiLanguage === lang ? 'bg-orange-500/10 text-orange-600 dark:text-orange-300' : 'text-muted-foreground hover:text-foreground'"
+                                            :disabled="!canSuggest || suggesting"
+                                            @click="setAiLanguage(lang)"
+                                        >
+                                            {{ lang === 'en' ? 'English' : 'हिंदी' }}
+                                        </button>
+                                    </div>
                                     <button
-                                        v-for="lang in (['en', 'hi'] as const)"
-                                        :key="lang"
                                         type="button"
-                                        class="rounded-md px-2 py-0.5 transition"
-                                        :class="aiLanguage === lang ? 'bg-orange-500/10 text-orange-600 dark:text-orange-300' : 'text-muted-foreground hover:text-foreground'"
                                         :disabled="!canSuggest || suggesting"
-                                        @click="setAiLanguage(lang)"
+                                        class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+                                        @click="fetchSuggestions"
                                     >
-                                        {{ lang === 'en' ? 'English' : 'हिंदी' }}
+                                        <Sparkles class="size-3.5 text-orange-500" />
+                                        {{ suggesting ? $t('jobForm.aiWriting') : $t('jobForm.aiSuggest') }}
                                     </button>
                                 </div>
+                            </div>
+                            <textarea
+                                id="description"
+                                v-model="form.description"
+                                rows="5"
+                                required
+                                :class="textareaClass"
+                                placeholder="Describe the work, requirements and timing…"
+                                @focus="onDescriptionFocus"
+                            />
+
+                            <!-- AI drafts: tap one to drop it in, then edit freely -->
+                            <p v-if="suggesting" class="text-xs text-muted-foreground">{{ $t('jobForm.aiWritingHint') }}</p>
+                            <p v-else-if="suggestError" class="text-xs text-muted-foreground">{{ $t('jobForm.aiFailed') }}</p>
+                            <div v-else-if="suggestions.length" class="grid gap-2">
+                                <p class="text-xs text-muted-foreground">{{ $t('jobForm.aiPick') }}</p>
                                 <button
+                                    v-for="(s, i) in suggestions"
+                                    :key="i"
                                     type="button"
-                                    :disabled="!canSuggest || suggesting"
-                                    class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
-                                    @click="fetchSuggestions"
+                                    class="rounded-xl border border-dashed bg-muted/30 p-3 text-left text-sm text-muted-foreground transition hover:border-orange-500/50 hover:bg-muted/60 hover:text-foreground"
+                                    @click="useSuggestion(s)"
                                 >
-                                    <Sparkles class="size-3.5 text-orange-500" />
-                                    {{ suggesting ? $t('jobForm.aiWriting') : $t('jobForm.aiSuggest') }}
+                                    {{ s }}
                                 </button>
                             </div>
+                            <InputError :message="form.errors.description" />
                         </div>
-                        <textarea
-                            id="description"
-                            v-model="form.description"
-                            rows="5"
-                            required
-                            :class="textareaClass"
-                            placeholder="Describe the work, requirements and timing…"
-                            @focus="onDescriptionFocus"
-                        />
 
-                        <!-- AI drafts: tap one to drop it in, then edit freely -->
-                        <p v-if="suggesting" class="text-xs text-muted-foreground">{{ $t('jobForm.aiWritingHint') }}</p>
-                        <p v-else-if="suggestError" class="text-xs text-muted-foreground">{{ $t('jobForm.aiFailed') }}</p>
-                        <div v-else-if="suggestions.length" class="grid gap-2">
-                            <p class="text-xs text-muted-foreground">{{ $t('jobForm.aiPick') }}</p>
-                            <button
-                                v-for="(s, i) in suggestions"
-                                :key="i"
-                                type="button"
-                                class="rounded-xl border border-dashed bg-muted/30 p-3 text-left text-sm text-muted-foreground transition hover:border-orange-500/50 hover:bg-muted/60 hover:text-foreground"
-                                @click="useSuggestion(s)"
-                            >
-                                {{ s }}
-                            </button>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="grid gap-2">
+                                <Label for="category">{{ $t('jobs.filters.category') }}</Label>
+                                <select id="category" v-model="form.category" :class="selectClass">
+                                    <option value="">{{ $t('jobForm.selectCategory') }}</option>
+                                    <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+                                </select>
+                                <InputError :message="form.errors.category" />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="skills">{{ $t('jobForm.skills') }}</Label>
+                                <SkillTagInput
+                                    id="skills"
+                                    v-model="form.skills"
+                                    :suggestions="skillSuggestions"
+                                    :placeholder="form.category ? $t('jobForm.skillsPlaceholder') : $t('jobForm.skillsPickCategory')"
+                                />
+                                <InputError :message="form.errors.skills" />
+                            </div>
                         </div>
-                        <InputError :message="form.errors.description" />
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="grid gap-2">
+                                <Label for="experience_min">{{ $t('jobForm.experienceMin') }}</Label>
+                                <Input id="experience_min" v-model="form.experience_min" type="number" min="0" max="60" placeholder="0" />
+                                <InputError :message="form.errors.experience_min" />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="experience_max">{{ $t('jobForm.experienceMax') }}</Label>
+                                <Input id="experience_max" v-model="form.experience_max" type="number" min="0" max="60" placeholder="5" />
+                                <InputError :message="form.errors.experience_max" />
+                            </div>
+                        </div>
                     </div>
+                </section>
 
-                    <div class="grid gap-4 sm:grid-cols-2">
+                <!-- Wage -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <IndianRupee class="size-4 text-orange-500" /> {{ $t('jobForm.compensation') }}
+                    </h2>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div class="grid gap-2">
-                            <Label for="category">{{ $t('jobs.filters.category') }}</Label>
-                            <select id="category" v-model="form.category" :class="selectClass">
-                                <option value="">{{ $t('jobForm.selectCategory') }}</option>
-                                <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+                            <Label for="wage_min">{{ $t('jobForm.wageMin') }}</Label>
+                            <Input id="wage_min" type="number" min="0" step="0.01" v-model="form.wage_min" />
+                            <InputError :message="form.errors.wage_min" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="wage_max">{{ $t('jobForm.wageMax') }}</Label>
+                            <Input id="wage_max" type="number" min="0" step="0.01" v-model="form.wage_max" />
+                            <InputError :message="form.errors.wage_max" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="wage_type">{{ $t('jobForm.wageType') }}</Label>
+                            <select id="wage_type" v-model="form.wage_type" :class="selectClass" disabled>
+                                <option value="monthly">{{ $t('jobForm.monthly') }}</option>
                             </select>
-                            <InputError :message="form.errors.category" />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="skills">{{ $t('jobForm.skills') }}</Label>
-                            <SkillTagInput
-                                id="skills"
-                                v-model="form.skills"
-                                :suggestions="skillSuggestions"
-                                :placeholder="form.category ? $t('jobForm.skillsPlaceholder') : $t('jobForm.skillsPickCategory')"
-                            />
-                            <InputError :message="form.errors.skills" />
+                            <InputError :message="form.errors.wage_type" />
                         </div>
                     </div>
+                </section>
 
+                <!-- Location -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <MapPin class="size-4 text-orange-500" /> {{ $t('common.location') }}
+                    </h2>
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="grid gap-2">
-                            <Label for="experience_min">{{ $t('jobForm.experienceMin') }}</Label>
-                            <Input id="experience_min" v-model="form.experience_min" type="number" min="0" max="60" placeholder="0" />
-                            <InputError :message="form.errors.experience_min" />
+                            <Label for="state">{{ $t('jobs.filters.state') }}</Label>
+                            <select id="state" v-model="form.state" :class="selectClass">
+                                <option value="">{{ $t('jobForm.selectState') }}</option>
+                                <option v-for="s in indianStates" :key="s" :value="s">{{ s }}</option>
+                            </select>
+                            <InputError :message="form.errors.state" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="experience_max">{{ $t('jobForm.experienceMax') }}</Label>
-                            <Input id="experience_max" v-model="form.experience_max" type="number" min="0" max="60" placeholder="5" />
-                            <InputError :message="form.errors.experience_max" />
+                            <Label for="city">{{ $t('jobs.filters.city') }}</Label>
+                            <select id="city" v-model="form.city" :disabled="!form.state" :class="selectClass" class="disabled:opacity-50">
+                                <option value="">{{ form.state ? $t('jobForm.selectCity') : $t('jobForm.selectStateFirst') }}</option>
+                                <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
+                            </select>
+                            <InputError :message="form.errors.city" />
                         </div>
                     </div>
-                </div>
-            </section>
 
-            <!-- Wage -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <IndianRupee class="size-4 text-orange-500" /> {{ $t('jobForm.compensation') }}
-                </h2>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div class="grid gap-2">
-                        <Label for="wage_min">{{ $t('jobForm.wageMin') }}</Label>
-                        <Input id="wage_min" type="number" min="0" step="0.01" v-model="form.wage_min" />
-                        <InputError :message="form.errors.wage_min" />
+                    <div class="mt-4 grid gap-2">
+                        <Label for="address">{{ $t('jobForm.address') }}</Label>
+                        <Input id="address" v-model="form.address" :placeholder="$t('jobForm.addressPlaceholder')" />
+                        <p class="text-xs text-muted-foreground">{{ $t('jobForm.addressHint') }}</p>
+                        <InputError :message="form.errors.address" />
                     </div>
-                    <div class="grid gap-2">
-                        <Label for="wage_max">{{ $t('jobForm.wageMax') }}</Label>
-                        <Input id="wage_max" type="number" min="0" step="0.01" v-model="form.wage_max" />
-                        <InputError :message="form.errors.wage_max" />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="wage_type">{{ $t('jobForm.wageType') }}</Label>
-                        <select id="wage_type" v-model="form.wage_type" :class="selectClass" disabled>
-                            <option value="monthly">{{ $t('jobForm.monthly') }}</option>
-                        </select>
-                        <InputError :message="form.errors.wage_type" />
-                    </div>
-                </div>
-            </section>
 
-            <!-- Location -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <MapPin class="size-4 text-orange-500" /> {{ $t('common.location') }}
-                </h2>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="grid gap-2">
-                        <Label for="state">{{ $t('jobs.filters.state') }}</Label>
-                        <select id="state" v-model="form.state" :class="selectClass">
-                            <option value="">{{ $t('jobForm.selectState') }}</option>
-                            <option v-for="s in indianStates" :key="s" :value="s">{{ s }}</option>
-                        </select>
-                        <InputError :message="form.errors.state" />
+                    <div class="mt-4 grid gap-2">
+                        <Label>{{ $t('jobForm.locationOnMap') }}</Label>
+                        <p class="text-xs text-muted-foreground">
+                            {{ locating ? $t('jobForm.locating') : $t('jobForm.mapHint') }}
+                        </p>
+                        <JobMap :lat="mapLat" :lng="mapLng" editable height="300px" @move="setPoint" />
+                        <InputError :message="form.errors.latitude || form.errors.longitude" />
                     </div>
-                    <div class="grid gap-2">
-                        <Label for="city">{{ $t('jobs.filters.city') }}</Label>
-                        <select id="city" v-model="form.city" :disabled="!form.state" :class="selectClass" class="disabled:opacity-50">
-                            <option value="">{{ form.state ? $t('jobForm.selectCity') : $t('jobForm.selectStateFirst') }}</option>
-                            <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
-                        </select>
-                        <InputError :message="form.errors.city" />
-                    </div>
-                </div>
+                </section>
+            </div>
 
-                <div class="mt-4 grid gap-2">
-                    <Label for="address">{{ $t('jobForm.address') }}</Label>
-                    <Input id="address" v-model="form.address" :placeholder="$t('jobForm.addressPlaceholder')" />
-                    <p class="text-xs text-muted-foreground">{{ $t('jobForm.addressHint') }}</p>
-                    <InputError :message="form.errors.address" />
-                </div>
-
-                <div class="mt-4 grid gap-2">
-                    <Label>{{ $t('jobForm.locationOnMap') }}</Label>
-                    <p class="text-xs text-muted-foreground">
-                        {{ locating ? $t('jobForm.locating') : $t('jobForm.mapHint') }}
-                    </p>
-                    <JobMap :lat="mapLat" :lng="mapLng" editable height="300px" @move="setPoint" />
-                    <InputError :message="form.errors.latitude || form.errors.longitude" />
-                </div>
-            </section>
-
-            <!-- Shift & perks -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Sun class="size-4 text-orange-500" /> {{ $t('jobForm.shiftPerks') }}
-                </h2>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="grid gap-2">
-                        <Label for="shift">{{ $t('jobForm.shift') }}</Label>
-                        <select id="shift" v-model="form.shift" :class="selectClass">
-                            <option value="">—</option>
-                            <option value="day">{{ $t('jobs.dayShift') }}</option>
-                            <option value="night">{{ $t('jobs.nightShift') }}</option>
-                            <option value="rotational">{{ $t('jobs.rotationalShift') }}</option>
-                        </select>
-                        <InputError :message="form.errors.shift" />
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="grid gap-1">
-                                <Label for="shift_start" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftFrom') }}</Label>
-                                <Input id="shift_start" v-model="form.shift_start" type="time" />
+            <div class="flex flex-col gap-5">
+                <!-- Shift & perks -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <Sun class="size-4 text-orange-500" /> {{ $t('jobForm.shiftPerks') }}
+                    </h2>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="shift">{{ $t('jobForm.shift') }}</Label>
+                            <select id="shift" v-model="form.shift" :class="selectClass">
+                                <option value="">—</option>
+                                <option value="day">{{ $t('jobs.dayShift') }}</option>
+                                <option value="night">{{ $t('jobs.nightShift') }}</option>
+                                <option value="rotational">{{ $t('jobs.rotationalShift') }}</option>
+                            </select>
+                            <InputError :message="form.errors.shift" />
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="grid gap-1">
+                                    <Label for="shift_start" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftFrom') }}</Label>
+                                    <Input id="shift_start" v-model="form.shift_start" type="time" />
+                                </div>
+                                <div class="grid gap-1">
+                                    <Label for="shift_end" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftTo') }}</Label>
+                                    <Input id="shift_end" v-model="form.shift_end" type="time" />
+                                </div>
                             </div>
-                            <div class="grid gap-1">
-                                <Label for="shift_end" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftTo') }}</Label>
-                                <Input id="shift_end" v-model="form.shift_end" type="time" />
+                            <InputError :message="form.errors.shift_start || form.errors.shift_end" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label class="flex items-center gap-1.5"><Gift class="size-3.5 text-orange-500" /> {{ $t('jobs.perks') }}</Label>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="perk in perkChips"
+                                    :key="perk"
+                                    type="button"
+                                    class="rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                                    :class="form.perks.includes(perk)
+                                        ? 'border-orange-500 bg-orange-500/10 text-orange-600 dark:text-orange-300'
+                                        : 'text-muted-foreground hover:border-orange-300 hover:text-foreground'"
+                                    @click="togglePerk(perk)"
+                                >
+                                    {{ form.perks.includes(perk) ? '✓ ' : '' }}{{ perk }}
+                                </button>
                             </div>
+                            <div class="flex gap-2">
+                                <Input v-model="newPerk" :placeholder="$t('jobForm.addPerkPlaceholder')" maxlength="40" @keydown.enter.prevent="addPerk" />
+                                <button type="button" class="shrink-0 rounded-md border px-3 text-xs font-semibold text-muted-foreground transition hover:bg-muted" @click="addPerk">
+                                    {{ $t('jobForm.addPerk') }}
+                                </button>
+                            </div>
+                            <InputError :message="form.errors.perks" />
                         </div>
-                        <InputError :message="form.errors.shift_start || form.errors.shift_end" />
                     </div>
-                    <div class="grid gap-2">
-                        <Label class="flex items-center gap-1.5"><Gift class="size-3.5 text-orange-500" /> {{ $t('jobs.perks') }}</Label>
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                v-for="perk in perkChips"
-                                :key="perk"
-                                type="button"
-                                class="rounded-full border px-3 py-1.5 text-xs font-medium transition"
-                                :class="form.perks.includes(perk)
-                                    ? 'border-orange-500 bg-orange-500/10 text-orange-600 dark:text-orange-300'
-                                    : 'text-muted-foreground hover:border-orange-300 hover:text-foreground'"
-                                @click="togglePerk(perk)"
-                            >
-                                {{ form.perks.includes(perk) ? '✓ ' : '' }}{{ perk }}
-                            </button>
+                </section>
+
+                <!-- Worker fee -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <Wallet class="size-4 text-orange-500" /> {{ $t('jobForm.workerPayQuestion') }}
+                    </h2>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label
+                            class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
+                            :class="!form.requires_worker_fee ? 'border-emerald-500 bg-emerald-500/5 ring-2 ring-emerald-500/20' : 'hover:border-emerald-300'"
+                        >
+                            <span class="flex items-center gap-2">
+                                <input v-model="form.requires_worker_fee" type="radio" name="requires_worker_fee" :value="false" class="accent-emerald-600" />
+                                <span class="flex items-center gap-1.5 text-sm font-semibold"><BadgeCheck class="size-4 text-emerald-600" /> {{ $t('jobForm.noFeeOption') }}</span>
+                            </span>
+                            <span class="text-xs text-muted-foreground">{{ $t('jobForm.noFeeHint') }}</span>
+                        </label>
+                        <label
+                            class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
+                            :class="form.requires_worker_fee ? 'border-amber-500 bg-amber-500/5 ring-2 ring-amber-500/20' : 'hover:border-amber-300'"
+                        >
+                            <span class="flex items-center gap-2">
+                                <input v-model="form.requires_worker_fee" type="radio" name="requires_worker_fee" :value="true" class="accent-amber-600" />
+                                <span class="text-sm font-semibold">{{ $t('jobForm.feeOption') }}</span>
+                            </span>
+                            <span class="text-xs text-muted-foreground">{{ $t('jobForm.feeHint') }}</span>
+                        </label>
+                    </div>
+                    <InputError class="mt-2" :message="form.errors.requires_worker_fee" />
+
+                    <div v-if="form.requires_worker_fee" class="mt-4 grid max-w-xs gap-2">
+                        <Label for="worker_fee_amount">{{ $t('jobForm.feeAmount') }}</Label>
+                        <Input id="worker_fee_amount" v-model="form.worker_fee_amount" type="number" min="1" step="0.01" placeholder="e.g. 500" />
+                        <InputError :message="form.errors.worker_fee_amount" />
+                    </div>
+                </section>
+
+                <!-- How workers respond -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <Phone class="size-4 text-orange-500" /> {{ $t('jobForm.contactQuestion') }}
+                    </h2>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <label
+                            v-for="m in contactModes"
+                            :key="m.value"
+                            class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
+                            :class="form.contact_mode === m.value ? 'border-orange-500 bg-orange-500/5 ring-2 ring-orange-500/20' : 'hover:border-orange-300'"
+                        >
+                            <span class="flex items-center gap-2">
+                                <input v-model="form.contact_mode" type="radio" name="contact_mode" :value="m.value" class="accent-orange-600" />
+                                <span class="text-sm font-semibold">{{ $t(m.label) }}</span>
+                            </span>
+                            <span class="text-xs text-muted-foreground">{{ $t(m.desc) }}</span>
+                        </label>
+                    </div>
+                    <InputError class="mt-2" :message="form.errors.contact_mode" />
+
+                    <div v-if="form.contact_mode !== 'apply'" class="mt-4 grid gap-4 sm:grid-cols-3">
+                        <div class="grid gap-2">
+                            <Label for="contact_name">{{ $t('jobForm.contactName') }}</Label>
+                            <Input id="contact_name" v-model="form.contact_name" maxlength="100" :placeholder="$t('jobForm.contactNamePlaceholder')" />
+                            <InputError :message="form.errors.contact_name" />
                         </div>
-                        <div class="flex gap-2">
-                            <Input v-model="newPerk" :placeholder="$t('jobForm.addPerkPlaceholder')" maxlength="40" @keydown.enter.prevent="addPerk" />
-                            <button type="button" class="shrink-0 rounded-md border px-3 text-xs font-semibold text-muted-foreground transition hover:bg-muted" @click="addPerk">
-                                {{ $t('jobForm.addPerk') }}
-                            </button>
+                        <div class="grid gap-2">
+                            <Label for="contact_phone">{{ $t('jobForm.phoneWorkersCall') }}</Label>
+                            <Input id="contact_phone" v-model="form.contact_phone" type="tel" placeholder="+91 98765 43210" />
+                            <InputError :message="form.errors.contact_phone" />
                         </div>
-                        <InputError :message="form.errors.perks" />
+                        <div class="grid gap-2">
+                            <Label for="contact_designation">{{ $t('jobForm.contactDesignation') }}</Label>
+                            <Input id="contact_designation" v-model="form.contact_designation" maxlength="100" :placeholder="$t('jobForm.contactDesignationPlaceholder')" />
+                            <InputError :message="form.errors.contact_designation" />
+                        </div>
+                        <p class="text-xs text-muted-foreground sm:col-span-3">{{ $t('jobForm.phonePublicHint') }}</p>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- Worker fee -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Wallet class="size-4 text-orange-500" /> {{ $t('jobForm.workerPayQuestion') }}
-                </h2>
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <label
-                        class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
-                        :class="!form.requires_worker_fee ? 'border-emerald-500 bg-emerald-500/5 ring-2 ring-emerald-500/20' : 'hover:border-emerald-300'"
-                    >
-                        <span class="flex items-center gap-2">
-                            <input v-model="form.requires_worker_fee" type="radio" name="requires_worker_fee" :value="false" class="accent-emerald-600" />
-                            <span class="flex items-center gap-1.5 text-sm font-semibold"><BadgeCheck class="size-4 text-emerald-600" /> {{ $t('jobForm.noFeeOption') }}</span>
-                        </span>
-                        <span class="text-xs text-muted-foreground">{{ $t('jobForm.noFeeHint') }}</span>
-                    </label>
-                    <label
-                        class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
-                        :class="form.requires_worker_fee ? 'border-amber-500 bg-amber-500/5 ring-2 ring-amber-500/20' : 'hover:border-amber-300'"
-                    >
-                        <span class="flex items-center gap-2">
-                            <input v-model="form.requires_worker_fee" type="radio" name="requires_worker_fee" :value="true" class="accent-amber-600" />
-                            <span class="text-sm font-semibold">{{ $t('jobForm.feeOption') }}</span>
-                        </span>
-                        <span class="text-xs text-muted-foreground">{{ $t('jobForm.feeHint') }}</span>
-                    </label>
-                </div>
-                <InputError class="mt-2" :message="form.errors.requires_worker_fee" />
-
-                <div v-if="form.requires_worker_fee" class="mt-4 grid max-w-xs gap-2">
-                    <Label for="worker_fee_amount">{{ $t('jobForm.feeAmount') }}</Label>
-                    <Input id="worker_fee_amount" v-model="form.worker_fee_amount" type="number" min="1" step="0.01" placeholder="e.g. 500" />
-                    <InputError :message="form.errors.worker_fee_amount" />
-                </div>
-            </section>
-
-            <!-- How workers respond -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Phone class="size-4 text-orange-500" /> {{ $t('jobForm.contactQuestion') }}
-                </h2>
-                <div class="grid gap-3 sm:grid-cols-3">
-                    <label
-                        v-for="m in contactModes"
-                        :key="m.value"
-                        class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
-                        :class="form.contact_mode === m.value ? 'border-orange-500 bg-orange-500/5 ring-2 ring-orange-500/20' : 'hover:border-orange-300'"
-                    >
-                        <span class="flex items-center gap-2">
-                            <input v-model="form.contact_mode" type="radio" name="contact_mode" :value="m.value" class="accent-orange-600" />
-                            <span class="text-sm font-semibold">{{ $t(m.label) }}</span>
-                        </span>
-                        <span class="text-xs text-muted-foreground">{{ $t(m.desc) }}</span>
-                    </label>
-                </div>
-                <InputError class="mt-2" :message="form.errors.contact_mode" />
-
-                <div v-if="form.contact_mode !== 'apply'" class="mt-4 grid gap-4 sm:grid-cols-3">
-                    <div class="grid gap-2">
-                        <Label for="contact_name">{{ $t('jobForm.contactName') }}</Label>
-                        <Input id="contact_name" v-model="form.contact_name" maxlength="100" :placeholder="$t('jobForm.contactNamePlaceholder')" />
-                        <InputError :message="form.errors.contact_name" />
+                <!-- Settings -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <Settings2 class="size-4 text-orange-500" /> {{ $t('jobForm.settings') }}
+                    </h2>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div class="grid gap-2">
+                            <Label for="vacancies">{{ $t('jobs.vacancies') }}</Label>
+                            <Input id="vacancies" type="number" min="1" v-model="form.vacancies" />
+                            <InputError :message="form.errors.vacancies" />
+                        </div>
+                        <div v-if="!neverPublished" class="grid gap-2">
+                            <Label for="status">{{ $t('kyc.status') }}</Label>
+                            <select id="status" v-model="form.status" :class="selectClass">
+                                <option value="active">{{ $t('status.active') }}</option>
+                                <option value="closed">{{ $t('status.closed') }}</option>
+                            </select>
+                            <InputError :message="form.errors.status" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="expires_at">{{ $t('jobForm.expiresOn') }}</Label>
+                            <Input id="expires_at" type="date" v-model="form.expires_at" />
+                            <InputError :message="form.errors.expires_at" />
+                        </div>
                     </div>
-                    <div class="grid gap-2">
-                        <Label for="contact_phone">{{ $t('jobForm.phoneWorkersCall') }}</Label>
-                        <Input id="contact_phone" v-model="form.contact_phone" type="tel" placeholder="+91 98765 43210" />
-                        <InputError :message="form.errors.contact_phone" />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="contact_designation">{{ $t('jobForm.contactDesignation') }}</Label>
-                        <Input id="contact_designation" v-model="form.contact_designation" maxlength="100" :placeholder="$t('jobForm.contactDesignationPlaceholder')" />
-                        <InputError :message="form.errors.contact_designation" />
-                    </div>
-                    <p class="text-xs text-muted-foreground sm:col-span-3">{{ $t('jobForm.phonePublicHint') }}</p>
-                </div>
-            </section>
+                </section>
 
-            <!-- Settings -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Settings2 class="size-4 text-orange-500" /> {{ $t('jobForm.settings') }}
-                </h2>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div class="grid gap-2">
-                        <Label for="vacancies">{{ $t('jobs.vacancies') }}</Label>
-                        <Input id="vacancies" type="number" min="1" v-model="form.vacancies" />
-                        <InputError :message="form.errors.vacancies" />
+                <!-- AI help: the employer's own switches, under the admin's -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <Bot class="size-4 text-orange-500" /> {{ $t('jobForm.aiTitle') }}
+                    </h2>
+                    <div class="grid gap-3">
+                        <label
+                            v-for="sw in aiSwitches"
+                            :key="sw.key"
+                            class="flex items-start justify-between gap-4 rounded-xl border p-4"
+                            :class="sw.available ? 'cursor-pointer' : 'opacity-60'"
+                        >
+                            <span class="grid gap-1">
+                                <span class="text-sm font-semibold">{{ $t(sw.title) }}</span>
+                                <span class="text-xs text-muted-foreground">{{ $t(sw.desc) }}</span>
+                                <span v-if="sw.note" class="text-xs font-medium text-amber-600">{{ $t(sw.note) }}</span>
+                            </span>
+                            <input v-model="form[sw.key]" type="checkbox" :disabled="!sw.available" class="mt-1 size-5 shrink-0 accent-orange-600" />
+                        </label>
                     </div>
-                    <div v-if="!neverPublished" class="grid gap-2">
-                        <Label for="status">{{ $t('kyc.status') }}</Label>
-                        <select id="status" v-model="form.status" :class="selectClass">
-                            <option value="active">{{ $t('status.active') }}</option>
-                            <option value="closed">{{ $t('status.closed') }}</option>
-                        </select>
-                        <InputError :message="form.errors.status" />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="expires_at">{{ $t('jobForm.expiresOn') }}</Label>
-                        <Input id="expires_at" type="date" v-model="form.expires_at" />
-                        <InputError :message="form.errors.expires_at" />
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- AI help: the employer's own switches, under the admin's -->
-            <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
-                <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <Bot class="size-4 text-orange-500" /> {{ $t('jobForm.aiTitle') }}
-                </h2>
-                <div class="grid gap-3">
-                    <label
-                        v-for="sw in aiSwitches"
-                        :key="sw.key"
-                        class="flex items-start justify-between gap-4 rounded-xl border p-4"
-                        :class="sw.available ? 'cursor-pointer' : 'opacity-60'"
-                    >
-                        <span class="grid gap-1">
-                            <span class="text-sm font-semibold">{{ $t(sw.title) }}</span>
-                            <span class="text-xs text-muted-foreground">{{ $t(sw.desc) }}</span>
-                            <span v-if="sw.note" class="text-xs font-medium text-amber-600">{{ $t(sw.note) }}</span>
-                        </span>
-                        <input v-model="form[sw.key]" type="checkbox" :disabled="!sw.available" class="mt-1 size-5 shrink-0 accent-orange-600" />
-                    </label>
-                </div>
-            </section>
+                <p v-if="neverPublished" class="text-right text-xs text-muted-foreground">{{ $t('jobForm.draftHint') }}</p>
+            </div>
 
-            <p v-if="neverPublished" class="text-right text-xs text-muted-foreground">{{ $t('jobForm.draftHint') }}</p>
-            <div class="flex flex-wrap items-center justify-end gap-3">
+            <div class="flex flex-wrap items-center justify-end gap-3 lg:col-span-2">
                 <Link href="/employer/jobs" class="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">{{ $t('common.cancel') }}</Link>
                 <button
                     v-if="neverPublished"

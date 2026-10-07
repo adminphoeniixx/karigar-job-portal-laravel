@@ -6,15 +6,19 @@ Base URL `{{base_url}}/api/v1`. Postman: "App launch checks" folder in both coll
 | What | Endpoint | Worker app | Employer app | Status |
 |---|---|---|---|---|
 | App update | `GET /app/update` | ✅ send `app=worker` | ✅ send `app=employer` | **New** |
-| Maintenance | `GET /app/maintenance` | ✅ same call | ✅ same call | **New** |
+| Maintenance | `GET /app/maintenance` | ✅ send `app=worker` | ✅ send `app=employer` | **New** |
 | Terms & Privacy | `GET /legal`, `GET /legal/{terms\|privacy}` | ✅ same call | ✅ same call | Already live, unchanged |
 | Help & Support | `GET /support?audience=…` | ✅ send `audience=worker` | ✅ send `audience=employer` | Already live, unchanged |
 
-**Both apps use all four.** Only two calls differ by app: `app=` on the update
-check and `audience=` on Help & Support. The other two are the same call from
-both apps.
+**Both apps use all four.** Three calls differ by app: `app=` on the update and
+maintenance checks, and `audience=` on Help & Support. Terms & Privacy is the
+same call from both apps.
 
 On every launch, call `/app/maintenance` and `/app/update` before anything else.
+
+**Send the `X-App` header on every API call**: `X-App: worker` from the worker
+app, `X-App: employer` from the employer app. The server uses it to tell which
+app is calling, so only that app gets the maintenance `503` (see 2).
 
 
 ### 1. `GET /app/update?app={worker|employer}&platform={android|ios}&version=1.3.5` (new)
@@ -31,7 +35,7 @@ Android and for iOS, so one app can be forced to update without the other.
   "update_available": true,
   "force_update": false,
   "store_url": "https://play.google.com/store/apps/details?id=…",   // may be null
-  "message": "Faster job feed." }   // may be null
+  "message": "Faster job feed." }   // may be null; each app has its own
 ```
 - `force_update: true` (installed is below `min_version`): show a blocking
   screen with an "Update" button to `store_url`. Do not let the user continue.
@@ -42,23 +46,36 @@ Android and for iOS, so one app can be forced to update without the other.
 
 The admin sets the versions in Admin → Settings → Mobile apps.
 
-### 2. `GET /app/maintenance` (new)
-**For: both apps, same call.** There is one maintenance switch: when it is on,
-both apps go into maintenance together.
+### 2. `GET /app/maintenance?app={worker|employer}` (new)
+**For: both apps, each its own.** The worker app sends `app=worker`, the
+employer app sends `app=employer`. Each app has its own maintenance switch,
+message and "back by" time, so the worker app can be down while the employer
+app keeps working (or the other way round, or both).
 
 ```json
-{ "maintenance": true,
+{ "app": "worker",
+  "maintenance": true,
   "message": "We are improving Super Karigar. Back soon.",
   "until": "2026-10-08T00:30:00+00:00" }   // ISO 8601, may be null
 ```
-When off: `{ "maintenance": false, "message": null, "until": null }`.
+When off: `{ "app": "worker", "maintenance": false, "message": null, "until": null }`.
+`422` when `app` is missing or unknown.
 
-**While maintenance is on, every other app API call returns `503`** with the same
-body plus `"code": "maintenance"`. Handle it globally: on any `503` with
-`code == "maintenance"`, show the maintenance screen (message, and "back by"
-from `until` in local time), and poll `/app/maintenance` every minute or so
-until it says `false`. These keep working during maintenance: `/app/update`,
-`/app/maintenance`, `/legal`, `/legal/{document}`, `/support`.
+**While an app is in maintenance, its other API calls return `503`** with the
+same body plus `"code": "maintenance"`. The server tells which app is calling
+from, in order:
+1. the `X-App` header (send it on every call),
+2. the `role` sent to `/auth/otp/verify`,
+3. the signed-in user's account (worker or employer).
+
+A guest call with none of these (e.g. `/auth/otp/send` without the header) is
+refused only when both apps are in maintenance. So send `X-App` always.
+
+Handle it globally: on any `503` with `code == "maintenance"`, show the
+maintenance screen (message, and "back by" from `until` in local time), and
+poll `/app/maintenance?app=…` every minute or so until it says `false`. These
+keep working during maintenance: `/app/update`, `/app/maintenance`, `/legal`,
+`/legal/{document}`, `/support`.
 
 ### 3. Terms & Policy (already live)
 **For: both apps, same call.** The Terms of use and Privacy policy are the same
@@ -117,7 +134,9 @@ sends `audience=employer`; each gets its own FAQs plus the shared ones.
 - `id` stays the same, so you can link to one answer.
 
 ### Test checklist
-- [ ] Launch calls `/app/maintenance` then `/app/update` with the real app, platform and version
+- [ ] Every API call sends `X-App: worker` / `X-App: employer`
+- [ ] Launch calls `/app/maintenance?app=…` then `/app/update` with the real app, platform and version
+- [ ] Worker maintenance on: worker app shows the maintenance screen, employer app keeps working (and the reverse)
 - [ ] Force update blocks the app; optional update can be dismissed
 - [ ] A `503` with `code: "maintenance"` anywhere shows the maintenance screen
 - [ ] Settings → Terms, Privacy and Help screens render from these endpoints

@@ -83,7 +83,7 @@ const date = (iso: string | null) =>
 <template>
     <Head title="Admin — KYC" />
 
-    <div class="flex flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="ShieldCheck" title="KYC Review" description="Check documents by hand, then approve or reject" />
 
         <div class="flex flex-wrap items-center gap-2">

@@ -53,7 +53,7 @@ const statusBadge: Record<string, string> = {
 <template>
     <Head title="Job Moderation" />
 
-    <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="Briefcase" title="Job Moderation" description="Review and take down job listings across all employers" />
 
         <!-- Filters -->

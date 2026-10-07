@@ -48,7 +48,7 @@ const remove = (c: Category) => {
 <template>
     <Head title="Categories" />
 
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="Tags" title="Job Categories" description="The master list employers pick from when posting jobs" />
 
         <!-- Add -->

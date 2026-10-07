@@ -64,7 +64,7 @@ const canRelease = (s: string) => s === 'funded' || s === 'release_requested' ||
 <template>
     <Head title="Escrows" />
 
-    <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="ShieldCheck" title="Escrow Payments" description="Funds held between employers and karigars" />
 
         <div v-if="!payoutsConfigured" class="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">

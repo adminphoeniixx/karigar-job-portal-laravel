@@ -116,7 +116,7 @@ const submit = () =>
 <template>
     <Head title="Verification" />
 
-    <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader
             :icon="ShieldCheck"
             :title="isEmployer ? 'Business verification' : 'KYC Verification'"
@@ -174,9 +174,9 @@ const submit = () =>
             </div>
         </div>
 
-        <form v-if="showForm" class="space-y-5" @submit.prevent="submit">
+        <form v-if="showForm" class="grid items-start gap-5 lg:grid-cols-2" @submit.prevent="submit">
             <!-- Business details (employers) -->
-            <section v-if="isEmployer" class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+            <section v-if="isEmployer" class="rounded-2xl border bg-card p-5 shadow-sm md:p-6 lg:col-span-2">
                 <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                     <Building2 class="size-4 text-orange-500" /> Business details
                 </h2>
@@ -266,6 +266,7 @@ const submit = () =>
                 </div>
             </section>
 
+            <div class="lg:col-span-2">
             <button
                 type="submit"
                 :disabled="form.processing || (isEmployer && !form.business_type)"
@@ -273,6 +274,7 @@ const submit = () =>
             >
                 Submit for verification
             </button>
+            </div>
         </form>
     </div>
 </template>

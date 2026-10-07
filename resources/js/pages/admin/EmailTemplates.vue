@@ -52,7 +52,7 @@ const insertPlaceholder = (t: Template, ph: string) => {
 <template>
     <Head title="Email Templates" />
 
-    <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader
             :icon="Mail"
             title="Email Templates"

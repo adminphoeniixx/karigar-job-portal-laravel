@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Setting;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,13 +22,18 @@ class MobileApps
     /** JSON: {app: {platform: {latest, min, store_url}}}. */
     public const VERSIONS_KEY = 'mobile_app_versions';
 
-    public const UPDATE_MESSAGE_KEY = 'mobile_app_update_message';
+    /** JSON: {app: {update_message, maintenance, maintenance_message, maintenance_until}}. */
+    public const APP_SETTINGS_KEY = 'mobile_app_settings';
 
-    public const MAINTENANCE_KEY = 'mobile_maintenance_enabled';
+    // One setting for both apps, from before they were split. Read only until
+    // the per-app settings are first saved, so a deploy keeps the live state.
+    private const LEGACY_UPDATE_MESSAGE_KEY = 'mobile_app_update_message';
 
-    public const MAINTENANCE_MESSAGE_KEY = 'mobile_maintenance_message';
+    private const LEGACY_MAINTENANCE_KEY = 'mobile_maintenance_enabled';
 
-    public const MAINTENANCE_UNTIL_KEY = 'mobile_maintenance_until';
+    private const LEGACY_MAINTENANCE_MESSAGE_KEY = 'mobile_maintenance_message';
+
+    private const LEGACY_MAINTENANCE_UNTIL_KEY = 'mobile_maintenance_until';
 
     /**
      * Every app and platform's version settings, with blanks where none is set.
@@ -55,10 +62,65 @@ class MobileApps
     /**
      * @param  array<string, array<string, array<string, ?string>>>  $versions
      */
-    public static function saveVersions(array $versions, ?string $message): void
+    public static function saveVersions(array $versions): void
     {
         Setting::set(self::VERSIONS_KEY, json_encode($versions));
-        Setting::set(self::UPDATE_MESSAGE_KEY, trim((string) $message));
+    }
+
+    /**
+     * Each app's update message and maintenance window. `maintenance_until`
+     * is UTC ISO 8601.
+     *
+     * @return array<string, array{update_message: ?string, maintenance: bool, maintenance_message: ?string, maintenance_until: ?string}>
+     */
+    public static function appSettings(): array
+    {
+        $stored = json_decode((string) Setting::get(self::APP_SETTINGS_KEY), true);
+
+        if (! is_array($stored)) {
+            $legacy = [
+                'update_message' => Setting::get(self::LEGACY_UPDATE_MESSAGE_KEY),
+                'maintenance' => Setting::bool(self::LEGACY_MAINTENANCE_KEY, false),
+                'maintenance_message' => Setting::get(self::LEGACY_MAINTENANCE_MESSAGE_KEY),
+                'maintenance_until' => Setting::get(self::LEGACY_MAINTENANCE_UNTIL_KEY),
+            ];
+            $stored = array_fill_keys(self::APPS, $legacy);
+        }
+
+        $settings = [];
+
+        foreach (self::APPS as $app) {
+            $row = $stored[$app] ?? [];
+            $settings[$app] = [
+                'update_message' => filled($row['update_message'] ?? null) ? (string) $row['update_message'] : null,
+                'maintenance' => (bool) ($row['maintenance'] ?? false),
+                'maintenance_message' => filled($row['maintenance_message'] ?? null) ? (string) $row['maintenance_message'] : null,
+                'maintenance_until' => filled($row['maintenance_until'] ?? null) ? (string) $row['maintenance_until'] : null,
+            ];
+        }
+
+        return $settings;
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $settings  per app; `maintenance_until` in India time, as typed
+     */
+    public static function saveAppSettings(array $settings): void
+    {
+        $clean = [];
+
+        foreach (self::APPS as $app) {
+            $row = $settings[$app] ?? [];
+            $until = $row['maintenance_until'] ?? null;
+            $clean[$app] = [
+                'update_message' => trim((string) ($row['update_message'] ?? '')) ?: null,
+                'maintenance' => (bool) ($row['maintenance'] ?? false),
+                'maintenance_message' => trim((string) ($row['maintenance_message'] ?? '')) ?: null,
+                'maintenance_until' => filled($until) ? Carbon::parse($until, config('app.display_timezone'))->utc()->toIso8601String() : null,
+            ];
+        }
+
+        Setting::set(self::APP_SETTINGS_KEY, json_encode($clean));
     }
 
     /**
@@ -85,36 +147,53 @@ class MobileApps
             'update_available' => $available || $force,
             'force_update' => $force,
             'store_url' => $row['store_url'],
-            'message' => (string) Setting::get(self::UPDATE_MESSAGE_KEY) ?: null,
+            'message' => self::appSettings()[$app]['update_message'],
         ];
     }
 
-    public static function underMaintenance(): bool
+    public static function underMaintenance(string $app): bool
     {
-        return Setting::bool(self::MAINTENANCE_KEY, false);
+        return self::appSettings()[$app]['maintenance'] ?? false;
     }
 
     /**
-     * @return array{maintenance: bool, message: ?string, until: ?string}
+     * @return array{app: string, maintenance: bool, message: ?string, until: ?string}
      */
-    public static function maintenance(): array
+    public static function maintenance(string $app): array
     {
-        $on = self::underMaintenance();
-        $until = Setting::get(self::MAINTENANCE_UNTIL_KEY);
+        $row = self::appSettings()[$app];
+        $on = $row['maintenance'];
 
         return [
+            'app' => $app,
             'maintenance' => $on,
-            'message' => $on ? (Setting::get(self::MAINTENANCE_MESSAGE_KEY) ?: __('We are improving Super Karigar. Please try again in a little while.')) : null,
+            'message' => $on ? ($row['maintenance_message'] ?? __('We are improving Super Karigar. Please try again in a little while.')) : null,
             // Only while it is on, as ISO 8601: the app shows "back by …".
-            'until' => $on && filled($until) ? Carbon::parse($until)->toIso8601String() : null,
+            'until' => $on && $row['maintenance_until'] !== null ? Carbon::parse($row['maintenance_until'])->toIso8601String() : null,
         ];
     }
 
-    public static function saveMaintenance(bool $on, ?string $message, ?string $until): void
+    /**
+     * Which app sent a request: the X-App header the apps send, else the
+     * role being signed in with, else the signed-in user's role. Null when it
+     * cannot be told (a guest call without the header).
+     */
+    public static function appFor(Request $request): ?string
     {
-        Setting::set(self::MAINTENANCE_KEY, $on ? '1' : '0');
-        Setting::set(self::MAINTENANCE_MESSAGE_KEY, trim((string) $message));
-        Setting::set(self::MAINTENANCE_UNTIL_KEY, filled($until) ? Carbon::parse($until, config('app.display_timezone'))->utc()->toIso8601String() : '');
+        foreach ([$request->header('X-App'), $request->input('role')] as $hint) {
+            if (is_string($hint) && in_array(strtolower($hint), self::APPS, true)) {
+                return strtolower($hint);
+            }
+        }
+
+        $user = $request->user('sanctum');
+
+        return match (true) {
+            ! $user instanceof User => null,
+            $user->isWorker() => 'worker',
+            $user->isEmployer() => 'employer',
+            default => null,
+        };
     }
 
     /**

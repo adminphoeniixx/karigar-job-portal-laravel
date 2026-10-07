@@ -91,7 +91,7 @@ const maxCategory = computed(() => Math.max(1, ...props.topCategories.map((c) =>
 <template>
     <Head title="Reports" />
 
-    <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="ChartColumn" title="Reports" description="Platform performance with data filters" />
 
         <!-- Filters -->

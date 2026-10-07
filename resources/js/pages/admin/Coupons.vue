@@ -107,7 +107,7 @@ const discountLabel = (c: Coupon) =>
 <template>
     <Head title="Coupons" />
 
-    <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
+    <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
         <PageHeader :icon="TicketPercent" title="Discount Coupons" description="Create discount codes employers can apply at subscription checkout." />
 
         <!-- Create / edit form -->

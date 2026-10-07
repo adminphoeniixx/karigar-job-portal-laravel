@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 /**
  * The two checks both apps make on launch, before sign-in: is an update
- * available or required, and is the service under maintenance. Public, and
+ * available or required, and is this app under maintenance. Public, and
  * still answered during maintenance.
  */
 class AppStatusController extends Controller
@@ -27,8 +27,12 @@ class AppStatusController extends Controller
         return response()->json(MobileApps::update($data['app'], $data['platform'], $data['version'] ?? null));
     }
 
-    public function maintenance(): JsonResponse
+    public function maintenance(Request $request): JsonResponse
     {
-        return response()->json(MobileApps::maintenance());
+        $data = $request->validate([
+            'app' => ['required', 'string', 'in:'.implode(',', MobileApps::APPS)],
+        ]);
+
+        return response()->json(MobileApps::maintenance($data['app']));
     }
 }
