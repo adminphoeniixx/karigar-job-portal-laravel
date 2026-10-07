@@ -68,8 +68,9 @@ const withdraw = (id: number) => {
                     <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
                             <th class="px-5 py-3 font-medium">{{ $t('applications.job') }}</th>
-                            <th class="px-5 py-3 font-medium">{{ $t('applications.employer') }}</th>
-                            <th class="px-5 py-3 font-medium">{{ $t('applications.applied') }}</th>
+                            <!-- On a phone these two fold under the job, so the status stays in view. -->
+                            <th class="hidden px-5 py-3 font-medium sm:table-cell">{{ $t('applications.employer') }}</th>
+                            <th class="hidden px-5 py-3 font-medium sm:table-cell">{{ $t('applications.applied') }}</th>
                             <th class="px-5 py-3 font-medium">{{ $t('kyc.status') }}</th>
                             <th class="px-5 py-3 text-right font-medium">{{ $t('common.actions') }}</th>
                         </tr>
@@ -83,10 +84,11 @@ const withdraw = (id: number) => {
                                     <span class="inline-flex items-center gap-1"><MapPin class="size-3" /> {{ [a.job.city, a.job.state].filter(Boolean).join(', ') || '—' }}</span>
                                     <span>{{ $t('jobs.posted') }} {{ fmtDate(a.job.created_at) }}</span>
                                     <span v-if="a.job.expires_at" class="font-medium text-rose-500 dark:text-rose-400">{{ $t('jobs.expires') }} {{ fmtDate(a.job.expires_at) }}</span>
+                                    <span class="sm:hidden">{{ a.job.employer.name }} · {{ $t('applications.applied') }} {{ fmtDate(a.created_at) }}</span>
                                 </div>
                             </td>
-                            <td class="px-5 py-3.5 text-muted-foreground">{{ a.job.employer.name }}</td>
-                            <td class="px-5 py-3.5 whitespace-nowrap text-muted-foreground">{{ fmtDate(a.created_at) }}</td>
+                            <td class="hidden px-5 py-3.5 text-muted-foreground sm:table-cell">{{ a.job.employer.name }}</td>
+                            <td class="hidden px-5 py-3.5 whitespace-nowrap text-muted-foreground sm:table-cell">{{ fmtDate(a.created_at) }}</td>
                             <td class="px-5 py-3.5">
                                 <!-- One pill: "Shortlisted" while the employer decides, then the decision itself. -->
                                 <div class="flex items-center gap-1.5">
@@ -105,7 +107,7 @@ const withdraw = (id: number) => {
                                     </span>
                                 </div>
                             </td>
-                            <td class="px-5 py-3.5 text-right whitespace-nowrap">
+                            <td class="px-3 py-3.5 text-right sm:px-5 sm:whitespace-nowrap">
                                 <button
                                     class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-500/10 dark:text-orange-300"
                                     @click="toggleTrack(a.id)"

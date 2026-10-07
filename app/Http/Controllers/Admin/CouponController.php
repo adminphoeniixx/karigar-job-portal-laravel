@@ -58,7 +58,9 @@ class CouponController extends Controller
             'discount_value' => ['required', 'numeric', 'min:0', 'max:1000000'],
             'max_discount_amount' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
             'min_amount' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
-            'razorpay_offer_id' => ['nullable', 'string', 'max:255'],
+            // Required: without a Razorpay offer the employer would be shown the
+            // discount, charged the full price, and invoiced for the discount.
+            'razorpay_offer_id' => ['required', 'string', 'max:255', 'regex:/^offer_[A-Za-z0-9]+$/'],
             'plan_ids' => ['nullable', 'array'],
             'plan_ids.*' => ['integer', 'exists:plans,id'],
             'max_redemptions' => ['nullable', 'integer', 'min:1'],
@@ -66,6 +68,9 @@ class CouponController extends Controller
             'starts_at' => ['nullable', 'date'],
             'expires_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'is_active' => ['required', 'boolean'],
+        ], [
+            'razorpay_offer_id.required' => __('Create the matching offer in Razorpay and paste its ID. Without it Razorpay charges the full price.'),
+            'razorpay_offer_id.regex' => __('A Razorpay offer ID looks like offer_XXXXXXXXXXXX.'),
         ]);
 
         // A percentage over 100 makes no sense.

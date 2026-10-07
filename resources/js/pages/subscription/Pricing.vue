@@ -119,7 +119,9 @@ const finalPrice = (plan: Plan): number => parseFloat(plan.price) - discountFor(
 const gstFor = (plan: Plan): number => Math.round(finalPrice(plan) * props.gstPercent) / 100;
 const totalFor = (plan: Plan): number => Math.round((finalPrice(plan) + gstFor(plan)) * 100) / 100;
 
-const money = (n: number) => '₹' + n.toLocaleString('en-IN');
+// Whole rupees as "₹999", paise always to two places: "₹99.90", never "₹99.9".
+const money = (n: number) =>
+    '₹' + n.toLocaleString('en-IN', Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const selectedDiscount = computed(() => (selected.value ? discountFor(selected.value) : 0));
 

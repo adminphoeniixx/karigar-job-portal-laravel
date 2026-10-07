@@ -9,6 +9,7 @@ import SkillTagInput from '@/components/SkillTagInput.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { citiesFor, indianStates } from '@/data/indianLocations';
+import { plainNumber } from '@/lib/utils';
 
 interface Job {
     id: number;
@@ -72,8 +73,8 @@ const form = useForm({
     description: props.job?.description ?? '',
     category: props.job?.category ?? '',
     skills: props.job?.skills ?? [],
-    wage_min: props.job?.wage_min ?? '',
-    wage_max: props.job?.wage_max ?? '',
+    wage_min: plainNumber(props.job?.wage_min),
+    wage_max: plainNumber(props.job?.wage_max),
     // Wages are monthly only (App\Support\Wage).
     wage_type: 'monthly',
     address: props.job?.address ?? '',

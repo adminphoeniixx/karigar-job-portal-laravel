@@ -46,10 +46,16 @@ class JobModerationController extends Controller
     }
 
     /**
-     * Take a job down (close) or restore it (active).
+     * Take a job down (close) or restore it (active). A draft is the
+     * employer's unfinished job: restoring it would publish it for them,
+     * past the plan and verification checks, so drafts are left alone.
      */
     public function toggle(JobListing $job): RedirectResponse
     {
+        if ($job->status === JobStatus::Draft) {
+            return back()->with('error', __('This job is a draft. Only the employer can publish it.'));
+        }
+
         $job->status = $job->status === JobStatus::Active ? JobStatus::Closed : JobStatus::Active;
         $job->save();
 

@@ -92,6 +92,73 @@
   ],
   "item": [
     {
+      "name": "App launch checks",
+      "item": [
+        {
+          "name": "App update check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/update?app=employer&platform=android&version=1.0.0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "update"
+              ],
+              "query": [
+                {
+                  "key": "app",
+                  "value": "employer"
+                },
+                {
+                  "key": "platform",
+                  "value": "android"
+                },
+                {
+                  "key": "version",
+                  "value": "1.0.0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Maintenance status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/app/maintenance",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "maintenance"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Auth",
       "item": [
         {

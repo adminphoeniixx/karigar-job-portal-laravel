@@ -128,7 +128,7 @@ const submit = () =>
                 <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                     <div class="relative">
                         <div class="flex size-24 items-center justify-center overflow-hidden rounded-2xl bg-primary text-3xl font-bold text-white shadow-lg shadow-rose-500/25">
-                            <img v-if="preview" :src="preview" alt="Logo" class="size-full object-cover" />
+                            <img v-if="preview" :src="preview" alt="Logo" class="size-full object-cover" @error="preview = null" />
                             <span v-else>{{ initial }}</span>
                         </div>
                         <label class="absolute -bottom-2 -right-2 flex size-9 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-rose-500 text-white shadow-md transition hover:bg-rose-600">

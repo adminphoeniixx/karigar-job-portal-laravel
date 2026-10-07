@@ -140,7 +140,7 @@ const submit = () =>
             </div>
             <ul class="mt-3 space-y-1.5 text-sm text-muted-foreground">
                 <li v-for="d in kyc.documents" :key="d.type">
-                    <span class="font-medium text-foreground">{{ d.label }}:</span>
+                    <span class="font-medium text-foreground">{{ d.label }}:</span>{{ ' ' }}
                     <template v-if="d.missing && d.alternate">
                         not available — sent {{ d.alternate.label }}<span v-if="d.alternate.number" class="font-mono"> ({{ d.alternate.number }})</span>
                     </template>

@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, Layers, Receipt, Settings as SettingsIcon } from '@lucide/vue';
+import { Check, Layers, Receipt, Settings as SettingsIcon, Smartphone } from '@lucide/vue';
 import { computed, reactive } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
+
+type AppName = 'worker' | 'employer';
+type Platform = 'android' | 'ios';
+type AppVersion = { latest: string | null; min: string | null; store_url: string | null };
 
 type SettingKey =
     | 'first_post_free_enabled'
@@ -31,6 +35,13 @@ const props = defineProps<{
         invoice_prefix: string;
         invoice_copy_email: string;
         plans: { name: string; price: number; interval: string }[];
+    };
+    apps: {
+        versions: Record<AppName, Record<Platform, AppVersion>>;
+        update_message: string;
+        maintenance: boolean;
+        maintenance_message: string;
+        maintenance_until: string;
     };
 }>();
 
@@ -158,6 +169,22 @@ const billing = useForm({
 
 const saveBilling = () => {
     billing.patch('/admin/settings/billing', { preserveScroll: true });
+};
+
+// ── Mobile apps: update check + maintenance ─────────────────────────
+const appNames: AppName[] = ['worker', 'employer'];
+const platforms: Platform[] = ['android', 'ios'];
+const apps = useForm({
+    versions: JSON.parse(JSON.stringify(props.apps.versions)) as Record<AppName, Record<Platform, AppVersion>>,
+    update_message: props.apps.update_message,
+    maintenance: props.apps.maintenance,
+    maintenance_message: props.apps.maintenance_message,
+    maintenance_until: props.apps.maintenance_until,
+});
+const appErrors = computed(() => apps.errors as Record<string, string | undefined>);
+
+const saveApps = () => {
+    apps.patch('/admin/settings/apps', { preserveScroll: true });
 };
 
 const rate = computed(() => (billing.gst_enabled ? Number(billing.gst_percent) || 0 : 0));
@@ -410,6 +437,86 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                     @click="saveBilling"
                 >
                     <Check class="size-4" /> Save billing
+                </button>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border bg-card p-5 shadow-sm">
+            <h2 class="flex items-center gap-2 font-semibold"><Smartphone class="size-4 text-primary" /> Mobile apps</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+                The apps check these on launch. Below the minimum version an app must update before it can be used;
+                below the latest it only offers the update. Blank means no check.
+            </p>
+
+            <div class="mt-4 overflow-x-auto rounded-xl border">
+                <table class="w-full text-sm">
+                    <thead class="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr>
+                            <th class="px-3 py-2 font-medium">App</th>
+                            <th class="px-3 py-2 font-medium">Latest</th>
+                            <th class="px-3 py-2 font-medium">Minimum</th>
+                            <th class="px-3 py-2 font-medium">Store link</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <template v-for="app in appNames" :key="app">
+                            <tr v-for="platform in platforms" :key="`${app}-${platform}`">
+                                <td class="whitespace-nowrap px-3 py-2 font-medium">{{ app === 'worker' ? 'Worker' : 'Employer' }} · {{ platform === 'ios' ? 'iOS' : 'Android' }}</td>
+                                <td class="px-3 py-2">
+                                    <input v-model="apps.versions[app][platform].latest" placeholder="1.4.2" :class="[inputClass, 'mt-0 w-24']" />
+                                    <span v-if="appErrors[`versions.${app}.${platform}.latest`]" class="mt-1 block text-xs text-rose-600">{{ appErrors[`versions.${app}.${platform}.latest`] }}</span>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <input v-model="apps.versions[app][platform].min" placeholder="1.2.0" :class="[inputClass, 'mt-0 w-24']" />
+                                    <span v-if="appErrors[`versions.${app}.${platform}.min`]" class="mt-1 block text-xs text-rose-600">{{ appErrors[`versions.${app}.${platform}.min`] }}</span>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <input
+                                        v-model="apps.versions[app][platform].store_url"
+                                        :placeholder="platform === 'ios' ? 'https://apps.apple.com/…' : 'https://play.google.com/store/apps/details?id=…'"
+                                        :class="[inputClass, 'mt-0 min-w-56']"
+                                    />
+                                    <span v-if="appErrors[`versions.${app}.${platform}.store_url`]" class="mt-1 block text-xs text-rose-600">{{ appErrors[`versions.${app}.${platform}.store_url`] }}</span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <label class="mt-4 block text-sm font-medium">
+                Update message (optional)
+                <input v-model="apps.update_message" placeholder="New: apply with one tap, faster job feed." :class="inputClass" />
+            </label>
+
+            <div class="mt-5 rounded-xl border p-4" :class="apps.maintenance ? 'border-rose-500/40 bg-rose-500/5' : ''">
+                <label class="flex items-center gap-2 text-sm font-semibold">
+                    <input v-model="apps.maintenance" type="checkbox" class="size-4 accent-rose-600" />
+                    Maintenance mode for both apps
+                </label>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    While on, the apps show a maintenance screen and their requests are refused. This website and the
+                    admin panel keep working.
+                </p>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label class="text-sm font-medium sm:col-span-2">
+                        Message for users
+                        <input v-model="apps.maintenance_message" placeholder="We are improving Super Karigar. Back soon." :class="inputClass" />
+                    </label>
+                    <label class="text-sm font-medium">
+                        Back by (optional, India time)
+                        <input v-model="apps.maintenance_until" type="datetime-local" :class="inputClass" />
+                    </label>
+                </div>
+            </div>
+
+            <div class="mt-5 flex justify-end border-t pt-4">
+                <button
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                    :disabled="apps.processing"
+                    @click="saveApps"
+                >
+                    <Check class="size-4" /> Save app settings
                 </button>
             </div>
         </div>

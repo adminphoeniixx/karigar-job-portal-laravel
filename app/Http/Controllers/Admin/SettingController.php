@@ -10,9 +10,11 @@ use App\Services\ApplicantAccess;
 use App\Services\Billing\Gst;
 use App\Services\Screening\ScreeningService;
 use App\Support\GstStates;
+use App\Support\MobileApps;
 use App\Support\Verification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -44,6 +46,16 @@ class SettingController extends Controller
                 'applicant_next_batch' => ApplicantAccess::nextBatch(),
             ],
             'billing' => $this->billing(),
+            'apps' => [
+                'versions' => MobileApps::versions(),
+                'update_message' => (string) Setting::get(MobileApps::UPDATE_MESSAGE_KEY),
+                'maintenance' => MobileApps::underMaintenance(),
+                'maintenance_message' => (string) Setting::get(MobileApps::MAINTENANCE_MESSAGE_KEY),
+                // datetime-local wants "2026-10-07T22:00" in the admin's own time.
+                'maintenance_until' => filled($until = Setting::get(MobileApps::MAINTENANCE_UNTIL_KEY))
+                    ? Carbon::parse($until)->timezone(config('app.display_timezone'))->format('Y-m-d\TH:i')
+                    : '',
+            ],
         ]);
     }
 
@@ -130,6 +142,50 @@ class SettingController extends Controller
         Setting::set(Gst::INVOICE_COPY_KEY, trim((string) ($data['invoice_copy_email'] ?? '')));
 
         return back()->with('toast', ['type' => 'success', 'message' => __('Billing settings updated.')]);
+    }
+
+    /**
+     * The mobile apps' update check and maintenance switch (GET /api/v1/app/*).
+     */
+    public function updateApps(Request $request): RedirectResponse
+    {
+        $version = ['nullable', 'string', 'max:20', 'regex:/^\d+(\.\d+){0,3}$/'];
+        $rules = [
+            'update_message' => ['nullable', 'string', 'max:300'],
+            'maintenance' => ['required', 'boolean'],
+            'maintenance_message' => ['nullable', 'string', 'max:300'],
+            'maintenance_until' => ['nullable', 'date'],
+        ];
+
+        foreach (MobileApps::APPS as $app) {
+            foreach (MobileApps::PLATFORMS as $platform) {
+                $rules["versions.$app.$platform.latest"] = $version;
+                $rules["versions.$app.$platform.min"] = $version;
+                $rules["versions.$app.$platform.store_url"] = ['nullable', 'url', 'max:300'];
+            }
+        }
+
+        $data = $request->validate($rules, ['regex' => __('Use a version like 1.4.2.')]);
+
+        foreach (MobileApps::APPS as $app) {
+            foreach (MobileApps::PLATFORMS as $platform) {
+                $row = $data['versions'][$app][$platform] ?? [];
+                $latest = $row['latest'] ?? null;
+                $min = $row['min'] ?? null;
+
+                if ($latest !== null && $min !== null && version_compare($min, $latest, '>')) {
+                    return back()->withErrors(["versions.$app.$platform.min" => __('The minimum cannot be above the latest version.')]);
+                }
+            }
+        }
+
+        MobileApps::saveVersions($data['versions'] ?? [], $data['update_message'] ?? null);
+        MobileApps::saveMaintenance($data['maintenance'], $data['maintenance_message'] ?? null, $data['maintenance_until'] ?? null);
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => $data['maintenance'] ? __('Saved. The apps are now in maintenance.') : __('App settings saved.'),
+        ]);
     }
 
     /**

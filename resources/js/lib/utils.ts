@@ -18,6 +18,11 @@ export function rupees(v: Amount): string {
     return Number(v).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
 
+/** A stored decimal ("24700.00") as a form input shows it: "24700". */
+export function plainNumber(v: Amount): string {
+    return v === null || v === undefined || v === '' ? '' : String(Number(v));
+}
+
 /** "₹12,000–20,000 / monthly", or null when no wage was given. */
 export function wageText(min: Amount, max: Amount, type?: string | null): string | null {
     if (!min && !max) {

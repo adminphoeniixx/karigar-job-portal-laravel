@@ -11,6 +11,7 @@ use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\ShortlistedNotification;
 use App\Services\ApplicantAccess;
 use App\Services\ContactUnlocks;
+use App\Services\PayoutService;
 use App\Services\Screening\ScreeningService;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\RedirectResponse;
@@ -110,6 +111,8 @@ class ApplicantController extends Controller
                 'used' => $wallet->unlocksUsed(),
                 'limit' => $wallet->planLimit(),
             ],
+            // Escrow is offered only once payouts can release it to the worker.
+            'escrowEnabled' => app(PayoutService::class)->configured(),
         ]);
     }
 

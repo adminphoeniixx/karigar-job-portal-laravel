@@ -7,7 +7,8 @@ import PageHeader from '@/components/PageHeader.vue';
 interface Row {
     id: number;
     name: string;
-    email: string;
+    email: string | null;
+    phone: string | null;
     role: string;
     suspended: boolean;
     created_at: string;
@@ -47,7 +48,7 @@ const suspend = (u: Row) => {
 const reinstate = (u: Row) => router.post(`/admin/users/${u.id}/unsuspend`, {}, { preserveScroll: true });
 
 const destroy = (u: Row) => {
-    if (window.confirm(`Permanently delete ${u.name} (${u.email})?\n\nThis removes their profile, KYC, jobs, applications and reviews. This CANNOT be undone.`)) {
+    if (window.confirm(`Permanently delete ${u.name} (${u.phone || u.email})?\n\nThis removes their profile, KYC, jobs, applications and reviews. This CANNOT be undone.`)) {
         router.delete(`/admin/users/${u.id}`, { preserveScroll: true });
     }
 };
@@ -76,7 +77,7 @@ const roleBadge: Record<string, string> = {
         <div class="flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-sm sm:flex-row">
             <div class="relative flex-1">
                 <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input v-model="q" placeholder="Search name or email…" class="w-full rounded-xl border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+                <input v-model="q" placeholder="Search name, phone or email…" class="w-full rounded-xl border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
             </div>
             <select v-model="role" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40">
                 <option value="">All roles</option>
@@ -100,7 +101,7 @@ const roleBadge: Record<string, string> = {
                         <span class="rounded-full px-2 py-0.5 text-xs font-semibold capitalize" :class="roleBadge[u.role]">{{ u.role }}</span>
                         <span v-if="u.suspended" class="rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-600 dark:text-rose-400">Suspended</span>
                     </div>
-                    <div class="truncate text-xs text-muted-foreground">{{ u.email }} · joined {{ u.created_at }}</div>
+                    <div class="truncate text-xs text-muted-foreground">{{ [u.phone, u.email].filter(Boolean).join(' · ') }} · joined {{ u.created_at }}</div>
                     <!-- Employer worker-database quota -->
                     <div v-if="u.is_employer" class="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <span class="inline-flex items-center gap-1 text-muted-foreground"><Database class="size-3.5" /> DB access: <strong class="text-foreground">{{ (u.quota_total ?? 0).toLocaleString('en-IN') }}</strong> contacts</span>

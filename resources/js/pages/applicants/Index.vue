@@ -69,6 +69,7 @@ const props = defineProps<{
     applications: Applicant[];
     sort: 'best_match' | 'recent';
     contactUnlocks: { used: number; limit: number };
+    escrowEnabled: boolean;
     // Who is hidden and why: a later batch, or no (or a lapsed) job plan.
     access: {
         total: number;
@@ -443,14 +444,14 @@ const submitReview = () => {
                     <!-- Escrow payment -->
                     <template v-if="a.status === 'accepted'">
                         <button
-                            v-if="!a.escrow || a.escrow.status === 'pending'"
+                            v-if="escrowEnabled && (!a.escrow || a.escrow.status === 'pending')"
                             class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                             @click="fund(a)"
                         >
                             <IndianRupee class="size-3.5" /> {{ a.escrow?.status === 'pending' ? 'Complete payment' : 'Fund payment' }}
                         </button>
                         <button
-                            v-else-if="a.escrow.status === 'funded'"
+                            v-else-if="a.escrow && a.escrow.status === 'funded'"
                             class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700"
                             @click="releasePayment(a.escrow.id, a.worker.name)"
                         >

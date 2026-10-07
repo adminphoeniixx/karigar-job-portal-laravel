@@ -427,6 +427,17 @@ Both settings rows, and neither needs a token — the OTP screen links to the
 legal documents before an account exists, and someone who cannot sign in still
 needs help.
 
+### `GET /app/update?app=worker|employer&platform=android|ios&version=1.3.5`
+Launch check, public. → `{ "app", "platform", "installed_version", "latest_version", "min_version",
+"update_available", "force_update", "store_url", "message" }`. `force_update` means the installed
+version is below the admin's minimum: block the app until updated. Versions are set in
+Admin → Settings → Mobile apps; unset values come back `null`. `422` for an unknown app/platform.
+
+### `GET /app/maintenance`
+Launch check, public. → `{ "maintenance": bool, "message": string|null, "until": ISO 8601|null }`.
+While on, **every other endpoint returns `503`** with that body plus `"code": "maintenance"`, except
+`/app/*`, `/legal`, `/legal/{document}` and `/support`.
+
 ### `GET /legal`
 The two documents without their bodies, for the settings row.
 ```json

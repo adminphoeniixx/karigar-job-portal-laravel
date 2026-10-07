@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
+import { plainNumber } from '@/lib/utils';
 
 interface WorkerProfile {
     phone: string | null;
@@ -62,7 +63,7 @@ const form = useForm<{
     skills: props.profile.skills ?? [],
     experience_years: props.profile.experience_years ?? '',
     bio: props.profile.bio ?? '',
-    expected_wage: props.profile.expected_wage ?? '',
+    expected_wage: plainNumber(props.profile.expected_wage),
     // Wages are monthly only (App\Support\Wage).
     wage_type: 'monthly',
     city: props.profile.city ?? '',
@@ -147,7 +148,7 @@ const submit = () => {
                 <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                     <div class="relative">
                         <div class="flex size-24 items-center justify-center overflow-hidden rounded-2xl bg-primary text-3xl font-bold text-white shadow-lg shadow-orange-500/25">
-                            <img v-if="preview" :src="preview" alt="Avatar" class="size-full object-cover" />
+                            <img v-if="preview" :src="preview" alt="Avatar" class="size-full object-cover" @error="preview = null" />
                             <span v-else>{{ initial }}</span>
                         </div>
                         <label class="absolute -bottom-2 -right-2 flex size-9 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-orange-500 text-white shadow-md transition hover:bg-orange-600">

@@ -91,7 +91,7 @@ const statusBadge: Record<string, string> = {
                         <EyeOff class="size-3.5" /> Take down
                     </button>
                     <button
-                        v-else
+                        v-else-if="j.status !== 'draft'"
                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-600 transition hover:bg-orange-500/10 dark:text-orange-400"
                         @click="toggle(j)"
                     >

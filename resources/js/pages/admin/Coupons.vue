@@ -168,10 +168,11 @@ const discountLabel = (c: Coupon) =>
 
             <!-- Razorpay offer -->
             <div>
-                <label class="mb-1 block text-xs font-medium text-muted-foreground">Razorpay Offer ID (optional but recommended)</label>
-                <input v-model="form.razorpay_offer_id" placeholder="offer_XXXXXXXXXXXX" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
-                <p class="mt-1 text-xs text-muted-foreground">
-                    Create a matching offer in the Razorpay Dashboard and paste its ID here so Razorpay actually charges the discounted amount. Leave blank to show the discount to users without adjusting the Razorpay charge.
+                <label class="mb-1 block text-xs font-medium text-muted-foreground">Razorpay Offer ID</label>
+                <input v-model="form.razorpay_offer_id" required placeholder="offer_XXXXXXXXXXXX" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
+                <p v-if="form.errors.razorpay_offer_id" class="mt-1 text-xs text-rose-600">{{ form.errors.razorpay_offer_id }}</p>
+                <p v-else class="mt-1 text-xs text-muted-foreground">
+                    Create the offer in Razorpay Dashboard → Offers first, with the same discount, and paste its ID here. Razorpay charges what the offer says, and the invoice shows this coupon's discount, so the two must match.
                 </p>
             </div>
 

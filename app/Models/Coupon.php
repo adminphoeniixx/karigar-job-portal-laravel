@@ -69,6 +69,11 @@ class Coupon extends Model
             return __('This coupon is no longer active.');
         }
 
+        // A coupon with no Razorpay offer cannot lower what Razorpay charges.
+        if (blank($this->razorpay_offer_id)) {
+            return __('This coupon is not available right now.');
+        }
+
         $now = now();
 
         if ($this->starts_at && $now->lt($this->starts_at)) {

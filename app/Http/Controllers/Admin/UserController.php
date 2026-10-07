@@ -26,7 +26,9 @@ class UserController extends Controller
         $users = User::query()
             ->with('employerProfile:id,user_id,contact_quota_bonus')
             ->when($filters['q'] ?? null, fn ($q, $term) => $q->where(
-                fn ($sub) => $sub->where('name', 'ilike', "%{$term}%")->orWhere('email', 'ilike', "%{$term}%")
+                fn ($sub) => $sub->where('name', 'ilike', "%{$term}%")
+                    ->orWhere('email', 'ilike', "%{$term}%")
+                    ->when(preg_replace('/\D/', '', $term), fn ($q, $digits) => $q->orWhere('phone', 'like', "%{$digits}%"))
             ))
             ->when($filters['role'] ?? null, fn ($q, $role) => $q->where('role', $role))
             ->when(($filters['status'] ?? null) === 'suspended', fn ($q) => $q->whereNotNull('suspended_at'))
@@ -40,7 +42,9 @@ class UserController extends Controller
                 return [
                     'id' => $u->id,
                     'name' => $u->name,
-                    'email' => $u->email,
+                    // Most accounts sign up by phone OTP and only have a placeholder email.
+                    'email' => $u->contactEmail(),
+                    'phone' => $u->phone,
                     'role' => $u->role->value,
                     'suspended' => $u->suspended_at !== null,
                     'created_at' => $u->created_at?->diffForHumans(),

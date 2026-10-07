@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Escrow;
 use App\Models\JobApplication;
 use App\Services\EscrowService;
+use App\Services\PayoutService;
 use App\Services\RazorpayService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,8 +19,7 @@ class EscrowController extends Controller
     public function __construct(
         private EscrowService $escrows,
         private RazorpayService $razorpay,
-    ) {
-    }
+    ) {}
 
     /**
      * Employer funds an escrow for an accepted application: create the escrow
@@ -34,6 +34,12 @@ class EscrowController extends Controller
 
         if (! $this->razorpay->configured()) {
             return back()->with('error', __('Payments are not configured yet.'));
+        }
+
+        // Without RazorpayX payouts the money could come in but never reach
+        // the worker, so escrow stays closed until payouts are set up.
+        if (! app(PayoutService::class)->configured()) {
+            return back()->with('error', __('Escrow payments are not available yet.'));
         }
 
         $data = $request->validate([

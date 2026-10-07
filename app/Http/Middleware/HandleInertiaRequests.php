@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Support\Chat;
 use App\Support\Verification;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -39,6 +40,8 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+
+        $this->forwardSessionToasts($request);
 
         return [
             ...parent::share($request),
@@ -82,5 +85,31 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * Controllers flash toasts the Laravel way (`->with('toast', [...])`, and
+     * a few `->with('success'|'error', '...')`), but Inertia only sends the
+     * page what went through Inertia::flash(). Without this those messages,
+     * "Invalid coupon code." among them, never reached the screen.
+     */
+    private function forwardSessionToasts(Request $request): void
+    {
+        if (! $request->hasSession()) {
+            return;
+        }
+
+        $session = $request->session();
+
+        $toast = match (true) {
+            is_array($session->get('toast')) => $session->get('toast'),
+            is_string($session->get('error')) => ['type' => 'error', 'message' => $session->get('error')],
+            is_string($session->get('success')) => ['type' => 'success', 'message' => $session->get('success')],
+            default => null,
+        };
+
+        if ($toast !== null && ! isset(Inertia::getFlashed($request)['toast'])) {
+            Inertia::flash('toast', $toast);
+        }
     }
 }

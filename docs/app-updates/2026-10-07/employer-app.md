@@ -1,6 +1,6 @@
-# Super Karigar **Employer app**: an invoice for every payment, and the invoice email
+# Super Karigar **Employer app**: changes of 7 Oct 2026
 
-Server changes from 7 Oct 2026. Full reference: `docs/employer-app-api.md` §13 ·
+An invoice for every payment, the invoice email, worker emails, and the launch checks (app update, maintenance). Full reference: `docs/employer-app-api.md` §13 ·
 Postman: `docs/karigar-employer-app.postman_collection.json`.
 
 ## What changed on the server
@@ -22,6 +22,7 @@ Postman: `docs/karigar-employer-app.postman_collection.json`.
 | 2 | When `billing_email` on `GET /employer/plans` is `null`, ask "Email for your GST invoice" on the plan sheet and send it as `email` with subscribe. | `POST /employer/plans/{plan}/subscribe` | **Must** |
 | 3 | Invoice list: there can be several invoices per plan now. Show "Renewal" when `cycle > 1`. | `GET /employer/plans` → `invoices[]` | Should |
 | 4 | Profile: show/edit `email` (it now comes back on the profile and is saved by `PUT /employer/profile`). | `GET/PUT /employer/profile` | Should |
+| 5 | A worker's `email` can now be `null` (phone-OTP sign-ups have no real address). Hide the email row instead of showing an empty one. | applicants, contacts, Find Karigars | Should |
 
 ### 1. Invoice ids
 ```jsonc
@@ -48,9 +49,22 @@ when it is invalid or already used by another account. It stays optional on the
 API so older app builds keep working, but without it a phone-OTP employer gets
 no invoice email (the invoice is still in the app).
 
+### 5. Worker email can be `null`
+A worker who signed up with phone OTP has no real email. The server used to send
+their placeholder `9876543210@phone.karigar`; it now sends `null`. This applies
+wherever a worker's `email` appears: applicants (once unlocked), saved contacts
+and the Find Karigars profile. The phone number is unchanged.
+
 ## Test checklist
 - [ ] Invoice list opens each invoice by its own id (old and new numbers)
 - [ ] Plan sheet asks for an email when `billing_email` is null; checkout works with and without it
 - [ ] A taken email shows the server's message
 - [ ] Renewal invoices show as "Renewal"
 - [ ] Profile shows and saves `email`
+- [ ] Workers without an email show no email row (no `@phone.karigar`)
+
+---
+
+## 6. App update, maintenance, Terms & Policy, Help & Support
+
+See **[app-update-maintenance-legal-support-apis.md](app-update-maintenance-legal-support-apis.md)** for the 4 APIs: app update, maintenance, Terms & Policy, Help & Support.

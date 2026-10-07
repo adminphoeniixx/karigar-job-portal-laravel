@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\AppStatusController;
 use App\Http\Controllers\Api\Auth\OtpAuthController;
 use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\ChatController;
@@ -35,6 +36,7 @@ use App\Http\Controllers\Api\Worker\ProfileController;
 use App\Http\Controllers\Api\Worker\ResumeController as WorkerResumeController;
 use App\Http\Controllers\Api\Worker\ReviewController;
 use App\Http\Controllers\Api\Worker\SavedJobController;
+use App\Http\Middleware\BlockAppsDuringMaintenance;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,7 +47,11 @@ use Illuminate\Support\Facades\Route;
 | `auth:sanctum` + `role:worker`. OTP + reference data are public.
 */
 
-Route::prefix('v1')->group(function () {
+Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(function () {
+
+    // ---- Public: launch checks, answered even during maintenance ----
+    Route::get('app/update', [AppStatusController::class, 'update'])->name('api.app.update');
+    Route::get('app/maintenance', [AppStatusController::class, 'maintenance'])->name('api.app.maintenance');
 
     // ---- Public: OTP auth ----
     Route::prefix('auth')->group(function () {

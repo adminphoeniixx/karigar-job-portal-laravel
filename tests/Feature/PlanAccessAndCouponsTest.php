@@ -55,28 +55,28 @@ it('computes a flat discount and never exceeds the price', function () {
 });
 
 it('rejects an inactive, expired, or not-yet-started coupon', function () {
-    $inactive = Coupon::create(['code' => 'OFF', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'is_active' => false]);
+    $inactive = Coupon::create(['code' => 'OFF', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'razorpay_offer_id' => 'offer_test', 'is_active' => false]);
     expect($inactive->reasonInvalidFor($this->employer, $this->plan, 1000))->not->toBeNull();
 
-    $expired = Coupon::create(['code' => 'OLD', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'is_active' => true, 'expires_at' => now()->subDay()]);
+    $expired = Coupon::create(['code' => 'OLD', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'razorpay_offer_id' => 'offer_test', 'is_active' => true, 'expires_at' => now()->subDay()]);
     expect($expired->reasonInvalidFor($this->employer, $this->plan, 1000))->not->toBeNull();
 
-    $future = Coupon::create(['code' => 'SOON', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'is_active' => true, 'starts_at' => now()->addDay()]);
+    $future = Coupon::create(['code' => 'SOON', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'razorpay_offer_id' => 'offer_test', 'is_active' => true, 'starts_at' => now()->addDay()]);
     expect($future->reasonInvalidFor($this->employer, $this->plan, 1000))->not->toBeNull();
 });
 
 it('enforces plan eligibility, minimum amount, and usage limits', function () {
     $other = Plan::create(['name' => 'Basic', 'slug' => 'basic', 'price' => 500, 'interval' => 'monthly', 'features' => [], 'is_active' => true]);
 
-    $planLimited = Coupon::create(['code' => 'PROONLY', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'is_active' => true, 'plan_ids' => [$this->plan->id]]);
+    $planLimited = Coupon::create(['code' => 'PROONLY', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'razorpay_offer_id' => 'offer_test', 'is_active' => true, 'plan_ids' => [$this->plan->id]]);
     expect($planLimited->reasonInvalidFor($this->employer, $this->plan, 1000))->toBeNull();
     expect($planLimited->reasonInvalidFor($this->employer, $other, 500))->not->toBeNull();
 
-    $minAmount = Coupon::create(['code' => 'MIN', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'is_active' => true, 'min_amount' => 800]);
+    $minAmount = Coupon::create(['code' => 'MIN', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'razorpay_offer_id' => 'offer_test', 'is_active' => true, 'min_amount' => 800]);
     expect($minAmount->reasonInvalidFor($this->employer, $this->plan, 1000))->toBeNull();
     expect($minAmount->reasonInvalidFor($this->employer, $other, 500))->not->toBeNull();
 
-    $used = Coupon::create(['code' => 'MAXED', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'is_active' => true, 'max_redemptions' => 1, 'redeemed_count' => 1]);
+    $used = Coupon::create(['code' => 'MAXED', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'razorpay_offer_id' => 'offer_test', 'is_active' => true, 'max_redemptions' => 1, 'redeemed_count' => 1]);
     expect($used->reasonInvalidFor($this->employer, $this->plan, 1000))->not->toBeNull();
 });
 
@@ -86,7 +86,7 @@ it('lets an admin create, update, and delete a coupon', function () {
     $this->actingAs($this->admin)
         ->post('/admin/coupons', [
             'code' => 'welcome20', 'discount_type' => 'percent', 'discount_value' => 20,
-            'per_user_limit' => 1, 'is_active' => true,
+            'razorpay_offer_id' => 'offer_Welcome20', 'per_user_limit' => 1, 'is_active' => true,
         ])->assertRedirect();
 
     $coupon = Coupon::first();
@@ -94,7 +94,7 @@ it('lets an admin create, update, and delete a coupon', function () {
 
     $this->actingAs($this->admin)->patch("/admin/coupons/{$coupon->id}", [
         'code' => 'WELCOME20', 'discount_type' => 'percent', 'discount_value' => 30,
-        'per_user_limit' => 2, 'is_active' => true,
+        'razorpay_offer_id' => 'offer_Welcome20', 'per_user_limit' => 2, 'is_active' => true,
     ])->assertRedirect();
     expect($coupon->fresh()->discount_value)->toBe('30.00');
 
@@ -103,7 +103,7 @@ it('lets an admin create, update, and delete a coupon', function () {
 });
 
 it('previews a valid coupon on the pricing page for an employer', function () {
-    Coupon::create(['code' => 'SAVE10', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'is_active' => true]);
+    Coupon::create(['code' => 'SAVE10', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'razorpay_offer_id' => 'offer_test', 'is_active' => true]);
 
     $this->actingAs($this->employer)
         ->get('/subscription?coupon=save10')
@@ -111,6 +111,19 @@ it('previews a valid coupon on the pricing page for an employer', function () {
             ->where('couponResult.valid', true)
             ->where('couponResult.code', 'SAVE10')
         );
+});
+
+it('refuses a coupon with no Razorpay offer, which could not lower the charge', function () {
+    $this->actingAs($this->admin)
+        ->post('/admin/coupons', ['code' => 'NOOFFER', 'discount_type' => 'percent', 'discount_value' => 20, 'per_user_limit' => 1, 'is_active' => true])
+        ->assertSessionHasErrors('razorpay_offer_id');
+
+    // One saved before the rule existed is not offered at checkout.
+    Coupon::create(['code' => 'OLDNOOFFER', 'discount_type' => DiscountType::Percent, 'discount_value' => 10, 'is_active' => true]);
+
+    $this->actingAs($this->employer)
+        ->get('/subscription?coupon=OLDNOOFFER')
+        ->assertInertia(fn ($page) => $page->where('couponResult.valid', false));
 });
 
 it('flags an unknown coupon as invalid', function () {
