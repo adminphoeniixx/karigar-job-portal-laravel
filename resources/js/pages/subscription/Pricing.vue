@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { AlertTriangle, Check, CreditCard, FileText, Mail, Sparkles, Tag, X } from '@lucide/vue';
+import { AlertTriangle, Check, CreditCard, Download, Mail, Receipt, Sparkles, Tag, X } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -27,27 +27,63 @@ interface CouponResult {
     plan_ids?: number[];
 }
 
-interface InvoiceRow {
-    id: number;
+interface OrderPayment {
+    invoice_id: number;
     invoice_number: string;
-    plan: string;
+    cycle: number;
     renewal: boolean;
-    total: string | null;
-    date: string | null;
+    amount: number;
+    paid_label: string;
+    period_label: string | null;
+    web_url: string;
+    web_pdf_url: string;
+}
+
+type PaymentStatus = 'paid' | 'pending' | 'not_completed' | 'renewal_failed';
+type PlanStatus = 'active' | 'expired' | 'cancelled' | 'completed' | 'none';
+
+interface Order {
+    id: number;
+    order_number: string;
+    plan: string | null;
+    plan_type: string | null;
+    ordered_label: string | null;
+    amount: number;
+    discount: number;
+    coupon: string | null;
+    payment_status: PaymentStatus;
+    plan_status: PlanStatus;
+    period_label: string | null;
+    total_paid: number;
+    payments: OrderPayment[];
 }
 
 const props = defineProps<{
     plans: Plan[];
-    current: { id: number; status: string; plan: Plan } | null;
-    currentDatabase: { id: number; status: string; plan: Plan } | null;
+    current: { id: number; status: string; ends_at: string | null; plan: Plan } | null;
+    currentDatabase: { id: number; status: string; ends_at: string | null; plan: Plan } | null;
     razorpayConfigured: boolean;
     couponResult: CouponResult | null;
     gstPercent: number;
-    invoices: InvoiceRow[];
+    orders: Order[];
     billingEmail: string | null;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Subscription', href: '/subscription' }] } });
+
+const paymentPill: Record<PaymentStatus, string> = {
+    paid: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-300',
+    pending: 'bg-amber-500/10 text-amber-700 ring-amber-500/20 dark:text-amber-300',
+    not_completed: 'bg-rose-500/10 text-rose-700 ring-rose-500/20 dark:text-rose-300',
+    renewal_failed: 'bg-rose-500/10 text-rose-700 ring-rose-500/20 dark:text-rose-300',
+};
+const planPill: Record<PlanStatus, string> = {
+    active: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-300',
+    expired: 'bg-muted text-muted-foreground ring-border',
+    cancelled: 'bg-muted text-muted-foreground ring-border',
+    completed: 'bg-muted text-muted-foreground ring-border',
+    none: '',
+};
 
 // "Buy Database" on the dashboard lands here with #database.
 onMounted(() => {
@@ -65,6 +101,12 @@ const sections = computed(() =>
 );
 
 const isCurrent = (plan: Plan) => props.current?.plan.id === plan.id || props.currentDatabase?.plan.id === plan.id;
+// "Active till 06 Nov 2026" under a plan that is already bought.
+const activeTill = (plan: Plan): string | null => {
+    const sub = props.current?.plan.id === plan.id ? props.current : props.currentDatabase?.plan.id === plan.id ? props.currentDatabase : null;
+
+    return sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : null;
+};
 
 // ── Plan details popup ──────────────────────────────────────────────
 const selected = ref<Plan | null>(null);
@@ -219,27 +261,70 @@ const subscribe = () => {
                         :disabled="isCurrent(plan)"
                         @click="openPlan(plan)"
                     >
-                        {{ isCurrent(plan) ? $t('subscription.currentPlan') : $t('subscription.viewDetails') }}
+                        <span v-if="isCurrent(plan)" class="inline-flex items-center gap-1.5"><Check class="size-4" /> {{ $t('subscription.alreadyPurchased') }}</span>
+                        <template v-else>{{ $t('subscription.viewDetails') }}</template>
                     </button>
+                    <p v-if="isCurrent(plan) && activeTill(plan)" class="mt-2 text-center text-xs text-muted-foreground">
+                        {{ $t('subscription.activeTill') }} {{ activeTill(plan) }}
+                    </p>
                 </div>
             </div>
         </section>
-        <!-- Tax invoices -->
-        <div v-if="invoices.length" class="rounded-2xl border bg-card shadow-sm">
-            <div class="border-b px-6 py-4">
-                <h2 class="flex items-center gap-2 text-sm font-semibold"><FileText class="size-4 text-orange-500" /> {{ $t('subscription.taxInvoices') }}</h2>
+        <!-- Order history: every checkout, paid or not, with its invoices. -->
+        <div v-if="orders.length" id="orders" class="rounded-2xl border bg-card shadow-sm">
+            <div class="border-b px-5 py-4 sm:px-6">
+                <h2 class="flex items-center gap-2 text-sm font-semibold"><Receipt class="size-4 text-orange-500" /> {{ $t('subscription.orderHistory') }}</h2>
+                <p class="mt-0.5 text-xs text-muted-foreground">{{ $t('subscription.orderHistoryHint') }}</p>
             </div>
             <div class="divide-y">
-                <div v-for="inv in invoices" :key="inv.id" class="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 text-sm">
-                    <div>
-                        <div class="font-semibold">{{ inv.invoice_number }}</div>
-                        <div class="text-xs text-muted-foreground">
-                            {{ inv.plan }} plan<template v-if="inv.renewal"> · {{ $t('subscription.renewal') }}</template> · {{ inv.date }}
+                <div v-for="order in orders" :key="order.id" class="px-5 py-4 text-sm sm:px-6">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-semibold">{{ order.plan }}</span>
+                                <span class="text-xs text-muted-foreground">{{ order.plan_type === 'database' ? $t('subscription.databasePlan') : $t('subscription.jobPlan') }}</span>
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset" :class="paymentPill[order.payment_status]">
+                                    {{ $t(`subscription.payment_${order.payment_status}`) }}
+                                </span>
+                                <span v-if="order.plan_status !== 'none'" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset" :class="planPill[order.plan_status]">
+                                    {{ $t(`subscription.plan_${order.plan_status}`) }}
+                                </span>
+                            </div>
+                            <div class="mt-1 text-xs text-muted-foreground">
+                                {{ order.order_number }} · {{ order.ordered_label }}
+                                <template v-if="order.period_label"> · {{ order.period_label }}</template>
+                                <template v-if="order.coupon"> · {{ $t('subscription.couponCode') }} {{ order.coupon }}</template>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold tabular-nums">{{ money(order.payment_status === 'paid' ? order.total_paid : order.amount) }}</div>
+                            <div v-if="order.payments.length > 1" class="text-[11px] text-muted-foreground">{{ order.payments.length }} {{ $t('subscription.payments') }}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <span class="font-bold tabular-nums">{{ money(Number(inv.total)) }}</span>
-                        <Link :href="`/invoices/${inv.id}`" class="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">{{ $t('subscription.viewInvoice') }}</Link>
+
+                    <p v-if="order.payment_status === 'not_completed'" class="mt-2 text-xs text-muted-foreground">{{ $t('subscription.notCompletedHint') }}</p>
+                    <p v-else-if="order.payment_status === 'pending'" class="mt-2 text-xs text-muted-foreground">{{ $t('subscription.pendingHint') }}</p>
+                    <p v-else-if="order.payment_status === 'renewal_failed'" class="mt-2 text-xs text-rose-600 dark:text-rose-400">{{ $t('subscription.renewalFailedHint') }}</p>
+
+                    <!-- Each payment on the order, with its tax invoice. -->
+                    <div v-if="order.payments.length" class="mt-3 divide-y rounded-xl border bg-muted/20">
+                        <div v-for="pay in order.payments" :key="pay.invoice_id" class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
+                            <div class="min-w-0">
+                                <div class="text-xs font-semibold">
+                                    {{ pay.renewal ? $t('subscription.renewal') : $t('subscription.firstPayment') }} · {{ pay.paid_label }}
+                                </div>
+                                <div class="text-[11px] text-muted-foreground">
+                                    {{ pay.invoice_number }}<template v-if="pay.period_label"> · {{ pay.period_label }}</template>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-semibold tabular-nums">{{ money(pay.amount) }}</span>
+                                <Link :href="pay.web_url" class="text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">{{ $t('subscription.viewInvoice') }}</Link>
+                                <a :href="pay.web_pdf_url" class="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">
+                                    <Download class="size-3.5" /> PDF
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

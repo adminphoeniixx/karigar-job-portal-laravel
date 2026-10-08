@@ -11,7 +11,7 @@ apps can get its own file in the folder, linked from both.
 
 | Date | Employer app | Worker app |
 |---|---|---|
-| [2026-10-07](2026-10-07/) | [Invoice per payment, invoice email, worker email `null`, app update + maintenance](2026-10-07/employer-app.md) | [App update + maintenance; Terms & Help endpoints](2026-10-07/worker-app.md) · both apps: [4 APIs](2026-10-07/app-update-maintenance-legal-support-apis.md) |
+| [2026-10-07](2026-10-07/) | [Invoice per payment, invoice email, worker email `null`, app update + maintenance](2026-10-07/employer-app.md) · [Order history + already-purchased plans](2026-10-07/employer-app-orders.md) | [App update + maintenance; Terms & Help endpoints](2026-10-07/worker-app.md) · both apps: [4 APIs](2026-10-07/app-update-maintenance-legal-support-apis.md) |
 
 Older handover notes, from before this folder existed, are the
 `employer-app-*.md` and `worker-app-*.md` files in `docs/`.

@@ -19,6 +19,24 @@ class SubscriptionCheckout
 {
     public function __construct(private RazorpayService $razorpay) {}
 
+    /**
+     * The running subscription when the account already holds this exact
+     * plan: buying it again would only pay twice for the same period.
+     */
+    public static function alreadyOwned(User $account, Plan $plan): ?Subscription
+    {
+        $active = $account->activeSubscription($plan->type ?? Plan::TYPE_JOB);
+
+        return $active?->plan_id === $plan->id ? $active : null;
+    }
+
+    public static function alreadyOwnedMessage(Subscription $active): string
+    {
+        return $active->ends_at
+            ? __('You already have this plan, active till :date.', ['date' => $active->ends_at->timezone(config('app.display_timezone'))->format('d M Y')])
+            : __('You already have this plan.');
+    }
+
     public function start(User $account, Plan $plan, ?Coupon $coupon = null, float $discount = 0.0): Subscription
     {
         // The Razorpay plan is what actually gets charged, so it must carry

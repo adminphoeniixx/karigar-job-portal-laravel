@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coupon;
-use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Billing\Gst;
+use App\Services\Billing\OrderHistory;
 use App\Services\Billing\SubscriptionCheckout;
 use App\Services\RazorpayService;
 use Illuminate\Http\RedirectResponse;
@@ -29,19 +29,8 @@ class SubscriptionController extends Controller
             'currentDatabase' => $request->user()->activeSubscription(Plan::TYPE_DATABASE)?->load('plan'),
             'razorpayConfigured' => app(RazorpayService::class)->configured(),
             'gstPercent' => Gst::percent(),
-            // One tax invoice per payment, renewals included.
-            'invoices' => $request->user()->invoices()
-                ->latest('issued_at')
-                ->latest('id')
-                ->get()
-                ->map(fn (Invoice $invoice) => [
-                    'id' => $invoice->id,
-                    'invoice_number' => $invoice->number,
-                    'plan' => $invoice->plan_name,
-                    'renewal' => $invoice->cycle > 1,
-                    'total' => $invoice->total_amount,
-                    'date' => $invoice->issued_at->timezone(config('app.display_timezone'))->format('d M Y'),
-                ]),
+            // Every checkout, paid or not, with its payments and invoices.
+            'orders' => OrderHistory::for($request->user()->employerAccount()),
             // Where the invoice email goes; the checkout asks for one when null.
             'billingEmail' => $request->user()->contactEmail(),
             // Partial-reloaded when the employer applies a coupon (?coupon=CODE).
@@ -56,6 +45,10 @@ class SubscriptionController extends Controller
                 'type' => 'error',
                 'message' => __('Payments are not configured yet. Please try again later.'),
             ]);
+        }
+
+        if ($active = SubscriptionCheckout::alreadyOwned($request->user()->employerAccount(), $plan)) {
+            return back()->with('toast', ['type' => 'error', 'message' => SubscriptionCheckout::alreadyOwnedMessage($active)]);
         }
 
         $data = $request->validate([

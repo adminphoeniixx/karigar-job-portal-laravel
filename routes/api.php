@@ -236,6 +236,7 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
 
             // Plans — catalogue (job + database plans), Razorpay checkout hand-off
             Route::get('employer/plans', [BillingController::class, 'index'])->name('api.employer.plans');
+            Route::get('employer/orders', [BillingController::class, 'orders'])->name('api.employer.orders');
             Route::post('employer/plans/callback', [BillingController::class, 'callback'])->name('api.employer.plans.callback');
             Route::post('employer/plans/{plan}/subscribe', [BillingController::class, 'subscribe'])->name('api.employer.plans.subscribe');
             Route::get('employer/invoices/{invoice}', [EmployerInvoiceController::class, 'show'])->name('api.employer.invoices.show');

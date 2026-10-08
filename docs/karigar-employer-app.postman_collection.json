@@ -2494,6 +2494,35 @@
           }
         },
         {
+          "name": "Order history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "orders"
+              ]
+            },
+            "description": "Every plan checkout, paid or not, with its payments and invoice PDFs. payment_status: paid | pending | not_completed | renewal_failed."
+          }
+        },
+        {
           "name": "Subscribe to plan",
           "request": {
             "method": "POST",

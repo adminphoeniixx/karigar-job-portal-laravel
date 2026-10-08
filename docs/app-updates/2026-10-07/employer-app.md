@@ -68,3 +68,11 @@ and the Find Karigars profile. The phone number is unchanged.
 ## 6. App update, maintenance, Terms & Policy, Help & Support
 
 See **[app-update-maintenance-legal-support-apis.md](app-update-maintenance-legal-support-apis.md)** for the 4 APIs: app update, maintenance, Terms & Policy, Help & Support.
+
+## 7. Order history and "already purchased" plans
+
+`GET /employer/orders` (every checkout, paid or not, with invoice PDFs), four
+new fields on each plan in `GET /employer/plans` to disable a plan already
+bought, and a new `422 already_subscribed` on subscribe. Full details:
+[employer-app-orders.md](employer-app-orders.md).
+

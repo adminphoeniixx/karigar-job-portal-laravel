@@ -67,18 +67,18 @@ const withdraw = (id: number) => {
                 <table class="w-full text-sm">
                     <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
-                            <th class="px-5 py-3 font-medium">{{ $t('applications.job') }}</th>
+                            <th class="px-3 py-3 font-medium sm:px-5">{{ $t('applications.job') }}</th>
                             <!-- On a phone these two fold under the job, so the status stays in view. -->
                             <th class="hidden px-5 py-3 font-medium sm:table-cell">{{ $t('applications.employer') }}</th>
                             <th class="hidden px-5 py-3 font-medium sm:table-cell">{{ $t('applications.applied') }}</th>
-                            <th class="px-5 py-3 font-medium">{{ $t('kyc.status') }}</th>
+                            <th class="hidden px-5 py-3 font-medium sm:table-cell">{{ $t('kyc.status') }}</th>
                             <th class="px-5 py-3 text-right font-medium">{{ $t('common.actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <template v-for="a in applications.data" :key="a.id">
                         <tr class="border-t transition hover:bg-muted/30">
-                            <td class="px-5 py-3.5">
+                            <td class="px-3 py-3.5 sm:px-5">
                                 <Link :href="`/jobs/${a.job.id}`" class="font-medium hover:text-orange-600 dark:hover:text-orange-300">{{ a.job.title }}</Link>
                                 <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                                     <span class="inline-flex items-center gap-1"><MapPin class="size-3" /> {{ [a.job.city, a.job.state].filter(Boolean).join(', ') || '—' }}</span>
@@ -86,10 +86,26 @@ const withdraw = (id: number) => {
                                     <span v-if="a.job.expires_at" class="font-medium text-rose-500 dark:text-rose-400">{{ $t('jobs.expires') }} {{ fmtDate(a.job.expires_at) }}</span>
                                     <span class="sm:hidden">{{ a.job.employer.name }} · {{ $t('applications.applied') }} {{ fmtDate(a.created_at) }}</span>
                                 </div>
+                                <!-- Phones: the status sits under the job instead of in its own column. -->
+                                <div class="mt-2 flex items-center gap-1.5 sm:hidden">
+                                    <span
+                                    v-if="a.shortlisted_at && a.status === 'pending'"
+                                    class="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300"
+                                >
+                                    <Star class="size-3" fill="currentColor" /> {{ $t('applications.shortlisted') }}
+                                </span>
+                                <span
+                                    v-else
+                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset"
+                                    :class="statusPill[a.status]"
+                                >
+                                    {{ $t(`status.${a.status}`) }}
+                                </span>
+                                </div>
                             </td>
                             <td class="hidden px-5 py-3.5 text-muted-foreground sm:table-cell">{{ a.job.employer.name }}</td>
                             <td class="hidden px-5 py-3.5 whitespace-nowrap text-muted-foreground sm:table-cell">{{ fmtDate(a.created_at) }}</td>
-                            <td class="px-5 py-3.5">
+                            <td class="hidden px-5 py-3.5 sm:table-cell">
                                 <!-- One pill: "Shortlisted" while the employer decides, then the decision itself. -->
                                 <div class="flex items-center gap-1.5">
                                     <span

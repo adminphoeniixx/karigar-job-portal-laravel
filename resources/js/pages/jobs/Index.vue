@@ -134,19 +134,19 @@ const destroy = (id: number) => {
                 <table class="w-full text-sm">
                     <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
-                            <th class="px-5 py-3 font-medium">{{ $t('myJobs.titleCol') }}</th>
-                            <th class="px-5 py-3 font-medium">{{ $t('common.location') }}</th>
+                            <th class="px-3 py-3 font-medium sm:px-5">{{ $t('myJobs.titleCol') }}</th>
+                            <th class="hidden px-5 py-3 font-medium sm:table-cell">{{ $t('common.location') }}</th>
                             <th class="px-5 py-3 font-medium">{{ $t('jobs.applicants') }}</th>
-                            <th class="px-5 py-3 font-medium">{{ $t('jobs.posted') }}</th>
-                            <th class="px-5 py-3 font-medium">{{ $t('jobs.expires') }}</th>
+                            <th class="hidden px-5 py-3 font-medium md:table-cell">{{ $t('jobs.posted') }}</th>
+                            <th class="hidden px-5 py-3 font-medium md:table-cell">{{ $t('jobs.expires') }}</th>
                             <th class="px-5 py-3 font-medium">{{ $t('kyc.status') }}</th>
                             <th class="px-5 py-3 text-right font-medium">{{ $t('common.actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="job in jobs.data" :key="job.id" class="border-t transition hover:bg-muted/30">
-                            <td class="px-5 py-3.5">
-                                <div class="flex items-center gap-1.5 font-medium">
+                            <td class="min-w-40 px-3 py-3.5 sm:px-5">
+                                <div class="flex flex-wrap items-center gap-1.5 font-medium">
                                     {{ job.title }}
                                     <span
                                         v-if="job.contact_mode !== 'apply'"
@@ -157,8 +157,15 @@ const destroy = (id: number) => {
                                     </span>
                                 </div>
                                 <div class="text-xs text-muted-foreground"><Users class="mr-0.5 inline size-3" /> {{ $t('jobs.vacancies') }}: {{ job.vacancies }}</div>
+                                <!-- Phones: location and dates under the title instead of their own columns. -->
+                                <div class="mt-0.5 text-xs text-muted-foreground sm:hidden">
+                                    <MapPin class="mr-0.5 inline size-3" /> {{ [job.city, job.state].filter(Boolean).join(', ') || '—' }}
+                                </div>
+                                <div class="mt-0.5 text-xs md:hidden" :class="isExpired(job) ? 'font-medium text-rose-600 dark:text-rose-400' : 'text-muted-foreground'">
+                                    {{ $t('jobs.posted') }} {{ fmtDate(job.created_at) }} · {{ $t('jobs.expires') }} {{ fmtDate(job.expires_at) }}
+                                </div>
                             </td>
-                            <td class="px-5 py-3.5 text-muted-foreground">
+                            <td class="hidden px-5 py-3.5 text-muted-foreground sm:table-cell">
                                 <span class="inline-flex items-center gap-1">
                                     <MapPin class="size-3.5" />
                                     {{ [job.city, job.state].filter(Boolean).join(', ') || '—' }}
@@ -169,10 +176,10 @@ const destroy = (id: number) => {
                                     <UsersRound class="size-3.5 text-orange-500" /> {{ job.applications_count }}
                                 </span>
                             </td>
-                            <td class="px-5 py-3.5 whitespace-nowrap text-muted-foreground">
+                            <td class="hidden px-5 py-3.5 whitespace-nowrap text-muted-foreground md:table-cell">
                                 <span class="inline-flex items-center gap-1"><CalendarDays class="size-3.5" /> {{ fmtDate(job.created_at) }}</span>
                             </td>
-                            <td class="px-5 py-3.5 whitespace-nowrap" :class="isExpired(job) ? 'font-medium text-rose-600 dark:text-rose-400' : 'text-muted-foreground'">
+                            <td class="hidden px-5 py-3.5 whitespace-nowrap md:table-cell" :class="isExpired(job) ? 'font-medium text-rose-600 dark:text-rose-400' : 'text-muted-foreground'">
                                 {{ fmtDate(job.expires_at) }}
                             </td>
                             <td class="px-5 py-3.5">

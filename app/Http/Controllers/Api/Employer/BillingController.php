@@ -7,7 +7,9 @@ use App\Models\Coupon;
 use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\User;
 use App\Services\Billing\Gst;
+use App\Services\Billing\OrderHistory;
 use App\Services\Billing\SubscriptionCheckout;
 use App\Services\ContactUnlocks;
 use App\Services\JobPostingGate;
@@ -60,6 +62,9 @@ class BillingController extends Controller
                 'is_current' => in_array($plan->id, [$current?->plan_id, $currentDatabase?->plan_id], true),
                 // Razorpay plans are created on demand at checkout now.
                 'purchasable' => $razorpay->configured(),
+                // Already bought and running: show the button disabled with
+                // `purchase_note`; subscribing to it again answers 422.
+                ...$this->ownership($account, $plan, $razorpay),
             ]),
             'current' => $current ? [
                 'id' => $current->id,
@@ -110,6 +115,17 @@ class BillingController extends Controller
     }
 
     /**
+     * Order history: every plan checkout, paid or not, newest first, with the
+     * payments made on it and their tax invoices.
+     */
+    public function orders(Request $request): JsonResponse
+    {
+        return response()->json([
+            'orders' => OrderHistory::for($request->user()->employerAccount(), api: true),
+        ]);
+    }
+
+    /**
      * Start a subscription: creates the Razorpay subscription and returns the
      * ids the app hands to the Razorpay checkout SDK.
      */
@@ -127,6 +143,13 @@ class BillingController extends Controller
         // `email`: where the GST invoice goes. Optional here so older app
         // builds keep working; without it a phone-OTP employer gets no
         // invoice email (see `billing_email` on GET /employer/plans).
+        if ($active = SubscriptionCheckout::alreadyOwned($account, $plan)) {
+            return response()->json([
+                'message' => SubscriptionCheckout::alreadyOwnedMessage($active),
+                'code' => 'already_subscribed',
+            ], 422);
+        }
+
         $data = $request->validate([
             'coupon' => ['nullable', 'string', 'max:60'],
             'email' => SubscriptionCheckout::emailRules($account),
@@ -197,6 +220,21 @@ class BillingController extends Controller
             'unlocks' => ContactUnlocks::for($account)->summary(),
             'database' => ContactUnlocks::for($account)->database(),
         ]);
+    }
+
+    /**
+     * @return array{already_purchased: bool, can_purchase: bool, active_until: ?string, purchase_note: ?string}
+     */
+    private function ownership(User $account, Plan $plan, RazorpayService $razorpay): array
+    {
+        $active = SubscriptionCheckout::alreadyOwned($account, $plan);
+
+        return [
+            'already_purchased' => $active !== null,
+            'can_purchase' => $active === null && $razorpay->configured(),
+            'active_until' => $active?->ends_at?->toIso8601String(),
+            'purchase_note' => $active ? SubscriptionCheckout::alreadyOwnedMessage($active) : null,
+        ];
     }
 
     /**

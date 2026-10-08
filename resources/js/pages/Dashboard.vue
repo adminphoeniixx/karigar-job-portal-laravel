@@ -301,12 +301,13 @@ const profileHref = computed(
                     <table class="w-full text-sm">
                         <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                             <tr>
-                                <th v-for="col in table.columns" :key="col" class="px-5 py-3 font-medium">{{ tr(col) }}</th>
+                                <!-- Phones show the first three columns; the rest from sm up. -->
+                                <th v-for="(col, j) in table.columns" :key="col" class="px-3 py-3 font-medium sm:px-5" :class="j > 2 ? 'hidden sm:table-cell' : ''">{{ tr(col) }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="(row, i) in table.rows" :key="i" class="border-t transition hover:bg-muted/40">
-                                <td v-for="(cell, j) in row" :key="j" class="px-5 py-3.5" :class="j === 0 ? 'font-medium' : 'text-muted-foreground'">
+                                <td v-for="(cell, j) in row" :key="j" class="px-3 py-3.5 sm:px-5" :class="[j === 0 ? 'font-medium' : 'text-muted-foreground', j > 2 ? 'hidden sm:table-cell' : '']">
                                     {{ cell }}
                                 </td>
                             </tr>

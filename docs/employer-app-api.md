@@ -881,7 +881,9 @@ unlocked across cycles and never costs again.
   "unlocks": { ...UnlockSummary },
   "database": { ...DatabaseCard },
   "plans": [ { "id", "name", "slug", "type", "price", "currency", "interval",
-               "features": {...}, "is_current": false, "purchasable": true } ],
+               "features": {...}, "is_current": false, "purchasable": true,
+               "already_purchased": false, "can_purchase": true,
+               "active_until": null, "purchase_note": null } ],
   "current": { "id", "plan", "status", "starts_at", "ends_at" } | null,          // job plan
   "current_database": { "id", "plan", "status", "starts_at", "ends_at" } | null, // database plan
   "job_plan_lapsed": false,
@@ -907,6 +909,28 @@ a Renew prompt. `invoices` has **one entry per payment**, renewals included
 `billing_email` is where the invoice emails go: `null` means the employer has
 no real email (phone-OTP sign-up) and gets no invoice email until they add one.
 Ask for it at checkout (`email` on subscribe) or on the profile.
+
+`can_purchase: false` disables the Buy button: the plan is already running
+(`already_purchased: true`, show `purchase_note` / `active_until`) or payments
+are not configured. Other plans stay buyable (upgrade, or a database plan next
+to a job plan).
+
+### `GET /employer/orders`
+Order history: every plan checkout, paid or not, newest first, each with its
+payments (first payment + renewals) and their tax invoices.
+```json
+{ "orders": [ { "id", "order_number": "ORD-00030", "plan", "plan_type", "interval",
+    "ordered_at", "ordered_label", "amount", "discount", "coupon",
+    "payment_status": "paid|pending|not_completed|renewal_failed", "payment_label",
+    "plan_status": "active|expired|cancelled|completed|none", "plan_label",
+    "starts_at", "ends_at", "period_label", "total_paid",
+    "payments": [ { "invoice_id", "invoice_number", "cycle", "renewal", "amount",
+                    "paid_at", "paid_label", "period_label",
+                    "invoice_url", "pdf_url", "web_url", "web_pdf_url" } ] } ] }
+```
+`not_completed` = checkout opened 30+ minutes ago and never paid; `pending` =
+opened in the last 30 minutes. `pdf_url` downloads the invoice PDF with the
+Bearer token. See `docs/app-updates/2026-10-07/employer-app-orders.md`.
 
 ### `GET /employer/invoices/{invoice}` · `GET /employer/invoices/{invoice}/pdf`
 The tax invoice as data, so the app lays it out natively (and can print or share
@@ -944,6 +968,8 @@ one `PUT /employer/profile` edits). Send it when `billing_email` is `null`.
 `422` when payments are unconfigured, the plan has no Razorpay plan id, the
 coupon is invalid/expired, or the email is taken by another account (the message
 says which).
+`422 { "code": "already_subscribed" }` when this exact plan is already running
+(the message says till when).
 
 ### `POST /employer/plans/callback`
 Verify the checkout signature and activate — issues the tax invoice and records
@@ -1070,7 +1096,7 @@ Content is English only for now.
 | GET/POST | `/employer/reviews` · `/employer/applicants/{application}/review` | 10 |
 | GET/POST/PATCH/DELETE | `/employer/team` · `/employer/team/{member}` | 11 |
 | GET/POST | `/conversations` (+ `/{id}`, `/messages`, `/read`) | 12 |
-| GET/POST | `/employer/plans` (+ `/{plan}/subscribe`, `/callback`) · `/employer/invoices/{invoice}` | 13 |
+| GET/POST | `/employer/plans` (+ `/{plan}/subscribe`, `/callback`) · `/employer/orders` · `/employer/invoices/{invoice}` | 13 |
 | GET/PUT/PATCH/DELETE | `/preferences` · `/auth/sessions` (+ `/{token}`) | 14 |
 | GET | `/legal` · `/legal/{document}` · `/support` (all public) | 15 |
 
