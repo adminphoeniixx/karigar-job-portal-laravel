@@ -12,6 +12,7 @@ use App\Notifications\ShortlistedNotification;
 use App\Services\ApplicantAccess;
 use App\Services\PayoutService;
 use App\Services\Screening\ScreeningService;
+use App\Support\ApplicantSignals;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,12 @@ class ApplicantController extends Controller
             ->with('worker:id,name,email,phone', 'worker.workerProfile', 'escrow', 'screeningCalls')
             ->when($sort === 'best_match', fn ($q) => $q->orderByRaw('ai_score DESC NULLS LAST'))
             ->latest()
-            ->get()
+            ->get();
+
+        // Distance from the job and "unlocked by N HRs", for the page at once.
+        ApplicantSignals::attach($applications, $request->user());
+
+        $applications = $applications
             ->map(fn (JobApplication $a) => [
                 'id' => $a->id,
                 'status' => $a->status->value,
@@ -89,6 +95,8 @@ class ApplicantController extends Controller
                     'skills' => $a->worker->workerProfile?->skills ?? [],
                     'city' => $a->worker->workerProfile?->city,
                     'state' => $a->worker->workerProfile?->state,
+                    ...ApplicantSignals::of($a, $request->user())['location'],
+                    'unlocked_by_count' => ApplicantSignals::of($a, $request->user())['unlocked_by_count'],
                     'experience_years' => $a->worker->workerProfile?->experience_years,
                     'email' => $a->worker->contactEmail(),
                     'phone' => $a->worker->workerProfile?->phone ?: $a->worker->phone,
@@ -215,7 +223,11 @@ class ApplicantController extends Controller
             ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->employerAccount()->id))
             ->with('worker:id,name,email,phone', 'worker.workerProfile', 'job:id,title,city,state')
             ->orderByDesc('shortlisted_at')
-            ->get()
+            ->get();
+
+        ApplicantSignals::attach($applications, $request->user());
+
+        $applications = $applications
             ->map(fn (JobApplication $a) => [
                 'id' => $a->id,
                 'status' => $a->status->value,
@@ -234,6 +246,8 @@ class ApplicantController extends Controller
                     'skills' => $a->worker->workerProfile?->skills ?? [],
                     'city' => $a->worker->workerProfile?->city,
                     'state' => $a->worker->workerProfile?->state,
+                    ...ApplicantSignals::of($a, $request->user())['location'],
+                    'unlocked_by_count' => ApplicantSignals::of($a, $request->user())['unlocked_by_count'],
                     'experience_years' => $a->worker->workerProfile?->experience_years,
                     'email' => $a->worker->contactEmail(),
                     'phone' => $a->worker->workerProfile?->phone ?: $a->worker->phone,

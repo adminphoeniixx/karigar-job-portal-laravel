@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\WorkerProfileUpdateRequest;
 use App\Services\BunnyCdn;
+use App\Services\Geocoder;
+use App\Support\KarigarArea;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -42,7 +44,8 @@ class WorkerProfileController extends Controller
     {
         $user = $request->user();
         $profile = $user->workerProfile()->firstOrCreate([]);
-        $profile->fill($request->safe()->except('avatar', 'email'));
+        $profile->fill($request->safe()->except('avatar', 'email', 'location_source'));
+        KarigarArea::apply($profile, $request->validated(), app(Geocoder::class));
 
         if ($request->filled('email')) {
             $user->email = $request->validated('email');

@@ -12,6 +12,7 @@ use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ShortlistedNotification;
 use App\Services\ApplicantAccess;
+use App\Support\ApplicantSignals;
 use App\Support\ReferenceData;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
@@ -52,6 +53,8 @@ class ApplicantController extends Controller
             ->latest()
             ->paginate(20);
 
+        ApplicantSignals::attach($applications->getCollection(), $request->user());
+
         return ApplicantResource::collection($applications)->additional([
             'counts' => $this->stageCounts($job, $access),
             'access' => $access->summary($job),
@@ -71,6 +74,8 @@ class ApplicantController extends Controller
             ->with(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title,city,state')
             ->orderByDesc('shortlisted_at')
             ->paginate(20);
+
+        ApplicantSignals::attach($applications->getCollection(), $request->user());
 
         return ApplicantResource::collection($applications);
     }

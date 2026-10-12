@@ -48,6 +48,10 @@ class WorkerProfileUpdateRequest extends FormRequest
             'state' => ['nullable', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            // The locality ("Sanganer"); employers see it with the distance.
+            'area' => ['nullable', 'string', 'max:120'],
+            // Where a new latitude/longitude came from: gps | area | city.
+            'location_source' => ['nullable', 'string', 'in:gps,area,city'],
             'available' => ['boolean'],
             'screening_calls_opted_out' => ['boolean'],
             'payout_upi' => ['nullable', 'string', 'max:100', 'regex:/^[\w.\-]{2,}@[a-zA-Z]{2,}$/'],

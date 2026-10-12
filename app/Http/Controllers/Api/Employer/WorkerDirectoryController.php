@@ -7,11 +7,13 @@ use App\Http\Resources\Api\ReviewResource;
 use App\Models\WorkerProfile;
 use App\Services\ContactList;
 use App\Services\ContactUnlocks;
-use App\Services\Geocoder;
+use App\Services\WorkerRejections;
+use App\Support\KarigarLocation;
 use App\Support\ReferenceData;
 use App\Support\Verification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Employer-facing "Find Workers" directory, powered by Typesense — the same
@@ -44,15 +46,25 @@ class WorkerDirectoryController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'radius_km' => ['nullable', 'numeric', 'min:1', 'max:500'],
+            // The "Rejected" tab: only the karigars this employer turned down.
+            'rejected' => ['nullable', 'boolean'],
         ]);
 
         // "Nearest" and the radius filter measure from the employer's own
         // location when the app sent no point.
-        $point = $this->origin($request, $filters);
+        $point = KarigarLocation::employerOrigin(
+            $request->user(),
+            isset($filters['latitude'], $filters['longitude']) ? [(float) $filters['latitude'], (float) $filters['longitude']] : null,
+        );
         $search = $point === null ? $filters : ['latitude' => $point[0], 'longitude' => $point[1]] + $filters;
 
+        // Rejected karigars leave the list (so the next ones move up into the
+        // plan's reach) and wait under the "Rejected" tab.
+        $rejections = WorkerRejections::for($request->user());
+        $onlyRejected = (bool) ($filters['rejected'] ?? false);
+
         $options = array_filter([
-            'filter_by' => $this->buildFilterBy($search),
+            'filter_by' => collect([$this->buildFilterBy($search), $rejections->searchFilter($onlyRejected)])->filter()->join(' && '),
             'sort_by' => $this->buildSortBy($search),
         ], fn ($v) => $v !== '');
 
@@ -70,10 +82,14 @@ class WorkerDirectoryController extends Controller
         $page = max(1, (int) $request->query('page', 1));
         $offset = ($page - 1) * $perPage;
 
-        $workers = $search->paginate($perPage)->withQueryString();
+        $workers = $onlyRejected && $rejections->count() === 0
+            ? new LengthAwarePaginator([], 0, $perPage, $page, ['path' => $request->url()])
+            : $search->paginate($perPage)->withQueryString();
+
+        $othersUnlocked = $wallet->othersUnlockCounts($workers->getCollection()->pluck('user_id')->all());
 
         $index = 0;
-        $workers->getCollection()->transform(function (WorkerProfile $w) use (&$index, $offset, $quota, $point, $unlockedIds) {
+        $workers->getCollection()->transform(function (WorkerProfile $w) use (&$index, $offset, $quota, $point, $unlockedIds, $othersUnlocked, $rejections) {
             $inQuota = $quota > 0 && ($offset + $index) < $quota;
             // A number shows while the database is open to the employer.
             $paidFor = isset($unlockedIds[$w->user_id]);
@@ -95,7 +111,12 @@ class WorkerDirectoryController extends Controller
                 'available' => (bool) $w->available,
                 'verified' => (bool) $w->user?->isKycVerified(),
                 'rating' => $w->user?->averageRating() ?? 0.0,
-                'distance_km' => $point ? $this->distanceKm($point, $w) : null,
+                // "1.5 km · Sanganer, Jaipur": distance_km, distance_label
+                // ("~4 km" while only the city is known), area, location_label.
+                ...KarigarLocation::for($w, $point),
+                // Other employers who unlocked this karigar's number.
+                'unlocked_by_count' => $othersUnlocked[$w->user_id] ?? 0,
+                'rejected' => $rejections->has($w->user_id),
                 'phone' => $unlocked ? $w->phone : null,
                 'locked' => ! $unlocked,
                 'contact_unlocked' => $unlocked,
@@ -116,6 +137,8 @@ class WorkerDirectoryController extends Controller
             'unlocks' => $wallet->summary(),
             'database' => $wallet->database(),
             'contact_counts' => ContactList::for($request->user())->counts(),
+            // For the "Rejected (3)" tab.
+            'rejected_count' => $rejections->count(),
         ]);
     }
 
@@ -130,6 +153,7 @@ class WorkerDirectoryController extends Controller
 
         $wallet = ContactUnlocks::for($request->user());
         $unlocked = $worker->user !== null && $wallet->contactVisible($worker->user_id);
+        $point = KarigarLocation::employerOrigin($request->user());
 
         $reviews = $worker->user
             ? $worker->user->reviewsReceived()->with('reviewer:id,name', 'job:id,title')->latest()->limit(10)->get()
@@ -152,6 +176,9 @@ class WorkerDirectoryController extends Controller
                 'wage_type' => $worker->wage_type,
                 'available' => (bool) $worker->available,
                 'verified' => (bool) $worker->user?->isKycVerified(),
+                ...KarigarLocation::for($worker, $point),
+                'unlocked_by_count' => $wallet->othersUnlockCounts([$worker->user_id])[$worker->user_id] ?? 0,
+                'rejected' => WorkerRejections::for($request->user())->has($worker->user_id),
                 'phone' => $unlocked ? ($worker->phone ?? $worker->user?->phone) : null,
                 'email' => $unlocked ? $worker->user?->contactEmail() : null,
                 'contact_unlocked' => $unlocked,
@@ -204,6 +231,42 @@ class WorkerDirectoryController extends Controller
                 'contact_unlocked' => true,
             ],
             'unlocks' => ContactUnlocks::for($request->user())->summary(),
+        ]);
+    }
+
+    /**
+     * Turn a karigar down without unlocking their number: free, nothing is
+     * spent. They leave this employer's searches and job matches and wait
+     * under the "Rejected" tab ({@see index()} with `rejected=1`).
+     */
+    public function reject(Request $request, WorkerProfile $worker): JsonResponse
+    {
+        abort_if($worker->user === null, 404);
+
+        $rejections = WorkerRejections::for($request->user());
+        $rejections->reject($worker->user, $request->user());
+
+        return response()->json([
+            'message' => __('Karigar rejected. They won\'t show in your search any more.'),
+            'worker' => ['id' => $worker->id, 'user_id' => $worker->user_id, 'rejected' => true],
+            'rejected_count' => $rejections->count(),
+        ]);
+    }
+
+    /**
+     * Take a rejected karigar back into the searches.
+     */
+    public function restore(Request $request, WorkerProfile $worker): JsonResponse
+    {
+        abort_if($worker->user === null, 404);
+
+        $rejections = WorkerRejections::for($request->user());
+        $rejections->restore($worker->user);
+
+        return response()->json([
+            'message' => __('Karigar is back in your search.'),
+            'worker' => ['id' => $worker->id, 'user_id' => $worker->user_id, 'rejected' => false],
+            'rejected_count' => $rejections->count(),
         ]);
     }
 
@@ -294,55 +357,5 @@ class WorkerDirectoryController extends Controller
     private function quote(string $value): string
     {
         return '`'.str_replace('`', '', $value).'`';
-    }
-
-    /**
-     * Where distances are measured from: the point the app sent, else the
-     * employer's own map pin, else the centre of the employer's city. Null
-     * when none is known.
-     *
-     * @param  array<string, mixed>  $filters
-     * @return array{0: float, 1: float}|null
-     */
-    private function origin(Request $request, array $filters): ?array
-    {
-        if (isset($filters['latitude'], $filters['longitude'])) {
-            return [(float) $filters['latitude'], (float) $filters['longitude']];
-        }
-
-        $profile = $request->user()->employerAccount()->employerProfile;
-
-        if ($profile?->latitude !== null && $profile?->longitude !== null) {
-            return [(float) $profile->latitude, (float) $profile->longitude];
-        }
-
-        return app(Geocoder::class)->cityCentre($profile?->city, $profile?->state, lookup: false);
-    }
-
-    /**
-     * Straight-line distance (km, 1 decimal) from the searched point to the
-     * worker, for the "3.2 km" line on the worker card. A karigar without a
-     * map pin is measured from their city's centre. Null when unknown.
-     *
-     * @param  array{0: float, 1: float}  $point
-     */
-    private function distanceKm(array $point, WorkerProfile $worker): ?float
-    {
-        $pin = $worker->latitude !== null && $worker->longitude !== null
-            ? [(float) $worker->latitude, (float) $worker->longitude]
-            : app(Geocoder::class)->cityCentre($worker->city, $worker->state, lookup: false);
-
-        if ($pin === null) {
-            return null;
-        }
-
-        [$lat1, $lng1] = $point;
-        [$lat2, $lng2] = $pin;
-
-        $km = 6371 * acos(min(1.0, cos(deg2rad($lat1)) * cos(deg2rad($lat2))
-            * cos(deg2rad($lng2) - deg2rad($lng1))
-            + sin(deg2rad($lat1)) * sin(deg2rad($lat2))));
-
-        return round($km, 1);
     }
 }

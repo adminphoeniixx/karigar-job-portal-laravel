@@ -234,6 +234,8 @@ export default {
         shortlisted: 'Shortlisted',
     },
     applicants: {
+        unlockedBy: '{count} aur HR ne unlock kiya | {count} aur HR ne unlock kiya',
+        approxDistance: 'Andaza: karigar ne abhi apna area nahi daala',
         batchInfo: '{total} mein se {visible} applicants dikh rahe hain.',
         batchNext: 'Agle {next} dekhne ke liye baaki {undecided} ko shortlist, hire ya reject karein.',
         noPlanInfo: '{hidden} applicants intezaar kar rahe hain. Unhe dekhne ke liye plan lein.',
@@ -386,6 +388,10 @@ export default {
         confirmRemove: 'Resume hata dein? Nayi applications sirf aapki profile se match hongi.',
     },
     profile: {
+        area: 'Area / Mohalla',
+        areaPlaceholder: 'jaise Sanganer',
+        useMyLocation: 'Meri location',
+        areaHint: 'Employer dekhenge aap kaam se kitni door ho (jaise "2 km · Sanganer"). Apna area likhein ya location use karein.',
         photo: 'Photo',
         logo: 'Company logo',
         upload: 'Upload karein',

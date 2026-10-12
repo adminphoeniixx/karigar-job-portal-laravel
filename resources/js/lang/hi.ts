@@ -234,6 +234,8 @@ export default {
         shortlisted: 'शॉर्टलिस्ट',
     },
     applicants: {
+        unlockedBy: '{count} और HR ने अनलॉक किया | {count} और HR ने अनलॉक किया',
+        approxDistance: 'अनुमानित: कारीगर ने अभी अपना इलाका नहीं डाला',
         batchInfo: '{total} में से {visible} आवेदक दिख रहे हैं।',
         batchNext: 'अगले {next} देखने के लिए बाकी {undecided} को शॉर्टलिस्ट, हायर या रिजेक्ट करें।',
         noPlanInfo: '{hidden} आवेदक इंतज़ार कर रहे हैं। उन्हें देखने के लिए प्लान लें।',
@@ -386,6 +388,10 @@ export default {
         confirmRemove: 'रिज़्यूमे हटाएँ? नई एप्लिकेशन सिर्फ़ आपकी प्रोफ़ाइल से मैच होंगी।',
     },
     profile: {
+        area: 'इलाका / मोहल्ला',
+        areaPlaceholder: 'जैसे सांगानेर',
+        useMyLocation: 'मेरी लोकेशन',
+        areaHint: 'नियोक्ता देखेंगे कि आप काम से कितनी दूर हैं (जैसे "2 km · सांगानेर")। अपना इलाका लिखें या लोकेशन इस्तेमाल करें।',
         photo: 'फोटो',
         logo: 'कंपनी लोगो',
         upload: 'अपलोड करें',

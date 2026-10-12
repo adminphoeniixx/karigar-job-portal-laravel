@@ -58,7 +58,8 @@ class LocateByCity
 
             // Query-builder updates: no model events, so no search sync per row.
             $ids = (clone $workers)->where($inCity)->pluck('id');
-            $counts['workers'] += WorkerProfile::whereKey($ids)->update($coords);
+            // Only a city centre: their distance shows as approximate.
+            $counts['workers'] += WorkerProfile::whereKey($ids)->update($coords + ['location_source' => 'city']);
             $located = [...$located, ...$ids->all()];
 
             $counts['employers'] += (clone $employers)->where($inCity)->update($coords);

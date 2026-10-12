@@ -26,7 +26,7 @@ deploy.
 | 1 | Jobs tab, top | Bar: 📍 "Jobs near **Current location**" / "Jobs near **Sanganer, Jaipur**", with "Change ›" | **Must** |
 | 2 | Home, under "Latest jobs near you" | Same bar | **Must** |
 | 3 | "Show jobs near" sheet | "Use my current location" row (✓ when active), a search box with results, "Pick on map" | **Must** |
-| 4 | After a change | Reload `GET /jobs` (and the dashboard) and toast the `message` | **Must** |
+| 4 | After a change | Show the `jobs` that came back with the change (no second call), refresh the dashboard in the background, toast the `message` | **Must** |
 
 See `app-mockup/worker-app.html` (Jobs tab → "Change ›").
 
@@ -53,8 +53,12 @@ places in India:
   { "label": "Sanganer, Jaipur, Rajasthan", "city": "Jaipur", "state": "Rajasthan", "latitude": 26.82, "longitude": 75.8 }
 ] }
 ```
+- **A city name is answered at once** from our own list of 238 cities
+  ("jaip" → Jaipur, "delhi" → Delhi and New Delhi; a state after a comma
+  narrows it: "Udaipur, Tri"). Anything else, a locality, a PIN code or Hindi
+  text, goes to the map service and takes about a second the first time.
 - **Call it when the karigar presses Search, or after they stop typing for
-  about 600 ms. Never on every key.** The map service behind it (OpenStreetMap)
+  about 400 ms. Never on every key.** The map service behind it (OpenStreetMap)
   allows about one request a second. The server caches answers, and the route
   allows 30 calls a minute per user (`429` after that).
 - `"places": []` means nothing matched, or the map service is down. Show "No
@@ -71,17 +75,29 @@ Pick a place.
 → `200`
 ```json
 { "message": "Showing jobs near Sanganer, Jaipur, Rajasthan.",
-  "location": { "mode": "chosen", "label": "Sanganer, Jaipur, Rajasthan", "latitude": 26.82, "longitude": 75.8 } }
+  "location": { "mode": "chosen", "label": "Sanganer, Jaipur, Rajasthan", "latitude": 26.82, "longitude": 75.8 },
+  "jobs": { "data": [ …JobResource, nearest first… ], "links": { …, "next": "https://superkarigar.com/api/v1/jobs?page=2" },
+            "meta": { …, "total": 37 }, "feed": { "type": "for_you", "location": "chosen", "location_label": "Sanganer, Jaipur, Rajasthan", … } } }
 ```
+**`jobs` is the feed's first page around the new place, exactly what
+`GET /jobs` would return.** Show it straight away instead of calling
+`GET /jobs` again. Its `links.next` points at `GET /jobs` for page 2. Send
+`"all": true` when the karigar is looking at all categories.
+
 Rules: `latitude` -90..90 and `longitude` -180..180, both required. `label`
 is optional, ≤150 chars. Without it the server looks the name up, falling back
-to "Pinned location". Missing coordinates give `422`.
+to "Pinned location", which adds about a second. Send the label you got from
+`places`. Missing coordinates give `422`.
 
-### `DELETE /worker/feed-location`
-Back to the current location.
+### `DELETE /worker/feed-location?lat=26.91&lng=75.79`
+Back to the current location. Send the phone's position as `lat` / `lng`
+(query string; optional `all=1`) to get the feed around it back in `jobs`,
+the same shape as above. Without them `jobs` falls back to the profile's
+position or city.
 ```json
 { "message": "Showing jobs near your current location.",
-  "location": { "mode": "current", "label": null, "latitude": null, "longitude": null } }
+  "location": { "mode": "current", "label": null, "latitude": null, "longitude": null },
+  "jobs": { "data": [ … ], "links": { … }, "meta": { … }, "feed": { "location": "current", … } } }
 ```
 
 ### What `GET /jobs` says about it
@@ -95,10 +111,32 @@ while a place is picked:
 
 ---
 
+## Making the change feel instant
+
+The server is in Europe, so every call from India costs about 0.2 s on the
+way there and back, and a new connection about 0.4 s more. What helps most
+on the app side:
+
+1. **One HTTP client for the whole app, kept alive.** The server speaks
+   HTTP/2, so a warm connection skips the 0.4 s. A new client per call
+   pays it every time.
+2. **Update the bar at once.** Put the new place in the "Jobs near …" bar
+   when it is tapped. Don't wait for the answer to do that.
+3. **Use `jobs` from the `PUT` / `DELETE` answer.** That makes the change one
+   call instead of two.
+4. **Show the last feed while loading.** Keep the last `GET /jobs` page on the
+   device and show it immediately on opening; replace it when the fresh one
+   arrives.
+5. **Debounce the search box** (about 400 ms) and send the `label` from
+   `places` with the `PUT`, so the server never has to name the place itself.
+
+---
+
 ## Checklist
 
 - [ ] "Jobs near …" bar on the Jobs tab and on Home
 - [ ] Sheet: current location row, search (on submit or debounced, never per key), results, pick on map
 - [ ] `PUT` with the picked result / pin; `DELETE` for current location
-- [ ] Feed and home reload after a change, `message` shown as a toast
+- [ ] After a change: show `jobs` from the answer, refresh home in the background, `message` as a toast
+- [ ] One kept-alive HTTP client; last feed shown from the device while loading
 - [ ] Bar reads `feed_location` (dashboard) or `feed.location` / `feed.location_label` (`GET /jobs`)

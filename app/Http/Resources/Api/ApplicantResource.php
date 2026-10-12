@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use App\Models\JobApplication;
+use App\Support\ApplicantSignals;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,6 +24,7 @@ class ApplicantResource extends JsonResource
     {
         $worker = $this->worker;
         $profile = $worker?->workerProfile;
+        $signals = $worker ? ApplicantSignals::of($this->resource, $request->user()) : null;
 
         return [
             'id' => $this->id,
@@ -84,6 +86,11 @@ class ApplicantResource extends JsonResource
                 'experience_years' => $profile?->experience_years,
                 'city' => $profile?->city,
                 'state' => $profile?->state,
+                // From the job's site: "2.3 km" / "~4 km" (only the city
+                // known), with the karigar's area: "Sanganer, Jaipur".
+                ...$signals['location'],
+                // Other employers who unlocked this karigar in the Worker Database.
+                'unlocked_by_count' => $signals['unlocked_by_count'],
                 'expected_wage' => $profile?->expected_wage,
                 'wage_type' => $profile?->wage_type,
                 'available' => (bool) ($profile?->available ?? false),

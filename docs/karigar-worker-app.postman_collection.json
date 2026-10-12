@@ -506,7 +506,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Rakesh Kumar\",\n  \"email\": \"rakesh@example.com\",\n  \"gender\": \"male\",\n  \"skills\": [\"Plumbing\", \"Tiling\"],\n  \"experience_years\": 6,\n  \"education\": \"12th Pass\",\n  \"spoken_languages\": [\"Hindi\", \"Tamil\"],\n  \"bio\": \"6 years experience in plumbing and tiling.\",\n  \"expected_wage\": 900,\n  \"wage_type\": \"daily\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"travel_radius_km\": 15,\n  \"available\": true,\n  \"payout_upi\": \"rakesh@okhdfcbank\"\n}"
+              "raw": "{\n  \"name\": \"Rakesh Kumar\",\n  \"email\": \"rakesh@example.com\",\n  \"gender\": \"male\",\n  \"skills\": [\n    \"Plumbing\",\n    \"Tiling\"\n  ],\n  \"experience_years\": 6,\n  \"education\": \"12th Pass\",\n  \"spoken_languages\": [\n    \"Hindi\",\n    \"Tamil\"\n  ],\n  \"bio\": \"6 years experience in plumbing and tiling.\",\n  \"expected_wage\": 900,\n  \"wage_type\": \"daily\",\n  \"city\": \"Chennai\",\n  \"state\": \"Tamil Nadu\",\n  \"latitude\": 13.0827,\n  \"longitude\": 80.2707,\n  \"travel_radius_km\": 15,\n  \"available\": true,\n  \"payout_upi\": \"rakesh@okhdfcbank\",\n  \"area\": \"T. Nagar\",\n  \"location_source\": \"gps\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/worker/profile",
@@ -520,7 +520,7 @@
                 "profile"
               ]
             },
-            "description": "Send any subset of fields. The signup wizard calls this per step."
+            "description": "Send any subset of fields. The signup wizard calls this per step.\n\n`area` is the karigar's locality; employers see \"2.3 km · T. Nagar, Chennai\". Send `latitude`/`longitude` only when the karigar sets their location: with `location_source: gps` (phone; the server names the area) or `area` (a place picked from Search places, sent with its `area`). An `area` alone is looked up; a new city alone moves the pin to the city centre. See docs/worker-app-api.md \"Where the karigar is\"."
           }
         },
         {
@@ -765,7 +765,8 @@
                   "value": "Sanganer"
                 }
               ]
-            }
+            },
+            "description": "Search box of the \"Show jobs near\" sheet. A city name (\"jaip\", \"Udaipur, Tri\") is answered at once from our own list; a locality, PIN code or Hindi text goes to OpenStreetMap (about a second the first time). Call it on Search or after ~400 ms without typing, never on every key (30/minute per user)."
           }
         },
         {
@@ -801,7 +802,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"latitude\": 26.82,\n  \"longitude\": 75.8,\n  \"label\": \"Sanganer, Jaipur, Rajasthan\"\n}"
-            }
+            },
+            "description": "Feed around a place from **Search places** (send its latitude, longitude and label) or a pin dropped on the map (no label: the server names it, about a second slower). The answer carries `jobs`: the feed's first page around the new place, exactly what `GET /jobs` returns, so show it without calling `GET /jobs` again. Its `links.next` points at `GET /jobs`. Optional `all: true` for all categories. Spec: docs/worker-app-feed-location.md"
           }
         },
         {
@@ -819,7 +821,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/worker/feed-location",
+              "raw": "{{base_url}}/api/v1/worker/feed-location?lat=26.9124&lng=75.7873",
               "host": [
                 "{{base_url}}"
               ],
@@ -828,8 +830,20 @@
                 "v1",
                 "worker",
                 "feed-location"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "26.9124",
+                  "description": "The phone's position, for the jobs sent back"
+                },
+                {
+                  "key": "lng",
+                  "value": "75.7873"
+                }
               ]
-            }
+            },
+            "description": "Back to \"my current location\". Send the phone's `lat` / `lng` to get the feed's first page around it back in `jobs` (same shape as `GET /jobs`). Optional `all=1` for all categories."
           }
         },
         {

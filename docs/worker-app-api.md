@@ -115,14 +115,29 @@ Any subset of these fields (JSON):
   "wage_type": "monthly",                 // monthly only; a daily/hourly figure is converted
   "city": "Chennai",
   "state": "Tamil Nadu",
-  "latitude": 13.0827,
-  "longitude": 80.2707,
+  "area": "T. Nagar",                     // locality, ≤120 chars
+  "latitude": 13.0418,
+  "longitude": 80.2341,
+  "location_source": "gps",               // where latitude/longitude came from: gps | area | city
   "travel_radius_km": 15,
   "available": true,
   "payout_upi": "rakesh@okhdfcbank"
 }
 ```
-→ `{ "data": WorkerProfileResource }` with the updated profile.
+→ `{ "data": WorkerProfileResource }` with the updated profile (now with `area`
+and `location_source`).
+
+**Where the karigar is.** Employers see "2.3 km · T. Nagar, Chennai" on the
+karigar's card, so the server keeps `area` and the pin in step:
+- **Phone position** ("Use my location"): send `latitude` + `longitude` (with
+  `location_source: "gps"` or none). The server names the area from the map.
+- **Place picked from `GET /places`**: send its `latitude`, `longitude` and
+  `area` (`location_source: "area"`).
+- **Area typed alone**: send `area`; the server finds it and moves the pin.
+- **City changed alone**: the pin moves to the city's centre and the old area
+  is dropped. Employers then see an approximate "~4 km".
+Send `latitude`/`longitude` only when the karigar sets their location, not on
+every save, or the area is re-read from wherever the phone happens to be.
 
 ### `POST /worker/profile/avatar` (multipart)
 Field `avatar` (image, ≤2 MB). → `{ "avatar_url": "https://.../storage/avatars/x.jpg" }`
@@ -188,7 +203,9 @@ available for work (`"unavailable": true`, empty `data`).
 
 The feed's "nearest first" point can be a place the karigar picked instead of
 the phone's position: see `/worker/feed-location` and `/places` in
-`docs/worker-app-feed-location.md`.
+`docs/worker-app-feed-location.md`. Changing it (`PUT` / `DELETE
+/worker/feed-location`) sends this same response back in `jobs`, so the app
+needs no `GET /jobs` after a change.
 
 **The karigar's feed** (no `q`, `state`, `city`, `category` or `skill`): jobs in
 the karigar's own categories — a job whose category, or one of whose skills, is

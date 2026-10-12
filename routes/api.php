@@ -223,6 +223,9 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             Route::get('employer/workers', [WorkerDirectoryController::class, 'index'])->name('api.employer.workers');
             Route::get('employer/workers/{worker}', [WorkerDirectoryController::class, 'show'])->name('api.employer.workers.show');
             Route::post('employer/workers/{worker}/unlock', [WorkerDirectoryController::class, 'unlock'])->name('api.employer.workers.unlock');
+            // Not interested: free, no unlock spent; undo with DELETE.
+            Route::post('employer/workers/{worker}/reject', [WorkerDirectoryController::class, 'reject'])->name('api.employer.workers.reject');
+            Route::delete('employer/workers/{worker}/reject', [WorkerDirectoryController::class, 'restore'])->name('api.employer.workers.restore');
 
             // My contacts: karigars unlocked from the database, and applicants.
             Route::get('employer/contacts/database', [ContactListController::class, 'database'])->name('api.employer.contacts.database');

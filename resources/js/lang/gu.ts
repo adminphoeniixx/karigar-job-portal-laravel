@@ -234,6 +234,8 @@ export default {
         shortlisted: 'શોર્ટલિસ્ટ',
     },
     applicants: {
+        unlockedBy: 'વધુ {count} HR એ અનલૉક કર્યું | વધુ {count} HR એ અનલૉક કર્યું',
+        approxDistance: 'અંદાજિત: કારીગરે હજુ પોતાનો વિસ્તાર નથી આપ્યો',
         batchInfo: '{total} માંથી {visible} અરજદારો દેખાય છે.',
         batchNext: 'આગળના {next} જોવા માટે બાકીના {undecided} ને શૉર્ટલિસ્ટ, હાયર અથવા રિજેક્ટ કરો.',
         noPlanInfo: '{hidden} અરજદારો રાહ જોઈ રહ્યા છે. તેમને જોવા માટે પ્લાન લો.',
@@ -368,6 +370,10 @@ export default {
         confirmRemove: 'રિઝ્યુમે દૂર કરવો? નવી અરજીઓ ફક્ત તમારી પ્રોફાઇલથી મેચ થશે.',
     },
     profile: {
+        area: 'વિસ્તાર / મહોલ્લો',
+        areaPlaceholder: 'જેમ કે સાંગાનેર',
+        useMyLocation: 'મારું લોકેશન',
+        areaHint: 'નોકરીદાતા જોશે કે તમે કામથી કેટલા દૂર છો (જેમ કે "2 km · સાંગાનેર"). તમારો વિસ્તાર લખો અથવા લોકેશન વાપરો.',
         photo: 'ફોટો',
         logo: 'કંપની લોગો',
         upload: 'અપલોડ કરો',

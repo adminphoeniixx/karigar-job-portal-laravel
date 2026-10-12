@@ -47,6 +47,31 @@ class ContactUnlocks
     }
 
     /**
+     * How many other employer accounts have unlocked each of these karigars,
+     * for the "unlocked by 3 HRs" line on a card. One query for a page; a
+     * karigar nobody else unlocked is missing from the answer.
+     *
+     * @param  list<int>  $workerIds  user ids
+     * @return array<int, int> worker user id => employers
+     */
+    public function othersUnlockCounts(array $workerIds): array
+    {
+        if ($workerIds === []) {
+            return [];
+        }
+
+        // One row per employer and karigar (unique index), so rows = employers.
+        return WorkerContactUnlock::query()
+            ->whereIn('worker_id', array_values(array_unique($workerIds)))
+            ->where('employer_id', '!=', $this->account->id)
+            ->selectRaw('worker_id, count(*) as employers')
+            ->groupBy('worker_id')
+            ->pluck('employers', 'worker_id')
+            ->map(fn ($count) => (int) $count)
+            ->all();
+    }
+
+    /**
      * The account's active subscription of one plan type, looked up once.
      */
     public function subscription(string $type = Plan::TYPE_JOB): ?Subscription

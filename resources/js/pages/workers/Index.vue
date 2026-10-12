@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { KeyRound, Lock, Mail, MapPin, Phone, Search, Star, UserRound } from '@lucide/vue';
+import { KeyRound, Lock, Mail, MapPin, Phone, RotateCcw, Search, Star, ThumbsDown, UserRound, Users } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import WorkerDatabaseTabs from '@/components/WorkerDatabaseTabs.vue';
@@ -21,6 +21,13 @@ interface Worker {
     expected_wage: string | null;
     wage_type: string | null;
     rating: number;
+    // "Sanganer, Jaipur", and "1.5 km" (exact) or "~4 km" (only the city known).
+    location_label: string | null;
+    distance_label: string | null;
+    distance_approx: boolean;
+    // Other employers who unlocked this karigar's number.
+    unlocked_by_count: number;
+    rejected: boolean;
     phone: string | null;
     email: string | null;
     locked: boolean;
@@ -29,10 +36,11 @@ interface Worker {
 
 const props = defineProps<{
     workers: { data: Worker[]; links: { url: string | null; label: string; active: boolean }[] };
-    filters: { q?: string; state?: string; city?: string; skill?: string };
+    filters: { q?: string; state?: string; city?: string; skill?: string; rejected?: string | boolean };
     access: { quota: number; accessible: number; total: number; has_plan: boolean };
     unlocks: { used: number; limit: number; remaining: number | null };
     contactCounts: { database_total: number; applicants_total: number };
+    rejectedCount: number;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Worker Database', href: '/employer/workers' }] } });
@@ -42,6 +50,8 @@ const form = reactive({
     city: props.filters.city ?? '',
     state: props.filters.state ?? '',
     skill: props.filters.skill ?? '',
+    // The "Rejected" tab.
+    rejected: props.filters.rejected === true || props.filters.rejected === '1' ? '1' : '',
 });
 
 const cities = computed(() => citiesFor(form.state));
@@ -73,6 +83,24 @@ const unlock = (w: Worker) => {
     unlocking.value = w.id;
     router.post(`/employer/workers/${w.id}/unlock`, {}, { preserveScroll: true, onFinish: () => (unlocking.value = null) });
 };
+
+// Not interested: free, no unlock spent; the karigar leaves the list.
+const rejecting = ref<number | null>(null);
+const reject = (w: Worker) => {
+    rejecting.value = w.id;
+    router.post(`/employer/workers/${w.id}/reject`, {}, { preserveScroll: true, onFinish: () => (rejecting.value = null) });
+};
+const restore = (w: Worker) => {
+    rejecting.value = w.id;
+    router.delete(`/employer/workers/${w.id}/reject`, { preserveScroll: true, onFinish: () => (rejecting.value = null) });
+};
+
+const showTab = (rejected: boolean) => {
+    form.rejected = rejected ? '1' : '';
+    submit();
+};
+
+const unlockedByText = (n: number) => `${n} HR${n === 1 ? '' : 's'} unlocked this karigar`;
 </script>
 
 <template>
@@ -119,6 +147,27 @@ const unlock = (w: Worker) => {
             </div>
         </form>
 
+        <!-- All / Rejected -->
+        <div class="flex items-center gap-2 text-sm">
+            <button
+                type="button"
+                class="rounded-full border px-4 py-1.5 font-medium transition"
+                :class="!form.rejected ? 'border-primary bg-primary text-white' : 'hover:bg-muted'"
+                @click="showTab(false)"
+            >
+                All karigars
+            </button>
+            <button
+                type="button"
+                class="rounded-full border px-4 py-1.5 font-medium transition"
+                :class="form.rejected ? 'border-primary bg-primary text-white' : 'hover:bg-muted'"
+                @click="showTab(true)"
+            >
+                Rejected ({{ rejectedCount }})
+            </button>
+            <span v-if="!form.rejected" class="text-xs text-muted-foreground">Rejecting is free and doesn't use an unlock.</span>
+        </div>
+
         <div v-if="workers.data.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div
                 v-for="w in workers.data"
@@ -130,7 +179,15 @@ const unlock = (w: Worker) => {
                     <div v-else class="flex size-12 items-center justify-center rounded-full bg-primary text-white"><UserRound class="size-6" /></div>
                     <div class="min-w-0">
                         <div class="font-semibold">{{ w.name }}</div>
-                        <div class="inline-flex items-center gap-1 text-xs text-muted-foreground"><MapPin class="size-3" /> {{ [w.city, w.state].filter(Boolean).join(', ') || '—' }}</div>
+                        <div class="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin class="size-3 shrink-0" />
+                            <span
+                                v-if="w.distance_label"
+                                class="font-semibold text-foreground"
+                                :title="w.distance_approx ? 'Approximate: the karigar has not set their area yet' : undefined"
+                            >{{ w.distance_label }} ·</span>
+                            {{ w.location_label || [w.city, w.state].filter(Boolean).join(', ') || '—' }}
+                        </div>
                     </div>
                     <span v-if="w.rating > 0" class="ml-auto inline-flex items-center gap-0.5 text-sm text-amber-500"><Star class="size-3.5" fill="currentColor" /> {{ w.rating }}</span>
                 </div>
@@ -141,6 +198,9 @@ const unlock = (w: Worker) => {
                 <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                     <span v-if="w.experience_years != null">{{ w.experience_years }} yrs exp</span>
                     <span v-if="w.expected_wage" class="font-medium text-foreground">{{ wageText(w.expected_wage, null, w.wage_type) }}</span>
+                </div>
+                <div v-if="w.unlocked_by_count > 0" class="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Users class="size-3.5" /> {{ unlockedByText(w.unlocked_by_count) }}
                 </div>
 
                 <!-- Contact / actions -->
@@ -175,14 +235,37 @@ const unlock = (w: Worker) => {
                         </span>
                     </template>
                     <Link :href="`/employer/workers/${w.id}`" class="inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-medium text-muted-foreground transition hover:bg-muted">View</Link>
+                    <button
+                        v-if="w.rejected"
+                        type="button"
+                        :disabled="rejecting === w.id"
+                        class="inline-flex items-center justify-center gap-1 rounded-xl border px-3 py-2 text-xs font-medium text-muted-foreground transition hover:bg-muted disabled:opacity-60"
+                        title="Bring back into your search"
+                        @click="restore(w)"
+                    >
+                        <RotateCcw class="size-3.5" /> Undo
+                    </button>
+                    <button
+                        v-else
+                        type="button"
+                        :disabled="rejecting === w.id"
+                        class="inline-flex items-center justify-center rounded-xl border px-3 py-2 text-muted-foreground transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-60"
+                        title="Not interested: hide this karigar (free, no unlock used)"
+                        aria-label="Reject"
+                        @click="reject(w)"
+                    >
+                        <ThumbsDown class="size-4" />
+                    </button>
                 </div>
             </div>
         </div>
 
         <div v-else class="rounded-2xl border bg-card px-5 py-16 text-center shadow-sm">
             <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><UserRound class="size-7" /></div>
-            <p class="mt-4 font-medium">No workers found</p>
-            <p class="mt-1 text-sm text-muted-foreground">Try a different skill or location.</p>
+            <p class="mt-4 font-medium">{{ form.rejected ? 'No rejected karigars' : 'No workers found' }}</p>
+            <p class="mt-1 text-sm text-muted-foreground">
+                {{ form.rejected ? 'Karigars you reject from the list show up here, and you can bring them back.' : 'Try a different skill or location.' }}
+            </p>
         </div>
 
         <!-- Pagination -->

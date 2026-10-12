@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { CalendarClock, Check, ChevronDown, FileText, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, PhoneCall, Send, Sparkles, Star, TriangleAlert, Users, X } from '@lucide/vue';
+import { CalendarClock, Check, ChevronDown, FileText, IndianRupee, Lock, Mail, MapPin, MessageSquare, Phone, PhoneCall, Send, Sparkles, Star, TriangleAlert, Users, UsersRound, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -57,6 +57,12 @@ interface Applicant {
         skills: string[];
         city: string | null;
         state: string | null;
+        // "2.3 km" from the job ("~4 km" while only the city is known), and "Sanganer, Jaipur".
+        location_label: string | null;
+        distance_label: string | null;
+        distance_approx: boolean;
+        // Other employers who unlocked this karigar in the Worker Database.
+        unlocked_by_count: number | null;
         experience_years: number | null;
         email: string | null;
         phone: string | null;
@@ -273,7 +279,14 @@ const submitReview = () => {
                             </span>
                         </div>
                         <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                            <span class="inline-flex items-center gap-1"><MapPin class="size-3" /> {{ [a.worker.city, a.worker.state].filter(Boolean).join(', ') || '—' }}</span>
+                            <span class="inline-flex items-center gap-1">
+                                        <MapPin class="size-3" />
+                                        <span v-if="a.worker.distance_label" class="font-semibold text-foreground" :title="a.worker.distance_approx ? $t('applicants.approxDistance') : undefined">{{ a.worker.distance_label }} ·</span>
+                                        {{ a.worker.location_label || [a.worker.city, a.worker.state].filter(Boolean).join(', ') || '—' }}
+                                    </span>
+                                    <span v-if="a.worker.unlocked_by_count" class="inline-flex items-center gap-1">
+                                        <UsersRound class="size-3" /> {{ $t('applicants.unlockedBy', { count: a.worker.unlocked_by_count }, a.worker.unlocked_by_count) }}
+                                    </span>
                             <span v-if="a.worker.experience_years != null">{{ a.worker.experience_years }} {{ $t('applicants.yrsExp') }}</span>
                             <span>{{ $t('applications.applied') }} {{ a.created_at }}</span>
                         </div>

@@ -328,6 +328,10 @@ inviting twice returns `200` with `"invited": true` and sends nothing.
 
 ---
 
+Karigars this employer rejected (§7) are left out. Each row also carries
+`distance_km`, `distance_label`, `distance_approx`, `area`, `location_label`
+(measured from the job's site) and `unlocked_by_count`, as in §7.
+
 ## 6. Applicants 🔒
 
 **ApplicantResource**
@@ -346,10 +350,18 @@ inviting twice returns `200` with `"invited": true` and sends nothing.
   "job": { "id": 12, "title": "..." },
   "worker": { "id", "name", "rating", "reviews_count", "avatar_url", "bio",
               "skills": [...], "spoken_languages": [...], "experience_years",
-              "city", "state", "expected_wage", "wage_type", "available",
+              "city", "state",
+              "distance_km": 2.3, "distance_label": "2.3 km", "distance_approx": false,
+              "area": "Sanganer", "location_label": "Sanganer, Jaipur",
+              "unlocked_by_count": 1,
+              "expected_wage", "wage_type", "available",
               "verified", "phone": "9876543210", "email": "suresh@…" | null }
 }
 ```
+The distance is from the **job's site** (the employer's pin when the job has
+none), labelled as in §7: `"~4 km"` while the karigar only gave a city.
+`unlocked_by_count` = other employers who unlocked this karigar in the Worker
+Database.
 Worker `phone` / `email` are always sent: an applicant's contact needs **no
 unlock** (changed 9 Oct 2026). `email` is `null` when the karigar has none.
 Unlocks are only for the Worker Database (§7). `stage` is
@@ -567,20 +579,37 @@ against the karigar's monthly `expected_wage`), `languages[]` (≤10),
 `verified=1` (KYC only), `available=1` (available now),
 `sort=best_match|nearest|rating|experience|wage_low`, and
 `latitude` + `longitude` (send both) with optional `radius_km` (1–500) for
-"distance from site". With a point, every row also carries `distance_km`;
-`sort=nearest` needs the point or it falls back to relevance.
+"distance from site". Distances are measured from that point, else the
+employer's own pin, else its city's centre; `sort=nearest` needs a point or it
+falls back to relevance. `rejected=1` lists only the karigars this employer
+rejected (the "Rejected" tab); without it they are left out.
+
+Every row also carries, for the card line **"1.5 km · Sanganer, Jaipur"**:
+- `distance_label`: `"1.5 km"`, `"800 m"`, or `"~4 km"` when the karigar only
+  gave a city (their pin is the city's centre, `distance_approx: true`).
+  `null` when unknown, or for an approximate distance under 1 km. Show
+  `location_label` alone then.
+- `distance_km` (number), `area` (`"Sanganer"` or `null`), `location_label`
+  (`"Sanganer, Jaipur"` / `"Jaipur"`).
+- `unlocked_by_count`: how many **other** employers unlocked this karigar.
+  Show "Unlocked by 3 other HRs" when > 0.
+- `rejected`: this employer rejected the karigar (only true in the Rejected tab).
 ```json
 {
   "workers": { "data": [ { "id", "user_id", "name", "avatar_url", "bio",
       "skills": [...], "city", "state", "experience_years", "expected_wage",
-      "wage_type", "available", "verified", "rating", "distance_km",
+      "wage_type", "available", "verified", "rating",
+      "distance_km": 1.5, "distance_label": "1.5 km", "distance_approx": false,
+      "area": "Sanganer", "location_label": "Sanganer, Jaipur",
+      "unlocked_by_count": 3, "rejected": false,
       "phone", "locked", "contact_unlocked", "can_unlock" } ],
     "links": {...}, "meta": {...} },
   "filters": { "q": null, ... },
   "access": { "quota": 25, "accessible": 6, "total": 6, "has_plan": true },
   "unlocks": { ...UnlockSummary },      // unlocks left for the counter
   "database": { ...DatabaseCard },      // plan banner / "Buy Database" button
-  "contact_counts": { "database_total": 4, "applicants_total": 3 }   // tab badges, see §7b
+  "contact_counts": { "database_total": 4, "applicants_total": 3 },  // tab badges, see §7b
+  "rejected_count": 2                   // "Rejected (2)" tab
 }
 ```
 `phone` is `null` and `locked: true` until the karigar is unlocked, and again
@@ -599,6 +628,8 @@ new unlock.
   "worker": { "id", "user_id", "name", "avatar_url", "bio", "skills": [...],
     "spoken_languages": [...], "city", "state", "experience_years", "education",
     "expected_wage", "wage_type", "available", "verified",
+    "distance_km", "distance_label", "distance_approx", "area", "location_label",
+    "unlocked_by_count": 3, "rejected": false,
     "phone": null, "email": null, "contact_unlocked": false, "can_unlock": true },
   "rating": { "average": 4.8, "count": 23 },
   "reviews": [ { ...ReviewResource } ]        // latest 10
@@ -620,6 +651,22 @@ who applied to the employer's job, costs nothing. After an unlock the employer c
 { "message": "You have reached your plan's contact unlock limit.",
   "code": "unlock_limit_reached", "unlocks": {...} }
 ```
+
+### `POST /employer/workers/{worker}/reject`
+"Not interested", **without** unlocking: free, no unlock is spent and the number
+stays hidden. The karigar leaves this employer's searches and job matches (so
+the next karigar moves up into the plan's reach) and shows under the Rejected
+tab (`GET /employer/workers?rejected=1`). A team member rejects for the account.
+```json
+// 200
+{ "message": "Karigar rejected. They won't show in your search any more.",
+  "worker": { "id": 2414, "user_id": 2443, "rejected": true },
+  "rejected_count": 3 }
+```
+Remove the card from the list straight away.
+
+### `DELETE /employer/workers/{worker}/reject`
+Undo: back into the searches. Same answer with `"rejected": false`.
 
 ---
 

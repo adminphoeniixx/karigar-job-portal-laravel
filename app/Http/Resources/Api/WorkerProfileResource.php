@@ -32,9 +32,13 @@ class WorkerProfileResource extends JsonResource
             'expected_wage' => $this->expected_wage,
             'wage_type' => $this->wage_type,
             'city' => $this->city,
+            // The locality ("Sanganer"), shown to employers with the distance.
+            'area' => $this->area,
             'state' => $this->state,
             'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
             'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
+            // gps | area: the karigar's own pin; city: only their city's centre.
+            'location_source' => $this->location_source,
             'travel_radius_km' => $this->travel_radius_km,
             'available' => (bool) $this->available,
             'payout_upi' => $this->payout_upi,

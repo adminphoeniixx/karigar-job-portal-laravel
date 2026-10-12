@@ -13,11 +13,14 @@ use App\Models\User;
 use App\Models\WorkerProfile;
 use App\Notifications\JobInviteNotification;
 use App\Notifications\NewJobNotification;
+use App\Services\ContactUnlocks;
 use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
 use App\Services\JobRepost;
+use App\Services\WorkerRejections;
 use App\Support\EmployerVerification;
 use App\Support\JobFormOptions;
+use App\Support\KarigarLocation;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -194,10 +197,13 @@ class JobController extends Controller
         $applied = $job->applications()->pluck('worker_id');
         $invited = $job->invites()->pluck('worker_id');
         $skills = collect($job->skills ?? [])->filter()->values();
+        // Karigars this employer turned down in the Worker Database.
+        $rejected = WorkerRejections::for($request->user())->ids();
 
         $profiles = WorkerProfile::query()
             ->with('user:id,name', 'user.kyc')
             ->whereHas('user', fn ($q) => $q->where('role', 'worker')->whereNotIn('id', $applied))
+            ->whereNotIn('user_id', $rejected)
             ->where('available', true)
             ->when($skills->isNotEmpty() || $job->category, function ($q) use ($skills, $job) {
                 $q->where(function ($q) use ($skills, $job) {
@@ -216,6 +222,9 @@ class JobController extends Controller
             ->limit(20)
             ->get();
 
+        $origin = KarigarLocation::jobOrigin($job, $request->user());
+        $othersUnlocked = ContactUnlocks::for($request->user())->othersUnlockCounts($profiles->pluck('user_id')->all());
+
         return response()->json([
             'workers' => $profiles->map(fn (WorkerProfile $w) => [
                 'id' => $w->id,
@@ -231,6 +240,9 @@ class JobController extends Controller
                 'available' => (bool) $w->available,
                 'verified' => (bool) $w->user?->isKycVerified(),
                 'rating' => $w->user?->averageRating() ?? 0.0,
+                // Measured from the job's site.
+                ...KarigarLocation::for($w, $origin),
+                'unlocked_by_count' => $othersUnlocked[$w->user_id] ?? 0,
                 'invited' => $invited->contains($w->user_id),
             ])->values(),
             'total' => $profiles->count(),

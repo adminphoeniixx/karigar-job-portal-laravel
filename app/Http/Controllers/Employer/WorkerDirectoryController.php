@@ -7,8 +7,11 @@ use App\Http\Controllers\ReviewController;
 use App\Models\WorkerProfile;
 use App\Services\ContactList;
 use App\Services\ContactUnlocks;
+use App\Services\WorkerRejections;
+use App\Support\KarigarLocation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,9 +27,15 @@ class WorkerDirectoryController extends Controller
             'state' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],
             'skill' => ['nullable', 'string', 'max:50'],
+            // The "Rejected" tab.
+            'rejected' => ['nullable', 'boolean'],
         ]);
 
-        $filterBy = $this->buildFilterBy($filters);
+        // Rejected karigars leave the list, so the next ones move up into the
+        // plan's reach, and wait under the "Rejected" tab.
+        $rejections = WorkerRejections::for($request->user());
+        $onlyRejected = (bool) ($filters['rejected'] ?? false);
+        $filterBy = collect([$this->buildFilterBy($filters), $rejections->searchFilter($onlyRejected)])->filter()->join(' && ');
 
         $search = WorkerProfile::search(trim($filters['q'] ?? '') ?: '*')
             ->query(fn ($query) => $query->with('user:id,name,email'));
@@ -45,10 +54,15 @@ class WorkerDirectoryController extends Controller
         $page = max(1, (int) $request->query('page', 1));
         $offset = ($page - 1) * $perPage;
 
-        $workers = $search->paginate($perPage)->withQueryString();
+        $workers = $onlyRejected && $rejections->count() === 0
+            ? new LengthAwarePaginator([], 0, $perPage, $page, ['path' => $request->url()])
+            : $search->paginate($perPage)->withQueryString();
+
+        $point = KarigarLocation::employerOrigin($request->user());
+        $othersUnlocked = $wallet->othersUnlockCounts($workers->getCollection()->pluck('user_id')->all());
 
         $index = 0;
-        $workers->getCollection()->transform(function (WorkerProfile $w) use (&$index, $offset, $quota, $unlockedIds) {
+        $workers->getCollection()->transform(function (WorkerProfile $w) use (&$index, $offset, $quota, $unlockedIds, $point, $othersUnlocked, $rejections) {
             $inQuota = $quota > 0 && ($offset + $index) < $quota;
             // A number shows while the database is open to the employer.
             $paidFor = isset($unlockedIds[$w->user_id]);
@@ -68,6 +82,9 @@ class WorkerDirectoryController extends Controller
                 'expected_wage' => $w->expected_wage,
                 'wage_type' => $w->wage_type,
                 'rating' => $w->user?->averageRating() ?? 0.0,
+                ...KarigarLocation::for($w, $point),
+                'unlocked_by_count' => $othersUnlocked[$w->user_id] ?? 0,
+                'rejected' => $rejections->has($w->user_id),
                 'phone' => $unlocked ? $w->phone : null,
                 'email' => $unlocked ? $w->user?->contactEmail() : null,
                 'locked' => ! $unlocked,
@@ -87,6 +104,7 @@ class WorkerDirectoryController extends Controller
             ],
             'unlocks' => $this->unlocks($wallet),
             'contactCounts' => ContactList::for($request->user())->counts(),
+            'rejectedCount' => $rejections->count(),
         ]);
     }
 
@@ -96,6 +114,7 @@ class WorkerDirectoryController extends Controller
 
         $wallet = ContactUnlocks::for($request->user());
         $unlocked = $worker->user !== null && $wallet->contactVisible($worker->user_id);
+        $point = KarigarLocation::employerOrigin($request->user());
 
         return Inertia::render('workers/Show', [
             'worker' => [
@@ -111,6 +130,9 @@ class WorkerDirectoryController extends Controller
                 'expected_wage' => $worker->expected_wage,
                 'wage_type' => $worker->wage_type,
                 'available' => $worker->available,
+                ...KarigarLocation::for($worker, $point),
+                'unlocked_by_count' => $wallet->othersUnlockCounts([$worker->user_id])[$worker->user_id] ?? 0,
+                'rejected' => WorkerRejections::for($request->user())->has($worker->user_id),
                 'phone' => $unlocked ? $worker->phone : null,
                 'email' => $unlocked ? $worker->user?->contactEmail() : null,
                 'contact_unlocked' => $unlocked,
@@ -148,6 +170,34 @@ class WorkerDirectoryController extends Controller
         return back()->with('toast', [
             'type' => 'success',
             'message' => __('Contact unlocked.'),
+        ]);
+    }
+
+    /**
+     * Not interested: the karigar leaves this employer's searches. Free,
+     * the number stays hidden and no unlock is spent.
+     */
+    public function reject(Request $request, WorkerProfile $worker): RedirectResponse
+    {
+        abort_if($worker->user === null, 404);
+
+        WorkerRejections::for($request->user())->reject($worker->user, $request->user());
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => __('Karigar rejected. They won\'t show in your search any more.'),
+        ]);
+    }
+
+    public function restore(Request $request, WorkerProfile $worker): RedirectResponse
+    {
+        abort_if($worker->user === null, 404);
+
+        WorkerRejections::for($request->user())->restore($worker->user);
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => __('Karigar is back in your search.'),
         ]);
     }
 

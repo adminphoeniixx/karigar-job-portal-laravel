@@ -23,6 +23,9 @@ class DashboardController extends Controller
         $user = $request->user();
         $profile = $user->workerProfile()->firstOrCreate([]);
         $profile->setRelation('user', $user);
+        // The feed below reads the profile too; no second query for it.
+        $user->setRelation('workerProfile', $profile);
+        $profileData = (new WorkerProfileResource($profile))->toArray($request);
         $verificationEnabled = Verification::forWorkers();
         $kyc = $verificationEnabled ? $user->kyc : null;
 
@@ -41,7 +44,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'greeting' => $user->name,
-            'profile' => new WorkerProfileResource($profile),
+            'profile' => $profileData,
             'stats' => [
                 'available_jobs' => JobListing::active()->hiring()->count(),
                 'applications' => $user->applications()->count(),
@@ -50,7 +53,7 @@ class DashboardController extends Controller
                 // KYC prompt at all rather than a misleading "Not submitted".
                 'kyc_status' => $verificationEnabled ? ($kyc?->status->value ?? 'not_submitted') : null,
                 'kyc_status_label' => $verificationEnabled ? ($kyc?->status->label() ?? 'Not submitted') : null,
-                'profile_completion' => (new WorkerProfileResource($profile))->toArray($request)['completion'],
+                'profile_completion' => $profileData['completion'],
                 'unread_notifications' => $user->unreadNotifications()->count(),
             ],
             // Admin-controlled feature flags; the app hides its KYC screens when

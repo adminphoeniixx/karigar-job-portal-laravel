@@ -37,8 +37,8 @@ class WorkerProfile extends Model
     // written as a set by App\Services\ResumeStore, never mass-assigned.
     protected $fillable = [
         'phone', 'gender', 'skills', 'experience_years', 'education', 'spoken_languages',
-        'bio', 'expected_wage', 'wage_type', 'avatar_path', 'city', 'state',
-        'latitude', 'longitude', 'travel_radius_km', 'available',
+        'bio', 'expected_wage', 'wage_type', 'avatar_path', 'city', 'area', 'state',
+        'latitude', 'longitude', 'location_source', 'travel_radius_km', 'available',
         'feed_location_label', 'feed_latitude', 'feed_longitude',
         'screening_calls_opted_out',
         'payout_upi', 'razorpayx_fund_account_id',

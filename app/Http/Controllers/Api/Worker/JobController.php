@@ -7,6 +7,7 @@ use App\Http\Controllers\JobBrowseController;
 use App\Http\Resources\Api\JobDetailResource;
 use App\Http\Resources\Api\JobResource;
 use App\Models\JobListing;
+use App\Models\User;
 use App\Support\JobFeed;
 use App\Support\JobSearch;
 use App\Support\WorkerVerification;
@@ -30,32 +31,51 @@ class JobController extends Controller
         $filters = JobBrowseController::validateFilters($request);
         $all = $request->validate(['all' => ['nullable', 'boolean']])['all'] ?? false;
 
+        $searching = collect(['q', 'state', 'city', 'category', 'skill'])
+            ->contains(fn (string $key) => filled($filters[$key] ?? null));
+
+        if ($searching && ! $request->user()->isUnavailableWorker()) {
+            return JobResource::collection(JobSearch::paginate($filters));
+        }
+
+        return self::feed(
+            $request->user(),
+            isset($filters['lat'], $filters['lng']) ? (float) $filters['lat'] : null,
+            isset($filters['lat'], $filters['lng']) ? (float) $filters['lng'] : null,
+            (bool) $all,
+            isset($filters['radius']) ? (float) $filters['radius'] : null,
+        );
+    }
+
+    /**
+     * The first page of the karigar's own feed (or of a later page, from
+     * `?page=`). Also sent back when the karigar changes where the feed
+     * looks (see FeedLocationController), so the app needs no second call.
+     */
+    public static function feed(User $worker, ?float $lat, ?float $lng, bool $all = false, ?float $radius = null): AnonymousResourceCollection
+    {
         // "Available for work" is off: no feed and no search until it is back
         // on. The app shows `message` with a button to switch it on.
-        if ($request->user()->isUnavailableWorker()) {
+        if ($worker->isUnavailableWorker()) {
             return JobResource::collection(new LengthAwarePaginator([], 0, 15))->additional([
                 'unavailable' => true,
                 'message' => __('You are not available for work. Switch it on to see jobs.'),
             ]);
         }
 
-        $searching = collect(['q', 'state', 'city', 'category', 'skill'])
-            ->contains(fn (string $key) => filled($filters[$key] ?? null));
+        $feed = JobFeed::for($worker, $lat, $lng, $all);
 
-        if ($searching) {
-            return JobResource::collection(JobSearch::paginate($filters));
-        }
-
-        $feed = JobFeed::for(
-            $request->user(),
-            isset($filters['lat'], $filters['lng']) ? (float) $filters['lat'] : null,
-            isset($filters['lat'], $filters['lng']) ? (float) $filters['lng'] : null,
-            (bool) $all,
-        );
-
-        $jobs = $feed->query(isset($filters['radius']) ? (float) $filters['radius'] : null)
+        $jobs = $feed->query($radius)
             ->paginate(15)
-            ->withQueryString();
+            // Next-page links always point at the job list, whichever
+            // endpoint sent the page.
+            ->withPath(route('api.jobs'))
+            ->appends(array_filter([
+                'lat' => $lat,
+                'lng' => $lng,
+                'all' => $all ? 1 : null,
+                'radius' => $radius,
+            ], fn ($value) => $value !== null));
 
         return JobResource::collection($jobs)->additional(['feed' => $feed->meta()]);
     }

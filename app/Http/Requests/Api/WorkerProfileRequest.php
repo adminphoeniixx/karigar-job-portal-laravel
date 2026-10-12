@@ -57,6 +57,10 @@ class WorkerProfileRequest extends FormRequest
             'state' => ['nullable', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            // The locality ("Sanganer"); employers see it with the distance.
+            'area' => ['nullable', 'string', 'max:120'],
+            // Where a new latitude/longitude came from: gps | area | city.
+            'location_source' => ['nullable', 'string', 'in:gps,area,city'],
             'travel_radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
             'available' => ['boolean'],
             // Opt out of automated screening calls. Never inferred — only the

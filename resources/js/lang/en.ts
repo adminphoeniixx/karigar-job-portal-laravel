@@ -234,6 +234,8 @@ export default {
         shortlisted: 'Shortlisted',
     },
     applicants: {
+        unlockedBy: 'Unlocked by {count} other HR | Unlocked by {count} other HRs',
+        approxDistance: 'Approximate: the karigar has not set their area yet',
         batchInfo: 'Showing {visible} of {total} applicants.',
         batchNext: 'Shortlist, hire or reject the {undecided} still open to see the next {next}.',
         noPlanInfo: '{hidden} applicant is waiting. Subscribe to a plan to see them. | {hidden} applicants are waiting. Subscribe to a plan to see them.',
@@ -386,6 +388,10 @@ export default {
         confirmRemove: 'Remove your resume? New applications will be matched on your profile alone.',
     },
     profile: {
+        area: 'Area / locality',
+        areaPlaceholder: 'e.g. Sanganer',
+        useMyLocation: 'Use my location',
+        areaHint: 'Employers see how far you are from their work (e.g. "2 km · Sanganer"). Add your area or use your location.',
         photo: 'Photo',
         logo: 'Company logo',
         upload: 'Upload',

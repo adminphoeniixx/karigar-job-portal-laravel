@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\Cache;
  */
 class Setting extends Model
 {
+    /**
+     * Cached in place of a setting that has no row, so one left at its
+     * default is cached too instead of costing a query on every read.
+     */
+    private const UNSET = '__setting_unset__';
+
     protected $fillable = ['key', 'value'];
 
     private static function cacheKey(string $key): string
@@ -26,12 +32,14 @@ class Setting extends Model
      */
     public static function get(string $key, ?string $default = null): ?string
     {
-        $value = Cache::rememberForever(
+        // Memoized for the request (Octane forgets it between requests), so
+        // a flag read once per job on a page costs one cache lookup, not 15.
+        $value = Cache::memo()->rememberForever(
             self::cacheKey($key),
-            fn () => static::query()->where('key', $key)->value('value'),
+            fn () => static::query()->where('key', $key)->value('value') ?? self::UNSET,
         );
 
-        return $value ?? $default;
+        return $value === self::UNSET ? $default : ($value ?? $default);
     }
 
     /**
@@ -60,6 +68,6 @@ class Setting extends Model
     public static function set(string $key, ?string $value): void
     {
         static::updateOrCreate(['key' => $key], ['value' => $value]);
-        Cache::forget(self::cacheKey($key));
+        Cache::memo()->forget(self::cacheKey($key));
     }
 }

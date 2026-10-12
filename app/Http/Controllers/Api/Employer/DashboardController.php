@@ -13,6 +13,7 @@ use App\Models\JobApplication;
 use App\Models\Setting;
 use App\Services\ApplicantAccess;
 use App\Services\ContactUnlocks;
+use App\Support\ApplicantSignals;
 use App\Support\EmployerVerification;
 use App\Support\Verification;
 use Illuminate\Http\JsonResponse;
@@ -59,6 +60,7 @@ class DashboardController extends Controller
             ->filter(fn (JobApplication $application) => $access->isVisible($application))
             ->take(5)
             ->values();
+        ApplicantSignals::attach($recentApplicants, $user);
 
         return response()->json([
             'greeting' => $account->name,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { Camera, FileText, IndianRupee, MapPin, UserRound } from '@lucide/vue';
+import { Camera, FileText, IndianRupee, LocateFixed, MapPin, UserRound } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import JobMap from '@/components/JobMap.vue';
@@ -22,9 +22,11 @@ interface WorkerProfile {
     expected_wage: string | null;
     wage_type: string | null;
     city: string | null;
+    area: string | null;
     state: string | null;
     latitude: string | null;
     longitude: string | null;
+    location_source: 'gps' | 'area' | 'city' | null;
     available: boolean;
     screening_calls_opted_out: boolean;
     payout_upi: string | null;
@@ -50,9 +52,13 @@ const form = useForm<{
     expected_wage: number | string;
     wage_type: string;
     city: string;
+    area: string;
     state: string;
     latitude: number | string;
     longitude: number | string;
+    // Where a moved pin came from: 'city' (centred on the city) or 'gps'
+    // (placed by hand / the browser's position). Empty when it didn't move.
+    location_source: '' | 'gps' | 'city';
     available: boolean;
     screening_calls_opted_out: boolean;
     payout_upi: string;
@@ -67,9 +73,11 @@ const form = useForm<{
     // Wages are monthly only (App\Support\Wage).
     wage_type: 'monthly',
     city: props.profile.city ?? '',
+    area: props.profile.area ?? '',
     state: props.profile.state ?? '',
     latitude: props.profile.latitude ?? '',
     longitude: props.profile.longitude ?? '',
+    location_source: '',
     available: props.profile.available ?? true,
     screening_calls_opted_out: props.profile.screening_calls_opted_out ?? false,
     payout_upi: props.profile.payout_upi ?? '',
@@ -99,11 +107,28 @@ const mapLat = ref<number | null>(form.latitude ? Number(form.latitude) : null);
 const mapLng = ref<number | null>(form.longitude ? Number(form.longitude) : null);
 const locating = ref(false);
 
-const setPoint = (lat: number, lng: number) => {
+const setPoint = (lat: number, lng: number, source: 'gps' | 'city' = 'gps') => {
     mapLat.value = lat;
     mapLng.value = lng;
     form.latitude = String(lat);
     form.longitude = String(lng);
+    form.location_source = source;
+};
+
+// The browser's own position: the karigar's real pin; the server names the area.
+const findingMe = ref(false);
+const useMyLocation = () => {
+    if (!navigator.geolocation) return;
+    findingMe.value = true;
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            setPoint(pos.coords.latitude, pos.coords.longitude, 'gps');
+            form.area = '';
+            findingMe.value = false;
+        },
+        () => (findingMe.value = false),
+        { enableHighAccuracy: true, timeout: 10000 },
+    );
 };
 
 let geoTimer: ReturnType<typeof setTimeout> | undefined;
@@ -120,7 +145,8 @@ watch([() => form.city, () => form.state], ([city, state]) => {
             });
             const res = await fetch(`https://nominatim.openstreetmap.org/search?${q}`, { headers: { Accept: 'application/json' } });
             const hits = await res.json();
-            if (hits[0]) setPoint(Number(hits[0].lat), Number(hits[0].lon));
+            // Only the city's centre: employers see an approximate distance.
+            if (hits[0]) setPoint(Number(hits[0].lat), Number(hits[0].lon), 'city');
         } catch {
             // best-effort only
         } finally {
@@ -201,6 +227,23 @@ const submit = () => {
                             </select>
                             <InputError :message="form.errors.city" />
                         </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-2">
+                        <Label for="area">{{ $t('profile.area') }}</Label>
+                        <div class="flex gap-2">
+                            <Input id="area" v-model="form.area" :placeholder="$t('profile.areaPlaceholder')" class="flex-1" />
+                            <button
+                                type="button"
+                                :disabled="findingMe"
+                                class="inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition hover:bg-muted disabled:opacity-60"
+                                @click="useMyLocation"
+                            >
+                                <LocateFixed class="size-3.5" /> {{ $t('profile.useMyLocation') }}
+                            </button>
+                        </div>
+                        <p class="text-xs text-muted-foreground">{{ $t('profile.areaHint') }}</p>
+                        <InputError :message="form.errors.area" />
                     </div>
 
                     <div class="mt-4 grid gap-2">

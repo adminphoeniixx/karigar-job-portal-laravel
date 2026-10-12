@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\CityCentres;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -104,11 +105,19 @@ class Geocoder
      * location picker. Cached for a month: Nominatim allows about one request
      * a second and asks that the same query is not sent twice.
      *
-     * @return list<array{label: string, city: string|null, state: string|null, latitude: float, longitude: float}>
+     * @return list<array{label: string, area: string|null, city: string|null, state: string|null, latitude: float, longitude: float}>
      */
     public function search(string $query, int $limit = 5): array
     {
         $query = trim(preg_replace('/\s+/', ' ', $query) ?? '');
+
+        // A city from the reference list is answered at once, without the
+        // round trip to Nominatim (about 0.7 s for a query it hasn't seen).
+        $cities = CityCentres::search($query, $limit);
+
+        if ($cities !== []) {
+            return $cities;
+        }
 
         if (! config('services.geocoder.enabled') || mb_strlen($query) < 2) {
             return [];
@@ -148,7 +157,7 @@ class Geocoder
     /**
      * The place at a map pin, for naming a point the person dropped.
      *
-     * @return array{label: string, city: string|null, state: string|null, latitude: float, longitude: float}|null
+     * @return array{label: string, area: string|null, city: string|null, state: string|null, latitude: float, longitude: float}|null
      */
     public function reverse(float $latitude, float $longitude): ?array
     {
@@ -203,7 +212,7 @@ class Geocoder
      * rather than Nominatim's full postal line.
      *
      * @param  array<string, mixed>  $hit
-     * @return array{label: string, city: string|null, state: string|null, latitude: float, longitude: float}
+     * @return array{label: string, area: string|null, city: string|null, state: string|null, latitude: float, longitude: float}
      */
     private function place(array $hit): array
     {
@@ -220,6 +229,8 @@ class Geocoder
 
         return [
             'label' => $label,
+            // The locality ("Sanganer"), null when the place is a whole city.
+            'area' => $area !== $city ? $area : null,
             'city' => $city,
             'state' => $state,
             'latitude' => (float) $hit['lat'],

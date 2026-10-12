@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\PersonalAccessToken;
 use App\Services\Calling\AgoraProvider;
 use App\Services\Calling\CallProvider;
 use App\Services\Calling\StubProvider;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,6 +44,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Writes last_used_at once a minute instead of on every API call.
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
     }
 
     /**

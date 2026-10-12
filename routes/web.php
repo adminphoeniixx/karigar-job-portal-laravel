@@ -200,6 +200,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('employer/workers/contacts/applicants', [ContactListController::class, 'applicants'])->name('workers.contacts.applicants');
         Route::get('employer/workers/{worker}', [WorkerDirectoryController::class, 'show'])->name('workers.show');
         Route::post('employer/workers/{worker}/unlock', [WorkerDirectoryController::class, 'unlock'])->name('workers.unlock');
+        Route::post('employer/workers/{worker}/reject', [WorkerDirectoryController::class, 'reject'])->name('workers.reject');
+        Route::delete('employer/workers/{worker}/reject', [WorkerDirectoryController::class, 'restore'])->name('workers.restore');
 
         // Subscriptions
         Route::get('subscription', [SubscriptionController::class, 'pricing'])->name('subscription.pricing');

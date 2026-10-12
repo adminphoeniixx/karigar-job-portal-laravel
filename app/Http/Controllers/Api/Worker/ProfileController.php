@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\WorkerProfileRequest;
 use App\Http\Resources\Api\WorkerProfileResource;
 use App\Services\BunnyCdn;
+use App\Services\Geocoder;
+use App\Support\KarigarArea;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -39,7 +41,8 @@ class ProfileController extends Controller
             $user->update(['email' => $request->validated('email')]);
         }
 
-        $profile->fill($request->safe()->except('name', 'email'));
+        $profile->fill($request->safe()->except('name', 'email', 'location_source'));
+        KarigarArea::apply($profile, $request->validated(), app(Geocoder::class));
         $profile->save();
         $profile->setRelation('user', $user->fresh());
 

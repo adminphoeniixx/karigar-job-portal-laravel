@@ -1609,7 +1609,7 @@
                 }
               ]
             },
-            "description": "Typesense-powered. phone is null until the karigar is unlocked; can_unlock marks rows within the plan quota."
+            "description": "Each row carries `distance_label` (\"1.5 km\", \"~4 km\" when only the city is known), `location_label` (\"Sanganer, Jaipur\"), `area`, `distance_km`, `unlocked_by_count` (other employers who unlocked this karigar) and `rejected`. Rejected karigars are left out; `rejected_count` is for the Rejected tab badge."
           }
         },
         {
@@ -1671,6 +1671,103 @@
               ]
             },
             "description": "Spends one database unlock (database plan first, then the job plan); free if this karigar is already unlocked or applied to your job. 422 `no_plan` without a plan, 422 `unlock_limit_reached` when the pool is spent."
+          }
+        },
+        {
+          "name": "Rejected karigars (tab)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/workers?rejected=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "workers"
+              ],
+              "query": [
+                {
+                  "key": "rejected",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Only the karigars this employer rejected, for the Rejected tab. Each has `rejected: true`; offer Undo."
+          }
+        },
+        {
+          "name": "Reject karigar (free, no unlock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/workers/{{worker_id}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "workers",
+                "{{worker_id}}",
+                "reject"
+              ]
+            },
+            "description": "\"Not interested\" without unlocking: no unlock is spent, the number stays hidden. The karigar leaves this employer's searches and job matches and moves to the Rejected tab. → `{ message, worker: { id, user_id, rejected: true }, rejected_count }`"
+          }
+        },
+        {
+          "name": "Undo reject",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/workers/{{worker_id}}/reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "workers",
+                "{{worker_id}}",
+                "reject"
+              ]
+            },
+            "description": "Brings a rejected karigar back into the searches. → `{ message, worker: { ..., rejected: false }, rejected_count }`"
           }
         },
         {
