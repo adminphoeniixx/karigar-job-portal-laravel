@@ -39,7 +39,7 @@ class BackfillInvoices extends Command
                 'plan_name' => $s->plan->name,
                 'period_start' => $start,
                 'period_end' => $start === null ? null
-                    : ($s->plan->interval === 'yearly' ? $start->copy()->addYear() : $start->copy()->addMonth()),
+                    : $s->plan->periodEnd($start),
             ]);
 
             $this->line("  <info>✓</info> {$s->invoice_number}");

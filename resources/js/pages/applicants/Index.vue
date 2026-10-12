@@ -29,6 +29,9 @@ interface ScreeningCall {
     proposed_mode: string | null;
     awaiting_confirmation: boolean;
     created_ago: string | null;
+    // A booked call: when it rings (IST), and it can still be taken back.
+    scheduled_label: string | null;
+    can_cancel: boolean;
 }
 
 interface Screening {
@@ -125,6 +128,16 @@ const setSort = (sort: 'best_match' | 'recent') => {
 
 // Queues scoring for applicants that never got a score (e.g. they applied
 // before AI matching was switched on). Scores land once the queue runs.
+// AI shortlist from the Worker Database: the AI invites the best fits; the
+// ones who accept are shortlisted and (if chosen) get an AI call booked.
+const pickOpen = ref(false);
+const pickForm = useForm({ count: 5, auto_call: true, call_at: '' });
+const submitPick = () => {
+    pickForm
+        .transform((data) => ({ ...data, call_at: data.call_at || null }))
+        .post(`/employer/jobs/${props.job.id}/ai-shortlist`, { preserveScroll: true, onSuccess: () => (pickOpen.value = false) });
+};
+
 const rescore = () => {
     router.post(`/employer/jobs/${props.job.id}/rescore`, {}, { preserveScroll: true });
 };
@@ -165,12 +178,31 @@ const escrowBadge: Record<string, string> = {
 // confirms it here before it lands on the application.
 const calling = ref<Set<number>>(new Set());
 
-const placeCall = (a: Applicant) => {
+// The popup: ring now, or book a date and time (Indian time; calls only go
+// out between 10 AM and 7 PM, so a time outside that moves to the next opening).
+const callFor = ref<Applicant | null>(null);
+const callMode = ref<'now' | 'later'>('now');
+const callAt = ref('');
+
+const openCall = (a: Applicant) => {
+    callFor.value = a;
+    callMode.value = 'now';
+    callAt.value = '';
+};
+
+const placeCall = () => {
+    const a = callFor.value;
+    if (a === null || (callMode.value === 'later' && !callAt.value)) return;
     calling.value.add(a.id);
-    router.post(`/employer/applications/${a.id}/screening-call`, {}, {
+    router.post(`/employer/applications/${a.id}/screening-call`, callMode.value === 'later' ? { at: callAt.value } : {}, {
         preserveScroll: true,
+        onSuccess: () => (callFor.value = null),
         onFinish: () => calling.value.delete(a.id),
     });
+};
+
+const cancelCall = (call: ScreeningCall) => {
+    router.delete(`/employer/screening-calls/${call.id}`, { preserveScroll: true });
 };
 
 const screeningTone: Record<string, string> = {
@@ -266,6 +298,12 @@ const submitReview = () => {
             >
                 <Sparkles class="size-3.5 text-orange-500" /> {{ $t('applicants.scoreUnscored', { count: unscored }) }}
             </button>
+            <button
+                class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+                @click="pickOpen = true"
+            >
+                <Sparkles class="size-3.5" /> {{ $t('applicants.aiPick.button') }}
+            </button>
         </div>
 
         <div v-if="applications.length" class="grid gap-4">
@@ -342,6 +380,17 @@ const submitReview = () => {
                             {{ a.screening.call.outcome_label }}
                         </span>
                         <span v-else class="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">{{ a.screening.call.status_label }}</span>
+                        <span v-if="a.screening.call.scheduled_label && a.screening.call.can_cancel" class="text-xs font-semibold">
+                            {{ $t('applicants.screening.bookedFor', { time: a.screening.call.scheduled_label }) }}
+                        </span>
+                        <button
+                            v-if="a.screening.call.can_cancel"
+                            type="button"
+                            class="text-xs font-semibold text-rose-600 hover:underline"
+                            @click="cancelCall(a.screening.call)"
+                        >
+                            {{ $t('applicants.screening.cancelCall') }}
+                        </button>
                         <span class="text-xs text-muted-foreground">{{ a.screening.call.created_ago }}</span>
                     </div>
                     <p v-if="a.screening.call.summary" class="mt-2 text-sm text-muted-foreground">{{ a.screening.call.summary }}</p>
@@ -402,7 +451,7 @@ const submitReview = () => {
                         :disabled="!a.screening.can_call || calling.has(a.id)"
                         :title="a.screening.blocked_because ?? $t('applicants.screening.hint')"
                         class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition enabled:hover:bg-muted enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                        @click="placeCall(a)"
+                        @click="openCall(a)"
                     >
                         <PhoneCall class="size-3.5 text-orange-500" />
                         {{ calling.has(a.id) ? $t('applicants.screening.calling') : $t('applicants.screening.call') }}
@@ -477,6 +526,73 @@ const submitReview = () => {
             <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Users class="size-7" /></div>
             <p class="mt-4 font-medium">{{ $t('applicants.empty') }}</p>
             <p class="mt-1 text-sm text-muted-foreground">{{ $t('applicants.emptyHint') }}</p>
+        </div>
+    </div>
+
+    <!-- AI shortlist from the Worker Database -->
+    <div v-if="pickOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="pickOpen = false">
+        <div class="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl">
+            <h3 class="text-lg font-semibold">{{ $t('applicants.aiPick.title') }}</h3>
+            <p class="mt-1 text-sm text-muted-foreground">{{ $t('applicants.aiPick.hint') }}</p>
+
+            <label class="mt-4 block text-xs font-semibold text-muted-foreground">{{ $t('applicants.aiPick.count') }}</label>
+            <select v-model.number="pickForm.count" class="mt-1 w-full rounded-xl border bg-background px-4 py-2.5 text-sm">
+                <option v-for="n in [3, 5, 10]" :key="n" :value="n">{{ n }}</option>
+            </select>
+
+            <label class="mt-4 flex items-center gap-2 text-sm">
+                <input v-model="pickForm.auto_call" type="checkbox" class="size-4 accent-orange-600" /> {{ $t('applicants.aiPick.autoCall') }}
+            </label>
+            <div v-if="pickForm.auto_call" class="mt-3">
+                <label class="block text-xs font-semibold text-muted-foreground">{{ $t('applicants.aiPick.callAt') }}</label>
+                <input v-model="pickForm.call_at" type="datetime-local" class="mt-1 w-full rounded-xl border bg-background px-4 py-2.5 text-sm" />
+                <p class="mt-1 text-xs text-muted-foreground">{{ $t('applicants.screening.hoursHint') }}</p>
+                <p v-if="pickForm.errors.call_at" class="mt-1 text-xs text-rose-500">{{ pickForm.errors.call_at }}</p>
+            </div>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button class="rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted" @click="pickOpen = false">{{ $t('common.cancel') }}</button>
+                <button :disabled="pickForm.processing" class="rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-60" @click="submitPick">
+                    {{ pickForm.processing ? $t('applicants.aiPick.working') : $t('applicants.aiPick.go') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI call: now, or at a date and time -->
+    <div v-if="callFor !== null" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="callFor = null">
+        <div class="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl">
+            <h3 class="text-lg font-semibold">{{ $t('applicants.screening.popupTitle', { name: callFor.worker.name }) }}</h3>
+            <p class="mt-1 text-sm text-muted-foreground">{{ $t('applicants.screening.popupHint') }}</p>
+
+            <div class="mt-4 grid gap-2">
+                <label class="flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm" :class="callMode === 'now' ? 'border-orange-500 bg-orange-500/5' : ''">
+                    <input v-model="callMode" type="radio" value="now" class="accent-orange-600" /> {{ $t('applicants.screening.callNow') }}
+                </label>
+                <label class="flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm" :class="callMode === 'later' ? 'border-orange-500 bg-orange-500/5' : ''">
+                    <input v-model="callMode" type="radio" value="later" class="accent-orange-600" /> {{ $t('applicants.screening.callLater') }}
+                </label>
+            </div>
+
+            <div v-if="callMode === 'later'" class="mt-3">
+                <input
+                    v-model="callAt"
+                    type="datetime-local"
+                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                />
+                <p class="mt-1 text-xs text-muted-foreground">{{ $t('applicants.screening.hoursHint') }}</p>
+            </div>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button class="rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted" @click="callFor = null">{{ $t('common.cancel') }}</button>
+                <button
+                    :disabled="calling.has(callFor.id) || (callMode === 'later' && !callAt)"
+                    class="rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-60"
+                    @click="placeCall"
+                >
+                    {{ callMode === 'now' ? $t('applicants.screening.callNow') : $t('applicants.screening.book') }}
+                </button>
+            </div>
         </div>
     </div>
 

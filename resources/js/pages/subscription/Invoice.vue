@@ -6,7 +6,7 @@ import { computed } from 'vue';
 interface Invoice {
     number: string;
     date: string | null;
-    plan: { name: string; interval: string; price: number };
+    plan: { name: string; interval: string; interval_label?: string; price: number };
     coupon_code: string | null;
     discount: number | null;
     subtotal: number | null;
@@ -118,7 +118,7 @@ const printInvoice = () => window.print();
                         <td class="py-3.5">
                             <div class="font-medium">{{ invoice.plan.name }} plan — subscription</div>
                             <div class="text-xs capitalize text-muted-foreground">
-                                Billed {{ invoice.plan.interval }}<template v-if="invoice.sac"> · SAC {{ invoice.sac }}</template>
+                                Billed every {{ invoice.plan.interval_label ?? invoice.plan.interval }}<template v-if="invoice.sac"> · SAC {{ invoice.sac }}</template>
                             </div>
                         </td>
                         <td class="py-3.5 text-right tabular-nums">{{ inr(invoice.plan.price) }}</td>

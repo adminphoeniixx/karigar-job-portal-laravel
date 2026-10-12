@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
 use Illuminate\Support\Facades\View;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,7 +22,7 @@ class PrivacyController extends Controller
         return Inertia::render('Privacy', [
             // Rendered rather than hard-coded so the page never contradicts the
             // admin switch — with verification off there is no KYC to disclose.
-            'kycEnabled' => \App\Models\Setting::bool('kyc_verification_enabled', true),
+            'kycEnabled' => Setting::bool('kyc_verification_enabled', true),
             'updatedAt' => '12 August 2026',
         ]);
     }

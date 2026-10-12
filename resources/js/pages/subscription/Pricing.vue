@@ -11,6 +11,7 @@ interface Plan {
     type: 'job' | 'database';
     price: string;
     interval: string;
+    interval_label?: string;
     features: { job_post_limit?: number; contact_unlock_limit?: number; featured?: boolean } | null;
     razorpay_plan_id: string | null;
     feature_list: string[];
@@ -236,7 +237,7 @@ const subscribe = () => {
                             class="text-4xl font-bold tracking-tight"
                             :class="discountFor(plan) > 0 ? 'text-orange-600 dark:text-orange-400' : ''"
                         >{{ money(finalPrice(plan)) }}</span>
-                        <span class="pb-1 text-sm text-muted-foreground">/{{ plan.interval }}</span>
+                        <span class="pb-1 text-sm text-muted-foreground">/{{ plan.interval_label ?? plan.interval }}</span>
                     </div>
                     <div v-if="gstPercent > 0" class="relative mt-0.5 text-[11px] text-muted-foreground">
                         + {{ gstPercent }}% GST · {{ money(totalFor(plan)) }} total
@@ -342,7 +343,7 @@ const subscribe = () => {
                             <Sparkles class="size-2.5" /> {{ $t('subscription.popular') }}
                         </span>
                     </h3>
-                    <p class="mt-0.5 text-sm capitalize text-muted-foreground">{{ $t('subscription.billed') }} {{ selected.interval }}</p>
+                    <p class="mt-0.5 text-sm capitalize text-muted-foreground">{{ $t('subscription.billedEvery', { period: selected.interval_label ?? selected.interval }) }}</p>
                 </div>
                 <button class="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" @click="closePlan">
                     <X class="size-5" />
@@ -401,7 +402,7 @@ const subscribe = () => {
                 </div>
                 <div class="flex justify-between border-t pt-2 text-base font-bold">
                     <span>{{ $t('subscription.totalPayable') }}</span>
-                    <span>{{ money(totalFor(selected)) }} <span class="text-xs font-normal text-muted-foreground">/{{ selected.interval }}</span></span>
+                    <span>{{ money(totalFor(selected)) }} <span class="text-xs font-normal text-muted-foreground">/{{ selected.interval_label ?? selected.interval }}</span></span>
                 </div>
             </div>
 

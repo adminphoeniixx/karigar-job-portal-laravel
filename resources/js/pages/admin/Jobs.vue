@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Briefcase, Search, EyeOff, Eye } from '@lucide/vue';
+import { Briefcase, Check, Eye, EyeOff, Search, ShieldAlert, X } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -12,11 +12,17 @@ interface Row {
     state: string | null;
     status: string;
     created_at: string;
+    description: string | null;
+    // Held by the AI safety check: pending (waiting for you), approved, rejected.
+    moderation_status: 'pending' | 'approved' | 'rejected' | null;
+    moderation_reasons: string[];
+    moderation_note: string | null;
 }
 
 const props = defineProps<{
     jobs: { data: Row[]; links: { url: string | null; label: string; active: boolean }[] };
     filters: { q?: string; status?: string };
+    reviewCount: number;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Job Moderation', href: '/admin/jobs' }] } });
@@ -43,6 +49,13 @@ const toggle = (j: Row) => {
     }
 };
 
+const approve = (j: Row) => router.post(`/admin/jobs/${j.id}/approve`, {}, { preserveScroll: true });
+
+const reject = (j: Row) => {
+    const note = window.prompt(`Why is "${j.title}" rejected? The employer sees this.`);
+    if (note) router.post(`/admin/jobs/${j.id}/reject`, { note }, { preserveScroll: true });
+};
+
 const statusBadge: Record<string, string> = {
     active: 'bg-orange-500/10 text-orange-600 dark:text-orange-300',
     closed: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
@@ -64,6 +77,7 @@ const statusBadge: Record<string, string> = {
             </div>
             <select v-model="status" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40">
                 <option value="">All statuses</option>
+                <option value="review">Waiting for review ({{ reviewCount }})</option>
                 <option value="active">Active</option>
                 <option value="closed">Closed</option>
                 <option value="draft">Draft</option>
@@ -77,14 +91,30 @@ const statusBadge: Record<string, string> = {
                     <div class="flex items-center gap-2">
                         <span class="truncate font-medium">{{ j.title }}</span>
                         <span class="rounded-full px-2 py-0.5 text-xs font-semibold capitalize" :class="statusBadge[j.status]">{{ j.status }}</span>
+                        <span v-if="j.moderation_status === 'pending'" class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:text-sky-300">
+                            <ShieldAlert class="size-3" /> Review
+                        </span>
+                        <span v-else-if="j.moderation_status === 'rejected'" class="rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-600">Rejected</span>
                     </div>
+                    <ul v-if="j.moderation_status === 'pending' && j.moderation_reasons.length" class="mt-1 list-inside list-disc text-xs text-sky-800 dark:text-sky-300">
+                        <li v-for="r in j.moderation_reasons" :key="r">{{ r }}</li>
+                    </ul>
+                    <p v-if="j.moderation_status === 'pending' && j.description" class="mt-1 line-clamp-2 max-w-2xl text-xs text-muted-foreground">{{ j.description }}</p>
                     <div class="truncate text-xs text-muted-foreground">
                         {{ j.employer ?? 'Unknown' }} · {{ [j.city, j.state].filter(Boolean).join(', ') || 'No location' }} · {{ j.created_at }}
                     </div>
                 </div>
-                <div class="shrink-0">
+                <div class="flex shrink-0 gap-1">
+                    <template v-if="j.moderation_status === 'pending'">
+                        <button class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-500/10" @click="approve(j)">
+                            <Check class="size-3.5" /> Approve
+                        </button>
+                        <button class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-500/10" @click="reject(j)">
+                            <X class="size-3.5" /> Reject
+                        </button>
+                    </template>
                     <button
-                        v-if="j.status === 'active'"
+                        v-else-if="j.status === 'active'"
                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400"
                         @click="toggle(j)"
                     >

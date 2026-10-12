@@ -50,6 +50,12 @@ class ScreeningController extends Controller
     {
         $this->authorize('update', $application->job);
 
+        // Optional: book the call for a time instead of ringing now. Without a
+        // timezone it is read as Indian time; calling hours still apply.
+        $data = $request->validate([
+            'at' => ['nullable', 'date', 'after:now', 'before:+15 days'],
+        ]);
+
         $blocker = $this->screening->blocker($application);
 
         if ($blocker !== null) {
@@ -57,6 +63,21 @@ class ScreeningController extends Controller
                 'message' => __('This applicant cannot be called right now.'),
                 'code' => $blocker,
             ], 422);
+        }
+
+        if (! empty($data['at'])) {
+            $call = $this->screening->schedule(
+                $application,
+                CarbonImmutable::parse($data['at'], config('app.display_timezone')),
+                'manual',
+                $request->user(),
+            );
+
+            return response()->json([
+                'message' => __('AI call booked for :time.', ['time' => $call->scheduled_at->timezone(config('app.display_timezone'))->format('d M, g:i A')]),
+                'calling_at' => $call->scheduled_at->toIso8601String(),
+                'call' => new ScreeningCallResource($call),
+            ], 201);
         }
 
         PlaceScreeningCall::dispatch($application->id);
@@ -69,6 +90,20 @@ class ScreeningController extends Controller
                 : __('Calling the worker now.'),
             'calling_at' => $callableAt->toIso8601String(),
         ], 202);
+    }
+
+    /**
+     * Take back a booked call that has not rung yet.
+     */
+    public function destroy(ScreeningCall $call): JsonResponse
+    {
+        $this->authorize('update', $call->application->job);
+
+        if (! $this->screening->cancel($call)) {
+            return response()->json(['message' => __('Only a call that has not rung yet can be cancelled.'), 'code' => 'not_scheduled'], 422);
+        }
+
+        return response()->json(['message' => __('AI call cancelled.'), 'call' => new ScreeningCallResource($call->fresh())]);
     }
 
     /**

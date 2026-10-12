@@ -16,7 +16,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class JobInvite extends Model
 {
-    protected $fillable = ['job_listing_id', 'worker_id', 'employer_id', 'message'];
+    protected $fillable = [
+        'job_listing_id', 'worker_id', 'employer_id', 'message',
+        'source', 'ai_score', 'ai_summary', 'auto_call', 'call_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'auto_call' => 'boolean',
+            'call_at' => 'datetime',
+        ];
+    }
 
     /**
      * @return BelongsTo<JobListing, $this>

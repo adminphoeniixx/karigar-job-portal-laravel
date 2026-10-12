@@ -42,6 +42,7 @@ class InvoiceDocument
                 'plan' => [
                     'name' => $i->plan_name,
                     'interval' => $s->plan->interval,
+                    'interval_label' => $s->plan->interval_label,
                     // What the plan cost on this invoice, not what it costs now.
                     'price' => (float) $i->subtotal_amount + (float) ($i->discount_amount ?? 0),
                 ],

@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\Auth\OtpAuthController;
 use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DeviceTokenController;
+use App\Http\Controllers\Api\Employer\AiInterviewController;
+use App\Http\Controllers\Api\Employer\AiShortlistController;
 use App\Http\Controllers\Api\Employer\ApplicantController as EmployerApplicantController;
 use App\Http\Controllers\Api\Employer\BillingController;
 use App\Http\Controllers\Api\Employer\ContactListController;
@@ -216,6 +218,12 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             Route::get('employer/applicants/{application}/screening-calls', [ScreeningController::class, 'index'])->name('api.employer.screening.index');
             Route::post('employer/applicants/{application}/screening-calls', [ScreeningController::class, 'store'])->name('api.employer.screening.store');
             Route::post('employer/screening-calls/{call}/confirm', [ScreeningController::class, 'confirm'])->name('api.employer.screening.confirm');
+            Route::delete('employer/screening-calls/{call}', [ScreeningController::class, 'destroy'])->name('api.employer.screening.destroy');
+            // Every AI call across the account's jobs: ?filter=upcoming|done|all
+            Route::get('employer/ai-interviews', [AiInterviewController::class, 'index'])->name('api.employer.ai-interviews');
+            // AI picks karigars from the database for a job and invites them.
+            Route::post('employer/jobs/{job}/ai-shortlist', [AiShortlistController::class, 'store'])
+                ->middleware('throttle:10,60')->name('api.employer.jobs.ai-shortlist');
             Route::delete('employer/applicants/{application}/interview', [EmployerApplicantController::class, 'cancelInterview'])->name('api.employer.applicants.interview.cancel');
             Route::post('employer/jobs/{job}/rescore', [EmployerApplicantController::class, 'rescore'])->name('api.employer.applicants.rescore');
 

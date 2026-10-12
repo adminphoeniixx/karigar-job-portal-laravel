@@ -12,6 +12,7 @@ use App\Services\JobPostingGate;
 use App\Services\JobRepost;
 use App\Support\EmployerVerification;
 use App\Support\JobFormOptions;
+use App\Support\JobModeration;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -132,7 +133,17 @@ class JobListingController extends Controller
             ]);
         }
 
-        $job = $account->jobListings()->create($request->validated());
+        // Safety check: a job that looks harmful is held as a draft for review,
+        // spending nothing from the plan.
+        $data = $request->validated();
+        $held = $gate !== null ? JobModeration::screen($data) : null;
+        $gate = $held === null ? $gate : null;
+
+        $job = $account->jobListings()->create($data);
+
+        if ($held !== null) {
+            JobModeration::hold($job, $held, $account);
+        }
 
         if ($gate !== null && $gate['consumesFreePost']) {
             JobPostingGate::consumeFreePost($account);
@@ -144,7 +155,9 @@ class JobListingController extends Controller
             $this->sendPostedEmail($job, $account);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $job->isDraft() ? __('Draft saved.') : __('Job posted.')]);
+        Inertia::flash('toast', $held !== null
+            ? ['type' => 'error', 'message' => JobModeration::heldMessage()]
+            : ['type' => 'success', 'message' => $job->isDraft() ? __('Draft saved.') : __('Job posted.')]);
 
         return to_route('jobs.index');
     }
@@ -230,7 +243,18 @@ class JobListingController extends Controller
             return back()->with('toast', ['type' => 'error', 'message' => $gate['message']]);
         }
 
-        $job->update($request->validated());
+        // Safety check when it goes live, or a live job's words change.
+        $data = $request->validated();
+        $held = JobModeration::needsCheck($data, $job) ? JobModeration::screen($data, $job) : null;
+        $gate = $held === null ? $gate : null;
+
+        $job->update($data);
+
+        if ($held !== null) {
+            JobModeration::hold($job, $held, $account);
+        } elseif ($job->status === JobStatus::Active && $job->moderation_status !== null) {
+            $job->update(['moderation_status' => null, 'moderation_reasons' => null]);
+        }
 
         if ($gate !== null) {
             if ($gate['consumesFreePost']) {
@@ -241,11 +265,13 @@ class JobListingController extends Controller
             $this->sendPostedEmail($job, $account);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => match (true) {
-            $goingLive => __('Job posted.'),
-            $job->isDraft() => __('Draft saved.'),
-            default => __('Job updated.'),
-        }]);
+        Inertia::flash('toast', $held !== null
+            ? ['type' => 'error', 'message' => JobModeration::heldMessage()]
+            : ['type' => 'success', 'message' => match (true) {
+                $goingLive => __('Job posted.'),
+                $job->isDraft() => __('Draft saved.'),
+                default => __('Job updated.'),
+            }]);
 
         return to_route('jobs.index');
     }

@@ -68,7 +68,7 @@ class Subscription extends Model
         $this->fill([
             'status' => SubscriptionStatus::Active,
             'starts_at' => $this->starts_at ?? now(),
-            'ends_at' => $this->plan->interval === 'yearly' ? now()->addYear() : now()->addMonth(),
+            'ends_at' => $this->plan->periodEnd(now()),
         ]);
 
         $this->save();
@@ -106,9 +106,7 @@ class Subscription extends Model
         ?CarbonInterface $periodEnd = null,
     ): void {
         $periodStart ??= $this->ends_at ?? now();
-        $periodEnd ??= $this->plan->interval === 'yearly'
-            ? $periodStart->copy()->addYear()
-            : $periodStart->copy()->addMonth();
+        $periodEnd ??= $this->plan->periodEnd($periodStart);
 
         $this->update([
             'status' => SubscriptionStatus::Active,
@@ -205,9 +203,7 @@ class Subscription extends Model
     public function currentCycleStart(): CarbonInterface
     {
         if ($this->ends_at !== null) {
-            $start = $this->plan->interval === 'yearly'
-                ? $this->ends_at->copy()->subYear()
-                : $this->ends_at->copy()->subMonth();
+            $start = $this->plan->periodStart($this->ends_at);
 
             // Never before the subscription itself began.
             return $this->starts_at !== null && $this->starts_at->gt($start) ? $this->starts_at : $start;

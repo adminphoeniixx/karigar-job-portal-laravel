@@ -4,6 +4,8 @@ namespace App\Enums;
 
 enum ScreeningCallStatus: string
 {
+    /** Booked for `scheduled_at`; dialled by `screening:place-due`. */
+    case Scheduled = 'scheduled';
     case Queued = 'queued';
     case Dialing = 'dialing';
     case InProgress = 'in_progress';
@@ -16,6 +18,7 @@ enum ScreeningCallStatus: string
     public function label(): string
     {
         return match ($this) {
+            self::Scheduled => 'Scheduled',
             self::Queued => 'Queued',
             self::Dialing => 'Dialing',
             self::InProgress => 'On call',
@@ -40,6 +43,6 @@ enum ScreeningCallStatus: string
      */
     public function isFinished(): bool
     {
-        return $this !== self::Queued && $this !== self::Dialing && $this !== self::InProgress;
+        return ! in_array($this, [self::Scheduled, self::Queued, self::Dialing, self::InProgress], true);
     }
 }

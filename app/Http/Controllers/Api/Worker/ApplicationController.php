@@ -11,6 +11,7 @@ use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Models\Review;
 use App\Notifications\NewApplicationNotification;
+use App\Services\DatabaseShortlist;
 use App\Support\TemplatedMailer;
 use App\Support\WorkerVerification;
 use Illuminate\Http\JsonResponse;
@@ -99,6 +100,11 @@ class ApplicationController extends Controller
             'expected_wage' => $data['expected_wage'] ?? null,
             'status' => ApplicationStatus::Pending,
         ]);
+
+        // Invited by the AI from the Worker Database: shortlisted, and the AI
+        // call the employer asked for is booked. Before scoring, so the
+        // employer's chosen time is the call that stands.
+        DatabaseShortlist::onApplied($application);
 
         ScoreApplication::dispatch($application->id);
 

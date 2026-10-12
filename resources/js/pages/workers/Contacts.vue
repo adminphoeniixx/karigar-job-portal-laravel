@@ -171,7 +171,7 @@ const field = 'rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline
                 <span v-for="(pool, key) in usage.pools" :key="key">
                     <strong>{{ pool.plan }}</strong>:
                     <template v-if="pool.limit > 0">
-                        {{ num(pool.limit) }} database unlocks per month, <strong>{{ num(pool.used) }}</strong> used, <strong>{{ num(pool.remaining ?? 0) }}</strong> left.
+                        {{ num(pool.limit) }} database unlocks per plan period, <strong>{{ num(pool.used) }}</strong> used, <strong>{{ num(pool.remaining ?? 0) }}</strong> left.
                     </template>
                     <template v-else>Unlimited database unlocks.</template>
                     <span v-if="pool.resets_at" class="text-muted-foreground"> Renews {{ date(pool.resets_at) }}.</span>

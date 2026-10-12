@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\ScreeningCallStatus;
 use App\Models\JobListing;
+use App\Models\ScreeningCall;
 use App\Models\User;
 use App\Services\Geocoder;
+use App\Services\Screening\ScreeningService;
 use App\Support\LocateByCity;
 use App\Support\WageConversion;
 use Illuminate\Foundation\Inspiring;
@@ -30,6 +33,22 @@ Schedule::command('jobs:sync-hiring')->hourly();
 // New karigars who typed a city but dropped no pin get the city centre, so
 // Find Workers can show how far away they are.
 Schedule::command('karigars:locate --sync')->hourly()->withoutOverlapping();
+
+// AI screening calls booked for a time (by the employer, or asked for outside
+// calling hours) are dialled here once that time comes.
+Artisan::command('screening:place-due', function (ScreeningService $screening) {
+    $due = ScreeningCall::where('status', ScreeningCallStatus::Scheduled)
+        ->where('scheduled_at', '<=', now())
+        ->orderBy('scheduled_at')
+        ->limit(50)
+        ->get();
+
+    $due->each(fn (ScreeningCall $call) => $screening->placeScheduled($call));
+
+    $this->info("Placed {$due->count()} scheduled screening calls.");
+})->purpose('Dial the AI screening calls whose booked time has come');
+
+Schedule::command('screening:place-due')->everyMinute()->withoutOverlapping();
 
 // Wages are monthly (App\Support\Wage). The migration converted what was
 // there; run this after deploying to catch rows older code wrote in between,

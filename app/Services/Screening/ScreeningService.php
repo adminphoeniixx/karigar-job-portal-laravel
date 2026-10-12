@@ -4,10 +4,10 @@ namespace App\Services\Screening;
 
 use App\Enums\ApplicationStatus;
 use App\Enums\ScreeningCallStatus;
-use App\Jobs\PlaceScreeningCall;
 use App\Models\JobApplication;
 use App\Models\ScreeningCall;
 use App\Models\Setting;
+use App\Models\User;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ScreeningCallCompleted;
 use App\Support\ReferenceData;
@@ -53,7 +53,7 @@ class ScreeningService
      * Why this application cannot be called right now, or null when it can.
      * Returned as a string so both the API and the job can report it.
      */
-    public function blocker(JobApplication $application): ?string
+    public function blocker(JobApplication $application, ?ScreeningCall $ignore = null): ?string
     {
         if (! $this->agent->configured()) {
             return 'provider_not_configured';
@@ -94,6 +94,12 @@ class ScreeningService
             ? $application->screeningCalls
             : $application->screeningCalls()->get();
 
+        $calls = $calls->reject(fn (ScreeningCall $call) => $ignore !== null && $call->is($ignore));
+
+        if ($calls->contains(fn (ScreeningCall $call) => $call->status === ScreeningCallStatus::Scheduled)) {
+            return 'call_scheduled';
+        }
+
         $live = $calls->contains(fn (ScreeningCall $call) => in_array(
             $call->status,
             [ScreeningCallStatus::Queued, ScreeningCallStatus::Dialing, ScreeningCallStatus::InProgress],
@@ -128,6 +134,7 @@ class ScreeningService
             'worker_opted_out' => __('This worker has opted out of automated calls.'),
             'worker_unavailable' => __('This worker is not available for work right now.'),
             'call_in_progress' => __('A call is already on its way.'),
+            'call_scheduled' => __('An AI call is already scheduled for this applicant.'),
             'already_screened' => __('This worker has already been screened.'),
             default => __('This applicant cannot be called right now.'),
         };
@@ -137,9 +144,9 @@ class ScreeningService
      * Create the call row and dial. Returns null when the application is not
      * callable — the reason is available from {@see blocker()}.
      */
-    public function start(JobApplication $application, int $attempt = 1): ?ScreeningCall
+    public function start(JobApplication $application, int $attempt = 1, ?ScreeningCall $scheduled = null): ?ScreeningCall
     {
-        if ($this->blocker($application) !== null) {
+        if ($this->blocker($application, $scheduled) !== null) {
             return null;
         }
 
@@ -147,14 +154,16 @@ class ScreeningService
 
         $script = CallScript::for($application);
 
-        $call = ScreeningCall::create([
+        $call = $scheduled ?? new ScreeningCall([
             'job_application_id' => $application->id,
             'worker_id' => $application->worker_id,
+            'attempt' => $attempt,
+        ]);
+        $call->fill([
             'provider' => $this->agent->name(),
             'status' => ScreeningCallStatus::Queued,
             'language' => $script->language,
-            'attempt' => $attempt,
-        ]);
+        ])->save();
 
         try {
             $providerCallId = $this->agent->place($call, $script, (string) $this->phoneFor($application));
@@ -336,8 +345,91 @@ class ScreeningService
             return;
         }
 
-        PlaceScreeningCall::dispatch($call->job_application_id, $call->attempt + 1)
-            ->delay($this->nextCallableTime(now()->addMinutes((int) config('screening.retry_after_minutes', 90))));
+        $this->schedule(
+            $call->application,
+            now()->addMinutes((int) config('screening.retry_after_minutes', 90))->toImmutable(),
+            source: 'retry',
+            attempt: $call->attempt + 1,
+            force: true,
+        );
+    }
+
+    /**
+     * Ring the applicant now when calling hours are open, else book the call
+     * for when they open. What the call button and auto-shortlist use.
+     */
+    public function callOrSchedule(JobApplication $application, string $source = 'manual', ?User $by = null): ?ScreeningCall
+    {
+        if ($this->nextCallableTime()->gt(now())) {
+            return $this->schedule($application, null, $source, $by);
+        }
+
+        return $this->start($application);
+    }
+
+    /**
+     * Book an AI call for a time ($at, moved into calling hours; null = the
+     * next moment they are open). Null when the applicant cannot be called;
+     * {@see blocker()} says why. `force` skips the blocker for a retry, whose
+     * own finished call would not block anyway.
+     */
+    public function schedule(
+        JobApplication $application,
+        ?CarbonImmutable $at = null,
+        string $source = 'manual',
+        ?User $by = null,
+        int $attempt = 1,
+        bool $force = false,
+    ): ?ScreeningCall {
+        if (! $force && $this->blocker($application) !== null) {
+            return null;
+        }
+
+        return ScreeningCall::create([
+            'job_application_id' => $application->id,
+            'worker_id' => $application->worker_id,
+            'provider' => $this->agent->name(),
+            'status' => ScreeningCallStatus::Scheduled,
+            'attempt' => $attempt,
+            // Stored in the app's timezone: Eloquent writes the wall-clock time
+            // as given, so an IST time saved as-is would land 5½ hours late.
+            'scheduled_at' => $this->nextCallableTime($at ?? CarbonImmutable::now())->setTimezone(config('app.timezone')),
+            'source' => $source,
+            'scheduled_by' => $by?->id,
+        ]);
+    }
+
+    /**
+     * Dial a booked call whose time has come. A call whose applicant can no
+     * longer be rung (rejected, opted out, interview booked meanwhile) is
+     * cancelled with the reason.
+     */
+    public function placeScheduled(ScreeningCall $call): ScreeningCall
+    {
+        $application = JobApplication::with('job.employer.employerProfile', 'worker.workerProfile', 'screeningCalls')
+            ->find($call->job_application_id);
+
+        $blocker = $application === null ? 'application_closed' : $this->blocker($application, $call);
+
+        if ($blocker !== null) {
+            $call->update(['status' => ScreeningCallStatus::Cancelled, 'failure_reason' => $blocker, 'ended_at' => now()]);
+
+            return $call;
+        }
+
+        return $this->start($application, $call->attempt, $call) ?? $call;
+    }
+
+    /**
+     * Take back a call that has not been placed yet.
+     */
+    public function cancel(ScreeningCall $call): bool
+    {
+        if ($call->status !== ScreeningCallStatus::Scheduled) {
+            return false;
+        }
+
+        return $call->update(['status' => ScreeningCallStatus::Cancelled, 'failure_reason' => 'cancelled_by_employer', 'ended_at' => now()]);
     }
 
     /**

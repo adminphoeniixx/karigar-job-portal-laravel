@@ -14,9 +14,9 @@ use Illuminate\Foundation\Queue\Queueable;
  * switched screening calls on), by the employer's manual "Call & schedule"
  * action, and by ScreeningService itself for retries after a no-answer.
  *
- * Runs on the queue because dialling talks to a telephony provider, and holds
- * itself back to the permitted daytime calling window — a call that comes due
- * at midnight waits for morning instead of waking a worker up.
+ * Runs on the queue because dialling talks to a telephony provider. Outside
+ * the permitted daytime calling window it books the call for the morning
+ * instead ({@see ScreeningService::schedule()}), so nobody is woken up.
  */
 class PlaceScreeningCall implements ShouldQueue
 {
@@ -26,13 +26,9 @@ class PlaceScreeningCall implements ShouldQueue
 
     public int $backoff = 30;
 
-    /** How often a call may be put back to wait for calling hours. */
-    private const MAX_HOLDS = 1;
-
     /**
-     * @param  int  $holds  How many times this job has already been put back to
-     *                      wait for calling hours. Bounded so that a queue
-     *                      driver which ignores delays (`sync`) cannot spin.
+     * @param  int  $holds  Unused since calls outside hours are booked
+     *                      instead; kept so queued jobs still unserialize.
      */
     public function __construct(public int $applicationId, public int $attempt = 1, public int $holds = 0) {}
 
@@ -45,16 +41,11 @@ class PlaceScreeningCall implements ShouldQueue
             return;
         }
 
-        $callableAt = $screening->nextCallableTime();
-
-        // Outside calling hours: put it down and pick it up when they open.
-        // The delay lands exactly on the window opening, so needing a second
-        // hold means the queue itself is late — at which point stopping is
-        // safer than dialling, and it keeps this from ever looping.
-        if ($callableAt->gt(now())) {
-            if ($this->holds < self::MAX_HOLDS) {
-                self::dispatch($this->applicationId, $this->attempt, $this->holds + 1)->delay($callableAt);
-            }
+        // Outside calling hours: book it for when they open. A booked call
+        // is dialled by `screening:place-due`; the queue's own delay is not
+        // trusted, since the sync queue production runs ignores it.
+        if ($screening->nextCallableTime()->gt(now())) {
+            $screening->schedule($application, null, $this->attempt > 1 ? 'retry' : 'auto', attempt: $this->attempt);
 
             return;
         }

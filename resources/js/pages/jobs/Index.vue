@@ -9,6 +9,9 @@ interface Job {
     id: number;
     title: string;
     status: 'draft' | 'active' | 'closed';
+    // Held by the safety check (a draft until an admin approves it).
+    moderation_status: 'pending' | 'approved' | 'rejected' | null;
+    moderation_note: string | null;
     city: string | null;
     state: string | null;
     vacancies: number;
@@ -188,6 +191,14 @@ const destroy = (id: number) => {
                                     class="inline-flex items-center rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-semibold text-rose-600 ring-1 ring-inset ring-rose-500/20 dark:text-rose-300"
                                 >
                                     {{ $t('status.expired') }}
+                                </span>
+                                <span
+                                    v-else-if="job.moderation_status === 'pending' || job.moderation_status === 'rejected'"
+                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset"
+                                    :class="job.moderation_status === 'pending' ? 'bg-sky-500/10 text-sky-700 ring-sky-500/20 dark:text-sky-300' : 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300'"
+                                    :title="job.moderation_note ?? undefined"
+                                >
+                                    {{ job.moderation_status === 'pending' ? $t('status.underReview') : $t('status.notApproved') }}
                                 </span>
                                 <span
                                     v-else-if="hiringPaused && job.status === 'active'"

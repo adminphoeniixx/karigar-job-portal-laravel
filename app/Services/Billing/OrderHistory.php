@@ -53,6 +53,7 @@ class OrderHistory
             'plan' => $order->plan?->name,
             'plan_type' => $order->plan?->type,
             'interval' => $order->plan?->interval,
+            'interval_label' => $order->plan?->interval_label,
             'ordered_at' => $order->created_at?->toIso8601String(),
             'ordered_label' => $order->created_at?->timezone($tz)->format('d M Y, h:i A'),
             // What the first payment was for: after the coupon, with GST.

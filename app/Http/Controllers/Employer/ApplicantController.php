@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Employer;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\ScreeningCallStatus;
 use App\Http\Controllers\Controller;
 use App\Jobs\ScoreApplication;
 use App\Models\JobApplication;
@@ -148,6 +149,9 @@ class ApplicantController extends Controller
                 'proposed_mode' => $call->proposed_mode,
                 'awaiting_confirmation' => $call->awaitingConfirmation(),
                 'created_ago' => $call->created_at?->diffForHumans(),
+                // A booked call: when it will ring (IST), and it can be taken back.
+                'scheduled_label' => $call->scheduled_at?->timezone(config('app.display_timezone'))->format('d M, g:i A'),
+                'can_cancel' => $call->status === ScreeningCallStatus::Scheduled,
             ],
         ];
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use App\Models\JobListing;
+use App\Support\JobModeration;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -60,6 +61,9 @@ class EmployerJobResource extends JsonResource
             'ai_shortlist_enabled' => (bool) ($this->ai_shortlist_enabled ?? true),
             'ai_call_enabled' => (bool) ($this->ai_call_enabled ?? true),
             'status' => $this->status->value,
+            // Held by the safety check: { status: pending|rejected, reasons, note }.
+            // A held job is a draft until an admin approves it.
+            'moderation' => JobModeration::summary($this->resource),
             // Never been live. Publishing it (status → active) is checked against
             // the plan's job posts; saving it as a draft never is.
             'is_draft' => $this->published_at === null,

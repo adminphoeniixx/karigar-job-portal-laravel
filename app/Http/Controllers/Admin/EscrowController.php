@@ -14,9 +14,7 @@ use Throwable;
 
 class EscrowController extends Controller
 {
-    public function __construct(private EscrowService $escrows)
-    {
-    }
+    public function __construct(private EscrowService $escrows) {}
 
     public function index(Request $request, PayoutService $payouts): Response
     {

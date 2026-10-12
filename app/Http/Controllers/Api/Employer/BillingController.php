@@ -53,6 +53,8 @@ class BillingController extends Controller
                 'price_with_gst' => $plan->grossPrice(),
                 'currency' => $plan->currency,
                 'interval' => $plan->interval,
+                // "30 days" for "₹499 / 30 days"; show this, not `interval`.
+                'interval_label' => $plan->interval_label,
                 // The raw limits, for logic. Show `feature_list` to the user:
                 // `features` is keys and numbers, and rendered as-is it reads
                 // "job post limit" with no number.

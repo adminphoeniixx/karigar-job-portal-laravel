@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Enums\ScreeningCallStatus;
 use App\Models\ScreeningCall;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -28,6 +29,12 @@ class ScreeningCallResource extends JsonResource
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'attempt' => $this->attempt,
+            // When a booked call will ring (status "scheduled"), in IST for the label.
+            'scheduled_at' => $this->scheduled_at?->toIso8601String(),
+            'scheduled_label' => $this->scheduled_at?->timezone(config('app.display_timezone'))->format('d M Y, g:i A'),
+            // manual | auto (after auto-shortlist) | retry | invite
+            'source' => $this->source,
+            'can_cancel' => $this->status === ScreeningCallStatus::Scheduled,
             'language' => $this->language,
             'outcome' => $this->outcome?->value,
             'outcome_label' => $this->outcome?->label(),

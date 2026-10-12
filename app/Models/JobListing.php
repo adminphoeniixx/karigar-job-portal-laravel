@@ -59,6 +59,7 @@ class JobListing extends Model
         'requires_worker_fee', 'worker_fee_amount',
         'ai_shortlist_enabled', 'ai_call_enabled',
         'boost_tier', 'boosted_until',
+        'moderation_status', 'moderation_reasons', 'moderation_note', 'moderated_at', 'moderated_by',
     ];
 
     protected function casts(): array
@@ -77,6 +78,8 @@ class JobListing extends Model
             'status' => JobStatus::class,
             'expires_at' => 'datetime',
             'published_at' => 'datetime',
+            'moderation_reasons' => 'array',
+            'moderated_at' => 'datetime',
             'wage_min' => 'decimal:2',
             'wage_max' => 'decimal:2',
         ];

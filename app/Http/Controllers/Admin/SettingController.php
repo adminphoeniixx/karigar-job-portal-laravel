@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\Setting;
 use App\Services\ApplicantAccess;
 use App\Services\Billing\Gst;
+use App\Services\JobModerator;
 use App\Services\Kyc\DecentroClient;
 use App\Services\Kyc\KycAutoVerifier;
 use App\Services\Screening\ScreeningService;
@@ -39,6 +40,7 @@ class SettingController extends Controller
                     (bool) config('services.kyc.worker_required', true),
                 ),
                 'kyc_auto_verify_enabled' => Setting::bool(KycAutoVerifier::ENABLED_KEY, true),
+                'ai_job_check_enabled' => JobModerator::enabled(),
                 // Without keys the auto-verify switch does nothing; the page says so.
                 'decentro_configured' => DecentroClient::configured(),
                 'ai_auto_shortlist_enabled' => Setting::bool(ScoreApplication::ENABLED_KEY, false),
@@ -80,6 +82,7 @@ class SettingController extends Controller
             'employer_verification_required' => ['sometimes', 'boolean'],
             'worker_verification_required' => ['sometimes', 'boolean'],
             'kyc_auto_verify_enabled' => ['sometimes', 'boolean'],
+            'ai_job_check_enabled' => ['sometimes', 'boolean'],
             'ai_auto_shortlist_enabled' => ['required', 'boolean'],
             // Below 40 the model calls a candidate a "weak" match, so allow the
             // admin to be lenient but not to shortlist literally everyone.
@@ -102,7 +105,7 @@ class SettingController extends Controller
         if (isset($data['employer_verification_required'])) {
             Setting::set('employer_verification_required', $data['employer_verification_required'] ? '1' : '0');
         }
-        foreach (['worker_verification_required' => WorkerVerification::KEY, 'kyc_auto_verify_enabled' => KycAutoVerifier::ENABLED_KEY] as $field => $key) {
+        foreach (['worker_verification_required' => WorkerVerification::KEY, 'kyc_auto_verify_enabled' => KycAutoVerifier::ENABLED_KEY, 'ai_job_check_enabled' => JobModerator::ENABLED_KEY] as $field => $key) {
             if (isset($data[$field])) {
                 Setting::set($key, $data[$field] ? '1' : '0');
             }
@@ -237,6 +240,7 @@ class SettingController extends Controller
                 'name' => $plan->name,
                 'price' => (float) $plan->price,
                 'interval' => $plan->interval,
+                'interval_label' => $plan->interval_label,
             ]),
         ];
     }

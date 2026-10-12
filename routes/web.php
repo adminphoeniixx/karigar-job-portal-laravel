@@ -17,6 +17,8 @@ use App\Http\Controllers\Auth\PhoneOtpController;
 use App\Http\Controllers\Auth\RoleAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeleteAccountController;
+use App\Http\Controllers\Employer\AiInterviewController;
+use App\Http\Controllers\Employer\AiShortlistController;
 use App\Http\Controllers\Employer\ApplicantController;
 use App\Http\Controllers\Employer\ContactListController;
 use App\Http\Controllers\Employer\EscrowController;
@@ -177,6 +179,10 @@ Route::middleware(['auth'])->group(function () {
         // interview slot they offered.
         Route::post('employer/applications/{application}/screening-call', [ScreeningController::class, 'store'])->name('screening.store');
         Route::post('employer/screening-calls/{call}/confirm', [ScreeningController::class, 'confirm'])->name('screening.confirm');
+        Route::delete('employer/screening-calls/{call}', [ScreeningController::class, 'destroy'])->name('screening.destroy');
+        Route::get('employer/ai-interviews', [AiInterviewController::class, 'index'])->name('employer.ai-interviews');
+        Route::post('employer/jobs/{job}/ai-shortlist', [AiShortlistController::class, 'store'])
+            ->middleware('throttle:10,60')->name('employer.jobs.ai-shortlist');
 
         // Shortlist
         Route::get('employer/shortlisted', [ApplicantController::class, 'shortlisted'])->name('applicants.shortlisted');
@@ -245,6 +251,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Job moderation
     Route::get('jobs', [AdminJobModerationController::class, 'index'])->name('jobs.index');
     Route::post('jobs/{job}/toggle', [AdminJobModerationController::class, 'toggle'])->name('jobs.toggle');
+    Route::post('jobs/{job}/approve', [AdminJobModerationController::class, 'approve'])->name('jobs.approve');
+    Route::post('jobs/{job}/reject', [AdminJobModerationController::class, 'reject'])->name('jobs.reject');
 
     // Escrow oversight & payouts
     Route::get('escrows', [AdminEscrowController::class, 'index'])->name('escrows.index');

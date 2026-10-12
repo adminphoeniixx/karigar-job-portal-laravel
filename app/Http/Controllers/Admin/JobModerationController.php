@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\JobStatus;
 use App\Http\Controllers\Controller;
 use App\Models\JobListing;
+use App\Notifications\JobModerationNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,13 +20,16 @@ class JobModerationController extends Controller
     {
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', 'string', 'in:draft,active,closed'],
+            'status' => ['nullable', 'string', 'in:draft,active,closed,review'],
         ]);
 
         $jobs = JobListing::query()
             ->with('employer:id,name')
             ->when($filters['q'] ?? null, fn ($q, $term) => $q->where('title', 'ilike', "%{$term}%"))
-            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            // "review": held by the safety check, waiting for a decision.
+            ->when($filters['status'] ?? null, fn ($q, $status) => $status === 'review'
+                ? $q->where('moderation_status', 'pending')
+                : $q->where('status', $status))
             ->latest()
             ->paginate(20)
             ->withQueryString()
@@ -37,12 +41,59 @@ class JobModerationController extends Controller
                 'state' => $j->state,
                 'status' => $j->status->value,
                 'created_at' => $j->created_at?->diffForHumans(),
+                'description' => str($j->description)->limit(300)->value(),
+                'moderation_status' => $j->moderation_status,
+                'moderation_reasons' => $j->moderation_reasons ?? [],
+                'moderation_note' => $j->moderation_note,
             ]);
 
         return Inertia::render('admin/Jobs', [
             'jobs' => $jobs,
             'filters' => $filters,
+            'reviewCount' => JobListing::where('moderation_status', 'pending')->count(),
         ]);
+    }
+
+    /**
+     * A job the safety check held is fine: it goes live now. Plan limits were
+     * checked when the employer posted it.
+     */
+    public function approve(Request $request, JobListing $job): RedirectResponse
+    {
+        abort_unless($job->moderation_status === 'pending', 404);
+
+        $job->update([
+            'status' => JobStatus::Active,
+            'published_at' => $job->published_at ?? now(),
+            'moderation_status' => 'approved',
+            'moderated_at' => now(),
+            'moderated_by' => $request->user()->id,
+        ]);
+        $job->employer?->notify(new JobModerationNotification($job, 'approved'));
+
+        return back()->with('success', __('Job ":title" approved and live.', ['title' => $job->title]));
+    }
+
+    /**
+     * A held job really is harmful: it stays off the site, and the employer
+     * is told why.
+     */
+    public function reject(Request $request, JobListing $job): RedirectResponse
+    {
+        abort_unless($job->moderation_status === 'pending', 404);
+
+        $note = $request->validate(['note' => ['required', 'string', 'max:500']])['note'];
+
+        $job->update([
+            'status' => JobStatus::Draft,
+            'moderation_status' => 'rejected',
+            'moderation_note' => $note,
+            'moderated_at' => now(),
+            'moderated_by' => $request->user()->id,
+        ]);
+        $job->employer?->notify(new JobModerationNotification($job, 'rejected'));
+
+        return back()->with('success', __('Job ":title" rejected.', ['title' => $job->title]));
     }
 
     /**

@@ -29,9 +29,14 @@ class ScreeningController extends Controller
      * Queue a screening call to this applicant. Held until the permitted
      * daytime calling window if asked for outside it.
      */
-    public function store(JobApplication $application): RedirectResponse
+    public function store(Request $request, JobApplication $application): RedirectResponse
     {
         $this->authorize('update', $application->job);
+
+        // From the popup: "Call now", or a date and time (Indian time).
+        $data = $request->validate([
+            'at' => ['nullable', 'date', 'after:now', 'before:+15 days'],
+        ]);
 
         $blocker = $this->screening->blocker($application);
 
@@ -39,6 +44,15 @@ class ScreeningController extends Controller
             return back()->with('toast', [
                 'type' => 'error',
                 'message' => ScreeningService::blockerLabel($blocker),
+            ]);
+        }
+
+        if (! empty($data['at'])) {
+            $call = $this->screening->schedule($application, CarbonImmutable::parse($data['at'], config('app.display_timezone')), 'manual', $request->user());
+
+            return back()->with('toast', [
+                'type' => 'success',
+                'message' => __('AI call booked for :time.', ['time' => $call->scheduled_at->timezone(config('app.display_timezone'))->format('d M, g:i A')]),
             ]);
         }
 
@@ -52,6 +66,18 @@ class ScreeningController extends Controller
                 ? __('Call queued for :time.', ['time' => $callableAt->format('d M, g:i A')])
                 : __('Calling the worker now.'),
         ]);
+    }
+
+    /**
+     * Take back a booked call that has not rung yet.
+     */
+    public function destroy(ScreeningCall $call): RedirectResponse
+    {
+        $this->authorize('update', $call->application->job);
+
+        return back()->with('toast', $this->screening->cancel($call)
+            ? ['type' => 'success', 'message' => __('AI call cancelled.')]
+            : ['type' => 'error', 'message' => __('Only a call that has not rung yet can be cancelled.')]);
     }
 
     /**

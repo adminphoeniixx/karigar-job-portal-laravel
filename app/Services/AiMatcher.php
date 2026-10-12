@@ -183,6 +183,15 @@ class AiMatcher
     }
 
     /**
+     * The quick, model-free score, for ranking many karigars before the few
+     * best are scored by the model (the Worker Database pick).
+     */
+    public function quickScore(JobListing $job, User $worker): int
+    {
+        return $this->heuristic($job, $worker)['score'];
+    }
+
+    /**
      * Deterministic skill-overlap score used when no model is available.
      *
      * @return Score

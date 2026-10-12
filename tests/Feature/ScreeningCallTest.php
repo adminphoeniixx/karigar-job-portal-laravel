@@ -336,7 +336,10 @@ it('tries again after a no-answer', function () {
 
     expect($call->refresh()->status)->toBe(ScreeningCallStatus::NoAnswer);
 
-    Queue::assertPushed(PlaceScreeningCall::class, fn ($job) => $job->attempt === 2);
+    // The next try is booked, not left to a queue delay.
+    $retry = ScreeningCall::where('status', ScreeningCallStatus::Scheduled)->sole();
+    expect($retry)->attempt->toBe(2)->source->toBe('retry')
+        ->and($retry->scheduled_at->isFuture())->toBeTrue();
     Notification::assertNothingSentTo($this->employer);
 });
 
@@ -394,22 +397,35 @@ it('holds a call outside the permitted hours until the window opens', function (
 
     runPlaceCall();
 
-    expect(ScreeningCall::count())->toBe(0);
-    Queue::assertPushed(PlaceScreeningCall::class, fn ($job) => $job->holds === 1);
+    // Booked for 10:00 the next morning, nobody rung tonight.
+    $booked = ScreeningCall::sole();
+    expect($booked->status)->toBe(ScreeningCallStatus::Scheduled)
+        ->and($booked->scheduled_at->timezone('Asia/Kolkata')->format('H:i'))->toBe('10:00');
+    Queue::assertNotPushed(PlaceScreeningCall::class);
 });
 
-it('stops re-queueing a held call instead of looping', function () {
-    Queue::fake();
-    config(['screening.window.start' => '10:00', 'screening.window.end' => '19:00']);
+it('dials a booked call once its time comes, and not before', function () {
+    $call = app(ScreeningService::class)->schedule($this->application, now()->addHour()->toImmutable());
 
-    $this->travelTo(now()->setTimezone('Asia/Kolkata')->setTime(23, 30));
+    $this->artisan('screening:place-due')->assertSuccessful();
+    expect($call->refresh()->status)->toBe(ScreeningCallStatus::Scheduled);
 
-    // A queue driver that ignores delays would re-enter this immediately; the
-    // hold counter is what stops that becoming an infinite loop.
-    (new PlaceScreeningCall($this->application->id, 1, 1))->handle(app(ScreeningService::class));
+    $this->travel(61)->minutes();
+    $this->artisan('screening:place-due')->assertSuccessful();
 
-    expect(ScreeningCall::count())->toBe(0);
-    Queue::assertNotPushed(PlaceScreeningCall::class);
+    expect($call->refresh()->status)->toBe(ScreeningCallStatus::Dialing)
+        ->and($call->provider_call_id)->not->toBeNull()
+        ->and(ScreeningCall::count())->toBe(1);
+});
+
+it('cancels a booked call whose applicant can no longer be rung', function () {
+    $call = app(ScreeningService::class)->schedule($this->application, now()->addHour()->toImmutable());
+    $this->application->update(['status' => ApplicationStatus::Rejected]);
+
+    $this->travel(61)->minutes();
+    $this->artisan('screening:place-due');
+
+    expect($call->refresh())->status->toBe(ScreeningCallStatus::Cancelled)->failure_reason->toBe('application_closed');
 });
 
 /**

@@ -46,6 +46,9 @@ class ScreeningCall extends Model
         'status',
         'language',
         'attempt',
+        'scheduled_at',
+        'source',
+        'scheduled_by',
         'outcome',
         'proposed_interview_at',
         'proposed_mode',
@@ -66,6 +69,7 @@ class ScreeningCall extends Model
             'proposed_interview_at' => 'datetime',
             'employer_confirmed' => 'boolean',
             'started_at' => 'datetime',
+            'scheduled_at' => 'datetime',
             'ended_at' => 'datetime',
         ];
     }

@@ -741,7 +741,7 @@
                 "jobs"
               ]
             },
-            "description": "Post a job (or `status: draft`). Notifies matching workers when active. Set `status` to draft to Save-draft."
+            "description": "Post a job (or `status: draft`). Notifies matching workers when active. Set `status` to draft to Save-draft.\n\nA job that looks harmful (asks karigars for money, adult/illegal work, child labour…) is saved as a draft under review: the answer has `code: \"job_under_review\"` and `job.moderation`. See docs/app-updates/2026-10-12/employer-job-safety-check.md"
           }
         },
         {
@@ -1044,6 +1044,45 @@
               "mode": "raw",
               "raw": "{\n  \"worker_id\": \"{{worker_id}}\",\n  \"message\": \"Site is in Guindy, start Monday.\"\n}"
             }
+          }
+        },
+        {
+          "name": "AI shortlist from database",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/{{job_id}}/ai-shortlist",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "{{job_id}}",
+                "ai-shortlist"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": 5,\n  \"auto_call\": true,\n  \"call_at\": \"2026-10-13T11:00\",\n  \"message\": \"Need weavers from Monday\"\n}"
+            },
+            "description": "AI picks karigars from the Worker Database (score 60+) and invites them; those who apply are shortlisted and get an AI call booked when auto_call. Takes 10–30 s. Spec: docs/app-updates/2026-10-12/employer-ai-shortlist-from-database.md"
           }
         }
       ]
@@ -1558,6 +1597,122 @@
               ]
             },
             "description": "Books the time the worker offered and notifies them. Send an empty body to accept the proposed slot as-is; send `interview_at` (future) only to move it, and `mode` from the interview modes in GET /reference. 422 `{ \"code\": \"no_proposed_slot\" }` when the call produced no time to confirm."
+          }
+        },
+        {
+          "name": "Book an AI call for a time",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/screening-calls",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "applicants",
+                "{{application_id}}",
+                "screening-calls"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"at\": \"2026-10-13T11:30\"\n}"
+            },
+            "description": "`at` books the call (IST when no timezone; within 15 days; moved into 10 AM–7 PM). Without `at` it rings now. → 201 with `call` (status scheduled, scheduled_label, can_cancel). Spec: docs/app-updates/2026-10-12/employer-ai-interviews-and-call-scheduling.md"
+          }
+        },
+        {
+          "name": "Cancel a booked AI call",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/screening-calls/{{call_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "screening-calls",
+                "{{call_id}}"
+              ]
+            },
+            "description": "Only while it has not rung (`can_cancel`). 422 `not_scheduled` after."
+          }
+        },
+        {
+          "name": "AI Interviews (all calls)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/ai-interviews?filter=upcoming&page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "ai-interviews"
+              ],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "upcoming"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Every AI screening call across the account's jobs. filter = upcoming | done | all; `counts` for the tab badges."
           }
         }
       ]

@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Services\Billing\Gst;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -27,10 +29,21 @@ class Plan extends Model
     /** Opens the Worker Database only. Held on its own or next to a job plan. */
     public const TYPE_DATABASE = 'database';
 
+    /** Every plan runs for 30 days at a time (not a calendar month). */
+    public const INTERVAL_30_DAYS = '30_days';
+
+    /** Older plans, before the 30-day switch; still read correctly. */
+    public const INTERVAL_MONTHLY = 'monthly';
+
+    public const INTERVAL_YEARLY = 'yearly';
+
     protected $fillable = [
         'name', 'slug', 'type', 'price', 'currency', 'interval',
         'razorpay_plan_id', 'razorpay_amount', 'features', 'is_active',
     ];
+
+    /** @var list<string> */
+    protected $appends = ['interval_label'];
 
     protected function casts(): array
     {
@@ -40,6 +53,44 @@ class Plan extends Model
             'price' => 'decimal:2',
             'razorpay_amount' => 'decimal:2',
         ];
+    }
+
+    /**
+     * When a period that starts at $start ends.
+     */
+    public function periodEnd(CarbonInterface $start): CarbonInterface
+    {
+        return match ($this->interval) {
+            self::INTERVAL_YEARLY => $start->copy()->addYear(),
+            self::INTERVAL_MONTHLY => $start->copy()->addMonth(),
+            default => $start->copy()->addDays(30),
+        };
+    }
+
+    /**
+     * When the period that ends at $end began.
+     */
+    public function periodStart(CarbonInterface $end): CarbonInterface
+    {
+        return match ($this->interval) {
+            self::INTERVAL_YEARLY => $end->copy()->subYear(),
+            self::INTERVAL_MONTHLY => $end->copy()->subMonth(),
+            default => $end->copy()->subDays(30),
+        };
+    }
+
+    /**
+     * "30 days", "month" or "year", for "₹499 / 30 days".
+     *
+     * @return Attribute<string, never>
+     */
+    protected function intervalLabel(): Attribute
+    {
+        return Attribute::get(fn (): string => match ($this->interval) {
+            self::INTERVAL_YEARLY => __('year'),
+            self::INTERVAL_MONTHLY => __('month'),
+            default => __('30 days'),
+        });
     }
 
     public function isDatabase(): bool
@@ -84,7 +135,11 @@ class Plan extends Model
      */
     public function featureList(): array
     {
-        $per = $this->interval === 'yearly' ? __('per year') : __('per month');
+        $per = match ($this->interval) {
+            self::INTERVAL_YEARLY => __('per year'),
+            self::INTERVAL_MONTHLY => __('per month'),
+            default => __('every 30 days'),
+        };
 
         $jobs = $this->jobPostLimit();
         $unlocks = $this->contactUnlockLimit();
@@ -133,6 +188,7 @@ class Plan extends Model
      */
     public function razorpayPlanIsCurrent(): bool
     {
+        // Cleared when the plan's period changes (the 30-day switch).
         return ! empty($this->razorpay_plan_id)
             && $this->razorpay_amount !== null
             && abs((float) $this->razorpay_amount - $this->grossPrice()) < 0.01;

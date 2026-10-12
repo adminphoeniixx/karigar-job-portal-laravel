@@ -11,6 +11,7 @@ interface Plan {
     type: 'job' | 'database';
     price: string;
     interval: string;
+    interval_label?: string;
     features: {
         job_post_limit?: number;
         contact_unlock_limit?: number;
@@ -69,7 +70,7 @@ const save = (p: Plan) => {
                         >{{ p.type === 'database' ? 'Database plan' : 'Job plan' }}</span>
                     </h3>
                     <p class="text-xs text-muted-foreground">
-                        ₹{{ drafts[p.id].price }} / {{ p.interval }}
+                        ₹{{ drafts[p.id].price }} / {{ p.interval_label ?? p.interval }}
                         <template v-if="gstPercent > 0"> · ₹{{ withGst(drafts[p.id].price) }} with {{ gstPercent }}% GST</template>
                     </p>
                 </div>
@@ -88,7 +89,7 @@ const save = (p: Plan) => {
                 </div>
                 <!-- A database plan posts no jobs. -->
                 <div v-if="p.type !== 'database'">
-                    <label class="mb-1 block text-xs font-medium text-muted-foreground">Job posts / {{ p.interval === 'yearly' ? 'year' : 'month' }} (0 = unlimited)</label>
+                    <label class="mb-1 block text-xs font-medium text-muted-foreground">Job posts / {{ p.interval_label ?? p.interval }} (0 = unlimited)</label>
                     <input v-model.number="drafts[p.id].job_post_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>

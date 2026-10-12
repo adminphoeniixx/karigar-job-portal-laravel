@@ -16,6 +16,7 @@ type SettingKey =
     | 'employer_verification_required'
     | 'worker_verification_required'
     | 'kyc_auto_verify_enabled'
+    | 'ai_job_check_enabled'
     | 'ai_auto_shortlist_enabled'
     | 'ai_auto_reject_enabled'
     | 'ai_screening_call_enabled';
@@ -38,7 +39,7 @@ const props = defineProps<{
         sac_code: string;
         invoice_prefix: string;
         invoice_copy_email: string;
-        plans: { name: string; price: number; interval: string }[];
+        plans: { name: string; price: number; interval: string; interval_label?: string }[];
     };
     apps: {
         versions: Record<AppName, Record<Platform, AppVersion>>;
@@ -55,6 +56,7 @@ const form = reactive({
     employer_verification_required: props.settings.employer_verification_required,
     worker_verification_required: props.settings.worker_verification_required,
     kyc_auto_verify_enabled: props.settings.kyc_auto_verify_enabled,
+    ai_job_check_enabled: props.settings.ai_job_check_enabled,
     ai_auto_shortlist_enabled: props.settings.ai_auto_shortlist_enabled,
     ai_auto_shortlist_threshold: props.settings.ai_auto_shortlist_threshold,
     ai_auto_reject_enabled: props.settings.ai_auto_reject_enabled,
@@ -120,6 +122,16 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'is verified instantly; anything else (alternate IDs, name mismatch, Aadhaar typed by hand) ' +
             'still comes to KYC Review. A PAN or GSTIN that does not exist is refused at once. ' +
             'Each check is billed by Decentro. When off, everything waits for you as before.',
+    },
+    {
+        key: 'ai_job_check_enabled',
+        title: 'AI checks new jobs',
+        description:
+            'When on, every job going live (and every edit to a live job) is checked for being harmful: asking ' +
+            'karigars for money, illegal or adult work, child labour, passports, fake work-from-home, hate. One ' +
+            'that looks wrong stays a draft and waits for you under Job Moderation → "Waiting for review"; the ' +
+            'employer is told and nothing from their plan is used. If the AI is down, only the built-in phrase ' +
+            'list checks, so honest jobs are never stuck.',
     },
     {
         key: 'ai_auto_shortlist_enabled',
@@ -454,7 +466,7 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                     </thead>
                     <tbody class="divide-y">
                         <tr v-for="plan in planPreview" :key="plan.name">
-                            <td class="px-3 py-2 font-medium">{{ plan.name }} <span class="text-xs font-normal capitalize text-muted-foreground">/ {{ plan.interval }}</span></td>
+                            <td class="px-3 py-2 font-medium">{{ plan.name }} <span class="text-xs font-normal capitalize text-muted-foreground">/ {{ plan.interval_label ?? plan.interval }}</span></td>
                             <td class="px-3 py-2 text-right tabular-nums">{{ inr(plan.price) }}</td>
                             <td class="px-3 py-2 text-right tabular-nums">
                                 {{ inr(plan.gst) }}

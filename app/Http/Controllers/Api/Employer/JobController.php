@@ -20,6 +20,7 @@ use App\Services\JobRepost;
 use App\Services\WorkerRejections;
 use App\Support\EmployerVerification;
 use App\Support\JobFormOptions;
+use App\Support\JobModeration;
 use App\Support\KarigarLocation;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
@@ -102,7 +103,17 @@ class JobController extends Controller
             ], 422);
         }
 
-        $job = $account->jobListings()->create($request->validated());
+        // Safety check: a job that looks harmful is held as a draft for review,
+        // spending nothing from the plan.
+        $data = $request->validated();
+        $held = $gate !== null ? JobModeration::screen($data) : null;
+        $gate = $held === null ? $gate : null;
+
+        $job = $account->jobListings()->create($data);
+
+        if ($held !== null) {
+            JobModeration::hold($job, $held, $account);
+        }
 
         if ($gate !== null && $gate['consumesFreePost']) {
             JobPostingGate::consumeFreePost($account);
@@ -114,8 +125,14 @@ class JobController extends Controller
         }
 
         return response()->json([
-            'message' => $job->isDraft() ? __('Draft saved.') : __('Job posted.'),
-            'job' => new EmployerJobResource($job),
+            'message' => match (true) {
+                $held !== null => JobModeration::heldMessage(),
+                $job->isDraft() => __('Draft saved.'),
+                default => __('Job posted.'),
+            },
+            // Set when the safety check held the job: show it, it is not live.
+            'code' => $held !== null ? 'job_under_review' : null,
+            'job' => new EmployerJobResource($job->fresh()),
         ], 201);
     }
 
@@ -137,7 +154,19 @@ class JobController extends Controller
         }
 
         $wasActive = $job->status === JobStatus::Active;
-        $job->update($request->validated());
+
+        // Safety check when it goes live, or a live job's words change.
+        $data = $request->validated();
+        $held = JobModeration::needsCheck($data, $job) ? JobModeration::screen($data, $job) : null;
+        $gate = $held === null ? $gate : null;
+
+        $job->update($data);
+
+        if ($held !== null) {
+            JobModeration::hold($job, $held, $account);
+        } elseif ($job->status === JobStatus::Active && $job->moderation_status !== null) {
+            $job->update(['moderation_status' => null, 'moderation_reasons' => null]);
+        }
 
         if ($gate !== null && $gate['consumesFreePost']) {
             JobPostingGate::consumeFreePost($account);
@@ -151,11 +180,13 @@ class JobController extends Controller
 
         return response()->json([
             'message' => match (true) {
+                $held !== null => JobModeration::heldMessage(),
                 $goingLive => __('Job posted.'),
                 $job->isDraft() => __('Draft saved.'),
                 default => __('Job updated.'),
             },
-            'job' => new EmployerJobResource($job),
+            'code' => $held !== null ? 'job_under_review' : null,
+            'job' => new EmployerJobResource($job->fresh()),
         ]);
     }
 
