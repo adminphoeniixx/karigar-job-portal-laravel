@@ -134,7 +134,7 @@ it('lists what a plan gives in words, for the apps', function () {
         ->getJson('/api/v1/employer/plans')
         ->assertOk()
         ->assertJsonPath('plans.0.feature_list.0', '2 job posts per month')
-        ->assertJsonPath('plans.0.feature_list.1', '20 contact unlocks per month')
+        ->assertJsonPath('plans.0.feature_list.1', '20 database unlocks per month')
         ->assertJsonPath('plans.0.price_with_gst', 588.82);
 });
 

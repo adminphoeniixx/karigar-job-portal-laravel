@@ -76,7 +76,7 @@ class Plan extends Model
 
     /**
      * What the plan gives, as lines a person reads: "5 job posts per month",
-     * "20 contact unlocks". The apps show these as they are, so the catalogue
+     * "20 database unlocks". The apps show these as they are, so the catalogue
      * never has to know what a limit key means. 0 means unlimited everywhere
      * the limits are enforced, and is said that way here.
      *
@@ -90,9 +90,11 @@ class Plan extends Model
         $unlocks = $this->contactUnlockLimit();
         $database = $this->contactDatabaseLimit();
 
+        // Unlocks open Worker Database numbers only; applicants' numbers
+        // show without one.
         $unlockLine = $unlocks > 0
-            ? trans_choice(':count contact unlock|:count contact unlocks', $unlocks, ['count' => number_format($unlocks)]).' '.$per
-            : __('Unlimited contact unlocks');
+            ? trans_choice(':count database unlock|:count database unlocks', $unlocks, ['count' => number_format($unlocks)]).' '.$per
+            : __('Unlimited database unlocks');
 
         if ($this->isDatabase()) {
             return array_values(array_filter([

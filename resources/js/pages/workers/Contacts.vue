@@ -171,20 +171,20 @@ const field = 'rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline
                 <span v-for="(pool, key) in usage.pools" :key="key">
                     <strong>{{ pool.plan }}</strong>:
                     <template v-if="pool.limit > 0">
-                        {{ num(pool.limit) }} contact unlocks per month, <strong>{{ num(pool.used) }}</strong> used, <strong>{{ num(pool.remaining ?? 0) }}</strong> left.
+                        {{ num(pool.limit) }} database unlocks per month, <strong>{{ num(pool.used) }}</strong> used, <strong>{{ num(pool.remaining ?? 0) }}</strong> left.
                     </template>
-                    <template v-else>Unlimited contact unlocks.</template>
+                    <template v-else>Unlimited database unlocks.</template>
                     <span v-if="pool.resets_at" class="text-muted-foreground"> Renews {{ date(pool.resets_at) }}.</span>
                 </span>
                 <span class="text-muted-foreground">
-                    This cycle: {{ num(usage.used_database) }} from the database, {{ num(usage.used_applicants) }} {{ usage.used_applicants === 1 ? 'applicant' : 'applicants' }}.
+                    This cycle: {{ num(usage.used_database) }} unlocked from the database. Applicants' numbers need no unlock.
                 </span>
             </div>
             <Link href="/subscription" class="shrink-0 text-xs font-semibold text-orange-600 hover:underline dark:text-orange-400">Need more? Upgrade →</Link>
         </div>
         <!-- No plan at all; when a plan ran out, the banner below says so instead. -->
         <div v-else-if="!hiddenHere" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
-            <span class="inline-flex items-center gap-2"><KeyRound class="size-4 shrink-0" /> Subscribe to a job plan or a database plan to unlock karigar contacts.</span>
+            <span class="inline-flex items-center gap-2"><KeyRound class="size-4 shrink-0" /> Subscribe to a job plan or a database plan to unlock karigar contacts from the database.</span>
             <Link href="/subscription" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white">View plans</Link>
         </div>
 
@@ -352,7 +352,7 @@ const field = 'rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline
             </template>
             <template v-else>
                 <p class="mt-4 font-medium">No applicant contacts yet</p>
-                <p class="mt-1 text-sm text-muted-foreground">Applicants whose contact you unlock on your jobs show up here.</p>
+                <p class="mt-1 text-sm text-muted-foreground">Everyone who applies to your jobs shows up here, with their numbers.</p>
                 <Link href="/employer/jobs" class="mt-4 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">Go to my jobs</Link>
             </template>
         </div>

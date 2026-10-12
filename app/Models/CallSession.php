@@ -13,8 +13,9 @@ use Illuminate\Support\Carbon;
  *
  * The point of these calls is that neither side ever sees the other's number:
  * the audio runs over the provider's channel, and `channel` is a single-use
- * random room name that only the two participants get a token for. Phone
- * numbers stay behind the contact-unlock paywall (see ApplicantResource).
+ * random room name that only the two participants get a token for. The
+ * call itself carries no phone number (see ApplicantResource for where an
+ * applicant's number is shown).
  *
  * @property int $id
  * @property int $caller_id

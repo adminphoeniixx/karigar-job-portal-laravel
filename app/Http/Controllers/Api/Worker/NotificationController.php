@@ -19,7 +19,10 @@ class NotificationController extends Controller
             ->through(fn ($n) => [
                 'id' => $n->id,
                 'type' => $n->data['type'] ?? null,
+                'title' => $n->data['title'] ?? null,
                 'message' => $n->data['message'] ?? null,
+                // Opens the application (and its hire offer) from the row.
+                'application_id' => $n->data['application_id'] ?? null,
                 'url' => $n->data['url'] ?? null,
                 'read' => $n->read_at !== null,
                 'created_at' => $n->created_at?->toIso8601String(),

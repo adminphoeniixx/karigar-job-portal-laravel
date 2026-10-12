@@ -335,7 +335,7 @@ inviting twice returns `200` with `"invited": true` and sends nothing.
 {
   "id": 14, "status": "pending", "status_label": "Pending", "stage": "pending",
   "shortlisted": false, "cover_note": "...", "expected_wage": 23400,
-  "contact_unlocked": false,
+  "contact_unlocked": true,          // always true: applicants are never locked
   "offer": { "wage": 23400, "start_date": "2026-08-10", "message": "Report by 9 AM" } | null,
   "interview": { "at": "2026-08-02T10:30:00+05:30", "at_label": "02 Aug 2026, 10:30 AM",
                  "mode": "site", "note": "Gate 2" } | null,
@@ -347,10 +347,12 @@ inviting twice returns `200` with `"invited": true` and sends nothing.
   "worker": { "id", "name", "rating", "reviews_count", "avatar_url", "bio",
               "skills": [...], "spoken_languages": [...], "experience_years",
               "city", "state", "expected_wage", "wage_type", "available",
-              "verified", "phone": null, "email": null }
+              "verified", "phone": "9876543210", "email": "suresh@…" | null }
 }
 ```
-Worker `phone` / `email` stay `null` until the contact is unlocked. `stage` is
+Worker `phone` / `email` are always sent: an applicant's contact needs **no
+unlock** (changed 9 Oct 2026). `email` is `null` when the karigar has none.
+Unlocks are only for the Worker Database (§7). `stage` is
 one of `pending | shortlisted | interview | hired | rejected` and the stages are
 **exclusive**, so the segmented tabs add up to `all`.
 
@@ -399,7 +401,11 @@ shortlisted first, each row carrying its `job`.
 ### `PATCH /employer/applicants/{application}/status`
 Hire or reject — notifies the worker (in-app + push + email). The Hire sheet's
 offer fields are stored on the application and echoed back as `applicant.offer`
-(ignored on a reject).
+(ignored on a reject). All three are optional, but the Hire sheet should ask for
+them: the worker's push reads "Sri Sai Constructions hired you for "Plumber".
+₹23,400 / month · Joining 12 Oct 2026", and their app shows the offer with the
+note, the job address and a number to call. See
+`docs/app-updates/2026-10-09/hire-offer.md`.
 ```json
 // body → 200
 { "status": "accepted",            // or "rejected"
@@ -426,22 +432,10 @@ stage, auto-shortlists them and notifies the worker (in-app + push).
 Cancel it — the applicant drops back to `shortlisted`.
 → `{ "message": "Interview cancelled.", "applicant": {...} }`
 
-### `POST /employer/applicants/{application}/unlock`
-Reveal the worker's contact, spending one contact unlock — the job plan's
-allowance first, then the database plan's. There are no bought credits.
-```json
-// 200
-{ "message": "Contact unlocked.", "applicant": {...}, "unlocks": { ...UnlockSummary } }
-// 422 — nothing left
-{ "message": "You have reached your plan's contact unlock limit.",
-  "code": "unlock_limit_reached", "unlocks": {...} }
-```
-Already unlocked → `200 { "applicant": {...} }` only (no `message`, no `unlocks`,
-nothing charged), so treat both shapes as success.
-
-Unlocks count **karigars, not clicks**, and applicants share one pool with the
-Find Workers directory (§7). A worker already unlocked on another job, or from
-the directory, opens free even when the allowance is at 0.
+### `POST /employer/applicants/{application}/unlock` (deprecated)
+Applicants are no longer unlocked; their number is in every ApplicantResource.
+This route stays only for app builds that still call it: it spends nothing and
+always returns `200 { "applicant": {...} }`. New builds should not call it.
 
 ### `POST /employer/jobs/{job}/rescore`
 Queue AI scoring for the job's applicants — unscored ones only, or everyone with
@@ -508,7 +502,7 @@ failed | cancelled`; `outcome` ∈ `interested | not_interested | callback_later
 already_placed | unclear` (`null` until the call completes). `transcript` is
 only included when you pass `?with_transcript=1` — it is long, so ask for it on
 the call-detail screen only. The worker's phone number is deliberately **not**
-in this payload; it stays behind the contact-unlock paywall.
+in this payload; take it from the applicant (ApplicantResource).
 
 ### `GET /employer/applicants/{application}/screening-calls`
 ```json
@@ -559,8 +553,9 @@ worker said no, or never answered.
 
 ## 7. Find Workers 🔒
 Typesense-powered directory, 15/page. A number is shown only for karigars this
-employer has **unlocked**: `POST /employer/workers/{worker}/unlock` spends one
-contact unlock from the same pool as applicant unlocks. The plan's database
+employer has **unlocked** (`POST /employer/workers/{worker}/unlock` spends one
+database unlock), and for karigars who applied to one of its jobs, whose number
+shows with no unlock (`contact_unlocked: true`, `can_unlock: false`). The plan's database
 quota (`access.quota`) says how far down the results can be unlocked:
 `can_unlock: true` marks the rows the employer can unlock now. Show an
 "Unlock contact" button on those rows and a locked state on the rest.
@@ -594,9 +589,9 @@ plan or a database plan opens the database (`quota` > 0).
 
 ### `GET /employer/workers/{worker}`
 `{worker}` is a **worker profile id**. Contact is revealed while the employer may
-see it: unlocked, and still covered by a plan — Worker Database access for any
-unlocked karigar, a job plan for an unlocked applicant, or no plan needed for a
-karigar the employer shortlisted or hired. `can_unlock` is false for a karigar
+see it: an applicant the employer can see on its applicants screen (no unlock
+needed), or a karigar unlocked from the database while Worker Database access
+lasts. `can_unlock` is false for an applicant, and for a karigar
 unlocked before whose number is hidden now; renewing brings it back without a
 new unlock.
 ```json
@@ -611,9 +606,9 @@ new unlock.
 ```
 
 ### `POST /employer/workers/{worker}/unlock`
-Reveal a directory karigar's number, spending one contact unlock (the database
-plan's allowance first, then the job plan's). A karigar already unlocked costs
-nothing. After an unlock the employer can also open a chat with the karigar.
+Reveal a directory karigar's number, spending one database unlock (the database
+plan's allowance first, then the job plan's). A karigar already unlocked, or one
+who applied to the employer's job, costs nothing. After an unlock the employer can also open a chat with the karigar.
 ```json
 // 200
 { "message": "Contact unlocked.",
@@ -661,7 +656,7 @@ and `applied_at`. `profile_id` opens `GET /employer/workers/{worker}`.
     "job": { "plan": "Pro", "limit": 150, "used": 10, "remaining": 140, "resets_at": "…" },
     "database": { "plan": "Database Basic", "limit": 30, "used": 2, "remaining": 28, "resets_at": "…" }
   },
-  "used_database": 8, "used_applicants": 4,
+  "used_database": 8, "used_applicants": 0,
   "has_database_access": true, "has_job_plan": true, "job_plan_lapsed": false,
   "database_total": 23, "applicants_total": 17,
   "database_hidden": 0, "applicants_hidden": 0 }
@@ -669,7 +664,9 @@ and `applied_at`. `profile_id` opens `GET /employer/workers/{worker}`.
 `pools` has one entry per plan held, each renewing on its own cycle; the top
 `limit` / `used` / `remaining` add them up (`remaining: null` = a plan does not
 meter unlocks). `plan` is the job plan, `database_plan` the database plan, both
-`null` when not held. The lists hold only what the employer can see now: when
+`null` when not held. `used_applicants` is always 0 for new unlocks now
+(applicants need none); hide it. The applicants list holds every applicant the
+applicants screen shows. The lists hold only what the employer can see now: when
 the database access or the job plan ends, `database_hidden` /
 `applicants_hidden` say how many are out of sight until it renews (karigars the
 employer shortlisted or hired stay).
@@ -865,8 +862,8 @@ unlocks.
   "directory_quota": 2000 }
 ```
 `plan_limit` / `plan_remaining` / `unlocks_used` add up the job plan and the
-database plan. A Worker Database unlock spends the database plan first, an
-applicant unlock the job plan first, then the other plan. **Without any plan
+database plan. Unlocks are for the Worker Database only and spend the database
+plan first, then the job plan. Applicants never use one. **Without any plan
 nothing unlocks** (`plan_remaining: 0`).
 The allowance renews every billing cycle, like job posts: `unlocks_used` counts
 karigars first unlocked in the cycle now running, and `unlocks_reset_at` is when

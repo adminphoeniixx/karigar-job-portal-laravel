@@ -64,34 +64,26 @@ it('keeps a directory karigar\'s number hidden until it is unlocked', function (
         ->assertJsonPath('worker.contact_unlocked', true);
 });
 
-it('spends directory unlocks from the same pool as applicant unlocks', function () {
+it('never spends an unlock on an applicant', function () {
     subscribeDirectory($this->employer, $this->plan);
 
-    $this->actingAs($this->employer)->post("/employer/workers/{$this->profile->id}/unlock")->assertRedirect();
-
-    $application = $this->job->applications()->create(['worker_id' => $this->other->id, 'status' => ApplicationStatus::Pending->value]);
-    $this->actingAs($this->employer)->post("/employer/applications/{$application->id}/unlock");
-
-    expect($application->fresh()->contact_unlocked)->toBeFalse();
-});
-
-it('does not charge again for a karigar already unlocked', function () {
-    subscribeDirectory($this->employer, $this->plan);
-
-    $this->actingAs($this->employer)->post("/employer/workers/{$this->profile->id}/unlock");
-
-    // The same karigar applies later: their application opens for free.
     $application = $this->job->applications()->create(['worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending->value]);
+
     $this->actingAs($this->employer, 'sanctum')
-        ->postJson("/api/v1/employer/applicants/{$application->id}/unlock")
-        ->assertOk();
+        ->getJson("/api/v1/employer/applicants/{$application->id}")
+        ->assertJsonPath('data.worker.phone', '9876543210')
+        ->assertJsonPath('data.contact_unlocked', true);
 
-    // And unlocking them from the directory again is free too.
-    $this->actingAs($this->employer)->post("/employer/workers/{$this->profile->id}/unlock");
+    // The applicant shows as unlocked in the database too, for free.
+    $this->actingAs($this->employer, 'sanctum')
+        ->getJson("/api/v1/employer/workers/{$this->profile->id}")
+        ->assertJsonPath('worker.phone', '9876543210')
+        ->assertJsonPath('worker.can_unlock', false);
 
-    expect($application->fresh()->contact_unlocked)->toBeTrue()
-        ->and(ContactUnlocks::for($this->employer)->unlocksUsed())->toBe(1)
-        ->and(WorkerContactUnlock::count())->toBe(1);
+    $this->actingAs($this->employer, 'sanctum')->postJson("/api/v1/employer/workers/{$this->profile->id}/unlock")->assertOk();
+
+    expect(ContactUnlocks::for($this->employer)->unlocksUsed())->toBe(0)
+        ->and(WorkerContactUnlock::count())->toBe(0);
 });
 
 it('refuses a directory unlock once the pool is spent', function () {
@@ -135,16 +127,6 @@ it('renews the unlock allowance every billing cycle', function () {
 
     // The karigar unlocked last cycle stays unlocked.
     expect(ContactUnlocks::for($this->employer)->hasUnlocked($this->worker->id))->toBeTrue();
-});
-
-it('records an applicant unlock against the cycle', function () {
-    subscribeDirectory($this->employer, $this->plan);
-
-    $application = $this->job->applications()->create(['worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending->value]);
-    $this->actingAs($this->employer)->post("/employer/applications/{$application->id}/unlock");
-
-    expect(WorkerContactUnlock::where('employer_id', $this->employer->id)->where('worker_id', $this->worker->id)->exists())->toBeTrue()
-        ->and(ContactUnlocks::for($this->employer)->planRemaining())->toBe(0);
 });
 
 it('backfills unlock records for applicants unlocked before', function () {

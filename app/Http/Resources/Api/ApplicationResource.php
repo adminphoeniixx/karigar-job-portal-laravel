@@ -38,12 +38,9 @@ class ApplicationResource extends JsonResource
                 'mode' => $this->interview_mode,
                 'note' => $this->interview_note,
             ] : null,
-            // Set once the employer accepts with hire details.
-            'offer' => $this->offered_wage !== null || $this->start_date !== null ? [
-                'wage' => $this->offered_wage,
-                'start_date' => $this->start_date?->toDateString(),
-                'message' => $this->offer_message,
-            ] : null,
+            // The hire offer, once the employer hires the worker: pay, start
+            // date, the employer's note, where to report and whom to call.
+            'offer' => $this->resource->offerForWorker(),
             // Rating the employer: only once the job was accepted, and only
             // once — the same rule the review endpoint enforces.
             'has_reviewed' => $hasReviewed,

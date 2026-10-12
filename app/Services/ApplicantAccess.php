@@ -107,6 +107,46 @@ class ApplicantAccess
             ->orWhere(fn (Builder $kept) => $kept->kept()));
     }
 
+    /**
+     * The applications to all of the account's jobs that the employer may
+     * see. A visible applicant's number shows without an unlock.
+     *
+     * @return Builder<JobApplication>
+     */
+    public function visibleApplications(): Builder
+    {
+        $query = JobApplication::query()
+            ->whereHas('job', fn (Builder $q) => $q->where('employer_id', $this->account->id));
+
+        if (! $this->hasJobPlan()) {
+            return $query->kept();
+        }
+
+        $cutoffs = JobListing::where('employer_id', $this->account->id)
+            ->whereHas('applications')
+            ->get()
+            ->mapWithKeys(fn (JobListing $job) => [$job->id => $this->cutoff($job)]);
+
+        return $query->where(function (Builder $q) use ($cutoffs) {
+            $q->kept();
+
+            foreach ($cutoffs as $jobId => $cutoff) {
+                $q->orWhere(fn (Builder $released) => $released
+                    ->where('job_applications.job_listing_id', $jobId)
+                    ->where('job_applications.id', '<=', $cutoff));
+            }
+        });
+    }
+
+    /**
+     * Whether the karigar applied to one of the account's jobs and the
+     * employer can see that application.
+     */
+    public function isVisibleApplicant(int $workerId): bool
+    {
+        return $this->visibleApplications()->where('worker_id', $workerId)->exists();
+    }
+
     public function isVisible(JobApplication $application): bool
     {
         if ($application->isKept()) {

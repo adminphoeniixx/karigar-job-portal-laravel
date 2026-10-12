@@ -209,6 +209,38 @@ class JobApplication extends Model
      * @return BelongsTo<JobListing, $this>
      */
     /**
+     * The hire offer as the hired karigar reads it: what they will be paid,
+     * when to start, the employer's note, where to report and whom to call.
+     * Null until the application is accepted. The contact is the job's call
+     * contact when the job has one, else the employer's own number.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function offerForWorker(): ?array
+    {
+        if ($this->status !== ApplicationStatus::Accepted) {
+            return null;
+        }
+
+        $job = $this->job;
+        $employer = $job?->employer;
+        $profile = $employer?->employerProfile;
+
+        return [
+            'wage' => $this->offered_wage,
+            // Wages are monthly everywhere in the app.
+            'wage_label' => $this->offered_wage !== null ? '₹'.number_format((float) $this->offered_wage).' / '.__('month') : null,
+            'start_date' => $this->start_date?->toDateString(),
+            'start_date_label' => $this->start_date?->format('d M Y'),
+            'message' => $this->offer_message,
+            'employer_name' => $profile?->company_name ?: $employer?->name,
+            'address' => collect([$job?->address, $job?->city, $job?->state])->filter()->join(', ') ?: null,
+            'contact_name' => $job?->contact_phone ? ($job->contact_name ?: $employer?->name) : $employer?->name,
+            'contact_phone' => $job?->contact_phone ?: ($profile?->phone ?: $employer?->phone),
+        ];
+    }
+
+    /**
      * Has this application's worker already reviewed the job's employer?
      *
      * Mirrors the uniqueness rule in {@see ReviewController::store()}

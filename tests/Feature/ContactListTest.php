@@ -54,8 +54,8 @@ it('lists database contacts and applicant contacts apart', function () {
     $applicant = karigar('Suresh Potter', ['phone' => '9000000012', 'skills' => ['Pottery'], 'state' => 'Gujarat']);
 
     $this->actingAs($this->employer)->post("/employer/workers/{$fromDatabase->workerProfile->id}/unlock");
-    $application = $this->job->applications()->create(['worker_id' => $applicant->id, 'status' => ApplicationStatus::Pending->value]);
-    $this->actingAs($this->employer)->post("/employer/applications/{$application->id}/unlock");
+    // An applicant is a contact as soon as they apply, with no unlock spent.
+    $this->job->applications()->create(['worker_id' => $applicant->id, 'status' => ApplicationStatus::Pending->value]);
 
     $this->actingAs($this->employer)->get('/employer/workers/contacts')
         ->assertOk()
@@ -64,9 +64,9 @@ it('lists database contacts and applicant contacts apart', function () {
             ->has('contacts.data', 1)
             ->where('contacts.data.0.name', 'Meena Weaver')
             ->where('contacts.data.0.phone', '9000000011')
-            ->where('usage.used', 2)
+            ->where('usage.used', 1)
             ->where('usage.used_database', 1)
-            ->where('usage.used_applicants', 1)
+            ->where('usage.used_applicants', 0)
             ->where('usage.database_total', 1)
             ->where('usage.applicants_total', 1));
 
@@ -77,11 +77,12 @@ it('lists database contacts and applicant contacts apart', function () {
             ->has('contacts.data', 1)
             ->where('contacts.data.0.name', 'Suresh Potter')
             ->where('contacts.data.0.job.title', 'Handloom weaver')
+            ->where('contacts.data.0.phone', '9000000012')
             ->where('contacts.data.0.stage', 'pending')
             ->has('jobs', 1));
 
     expect(WorkerContactUnlock::where('worker_id', $fromDatabase->id)->value('source'))->toBe('directory')
-        ->and(WorkerContactUnlock::where('worker_id', $applicant->id)->value('source'))->toBe('application');
+        ->and(WorkerContactUnlock::where('worker_id', $applicant->id)->exists())->toBeFalse();
 });
 
 it('never shows another employer\'s contacts', function () {
@@ -125,12 +126,10 @@ it('filters applicant contacts by job and stage', function () {
     $a = karigar('Asha Printer', ['phone' => '9000000015']);
     $b = karigar('Bhola Weaver', ['phone' => '9000000016']);
 
-    $this->job->applications()->create(['worker_id' => $b->id, 'status' => ApplicationStatus::Pending->value, 'contact_unlocked' => true]);
+    $this->job->applications()->create(['worker_id' => $b->id, 'status' => ApplicationStatus::Pending->value]);
     $second->applications()->create([
-        'worker_id' => $a->id, 'status' => ApplicationStatus::Pending->value, 'contact_unlocked' => true, 'shortlisted_at' => now(),
+        'worker_id' => $a->id, 'status' => ApplicationStatus::Pending->value, 'shortlisted_at' => now(),
     ]);
-    // A locked applicant is not a contact yet.
-    $second->applications()->create(['worker_id' => karigar('Locked One', ['phone' => '9000000017'])->id, 'status' => ApplicationStatus::Pending->value]);
 
     $names = fn (array $query) => collect(
         $this->actingAs($this->employer)->get('/employer/workers/contacts/applicants?'.http_build_query($query))->viewData('page')['props']['contacts']['data']

@@ -267,8 +267,6 @@ export default {
             modes: { site: 'At the workplace', phone: 'Phone', video: 'Video' },
         },
         title: 'Applicants',
-        contactUnlocks: 'Contact unlocks',
-        unlockContact: 'Unlock contact',
         accept: 'Accept',
         reject: 'Reject',
         shortlist: 'Shortlist',

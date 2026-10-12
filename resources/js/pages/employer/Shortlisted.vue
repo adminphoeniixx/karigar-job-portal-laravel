@@ -8,7 +8,6 @@ interface Entry {
     id: number;
     status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
     expected_wage: string | null;
-    contact_unlocked: boolean;
     shortlisted_at: string;
     applied_at: string;
     job: { id: number; title: string; location: string };
@@ -84,8 +83,8 @@ const remove = (id: number) => {
                     <span v-for="s in a.worker.skills" :key="s" class="rounded-full bg-muted px-2.5 py-1 font-medium text-muted-foreground">{{ s }}</span>
                 </div>
 
-                <div v-if="a.contact_unlocked" class="mt-3 flex flex-wrap gap-4 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 text-sm">
-                    <span class="inline-flex items-center gap-1.5"><Mail class="size-4 text-orange-600" /> {{ a.worker.email }}</span>
+                <div v-if="a.worker.email || a.worker.phone" class="mt-3 flex flex-wrap gap-4 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 text-sm">
+                    <span v-if="a.worker.email" class="inline-flex items-center gap-1.5"><Mail class="size-4 text-orange-600" /> {{ a.worker.email }}</span>
                     <span v-if="a.worker.phone" class="inline-flex items-center gap-1.5"><Phone class="size-4 text-orange-600" /> {{ a.worker.phone }}</span>
                 </div>
 

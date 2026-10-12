@@ -12,7 +12,6 @@ use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ShortlistedNotification;
 use App\Services\ApplicantAccess;
-use App\Services\ContactUnlocks;
 use App\Support\ReferenceData;
 use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +20,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Applicant management for the employer app's "Manage Job" screen — listing,
- * shortlisting, hiring/rejecting and unlocking contact. Notifications and
+ * shortlisting and hiring/rejecting. Notifications and
  * transactional emails mirror the web Employer\ApplicantController exactly.
  */
 class ApplicantController extends Controller
@@ -231,36 +230,17 @@ class ApplicantController extends Controller
     }
 
     /**
-     * Reveal an applicant's contact details, spending one contact credit
-     * (free when the karigar is already unlocked).
+     * Kept for app builds that still show an "Unlock contact" button. An
+     * applicant's number is no longer unlocked: it is in every applicant
+     * payload already, so this spends nothing and returns the applicant.
      */
-    public function unlockContact(Request $request, JobApplication $application): JsonResponse
+    public function unlockContact(JobApplication $application): JsonResponse
     {
         $this->authorize('update', $application->job);
 
-        if ($application->contact_unlocked) {
-            $application->loadMissing(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title');
-
-            return response()->json(['applicant' => new ApplicantResource($application)]);
-        }
-
-        $wallet = ContactUnlocks::for($request->user());
-
-        if (! $wallet->unlockApplication($application, $request->user())) {
-            return response()->json([
-                'message' => __('You have reached your plan\'s contact unlock limit.'),
-                'code' => 'unlock_limit_reached',
-                'unlocks' => $wallet->summary(),
-            ], 422);
-        }
-
         $application->loadMissing(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title');
 
-        return response()->json([
-            'message' => __('Contact unlocked.'),
-            'applicant' => new ApplicantResource($application),
-            'unlocks' => ContactUnlocks::for($request->user())->summary(),
-        ]);
+        return response()->json(['applicant' => new ApplicantResource($application)]);
     }
 
     /**

@@ -22,7 +22,7 @@ This applies to the employer app (API), the web, and the HTML mockup.
 
 - Defined in `database/seeders/PlanSeeder.php` (`type: database`). Admin can change prices and limits in **Admin → Plans**.
 - Unlocks renew every billing cycle. A karigar unlocked once stays unlocked and never costs again.
-- A database plan works on its own or alongside a job plan. Worker Database unlocks spend the database plan first, applicant unlocks spend the job plan first.
+- A database plan works on its own or alongside a job plan. Unlocks spend the database plan first, then the job plan. Applicants never need an unlock (since 9 Oct 2026, see docs/app-updates/2026-10-09/employer-app.md).
 - Job plans (Basic / Standard / Pro) still include some database access as before.
 - No plan = no unlocks.
 

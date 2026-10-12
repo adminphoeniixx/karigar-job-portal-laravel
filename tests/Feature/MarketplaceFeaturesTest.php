@@ -10,6 +10,7 @@ use App\Models\Plan;
 use App\Models\Review;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\ContactUnlocks;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 
@@ -102,18 +103,21 @@ it('forbids an employer from touching another employer\'s applicants', function 
     $this->actingAs($other)->patch("/employer/applications/{$app->id}", ['status' => 'accepted'])->assertForbidden();
 });
 
-// ───────────────────────── CONTACT UNLOCK (plan-gated) ─────────────────────────
+// ───────────────────────── APPLICANT CONTACT (no unlock) ─────────────────────────
 
-it('lets a subscribed employer unlock a contact', function () {
+it('shows an applicant\'s number without an unlock', function () {
     subscribe($this->employer, $this->plan);
-    $app = $this->job->applications()->create(['worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending->value]);
+    $this->worker->workerProfile()->create(['phone' => '9876500001']);
+    $this->job->applications()->create(['worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending->value]);
 
-    $this->actingAs($this->employer)->post("/employer/applications/{$app->id}/unlock")->assertRedirect();
-    expect($app->fresh()->contact_unlocked)->toBeTrue();
+    $this->actingAs($this->employer)
+        ->get("/employer/jobs/{$this->job->id}/applicants")
+        ->assertInertia(fn ($page) => $page
+            ->where('applications.0.worker.phone', '9876500001')
+            ->missing('contactUnlocks'));
 });
 
-it('enforces the plan contact unlock limit', function () {
-    // Plan that allows exactly one unlock.
+it('keeps the old unlock endpoint free for app builds that still call it', function () {
     $limited = Plan::create([
         'name' => 'Solo', 'slug' => 'solo', 'price' => 99, 'currency' => 'INR', 'interval' => 'monthly',
         'features' => ['job_post_limit' => 5, 'contact_unlock_limit' => 1], 'is_active' => true,
@@ -124,11 +128,14 @@ it('enforces the plan contact unlock limit', function () {
     $a1 = $this->job->applications()->create(['worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending->value]);
     $a2 = $this->job->applications()->create(['worker_id' => $w2->id, 'status' => ApplicationStatus::Pending->value]);
 
-    $this->actingAs($this->employer)->post("/employer/applications/{$a1->id}/unlock");
-    $this->actingAs($this->employer)->post("/employer/applications/{$a2->id}/unlock");
+    foreach ([$a1, $a2] as $application) {
+        $this->actingAs($this->employer, 'sanctum')
+            ->postJson("/api/v1/employer/applicants/{$application->id}/unlock")
+            ->assertOk()
+            ->assertJsonPath('applicant.contact_unlocked', true);
+    }
 
-    expect($a1->fresh()->contact_unlocked)->toBeTrue()
-        ->and($a2->fresh()->contact_unlocked)->toBeFalse(); // blocked by limit
+    expect(ContactUnlocks::for($this->employer)->unlocksUsed())->toBe(0);
 });
 
 // ───────────────────────── SAVED JOBS ─────────────────────────

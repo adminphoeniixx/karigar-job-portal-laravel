@@ -42,7 +42,6 @@ interface Applicant {
     status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
     cover_note: string | null;
     expected_wage: string | null;
-    contact_unlocked: boolean;
     shortlisted: boolean;
     created_at: string;
     tracking_steps: TrackStep[];
@@ -68,7 +67,6 @@ const props = defineProps<{
     job: { id: number; title: string };
     applications: Applicant[];
     sort: 'best_match' | 'recent';
-    contactUnlocks: { used: number; limit: number };
     escrowEnabled: boolean;
     // Who is hidden and why: a later batch, or no (or a lapsed) job plan.
     access: {
@@ -92,10 +90,6 @@ const statusPill: Record<string, string> = {
 
 const setStatus = (id: number, status: 'accepted' | 'rejected') => {
     router.patch(`/employer/applications/${id}`, { status }, { preserveScroll: true });
-};
-
-const unlock = (id: number) => {
-    router.post(`/employer/applications/${id}/unlock`, {}, { preserveScroll: true });
 };
 
 // Opens (or re-opens) the chat thread with this applicant, pinned to this job.
@@ -224,14 +218,7 @@ const submitReview = () => {
     <Head :title="`Applicants · ${job.title}`" />
 
     <div class="flex flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="Users" :title="$t('applicants.title')" :description="job.title">
-            <template #action>
-                <div class="flex gap-1 rounded-xl border bg-card px-4 py-2 text-sm">
-                    <span class="text-muted-foreground">{{ $t('applicants.contactUnlocks') }}:</span>
-                    <span class="font-semibold">{{ contactUnlocks.used }}<span v-if="contactUnlocks.limit"> / {{ contactUnlocks.limit }}</span></span>
-                </div>
-            </template>
-        </PageHeader>
+        <PageHeader :icon="Users" :title="$t('applicants.title')" :description="job.title" />
 
         <!-- Applicants arrive in batches, and only with a job plan. -->
         <div v-if="access.reason === 'batch'" class="flex items-start gap-2 rounded-2xl border bg-orange-500/5 px-5 py-4 text-sm">
@@ -372,19 +359,10 @@ const submitReview = () => {
                 <p v-if="a.cover_note" class="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">{{ a.cover_note }}</p>
                 <p v-if="a.expected_wage" class="mt-2 text-sm"><span class="text-muted-foreground">{{ $t('applicants.expectedWage') }}:</span> <span class="font-medium">₹{{ rupees(a.expected_wage) }}</span></p>
 
-                <!-- Contact -->
-                <div class="mt-3">
-                    <div v-if="a.contact_unlocked" class="flex flex-wrap gap-4 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 text-sm">
-                        <span v-if="a.worker.email" class="inline-flex items-center gap-1.5"><Mail class="size-4 text-orange-600" /> {{ a.worker.email }}</span>
-                        <span v-if="a.worker.phone" class="inline-flex items-center gap-1.5"><Phone class="size-4 text-orange-600" /> {{ a.worker.phone }}</span>
-                    </div>
-                    <button
-                        v-else
-                        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:bg-muted"
-                        @click="unlock(a.id)"
-                    >
-                        <Lock class="size-3.5" /> {{ $t('applicants.unlockContact') }}
-                    </button>
+                <!-- Contact: an applicant's number needs no unlock -->
+                <div v-if="a.worker.email || a.worker.phone" class="mt-3 flex flex-wrap gap-4 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 text-sm">
+                    <span v-if="a.worker.email" class="inline-flex items-center gap-1.5"><Mail class="size-4 text-orange-600" /> {{ a.worker.email }}</span>
+                    <span v-if="a.worker.phone" class="inline-flex items-center gap-1.5"><Phone class="size-4 text-orange-600" /> {{ a.worker.phone }}</span>
                 </div>
 
                 <!-- Actions -->

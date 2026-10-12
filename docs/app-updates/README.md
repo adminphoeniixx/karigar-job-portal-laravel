@@ -11,6 +11,7 @@ apps can get its own file in the folder, linked from both.
 
 | Date | Employer app | Worker app |
 |---|---|---|
+| [2026-10-09](2026-10-09/) | [Applicants' numbers show without an unlock; unlocks are for the Worker Database only](2026-10-09/employer-app.md) · [Hire sheet: send the offer](2026-10-09/hire-offer.md) | [Hire offer card, "You're hired" push](2026-10-09/hire-offer.md) |
 | [2026-10-07](2026-10-07/) | [Invoice per payment, invoice email, worker email `null`, app update + maintenance](2026-10-07/employer-app.md) · [Order history + already-purchased plans](2026-10-07/employer-app-orders.md) | [App update + maintenance; Terms & Help endpoints](2026-10-07/worker-app.md) · both apps: [4 APIs](2026-10-07/app-update-maintenance-legal-support-apis.md) |
 
 Older handover notes, from before this folder existed, are the

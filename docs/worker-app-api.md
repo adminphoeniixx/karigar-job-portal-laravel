@@ -248,9 +248,23 @@ renews the plan, the job comes back everywhere on its own.
 ## 5. Applications 🔒 (worker)
 
 `ApplicationResource` also carries `interview` (`{ at, at_label, mode, note }`,
-set when the employer schedules one) and `offer`
-(`{ wage, start_date, message }`, set when they hire you) — both `null` until
-they happen.
+set when the employer schedules one) and `offer`, the hire offer (set when
+the employer hires you, `status: accepted`). Both are `null` until they happen.
+
+```jsonc
+"offer": {
+  "wage": "23400.00", "wage_label": "₹23,400 / month",      // null if not given
+  "start_date": "2026-10-12", "start_date_label": "12 Oct 2026", // null if not given
+  "message": "Report to the site by 9 AM with your tools",       // null if not given
+  "employer_name": "Sri Sai Constructions",
+  "address": "12 Anna Salai, Chennai, Tamil Nadu",               // where to report
+  "contact_name": "Ramesh", "contact_phone": "9000000777"        // whom to call
+}
+```
+`contact_phone` is the job's call contact when the job has one, else the
+employer's own number. Show the offer card on the application whenever `offer`
+is not `null`, and hide any row whose value is `null`. Details:
+`docs/app-updates/2026-10-09/hire-offer.md`.
 
 ### `GET /worker/applications?status=pending`
 `status` optional (`pending|accepted|rejected|withdrawn`). Paginated
@@ -332,10 +346,12 @@ Raw numbers are encrypted at rest and never returned.
 ## 8. Notifications 🔒 (any auth)
 
 Notification `type`s include `job.new`, `application.shortlisted`,
-`application.status`, `application.interview`, `job.invite` (an employer invited
-you to apply) and `chat.message`.
+`application.accepted` (hired: the message carries the offer), `application.rejected`,
+`application.interview`, `job.invite` (an employer invited you to apply) and
+`chat.message`.
 
-- `GET /notifications` → `{ "notifications": { paginated [{id,type,message,url,read,created_at,created_ago}] }, "unread": 2 }`
+- `GET /notifications` → `{ "notifications": { paginated [{id,type,title,message,application_id,url,read,created_at,created_ago}] }, "unread": 2 }`
+  (`title` and `application_id` are `null` on older rows and on types that don't set them)
 - `POST /notifications/{id}/read` → `{ "unread": 1 }`
 - `POST /notifications/read-all` → `{ "unread": 0 }`
 

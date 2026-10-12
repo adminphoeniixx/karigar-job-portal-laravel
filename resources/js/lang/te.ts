@@ -267,8 +267,6 @@ export default {
             modes: { site: 'పని ప్రదేశంలో', phone: 'ఫోన్', video: 'వీడియో' },
         },
         title: 'దరఖాస్తుదారులు',
-        contactUnlocks: 'కాంటాక్ట్ అన్‌లాక్‌లు',
-        unlockContact: 'కాంటాక్ట్ అన్‌లాక్ చేయండి',
         accept: 'ఆమోదించండి',
         reject: 'తిరస్కరించండి',
         shortlist: 'షార్ట్‌లిస్ట్ చేయండి',

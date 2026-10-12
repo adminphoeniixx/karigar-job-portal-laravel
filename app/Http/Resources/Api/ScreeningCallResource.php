@@ -11,7 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * when they could come in, and whether that slot still needs confirming.
  *
  * The worker's phone number is not in here. The platform placed the call; the
- * number stays behind the contact-unlock paywall.
+ * number comes with the applicant (ApplicantResource).
  *
  * @mixin ScreeningCall
  */

@@ -14,8 +14,8 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * The rules and lifecycle of an in-app voice call, in one place.
  *
- * Why calls exist at all: an employer can talk to an applicant without buying
- * a contact unlock, and the worker's number is never disclosed. The audio runs
+ * Why calls exist at all: an employer can talk to a karigar without either
+ * side's number being disclosed by the call. The audio runs
  * through a CallProvider channel; this class only decides who may ring whom,
  * makes the other phone ring, and keeps the call log honest.
  *

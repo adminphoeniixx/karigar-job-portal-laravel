@@ -29,7 +29,11 @@ class ApplicationController extends Controller
         ]);
 
         $applications = $request->user()->applications()
-            ->with('job:id,title,city,state,employer_id,created_at,expires_at', 'job.employer:id,name')
+            ->with(
+                'job:id,title,address,city,state,employer_id,contact_phone,contact_name,created_at,expires_at',
+                'job.employer:id,name,phone',
+                'job.employer.employerProfile:id,user_id,company_name,phone',
+            )
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->latest()
             ->paginate(15);

@@ -1225,12 +1225,15 @@ function unlockContact(id){
   toast('Contact unlocked · '+(db.limit-db.used)+' unlocks left');
   refreshCurrent();
 }
-function waWorker(id){ if(!unlocked.has(id)){unlockContact(id);return;} toast('Opening WhatsApp… (demo)'); }
+// Applicants' numbers show without an unlock; only Worker Database karigars
+// (opened from Find karigars) need one.
+const hasNumber = (id, fromDb) => !fromDb || unlocked.has(id);
+function waWorker(id, fromDb){ if(!hasNumber(id, fromDb)){unlockContact(id);return;} toast('Opening WhatsApp… (demo)'); }
 
 /* refresh whichever screen is on top after a state change */
 function refreshCurrent(){
   const top = stack[stack.length-1];
-  if(top==='s-worker') openWorker(curWorkerId);
+  if(top==='s-worker') openWorker(curWorkerId, curWorkerFromDb);
   else if(top==='s-jobmanage') renderManage();
   else if(top==='s-workers') renderWorkers(WORKERS);
   else if(top==='s-jobs') renderMyJobs(document.querySelector('#jobSeg .active')?.textContent.toLowerCase()||'active');
@@ -1242,10 +1245,10 @@ const SVG_STAR='<path d="M12 2 15 9l7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9z
 const SVG_CAL='<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>';
 const SVG_CHAT='<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>';
 const SVG_WA='<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>';
-function contactBtns(w){
-  if(unlocked.has(w.id)){
-    return `<button class="btn btn-outline btn-sm" onclick="callWorker(${w.id})"><svg class="ic" style="stroke:var(--primary)" viewBox="0 0 24 24">${SVG_PHONE}</svg> Call</button>
-      <button class="btn btn-wa btn-sm" onclick="waWorker(${w.id})"><svg class="ic" style="stroke:#fff" viewBox="0 0 24 24">${SVG_WA}</svg> WhatsApp</button>
+function contactBtns(w, fromDb=false){
+  if(hasNumber(w.id, fromDb)){
+    return `<button class="btn btn-outline btn-sm" onclick="callWorker(${w.id},${fromDb})"><svg class="ic" style="stroke:var(--primary)" viewBox="0 0 24 24">${SVG_PHONE}</svg> Call</button>
+      <button class="btn btn-wa btn-sm" onclick="waWorker(${w.id},${fromDb})"><svg class="ic" style="stroke:#fff" viewBox="0 0 24 24">${SVG_WA}</svg> WhatsApp</button>
       <button class="btn btn-outline btn-sm" onclick="openChat(${w.id})"><svg class="ic" viewBox="0 0 24 24">${SVG_CHAT}</svg> Chat</button>`;
   }
   return `<button class="btn btn-ghost btn-sm" style="flex:1" onclick="unlockContact(${w.id})"><svg class="ic" style="stroke:var(--brand-700)" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg> View contact · 1 credit</button>`;
@@ -1556,9 +1559,10 @@ function renderHomeApplicants(){
 
 /* ============================ WORKER PROFILE ============================ */
 let curWorkerId=null;
-function openWorker(id){
-  const w = WORKERS.find(x=>x.id===id); curWorkerId=id;
-  const unl = unlocked.has(id);
+let curWorkerFromDb=false;
+function openWorker(id, fromDb=false){
+  const w = WORKERS.find(x=>x.id===id); curWorkerId=id; curWorkerFromDb=fromDb;
+  const unl = hasNumber(id, fromDb);
   document.getElementById('workerBody').innerHTML = `
     <div style="padding:22px 16px;background:linear-gradient(160deg,var(--primary),#c93a06);color:#fff">
       <div class="row" style="gap:14px">
@@ -1582,7 +1586,7 @@ function openWorker(id){
       <div class="card lockcard">
         <div style="width:40px;height:40px;border-radius:12px;background:var(--brand-50);color:var(--brand-700);display:grid;place-items:center;flex:0 0 auto"><svg class="ic ic-lg" style="stroke:var(--primary)" viewBox="0 0 24 24">${SVG_PHONE}</svg></div>
         <div style="flex:1"><div class="tiny muted">Phone number</div><div class="num">+91 ${unl?phoneFor(id):phoneFor(id).slice(0,6)+'•••••'}</div></div>
-        ${unl?'<span class="pill" style="background:var(--green-bg);color:var(--green-fg)">Unlocked</span>':`<button class="btn-sm btn-ghost" style="width:auto" onclick="unlockContact(${id})">Unlock</button>`}
+        ${unl?`<span class="pill" style="background:var(--green-bg);color:var(--green-fg)">${fromDb?'Unlocked':'Applied'}</span>`:`<button class="btn-sm btn-ghost" style="width:auto" onclick="unlockContact(${id})">Unlock</button>`}
       </div>
     </div>
     ${AI_SCORE[id]!=null?`<div class="pad" style="padding-bottom:0">
@@ -1608,16 +1612,16 @@ function openWorker(id){
       </div>
     </div>`;
   document.getElementById('workerActions').innerHTML =
-    `<div class="actbar" style="margin-top:0">${contactBtns(w)}</div>
+    `<div class="actbar" style="margin-top:0">${contactBtns(w, fromDb)}</div>
      <div class="actbar" style="margin-top:8px">${pipelineBtns(w)}</div>`;
   go('s-worker');
 }
-function callWorker(id){ if(id && !unlocked.has(id)){ unlockContact(id); return; } toast('📞 Calling '+(id?'+91 '+phoneFor(id):'worker')+'… (demo)'); }
+function callWorker(id, fromDb){ if(id && !hasNumber(id, fromDb)){ unlockContact(id); return; } toast('📞 Calling '+(id?'+91 '+phoneFor(id):'worker')+'… (demo)'); }
 function confirmHire(){ const w=WORKERS.find(x=>x.id===curWorkerId); if(w)w.status='hired'; closeSheet('sheet-hire'); toast('Hire offer sent to '+(w?w.name:'worker')+' 🎉'); refreshCurrent(); }
 
 /* ============================ FIND WORKERS ============================ */
 function workerBrowseCardHtml(w){
-  return `<div class="card wcard" onclick="openWorker(${w.id})">
+  return `<div class="card wcard" onclick="openWorker(${w.id},true)">
     <div class="top">
       <div class="avatar" style="display:grid;place-items:center;font-weight:700;color:var(--brand-700)">${w.init}</div>
       <div style="flex:1;min-width:0">

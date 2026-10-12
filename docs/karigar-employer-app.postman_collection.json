@@ -1163,7 +1163,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"accepted\"\n}"
+              "raw": "{\n  \"status\": \"accepted\",\n  \"offered_wage\": 23400,\n  \"start_date\": \"2026-10-12\",\n  \"message\": \"Report to the site by 9 AM with your tools\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/employer/applicants/{{application_id}}/status",
@@ -1179,7 +1179,7 @@
                 "status"
               ]
             },
-            "description": "`accepted` = hire, `rejected` = reject. Notifies the worker (in-app + email)."
+            "description": "`accepted` = hire, `rejected` = reject. On a hire send the offer: offered_wage (monthly), start_date (YYYY-MM-DD) and message, all optional. The worker gets push + in-app + email; push and app show the offer with the job address and a number to call."
           }
         },
         {
@@ -1213,7 +1213,7 @@
           }
         },
         {
-          "name": "Unlock contact",
+          "name": "Unlock contact (deprecated)",
           "request": {
             "method": "POST",
             "header": [
@@ -1240,7 +1240,7 @@
                 "unlock"
               ]
             },
-            "description": "Reveals the worker's phone/email, consuming one plan unlock. 422 if the limit is reached."
+            "description": "Deprecated 9 Oct 2026: applicants are never unlocked, their phone/email come in every applicant payload. Kept for old app builds: spends nothing, always 200 { applicant }."
           }
         },
         {
@@ -1666,7 +1666,7 @@
                 "unlock"
               ]
             },
-            "description": "Spends one contact unlock from the same pool as applicant unlocks; free if this karigar is already unlocked. 422 `no_plan` without a plan, 422 `unlock_limit_reached` when the pool is spent."
+            "description": "Spends one database unlock (database plan first, then the job plan); free if this karigar is already unlocked or applied to your job. 422 `no_plan` without a plan, 422 `unlock_limit_reached` when the pool is spent."
           }
         },
         {
@@ -1790,7 +1790,7 @@
                 }
               ]
             },
-            "description": "Applicants to your jobs whose contact is unlocked, one row per application. stage=all|pending|shortlisted|interview|hired|rejected; `jobs` lists your jobs for the picker."
+            "description": "Applicants to your jobs (every one the applicants screen shows; no unlock needed), one row per application. stage=all|pending|shortlisted|interview|hired|rejected; `jobs` lists your jobs for the picker."
           }
         },
         {

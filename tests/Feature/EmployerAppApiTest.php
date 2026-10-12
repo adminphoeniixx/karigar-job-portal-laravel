@@ -8,8 +8,10 @@ use App\Models\JobApplication;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\JobInviteNotification;
+use App\Notifications\Messages\FcmMessage;
 use App\Notifications\NewMessageNotification;
 use App\Services\ResumeStore;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -141,6 +143,52 @@ it('stores the hire sheet offer when accepting an applicant', function () {
         ->assertJsonPath('applicant.offer.message', 'Report by 9 AM');
 
     expect((float) $application->fresh()->offered_wage)->toBe(900.0);
+});
+
+it('sends the hired worker the offer: pay, start date, note, address and a number to call', function () {
+    Notification::fake();
+    $this->employer->employerProfile->update(['phone' => '9000000555']);
+    $this->job->update(['address' => '12 Anna Salai']);
+    $application = applyToJob();
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->patchJson("/api/v1/employer/applicants/{$application->id}/status", [
+            'status' => 'accepted', 'offered_wage' => 23400, 'start_date' => '2026-10-12', 'message' => 'Report by 9 AM',
+        ])
+        ->assertOk();
+
+    Notification::assertSentTo($this->worker, ApplicationStatusNotification::class, function ($notification) {
+        $push = $notification->toFcm($this->worker);
+        $data = $notification->toArray($this->worker);
+
+        return $data['title'] === 'You\'re hired! 🎉'
+            && $data['message'] === 'Sri Sai Constructions hired you for "Plumber for apartment project". ₹23,400 / month · Joining 12 Oct 2026'
+            && $data['offer']['contact_phone'] === '9000000555'
+            && $push instanceof FcmMessage;
+    });
+
+    $this->actingAs($this->worker, 'sanctum')
+        ->getJson('/api/v1/worker/applications')
+        ->assertOk()
+        ->assertJsonPath('data.0.offer.wage_label', '₹23,400 / month')
+        ->assertJsonPath('data.0.offer.start_date', '2026-10-12')
+        ->assertJsonPath('data.0.offer.start_date_label', '12 Oct 2026')
+        ->assertJsonPath('data.0.offer.message', 'Report by 9 AM')
+        ->assertJsonPath('data.0.offer.employer_name', 'Sri Sai Constructions')
+        ->assertJsonPath('data.0.offer.address', '12 Anna Salai, Chennai, Tamil Nadu')
+        ->assertJsonPath('data.0.offer.contact_phone', '9000000555');
+});
+
+it('gives the hired worker the job\'s call contact over the employer\'s number', function () {
+    $this->job->update(['contact_mode' => 'call', 'contact_phone' => '9000000777', 'contact_name' => 'Ramesh']);
+    $application = applyToJob();
+    $application->update(['status' => ApplicationStatus::Accepted]);
+
+    expect($application->fresh()->offerForWorker())
+        ->toMatchArray(['contact_name' => 'Ramesh', 'contact_phone' => '9000000777', 'wage' => null, 'message' => null]);
+
+    $application->update(['status' => ApplicationStatus::Pending]);
+    expect($application->fresh()->offerForWorker())->toBeNull();
 });
 
 it('suggests matched workers and invites them once', function () {

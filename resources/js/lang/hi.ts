@@ -267,8 +267,6 @@ export default {
             modes: { site: 'काम की जगह पर', phone: 'फ़ोन', video: 'वीडियो' },
         },
         title: 'आवेदक',
-        contactUnlocks: 'संपर्क अनलॉक',
-        unlockContact: 'संपर्क अनलॉक करें',
         accept: 'स्वीकार करें',
         reject: 'अस्वीकार करें',
         shortlist: 'शॉर्टलिस्ट करें',

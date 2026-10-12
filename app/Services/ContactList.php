@@ -62,8 +62,8 @@ class ContactList
     }
 
     /**
-     * Applicants to this account's jobs whose contact is unlocked, one row per
-     * application.
+     * Applicants to this account's jobs, one row per application. Their
+     * numbers need no unlock.
      *
      * @param  array<string, mixed>  $filters  q, skill, state, city, job, stage, sort
      */
@@ -137,6 +137,8 @@ class ContactList
             'resets_at' => ($job ?? $database)?->ends_at?->toIso8601String(),
             'pools' => $wallet->pools(),
             'used_database' => $bySource[WorkerContactUnlock::SOURCE_DIRECTORY],
+            // Applicants no longer use unlocks; this counts only the ones
+            // unlocked this cycle before that changed.
             'used_applicants' => $bySource[WorkerContactUnlock::SOURCE_APPLICATION],
             'has_database_access' => $this->hasDatabaseAccess(),
             'has_job_plan' => $job !== null,
@@ -144,7 +146,9 @@ class ContactList
             ...$counts,
             // Unlocked contacts out of sight until the plan behind them is renewed.
             'database_hidden' => $this->allDatabaseContacts()->count() - $counts['database_total'],
-            'applicants_hidden' => $this->allApplicantContacts()->count() - $counts['applicants_total'],
+            // Applicants still waiting in a batch are not counted: a plan
+            // renewal would not show them.
+            'applicants_hidden' => $job !== null ? 0 : $this->allApplicantContacts()->count() - $counts['applicants_total'],
         ];
     }
 
@@ -191,21 +195,20 @@ class ContactList
     private function allApplicantContacts(): Builder
     {
         return JobApplication::query()
-            ->where('contact_unlocked', true)
             ->whereHas('job', fn ($q) => $q->where('employer_id', $this->account->id))
             ->whereHas('worker');
     }
 
     /**
-     * Applicant contacts the employer can see now: all of them with a job
-     * plan, else only the ones it shortlisted or hired.
+     * Applicant contacts the employer can see now: the applicants its
+     * applicants screens show ({@see ApplicantAccess}). Without a job plan
+     * only the ones it shortlisted or hired.
      *
      * @return Builder<JobApplication>
      */
     private function applicantContacts(): Builder
     {
-        return $this->allApplicantContacts()
-            ->unless($this->account->hasActiveSubscription(Plan::TYPE_JOB), fn (Builder $q) => $q->kept());
+        return ApplicantAccess::for($this->account)->visibleApplications()->whereHas('worker');
     }
 
     private function hasDatabaseAccess(): bool

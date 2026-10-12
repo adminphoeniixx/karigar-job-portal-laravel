@@ -7,8 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * One applicant as the employer sees them. Contact details are only revealed
- * once the application's contact has been unlocked. `stage` collapses status,
+ * One applicant as the employer sees them, number included: applicants are
+ * never unlocked, only Worker Database karigars are. `stage` collapses status,
  * shortlist and interview into the app's pipeline tabs:
  * pending / shortlisted / interview / hired / rejected.
  *
@@ -32,7 +32,9 @@ class ApplicantResource extends JsonResource
             'shortlisted' => $this->shortlisted_at !== null,
             'cover_note' => $this->cover_note,
             'expected_wage' => $this->expected_wage,
-            'contact_unlocked' => $this->contact_unlocked,
+            // Always true: an applicant's number shows without an unlock.
+            // Kept for app builds that still check it.
+            'contact_unlocked' => true,
             // Hire sheet: what was offered when the applicant was accepted.
             'offer' => $this->offered_wage !== null || $this->start_date !== null || $this->offer_message !== null ? [
                 'wage' => $this->offered_wage,
@@ -86,9 +88,8 @@ class ApplicantResource extends JsonResource
                 'wage_type' => $profile?->wage_type,
                 'available' => (bool) ($profile?->available ?? false),
                 'verified' => $worker->isKycVerified(),
-                // Only revealed once the contact has been unlocked.
-                'phone' => $this->contact_unlocked ? ($profile?->phone ?? $worker->phone) : null,
-                'email' => $this->contact_unlocked ? $worker->contactEmail() : null,
+                'phone' => $profile?->phone ?? $worker->phone,
+                'email' => $worker->contactEmail(),
             ] : null,
         ];
     }

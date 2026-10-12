@@ -267,8 +267,6 @@ export default {
             modes: { site: 'કામની જગ્યાએ', phone: 'ફોન', video: 'વીડિયો' },
         },
         title: 'અરજદારો',
-        contactUnlocks: 'સંપર્ક અનલૉક',
-        unlockContact: 'સંપર્ક અનલૉક કરો',
         accept: 'સ્વીકારો',
         reject: 'નકારો',
         shortlist: 'શોર્ટલિસ્ટ કરો',

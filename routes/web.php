@@ -164,7 +164,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('employer/applications/{application}/resume', [ResumeController::class, 'download'])->name('applicants.resume');
         Route::post('employer/jobs/{job}/rescore', [ApplicantController::class, 'rescore'])->name('applicants.rescore');
         Route::patch('employer/applications/{application}', [ApplicantController::class, 'updateStatus'])->name('applicants.status');
-        Route::post('employer/applications/{application}/unlock', [ApplicantController::class, 'unlockContact'])->name('applicants.unlock');
 
         // Automated AI screening calls — ring the applicant, then confirm the
         // interview slot they offered.

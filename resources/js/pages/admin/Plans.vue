@@ -92,7 +92,7 @@ const save = (p: Plan) => {
                     <input v-model.number="drafts[p.id].job_post_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-muted-foreground">Contact unlocks (0 = unlimited)</label>
+                    <label class="mb-1 block text-xs font-medium text-muted-foreground">Database unlocks (0 = unlimited)</label>
                     <input v-model.number="drafts[p.id].contact_unlock_limit" type="number" min="0" class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40" />
                 </div>
                 <div>

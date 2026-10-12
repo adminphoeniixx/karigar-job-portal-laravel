@@ -267,8 +267,6 @@ export default {
             modes: { site: 'কাজের জায়গায়', phone: 'ফোন', video: 'ভিডিও' },
         },
         title: 'আবেদনকারী',
-        contactUnlocks: 'যোগাযোগ আনলক',
-        unlockContact: 'যোগাযোগ আনলক করুন',
         accept: 'গ্রহণ করুন',
         reject: 'প্রত্যাখ্যান',
         shortlist: 'শর্টলিস্ট করুন',

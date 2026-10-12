@@ -200,8 +200,8 @@ class LegalDocuments
             'key' => 'terms',
             'title' => 'Terms of use',
             'summary' => 'The rules for using Super Karigar, for karigars and employers alike.',
-            'updated_at' => '2026-09-03',
-            'updated_label' => '3 September 2026',
+            'updated_at' => '2026-10-09',
+            'updated_label' => '9 October 2026',
             // No web page for the terms yet — the app is the only place they
             // are published. Point this at url('/terms') once that page exists;
             // a client showing an "open in browser" link must handle null.
@@ -238,7 +238,7 @@ class LegalDocuments
                     self::list([
                         'Employers pay for job plans and Worker Database plans. Prices are shown before you pay, with GST added at checkout, and a tax invoice is issued for every payment.',
                         'Payments run through our payment provider. We never see or store your full card details.',
-                        'Each plan includes a number of contact unlocks. An unlock is used when you reveal a karigar\'s contact details, straight away, and cannot be undone.',
+                        'Each plan includes a number of Worker Database unlocks. An unlock is used when you reveal a karigar\'s contact details from the Worker Database, straight away, and cannot be undone. The numbers of karigars who apply to your jobs show without an unlock.',
                         'A plan runs for the period you bought and does not renew by itself unless the checkout said so.',
                     ]),
                 ]),

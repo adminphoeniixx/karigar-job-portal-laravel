@@ -2,26 +2,25 @@
 
 namespace App\Services;
 
-use App\Models\JobApplication;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WorkerContactUnlock;
 
 /**
- * The employer's contact unlocks: how many karigar numbers the plans the
- * account holds let it reveal. There is no wallet of bought credits; unlocks
- * come only from plans:
+ * The employer's contact unlocks: how many karigar numbers from the Worker
+ * Database the plans the account holds let it reveal. Applicants are never
+ * unlocked: an applicant the employer can see ({@see ApplicantAccess}) shows
+ * their number as it is. There is no wallet of bought credits; unlocks come
+ * only from plans:
  *
- *  - the job plan's contact-unlock allowance (applicants), and
- *  - the database plan's allowance (the Worker Database), when the account
- *    holds one.
+ *  - the database plan's allowance, when the account holds one, and
+ *  - the job plan's allowance, its share of the Worker Database.
  *
  * Each plan's allowance renews on its own billing cycle and counts the unlocks
  * it paid for since that cycle began; a limit of 0 means the plan does not
- * meter unlocks. A Worker Database unlock spends the database plan first, an
- * applicant unlock the job plan first, then the other plan. Without a plan
- * nothing unlocks.
+ * meter unlocks. An unlock spends the database plan first, then the job plan.
+ * Without a plan nothing unlocks.
  *
  * Unlocks count karigars, not clicks: a karigar's first unlock is recorded as
  * a WorkerContactUnlock and never charged again. Whether the number still
@@ -128,103 +127,66 @@ class ContactUnlocks
     }
 
     /**
-     * Karigars (worker user ids) this employer account has unlocked, through
-     * an application or straight from the Worker Database.
+     * Karigars (worker user ids) whose number this employer account holds:
+     * the ones unlocked from the Worker Database, and its own applicants.
      *
      * @return list<int>
      */
     public function unlockedWorkerIds(): array
     {
-        $fromApplications = JobApplication::where('contact_unlocked', true)
-            ->whereHas('job', fn ($q) => $q->where('employer_id', $this->account->id))
-            ->pluck('worker_id');
+        $applicants = ApplicantAccess::for($this->account)->visibleApplications()->pluck('worker_id');
 
         $fromDirectory = WorkerContactUnlock::where('employer_id', $this->account->id)->pluck('worker_id');
 
-        return $fromApplications->merge($fromDirectory)->map(fn ($id) => (int) $id)->unique()->values()->all();
-    }
-
-    public function hasUnlocked(int $workerId): bool
-    {
-        return WorkerContactUnlock::where('employer_id', $this->account->id)->where('worker_id', $workerId)->exists()
-            || JobApplication::where('worker_id', $workerId)
-                ->where('contact_unlocked', true)
-                ->whereHas('job', fn ($q) => $q->where('employer_id', $this->account->id))
-                ->exists();
+        return $applicants->merge($fromDirectory)->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     /**
-     * Whether the karigar's number shows to this employer right now. It needs
-     * an unlock and a plan to show it through: Worker Database access for any
-     * unlocked karigar, or the job plan for an unlocked applicant. An
-     * applicant the employer shortlisted or hired stays visible without one.
+     * Whether the karigar's number is already the employer's: unlocked from
+     * the Worker Database, or an applicant to one of its jobs. Either way a
+     * Worker Database unlock would cost nothing.
+     */
+    public function hasUnlocked(int $workerId): bool
+    {
+        return WorkerContactUnlock::where('employer_id', $this->account->id)->where('worker_id', $workerId)->exists()
+            || ApplicantAccess::for($this->account)->isVisibleApplicant($workerId);
+    }
+
+    /**
+     * Whether the karigar's number shows to this employer right now. An
+     * applicant the employer can see shows without an unlock; any other
+     * karigar needs a Worker Database unlock and Worker Database access.
      */
     public function contactVisible(int $workerId): bool
     {
-        $applications = JobApplication::where('worker_id', $workerId)
-            ->where('contact_unlocked', true)
-            ->whereHas('job', fn ($q) => $q->where('employer_id', $this->account->id));
-
-        if ((clone $applications)->kept()->exists()) {
+        if (ApplicantAccess::for($this->account)->isVisibleApplicant($workerId)) {
             return true;
         }
 
-        if ($this->subscription(Plan::TYPE_JOB) !== null && (clone $applications)->exists()) {
-            return true;
-        }
-
-        return $this->account->contactDatabaseQuota() > 0 && $this->hasUnlocked($workerId);
+        return $this->account->contactDatabaseQuota() > 0
+            && WorkerContactUnlock::where('employer_id', $this->account->id)->where('worker_id', $workerId)->exists();
     }
 
     /**
      * Unlock a karigar from the Worker Database. Returns false when the
-     * employer is out of unlocks; a karigar already unlocked costs nothing.
+     * employer is out of unlocks; a karigar already unlocked, or one who
+     * applied to the employer's job, costs nothing.
      */
     public function unlockWorker(User $worker, User $by): bool
     {
-        return $this->unlock($worker->id, $by, WorkerContactUnlock::SOURCE_DIRECTORY);
-    }
-
-    /**
-     * Reveal an applicant's contact. Returns false when the employer is out
-     * of unlocks; a karigar already unlocked (on another job, or from the
-     * Worker Database) costs nothing.
-     */
-    public function unlockApplication(JobApplication $application, User $by): bool
-    {
-        if ($application->contact_unlocked) {
+        if ($this->hasUnlocked($worker->id)) {
             return true;
         }
 
-        if (! $this->unlock($application->worker_id, $by, WorkerContactUnlock::SOURCE_APPLICATION)) {
-            return false;
-        }
-
-        $application->update(['contact_unlocked' => true]);
-
-        return true;
-    }
-
-    /**
-     * Charge for a karigar the first time they are unlocked, and record it
-     * with the pool that paid. The record's date places it in that pool's
-     * billing cycle.
-     */
-    private function unlock(int $workerId, User $by, string $source): bool
-    {
-        if ($this->hasUnlocked($workerId)) {
-            return true;
-        }
-
-        $pool = $this->charge($source);
+        $pool = $this->charge();
 
         if ($pool === null) {
             return false;
         }
 
         WorkerContactUnlock::firstOrCreate(
-            ['employer_id' => $this->account->id, 'worker_id' => $workerId],
-            ['source' => $source, 'pool' => $pool, 'unlocked_by' => $by->id],
+            ['employer_id' => $this->account->id, 'worker_id' => $worker->id],
+            ['source' => WorkerContactUnlock::SOURCE_DIRECTORY, 'pool' => $pool, 'unlocked_by' => $by->id],
         );
         $this->pools = null;
 
@@ -232,18 +194,15 @@ class ContactUnlocks
     }
 
     /**
-     * Pick the plan pool that pays for one unlock. Null when every plan is
-     * out of unlocks (or the account holds none).
+     * Pick the plan pool that pays for one unlock: the database plan first,
+     * then the job plan's share of the database. Null when every plan is out
+     * of unlocks (or the account holds none).
      */
-    private function charge(string $source): ?string
+    private function charge(): ?string
     {
-        $order = $source === WorkerContactUnlock::SOURCE_DIRECTORY
-            ? [WorkerContactUnlock::POOL_DATABASE, WorkerContactUnlock::POOL_JOB]
-            : [WorkerContactUnlock::POOL_JOB, WorkerContactUnlock::POOL_DATABASE];
-
         $pools = $this->pools();
 
-        foreach ($order as $pool) {
+        foreach ([WorkerContactUnlock::POOL_DATABASE, WorkerContactUnlock::POOL_JOB] as $pool) {
             if (isset($pools[$pool]) && ($pools[$pool]['remaining'] === null || $pools[$pool]['remaining'] > 0)) {
                 return $pool;
             }

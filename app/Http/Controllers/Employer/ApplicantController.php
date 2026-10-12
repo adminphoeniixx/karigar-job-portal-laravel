@@ -10,7 +10,6 @@ use App\Models\JobListing;
 use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\ShortlistedNotification;
 use App\Services\ApplicantAccess;
-use App\Services\ContactUnlocks;
 use App\Services\PayoutService;
 use App\Services\Screening\ScreeningService;
 use App\Support\TemplatedMailer;
@@ -43,9 +42,7 @@ class ApplicantController extends Controller
             // column came back null, ScreeningService::phoneFor() fell through
             // to nothing, and every such applicant showed "This worker has no
             // phone number on file" with the call button greyed out — a number
-            // we hold and the mobile API dials perfectly well. Selecting it
-            // reveals nothing: the payload below still gates contact details
-            // on contact_unlocked.
+            // we hold and the mobile API dials perfectly well.
             ->with('worker:id,name,email,phone', 'worker.workerProfile', 'escrow', 'screeningCalls')
             ->when($sort === 'best_match', fn ($q) => $q->orderByRaw('ai_score DESC NULLS LAST'))
             ->latest()
@@ -55,7 +52,6 @@ class ApplicantController extends Controller
                 'status' => $a->status->value,
                 'cover_note' => $a->cover_note,
                 'expected_wage' => $a->expected_wage,
-                'contact_unlocked' => $a->contact_unlocked,
                 'shortlisted' => $a->shortlisted_at !== null,
                 'created_at' => $a->created_at?->diffForHumans(),
                 'tracking_steps' => $a->trackingSteps(),
@@ -94,23 +90,16 @@ class ApplicantController extends Controller
                     'city' => $a->worker->workerProfile?->city,
                     'state' => $a->worker->workerProfile?->state,
                     'experience_years' => $a->worker->workerProfile?->experience_years,
-                    // Contact details are only revealed once unlocked.
-                    'email' => $a->contact_unlocked ? $a->worker->contactEmail() : null,
-                    'phone' => $a->contact_unlocked ? ($a->worker->workerProfile?->phone ?: $a->worker->phone) : null,
+                    'email' => $a->worker->contactEmail(),
+                    'phone' => $a->worker->workerProfile?->phone ?: $a->worker->phone,
                 ],
             ]);
-
-        $wallet = ContactUnlocks::for($request->user());
 
         return Inertia::render('applicants/Index', [
             'job' => $job->only('id', 'title'),
             'applications' => $applications,
             'sort' => $sort,
             'access' => $access->summary($job),
-            'contactUnlocks' => [
-                'used' => $wallet->unlocksUsed(),
-                'limit' => $wallet->planLimit(),
-            ],
             // Escrow is offered only once payouts can release it to the worker.
             'escrowEnabled' => app(PayoutService::class)->configured(),
         ]);
@@ -231,7 +220,6 @@ class ApplicantController extends Controller
                 'id' => $a->id,
                 'status' => $a->status->value,
                 'expected_wage' => $a->expected_wage,
-                'contact_unlocked' => $a->contact_unlocked,
                 'shortlisted_at' => $a->shortlisted_at?->diffForHumans(),
                 'applied_at' => $a->created_at?->diffForHumans(),
                 'job' => [
@@ -247,8 +235,8 @@ class ApplicantController extends Controller
                     'city' => $a->worker->workerProfile?->city,
                     'state' => $a->worker->workerProfile?->state,
                     'experience_years' => $a->worker->workerProfile?->experience_years,
-                    'email' => $a->contact_unlocked ? $a->worker->contactEmail() : null,
-                    'phone' => $a->contact_unlocked ? ($a->worker->workerProfile?->phone ?: $a->worker->phone) : null,
+                    'email' => $a->worker->contactEmail(),
+                    'phone' => $a->worker->workerProfile?->phone ?: $a->worker->phone,
                 ],
             ]);
 
@@ -294,31 +282,6 @@ class ApplicantController extends Controller
         return back()->with('toast', [
             'type' => 'success',
             'message' => __('Applicant shortlisted — the worker has been notified.'),
-        ]);
-    }
-
-    /**
-     * Reveal an applicant's contact details, consuming one unlock from the plan
-     * (free when the karigar is already unlocked).
-     */
-    public function unlockContact(Request $request, JobApplication $application): RedirectResponse
-    {
-        $this->authorize('update', $application->job);
-
-        if ($application->contact_unlocked) {
-            return back();
-        }
-
-        if (! ContactUnlocks::for($request->user())->unlockApplication($application, $request->user())) {
-            return back()->with('toast', [
-                'type' => 'error',
-                'message' => __('You have reached your plan\'s contact unlock limit.'),
-            ]);
-        }
-
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => __('Contact unlocked.'),
         ]);
     }
 }

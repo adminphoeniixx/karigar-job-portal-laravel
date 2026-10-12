@@ -601,9 +601,7 @@ it('offers the call when the number is on the user row and not the profile', fun
             ->where('applications.0.screening.blocked_because', null));
 });
 
-it('shows the user-row number once the employer pays to unlock the contact', function () {
-    $this->application->update(['contact_unlocked' => true]);
-
+it('shows the user-row number on the applicants page', function () {
     $this->actingAs($this->employer)
         ->get("/employer/jobs/{$this->job->id}/applicants")
         ->assertOk()

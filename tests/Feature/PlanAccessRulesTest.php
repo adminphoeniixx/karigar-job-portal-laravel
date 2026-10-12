@@ -189,14 +189,17 @@ it('keeps only shortlisted and hired applicants once the job plan ends', functio
         ->assertInertia(fn ($page) => $page->has('applications', 5)->where('access.reason', null));
 });
 
-it('no longer unlocks for free without a plan', function () {
+it('shows a kept applicant\'s number without a plan or an unlock', function () {
     $apps = accessApplicants($this->job, 1);
     $apps[0]->update(['shortlisted_at' => now()]); // kept, so visible
 
+    $apps[0]->worker->workerProfile()->create(['phone' => '9000000310']);
+    $phone = '9000000310';
+
     $this->actingAs($this->employer, 'sanctum')
-        ->postJson("/api/v1/employer/applicants/{$apps[0]->id}/unlock")
-        ->assertStatus(422)
-        ->assertJsonPath('code', 'unlock_limit_reached');
+        ->getJson("/api/v1/employer/applicants/{$apps[0]->id}")
+        ->assertOk()
+        ->assertJsonPath('data.worker.phone', $phone);
 
     expect(WorkerContactUnlock::count())->toBe(0);
 });
@@ -323,7 +326,7 @@ it('fills the Worker Database card from the database plan', function () {
         ->cta->toBe('Upgrade');
 });
 
-it('adds a database plan to a job plan, each paying for its own list first', function () {
+it('adds a database plan to a job plan, the database plan paying first', function () {
     accessSubscribe($this->employer, $this->jobPlan);
     accessSubscribe($this->employer, $this->databasePlan);
 
@@ -335,14 +338,13 @@ it('adds a database plan to a job plan, each paying for its own list first', fun
     $this->actingAs($this->employer)->post("/employer/workers/{$first->workerProfile->id}/unlock");
     $this->actingAs($this->employer)->post("/employer/workers/{$second->workerProfile->id}/unlock");
 
-    // An applicant goes on the job plan.
-    $apps = accessApplicants($this->job, 1);
-    $this->actingAs($this->employer)->post("/employer/applications/{$apps[0]->id}/unlock");
+    // An applicant costs nothing.
+    accessApplicants($this->job, 1);
 
     expect(WorkerContactUnlock::where('worker_id', $first->id)->value('pool'))->toBe('database')
         ->and(WorkerContactUnlock::where('worker_id', $second->id)->value('pool'))->toBe('job')
-        ->and(WorkerContactUnlock::where('worker_id', $apps[0]->worker_id)->value('pool'))->toBe('job')
-        ->and(ContactUnlocks::for($this->employer)->planRemaining())->toBe(0);
+        ->and(WorkerContactUnlock::count())->toBe(2)
+        ->and(ContactUnlocks::for($this->employer)->planRemaining())->toBe(1);
 });
 
 it('hides database contacts when the database access ends, keeping shortlisted karigars', function () {

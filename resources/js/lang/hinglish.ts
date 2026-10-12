@@ -267,8 +267,6 @@ export default {
             modes: { site: 'Kaam ki jagah par', phone: 'Phone', video: 'Video' },
         },
         title: 'Applicants',
-        contactUnlocks: 'Contact unlocks',
-        unlockContact: 'Contact unlock karein',
         accept: 'Accept karein',
         reject: 'Reject karein',
         shortlist: 'Shortlist karein',

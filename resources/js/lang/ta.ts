@@ -267,8 +267,6 @@ export default {
             modes: { site: 'வேலை இடத்தில்', phone: 'தொலைபேசி', video: 'வீடியோ' },
         },
         title: 'விண்ணப்பதாரர்கள்',
-        contactUnlocks: 'தொடர்பு அன்லாக்',
-        unlockContact: 'தொடர்பை அன்லாக் செய்',
         accept: 'ஏற்றுக்கொள்',
         reject: 'நிராகரி',
         shortlist: 'தேர்வுப்பட்டியலில் சேர்',

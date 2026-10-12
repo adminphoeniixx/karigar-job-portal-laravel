@@ -16,7 +16,7 @@ use Illuminate\Notifications\Notification;
  * agent only ever collects a preference.
  *
  * Carries no phone number: the platform placed the call, and the worker's
- * contact stays behind the unlock paywall.
+ * number is on the applicant screen.
  */
 class ScreeningCallCompleted extends Notification
 {

@@ -267,8 +267,6 @@ export default {
             modes: { site: 'कामाच्या ठिकाणी', phone: 'फोन', video: 'व्हिडिओ' },
         },
         title: 'अर्जदार',
-        contactUnlocks: 'संपर्क अनलॉक',
-        unlockContact: 'संपर्क अनलॉक करा',
         accept: 'स्वीकारा',
         reject: 'नाकारा',
         shortlist: 'शॉर्टलिस्ट करा',
