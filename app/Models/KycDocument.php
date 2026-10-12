@@ -20,6 +20,9 @@ use Illuminate\Support\Carbon;
  * @property string|null $business_type
  * @property array<string, array{alt_type: string, alt_number: ?string, doc_path: ?string, reason: string}>|null $missing_documents
  * @property bool $has_missing_documents
+ * @property array<string, array<string, mixed>>|null $checks
+ * @property bool $auto_verified
+ * @property string|null $aadhaar_last4
  * @property KycStatus $status
  * @property int|null $reviewed_by
  * @property Carbon|null $reviewed_at
@@ -32,6 +35,7 @@ class KycDocument extends Model
         'pan_doc_path', 'aadhaar_doc_path', 'gst_doc_path', 'status',
         'reviewed_by', 'reviewed_at', 'remarks',
         'business_type', 'missing_documents', 'has_missing_documents',
+        'checks', 'auto_verified', 'aadhaar_last4',
     ];
 
     /**
@@ -41,7 +45,7 @@ class KycDocument extends Model
      */
     protected $hidden = [
         'pan_number', 'aadhaar_number', 'aadhaar_hash',
-        'pan_doc_path', 'aadhaar_doc_path', 'gst_doc_path', 'missing_documents',
+        'pan_doc_path', 'aadhaar_doc_path', 'gst_doc_path', 'missing_documents', 'checks',
     ];
 
     /**
@@ -56,6 +60,8 @@ class KycDocument extends Model
             'aadhaar_number' => 'encrypted',
             'missing_documents' => 'encrypted:array',
             'has_missing_documents' => 'boolean',
+            'checks' => 'encrypted:array',
+            'auto_verified' => 'boolean',
             'status' => KycStatus::class,
             'reviewed_at' => 'datetime',
         ];
@@ -76,9 +82,10 @@ class KycDocument extends Model
      */
     protected function maskedAadhaar(): Attribute
     {
-        return Attribute::get(fn (): ?string => $this->aadhaar_number
-            ? 'XXXX XXXX '.substr($this->aadhaar_number, -4)
-            : null);
+        // A DigiLocker Aadhaar comes with its last four digits only.
+        $last4 = $this->aadhaar_number ? substr($this->aadhaar_number, -4) : $this->aadhaar_last4;
+
+        return Attribute::get(fn (): ?string => $last4 ? 'XXXX XXXX '.$last4 : null);
     }
 
     /**
@@ -152,6 +159,7 @@ class KycDocument extends Model
                         'has_file' => ($alt['doc_path'] ?? null) !== null,
                         'reason' => $alt['reason'],
                     ],
+                    'check' => null,
                 ];
             }
 
@@ -165,8 +173,38 @@ class KycDocument extends Model
                 'number' => $number,
                 'has_file' => self::pathFor($this, $doc) !== null,
                 'alternate' => null,
+                'check' => $this->checkSummary($doc, $forAdmin),
             ];
         })->all();
+    }
+
+    /**
+     * What the automatic check found for one document, or null when it was
+     * not checked (Aadhaar typed in by hand, Decentro switched off). The name
+     * on record goes to admins only.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function checkSummary(string $doc, bool $forAdmin): ?array
+    {
+        $check = ($this->checks ?? [])[$doc] ?? null;
+
+        if ($check === null) {
+            return null;
+        }
+
+        return [
+            'status' => $check['status'],
+            'via' => $check['method'],
+            'verified' => $check['status'] === KycCheck::PASSED && ($check['name_matches'] ?? true),
+            'name_matches' => $check['name_matches'] ?? null,
+            'message' => $check['message'] ?? null,
+            'checked_at' => $check['checked_at'] ?? null,
+        ] + ($forAdmin ? [
+            'name' => $check['name'] ?? null,
+            'alt_name' => $check['alt_name'] ?? null,
+            'detail' => $check['detail'] ?? null,
+        ] : []);
     }
 
     private static function mask(?string $value): ?string

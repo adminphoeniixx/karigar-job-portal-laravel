@@ -25,9 +25,12 @@ class KycResource extends JsonResource
             'masked_aadhaar' => $this->masked_aadhaar,
             // Employers only: what the documents were asked by.
             'business_type' => $this->business_type,
-            // One entry per document asked for: given, or missing with the alternate offered.
+            // One entry per document asked for: given, or missing with the
+            // alternate offered; `check` is what the automatic lookup found.
             'documents' => $this->documentsSummary($this->user?->employerProfile?->gstin),
             'has_missing_documents' => $this->has_missing_documents,
+            // Approved by the automatic checks (Decentro) rather than an admin.
+            'auto_verified' => $this->auto_verified,
             'remarks' => $this->remarks,
             'reviewed_at' => $this->reviewed_at?->toIso8601String(),
             'submitted_at' => $this->created_at?->toIso8601String(),

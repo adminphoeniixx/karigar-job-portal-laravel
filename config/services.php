@@ -54,6 +54,19 @@ return [
     // until an admin saves it. Off in tests, which post jobs freely.
     'kyc' => [
         'employer_required' => env('EMPLOYER_VERIFICATION_REQUIRED', true),
+        // Default for "Karigars must be verified to apply". Off in tests.
+        'worker_required' => env('WORKER_VERIFICATION_REQUIRED', true),
+    ],
+
+    // Decentro checks PAN and GSTIN numbers against government records and
+    // reads a verified Aadhaar out of the user's DigiLocker. Without a client
+    // id nothing is checked and every submission waits for an admin.
+    'decentro' => [
+        'base_url' => rtrim((string) env('DECENTRO_BASE_URL', 'https://in.staging.decentro.tech'), '/'),
+        'client_id' => env('DECENTRO_CLIENT_ID'),
+        'client_secret' => env('DECENTRO_CLIENT_SECRET'),
+        'module_secret' => env('DECENTRO_KYC_MODULE_SECRET'),
+        'timeout' => (int) env('DECENTRO_TIMEOUT', 25),
     ],
 
     // OpenStreetMap's geocoder, placing a job's map pin from its address when

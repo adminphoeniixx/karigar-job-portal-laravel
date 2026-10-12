@@ -406,6 +406,7 @@ export default {
         submit: 'ధృవీకరణ కోసం సమర్పించండి',
         pending: 'మీ KYC సమీక్షలో ఉంది.',
         verified: 'మీ KYC ధృవీకరించబడింది.',
+        completeToApply: 'దరఖాస్తు చేయడానికి KYC పూర్తి చేయండి',
     },
     dashboard: {
         kycStatus: 'KYC స్థితి',

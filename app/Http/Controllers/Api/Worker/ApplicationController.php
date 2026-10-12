@@ -12,6 +12,7 @@ use App\Models\JobListing;
 use App\Models\Review;
 use App\Notifications\NewApplicationNotification;
 use App\Support\TemplatedMailer;
+use App\Support\WorkerVerification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -55,7 +56,8 @@ class ApplicationController extends Controller
 
     /**
      * Apply to a job. Mirrors the web flow: notifies the employer and sends
-     * both transactional emails.
+     * both transactional emails. A karigar without a verified KYC gets a 422
+     * with code `verification_required` while the admin rule is on.
      */
     public function store(Request $request, JobListing $job): JsonResponse
     {
@@ -69,12 +71,21 @@ class ApplicationController extends Controller
             ], 422);
         }
 
+        $worker = $request->user();
+
+        // No application without a verified KYC (Admin → Settings can lift it).
+        if ($blocked = WorkerVerification::blockMessage($worker)) {
+            return response()->json([
+                'message' => $blocked,
+                'code' => 'verification_required',
+                'verification' => WorkerVerification::summary($worker),
+            ], 422);
+        }
+
         $data = $request->validate([
             'cover_note' => ['nullable', 'string', 'max:1000'],
             'expected_wage' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
         ]);
-
-        $worker = $request->user();
 
         if ($job->applications()->where('worker_id', $worker->id)->exists()) {
             throw ValidationException::withMessages([

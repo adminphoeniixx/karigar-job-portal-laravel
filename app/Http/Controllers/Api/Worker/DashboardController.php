@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\JobResource;
 use App\Http\Resources\Api\WorkerProfileResource;
 use App\Models\JobListing;
+use App\Services\Kyc\KycAutoVerifier;
 use App\Support\JobFeed;
 use App\Support\Verification;
+use App\Support\WorkerVerification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -55,7 +57,13 @@ class DashboardController extends Controller
             // verification_enabled is false.
             'features' => [
                 'verification_enabled' => $verificationEnabled,
+                // Applying needs a verified KYC; see `verification` below.
+                'verification_required_to_apply' => WorkerVerification::required(),
+                // DigiLocker + registry checks are live; offer "Verify with DigiLocker".
+                'auto_verification_enabled' => $verificationEnabled && KycAutoVerifier::enabled(),
             ],
+            // can_apply false = show `message` and send the karigar to KYC.
+            'verification' => WorkerVerification::summary($user),
             'latest_jobs' => JobResource::collection($latest),
             // What "Latest jobs near you" is near: the phone, or a place the
             // karigar picked (see /worker/feed-location).

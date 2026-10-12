@@ -424,6 +424,7 @@ export default {
         submit: 'Submit for verification',
         pending: 'Your KYC is under review.',
         verified: 'Your KYC is verified.',
+        completeToApply: 'Complete KYC to apply',
     },
     dashboard: {
         kycStatus: 'KYC Status',

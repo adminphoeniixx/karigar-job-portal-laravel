@@ -9,6 +9,7 @@ use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Notifications\NewApplicationNotification;
 use App\Support\TemplatedMailer;
+use App\Support\WorkerVerification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -48,12 +49,17 @@ class JobApplicationController extends Controller
             ]);
         }
 
+        $worker = $request->user();
+
+        // No application without a verified KYC (Admin → Settings can lift it).
+        if ($blocked = WorkerVerification::blockMessage($worker)) {
+            return to_route('kyc.show')->with('toast', ['type' => 'error', 'message' => $blocked]);
+        }
+
         $data = $request->validate([
             'cover_note' => ['nullable', 'string', 'max:1000'],
             'expected_wage' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
         ]);
-
-        $worker = $request->user();
 
         if ($job->applications()->where('worker_id', $worker->id)->exists()) {
             return back()->with('toast', [

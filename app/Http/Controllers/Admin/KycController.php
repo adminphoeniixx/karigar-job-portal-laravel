@@ -62,6 +62,7 @@ class KycController extends Controller
             'submitted_at' => $kyc->updated_at?->toIso8601String(),
             'reviewed_at' => $kyc->reviewed_at?->toIso8601String(),
             'has_missing_documents' => $kyc->has_missing_documents,
+            'auto_verified' => $kyc->auto_verified,
             'user' => [
                 'id' => $user?->id,
                 'name' => $user?->name,
@@ -83,6 +84,7 @@ class KycController extends Controller
     public function approve(KycDocument $kyc, Request $request): RedirectResponse
     {
         $kyc->update([
+            'auto_verified' => false,
             'status' => KycStatus::Verified,
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
@@ -102,6 +104,7 @@ class KycController extends Controller
         $request->validate(['remarks' => ['required', 'string', 'max:500']]);
 
         $kyc->update([
+            'auto_verified' => false,
             'status' => KycStatus::Rejected,
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),

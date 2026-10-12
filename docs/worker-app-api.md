@@ -313,6 +313,15 @@ applying returns `422` with `code: "job_not_hiring"` ("This job is not taking
 applications right now."). Show the message; the job comes back when the
 employer renews.
 
+**KYC first.** While the admin rule "Karigars must be verified to apply" is on
+(default), a karigar without a verified KYC gets `422` with
+`code: "verification_required"`, a `message` and a `verification` block
+(`{ required, status, can_apply, message }`). Show the message and a
+**Complete KYC** button. `GET /worker/dashboard` → `verification` and
+`GET /jobs/{job}` → `meta.verification` carry the same block, so the app can
+show **Complete KYC** instead of **Apply** before the tap. See
+[`kyc-verification-decentro.md`](kyc-verification-decentro.md).
+
 ### `DELETE /applications/{application}`
 Withdraw your own application. → `{ "message": "Application withdrawn." }`
 
@@ -326,20 +335,31 @@ Withdraw your own application. → `{ "message": "Application withdrawn." }`
 
 ---
 
-## 7. KYC 🔒 (worker, **optional**)
+## 7. KYC 🔒 (worker, needed to apply)
 
 Full spec, including the **"I don't have this document"** alternate:
-[`worker-app-verification.md`](worker-app-verification.md).
+[`worker-app-verification.md`](worker-app-verification.md). Automatic checks
+(PAN against Income Tax records, Aadhaar through DigiLocker, instant approval):
+[`kyc-verification-decentro.md`](kyc-verification-decentro.md).
+
+### `POST /kyc/digilocker` → `{ reference, authorization_url, return_url_prefix, expires_in_minutes }`
+Open `authorization_url` in an in-app browser; close it once the URL starts
+with `return_url_prefix`, then call:
+
+### `GET /kyc/digilocker/{reference}` → `{ status: initiated|passed|invalid|error, name, masked_aadhaar, message, kyc }`
 
 ### `GET /kyc`
-`{ "kyc": null | { "status", "documents": [...], "has_missing_documents", "remarks", ... }, "required_documents": ["aadhaar", "pan"] }`
+`{ "kyc": null | { "status", "auto_verified", "documents": [{ ..., "check" }], "has_missing_documents", "remarks", ... }, "required_documents": ["aadhaar", "pan"], "digilocker": { available, verified, name, masked_aadhaar }, "auto_verification_enabled", "verification": { required, status, can_apply, message } }`
 
 ### `POST /kyc` (multipart)
 Per document (`aadhaar`, `pan`) either the number (`aadhaar_number` / `pan_number`)
-+ `{doc}_doc`, or `{doc}_missing=1` + `{doc}_alt_type`, `{doc}_alt_number`
-(optional), `{doc}_alt_doc`, `{doc}_reason`. Files jpg/png/pdf ≤5 MB, required on
-first submit. → `201 { "message": "KYC submitted for review.", "kyc": {...} }`.
-Raw numbers are encrypted at rest and never returned.
++ `{doc}_doc` (photo **optional**), or `{doc}_missing=1` + `{doc}_alt_type`,
+`{doc}_alt_number` (optional), `{doc}_alt_doc` (required), `{doc}_reason`. Files
+jpg/png/pdf ≤5 MB. Once `digilocker.verified` is true, leave `aadhaar_number`
+out. → `201 { "message", "kyc": {...}, "verification": {...} }`; `kyc.status`
+is `verified` straight away when PAN and DigiLocker Aadhaar check out and the
+names agree, `pending` otherwise. A PAN the Income Tax record does not know is
+`422` on `pan_number`. Raw numbers are encrypted at rest and never returned.
 
 ---
 

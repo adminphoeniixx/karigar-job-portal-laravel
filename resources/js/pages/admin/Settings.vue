@@ -14,6 +14,8 @@ type SettingKey =
     | 'kyc_verification_enabled'
     | 'worker_verification_enabled'
     | 'employer_verification_required'
+    | 'worker_verification_required'
+    | 'kyc_auto_verify_enabled'
     | 'ai_auto_shortlist_enabled'
     | 'ai_auto_reject_enabled'
     | 'ai_screening_call_enabled';
@@ -24,6 +26,7 @@ const props = defineProps<{
         ai_auto_reject_below: number;
         applicant_first_batch: number;
         applicant_next_batch: number;
+        decentro_configured: boolean;
     };
     billing: {
         gst_enabled: boolean;
@@ -50,6 +53,8 @@ const form = reactive({
     kyc_verification_enabled: props.settings.kyc_verification_enabled,
     worker_verification_enabled: props.settings.worker_verification_enabled,
     employer_verification_required: props.settings.employer_verification_required,
+    worker_verification_required: props.settings.worker_verification_required,
+    kyc_auto_verify_enabled: props.settings.kyc_auto_verify_enabled,
     ai_auto_shortlist_enabled: props.settings.ai_auto_shortlist_enabled,
     ai_auto_shortlist_threshold: props.settings.ai_auto_shortlist_threshold,
     ai_auto_reject_enabled: props.settings.ai_auto_reject_enabled,
@@ -93,10 +98,28 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
         key: 'employer_verification_required',
         title: 'Employers must be verified to post jobs',
         description:
-            'When on, an employer\'s job only goes live after you approve their business ' +
-            'verification (PAN / GST or an alternate document) in KYC Review. They can still ' +
+            'When on, an employer\'s job only goes live once their business verification (PAN / GST ' +
+            'or an alternate document) is approved, automatically or by you in KYC Review. They can still ' +
             'save drafts meanwhile. Jobs already live are not touched. Has no effect while KYC ' +
             'verification is off.',
+    },
+    {
+        key: 'worker_verification_required',
+        title: 'Karigars must be verified to apply',
+        description:
+            'When on, a karigar can only apply to a job once their KYC (Aadhaar + PAN) is verified. ' +
+            'They can still browse, save jobs and call employers who list a number. Applications ' +
+            'already sent are not touched. Has no effect while karigar verification is off.',
+    },
+    {
+        key: 'kyc_auto_verify_enabled',
+        title: 'Auto-verify with Decentro',
+        description:
+            'When on, PAN and GSTIN numbers are checked against government records and Aadhaar can be ' +
+            'verified through DigiLocker. If every document checks out and the names match, the user ' +
+            'is verified instantly; anything else (alternate IDs, name mismatch, Aadhaar typed by hand) ' +
+            'still comes to KYC Review. A PAN or GSTIN that does not exist is refused at once. ' +
+            'Each check is billed by Decentro. When off, everything waits for you as before.',
     },
     {
         key: 'ai_auto_shortlist_enabled',
@@ -258,6 +281,13 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                         />
                     </button>
                 </div>
+
+                <p
+                    v-if="toggle.key === 'kyc_auto_verify_enabled' && !settings.decentro_configured"
+                    class="mt-4 rounded-xl bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300"
+                >
+                    Decentro keys are not set on this server (DECENTRO_CLIENT_ID / DECENTRO_CLIENT_SECRET), so nothing is checked automatically yet.
+                </p>
 
                 <!-- Threshold only matters while auto-shortlisting is on. -->
                 <div

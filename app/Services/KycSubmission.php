@@ -4,18 +4,24 @@ namespace App\Services;
 
 use App\Enums\KycStatus;
 use App\Http\Requests\KycSubmitRequest;
+use App\Models\KycCheck;
 use App\Models\KycDocument;
 use App\Models\User;
+use App\Services\Kyc\KycAutoVerifier;
 use App\Support\KycRequirements;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Saves a verification submission, from the web or either app. Every document
  * the user is asked for ends up either given (number + photo) or missing (an
  * alternate ID, its photo and a reason); documents no longer asked for — say
- * an employer switched business type — are cleared. Any submission goes back
- * to pending review.
+ * an employer switched business type — are cleared.
+ *
+ * PAN and GSTIN are looked up through Decentro and an Aadhaar may come from
+ * DigiLocker; when all of it checks out the submission is verified on the
+ * spot, otherwise it waits for an admin (see KycAutoVerifier).
  *
  * Proof files stay on the local disk, never the CDN.
  */
@@ -27,6 +33,17 @@ class KycSubmission
     {
         $docs = $request->documents();
         $businessType = $request->businessType();
+
+        // Registry lookups first: a number nobody has heard of goes back to
+        // the user before anything is saved.
+        $checks = self::checkNumbers($request, $account, $docs);
+        $digilocker = in_array('aadhaar', $docs, true) && ! $request->isMissing('aadhaar') && blank($request->validated('aadhaar_number'))
+            ? $request->digilockerAadhaar()
+            : null;
+
+        if ($digilocker !== null) {
+            $checks['aadhaar'] = KycAutoVerifier::snapshot($digilocker);
+        }
 
         if ($account->isEmployer()) {
             $account->employerProfile()->firstOrCreate([])->update([
@@ -69,8 +86,16 @@ class KycSubmission
             }
 
             unset($missing[$doc]);
-            self::setNumber($kyc, $doc, $request->validated(KycRequirements::DOCUMENTS[$doc]['number_field']));
             $kyc->{$column} = self::store($request->file($doc.'_doc')) ?? $kyc->{$column};
+
+            if ($doc === 'aadhaar' && $digilocker !== null) {
+                self::setNumber($kyc, 'aadhaar', null);
+                $kyc->aadhaar_last4 = $digilocker->details['last4'] ?? null;
+
+                continue;
+            }
+
+            self::setNumber($kyc, $doc, $request->validated(KycRequirements::DOCUMENTS[$doc]['number_field']));
         }
 
         $kyc->business_type = $businessType;
@@ -80,7 +105,9 @@ class KycSubmission
         $kyc->reviewed_by = null;
         $kyc->reviewed_at = null;
         $kyc->remarks = null;
-        $kyc->save();
+        $kyc->checks = $checks ?: null;
+        // Saves it: verified on the spot when every check passed, pending otherwise.
+        app(KycAutoVerifier::class)->decide($kyc, $account);
 
         // Files the submission replaced or dropped. A path can sit in two
         // columns (older employer rows had their GST certificate copied), so
@@ -92,12 +119,56 @@ class KycSubmission
         return $kyc;
     }
 
+    /**
+     * Each PAN / GSTIN given, looked up in the registry (when automatic
+     * verification is on). Throws for a number the registry does not know.
+     *
+     * @param  list<string>  $docs
+     * @return array<string, array<string, mixed>>
+     */
+    private static function checkNumbers(KycSubmitRequest $request, User $account, array $docs): array
+    {
+        if (! KycAutoVerifier::enabled()) {
+            return [];
+        }
+
+        $verifier = app(KycAutoVerifier::class);
+        $checks = [];
+        $errors = [];
+
+        foreach ($docs as $doc) {
+            $field = KycRequirements::DOCUMENTS[$doc]['number_field'];
+            $number = $request->validated($field);
+
+            if ($doc === 'aadhaar' || $request->isMissing($doc) || blank($number)) {
+                continue;
+            }
+
+            $check = $verifier->checkNumber($account, $doc, $number);
+
+            if ($check->status === KycCheck::INVALID) {
+                $errors[$field] = $check->message;
+
+                continue;
+            }
+
+            $checks[$doc] = KycAutoVerifier::snapshot($check);
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        return $checks;
+    }
+
     private static function setNumber(KycDocument $kyc, string $doc, ?string $number): void
     {
         match ($doc) {
             'aadhaar' => [
                 $kyc->aadhaar_number = $number,
                 $kyc->aadhaar_hash = $number !== null ? hash('sha256', $number) : null,
+                $kyc->aadhaar_last4 = $number !== null ? substr($number, -4) : null,
             ],
             'pan' => $kyc->pan_number = $number,
             // An employer's GSTIN lives on its profile.

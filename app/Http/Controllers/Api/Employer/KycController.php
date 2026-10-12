@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\Employer;
 
+use App\Enums\KycStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EmployerKycRequest;
 use App\Http\Resources\Api\KycResource;
 use App\Models\User;
+use App\Services\Kyc\KycAutoVerifier;
 use App\Services\KycSubmission;
 use App\Support\EmployerVerification;
 use App\Support\KycRequirements;
@@ -34,10 +36,13 @@ class KycController extends Controller
     public function store(EmployerKycRequest $request): JsonResponse
     {
         $account = $request->user()->employerAccount();
-        KycSubmission::save($request, $account);
+
+        $kyc = KycSubmission::save($request, $account);
 
         return response()->json([
-            'message' => __('Business verification submitted for review.'),
+            'message' => $kyc->status === KycStatus::Verified
+                ? __('Your business is verified. You can post jobs now.')
+                : __('Business verification submitted for review.'),
             ...$this->payload($account->fresh()),
         ], 201);
     }
@@ -61,6 +66,8 @@ class KycController extends Controller
             'required_documents' => KycRequirements::documentsFor('employer', $profile?->business_type),
             'kyc' => $kyc ? new KycResource($kyc) : null,
             'verification' => EmployerVerification::summary($account),
+            'digilocker' => KycAutoVerifier::digilockerSummary($account),
+            'auto_verification_enabled' => KycAutoVerifier::enabled(),
         ];
     }
 }

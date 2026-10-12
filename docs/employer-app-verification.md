@@ -301,5 +301,7 @@ away.
 - Hide everything while `features.verification_enabled` is `false`.
 
 Postman: `docs/karigar-employer-app.postman_collection.json` → "Business
-Verification (KYC)" → "Submit business verification". It has disabled rows
-for the "I don't have it" case; enable them to try it.
+Verification (KYC)" → "Submit business verification (company)". It has disabled rows
+for the "I don't have it" case; enable them to try it. For an individual employer,
+"Start DigiLocker" → "DigiLocker result" → "Submit business verification (individual,
+after DigiLocker)". Each request has saved example responses.

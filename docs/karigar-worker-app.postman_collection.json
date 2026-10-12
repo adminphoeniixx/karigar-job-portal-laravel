@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Super Karigar — Worker App API (v1)",
-    "description": "Token-based (Sanctum) JSON API for the Super Karigar worker mobile app.\n\nQuick start:\n1. Set the `base_url` collection variable (default http://localhost:8000).\n2. Run **Auth → Send OTP**, then check storage/logs for the dev OTP.\n3. Run **Auth → Verify OTP** — it auto-saves the returned token into the `token` variable, so every other request is authenticated.\n\nFull reference: docs/worker-app-api.md",
+    "description": "Token-based (Sanctum) JSON API for the Super Karigar worker mobile app.\n\nQuick start:\n1. Set the `base_url` collection variable (default http://localhost:8000).\n2. Run **Auth → Send OTP**, then check storage/logs for the dev OTP.\n3. Run **Auth → Verify OTP** — it auto-saves the returned token into the `token` variable, so every other request is authenticated.\n\nFull reference: docs/worker-app-api.md\nKYC, DigiLocker and instant verification: docs/kyc-verification-decentro.md",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -69,6 +69,10 @@
       "key": "session_id",
       "value": "1",
       "type": "string"
+    },
+    {
+      "key": "kyc_reference",
+      "value": ""
     }
   ],
   "item": [
@@ -922,7 +926,8 @@
                 "jobs",
                 "{{job_id}}"
               ]
-            }
+            },
+            "description": "`meta.can_apply`: the job is open and you have not applied. `meta.verification.can_apply`: whether the karigar's KYC lets them apply. When it is false, show `meta.verification.message` and **Complete KYC** instead of **Apply**."
           }
         }
       ]
@@ -999,8 +1004,59 @@
                 "{{job_id}}",
                 "apply"
               ]
+            },
+            "description": "While the admin rule is on, a karigar without a verified KYC gets `422` with `code: \"verification_required\"` and a `verification` block: show `message` and a **Complete KYC** button. Other 422s: already applied, and `code: \"job_not_hiring\"` (paused job)."
+          },
+          "response": [
+            {
+              "name": "422 · KYC not verified",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cover_note\": \"Available from tomorrow.\",\n  \"expected_wage\": 900\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/jobs/{{job_id}}/apply",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "jobs",
+                    "{{job_id}}",
+                    "apply"
+                  ]
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Complete your KYC (Aadhaar + PAN) to apply to jobs. It takes two minutes.\",\n  \"code\": \"verification_required\",\n  \"verification\": {\n    \"required\": true,\n    \"status\": \"not_submitted\",\n    \"can_apply\": false,\n    \"message\": \"Complete your KYC (Aadhaar + PAN) to apply to jobs. It takes two minutes.\"\n  }\n}"
             }
-          }
+          ]
         },
         {
           "name": "Withdraw application",
@@ -1095,7 +1151,7 @@
       ]
     },
     {
-      "name": "KYC (optional)",
+      "name": "KYC (needed to apply)",
       "item": [
         {
           "name": "Get KYC status",
@@ -1121,8 +1177,412 @@
                 "v1",
                 "kyc"
               ]
+            },
+            "description": "`kyc` (null until submitted), `required_documents`, `digilocker` (`available`, `verified`, `name`, `masked_aadhaar`), `auto_verification_enabled`, and `verification` (`can_apply` + `message` for the apply button). Each `kyc.documents[]` entry has a `check` with what the automatic lookup found (`null` = not checked automatically)."
+          },
+          "response": [
+            {
+              "name": "200 · not submitted yet",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kyc",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "kyc"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"kyc\": null,\n  \"required_documents\": [\n    \"aadhaar\",\n    \"pan\"\n  ],\n  \"digilocker\": {\n    \"available\": true,\n    \"verified\": false,\n    \"name\": null,\n    \"masked_aadhaar\": null,\n    \"verified_at\": null\n  },\n  \"auto_verification_enabled\": true,\n  \"verification\": {\n    \"required\": true,\n    \"status\": \"not_submitted\",\n    \"can_apply\": false,\n    \"message\": \"Complete your KYC (Aadhaar + PAN) to apply to jobs. It takes two minutes.\"\n  }\n}"
+            },
+            {
+              "name": "200 · verified (DigiLocker + PAN)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kyc",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "kyc"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"kyc\": {\n    \"status\": \"verified\",\n    \"status_label\": \"Verified\",\n    \"masked_pan\": \"ABXXXXXF\",\n    \"masked_aadhaar\": \"XXXX XXXX 4321\",\n    \"business_type\": null,\n    \"documents\": [\n      {\n        \"type\": \"aadhaar\",\n        \"label\": \"Aadhaar card\",\n        \"missing\": false,\n        \"number\": \"XXXX XXXX 4321\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": {\n          \"status\": \"passed\",\n          \"via\": \"digilocker\",\n          \"verified\": true,\n          \"name_matches\": true,\n          \"message\": null,\n          \"checked_at\": \"2026-10-12T04:27:51+00:00\"\n        }\n      },\n      {\n        \"type\": \"pan\",\n        \"label\": \"PAN card\",\n        \"missing\": false,\n        \"number\": \"ABXXXXXF\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": {\n          \"status\": \"passed\",\n          \"via\": \"registry\",\n          \"verified\": true,\n          \"name_matches\": true,\n          \"message\": null,\n          \"checked_at\": \"2026-10-12T04:27:51+00:00\"\n        }\n      }\n    ],\n    \"has_missing_documents\": false,\n    \"auto_verified\": true,\n    \"remarks\": null,\n    \"reviewed_at\": \"2026-10-12T04:27:51+00:00\",\n    \"submitted_at\": \"2026-10-12T04:27:51+00:00\"\n  },\n  \"required_documents\": [\n    \"aadhaar\",\n    \"pan\"\n  ],\n  \"digilocker\": {\n    \"available\": true,\n    \"verified\": true,\n    \"name\": \"RAMESH KUMAR\",\n    \"masked_aadhaar\": \"XXXX XXXX 4321\",\n    \"verified_at\": \"2026-10-12T04:27:51+00:00\"\n  },\n  \"auto_verification_enabled\": true,\n  \"verification\": {\n    \"required\": true,\n    \"status\": \"verified\",\n    \"can_apply\": true,\n    \"message\": null\n  }\n}"
             }
-          }
+          ]
+        },
+        {
+          "name": "Start DigiLocker (saves kyc_reference)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.reference) {",
+                  "  pm.collectionVariables.set('kyc_reference', res.reference);",
+                  "  console.log('kyc_reference saved:', res.reference);",
+                  "  console.log('Open in a browser:', res.authorization_url);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kyc/digilocker",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "kyc",
+                "digilocker"
+              ]
+            },
+            "description": "Starts an Aadhaar check through DigiLocker and saves `reference` into `{{kyc_reference}}`. Open `authorization_url` in a Custom Tab / SFSafariViewController / WebView, where the karigar signs in to DigiLocker with their Aadhaar OTP. Close the browser once its URL starts with `return_url_prefix`, then call **DigiLocker result**. The session lasts `expires_in_minutes` (60).\n\n`422 digilocker_unavailable`: the admin switched auto-verify off, so fall back to typing the Aadhaar number. Limit 10/hour."
+          },
+          "response": [
+            {
+              "name": "201 · DigiLocker link",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kyc/digilocker",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "kyc",
+                    "digilocker"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"reference\": \"KRG-01M4Q5VX82NAFW3KB1S16HTWPQ\",\n  \"authorization_url\": \"https://in.decentro.tech/digilocker/digilocker-redirect?state=9744B833FF1E4FACAEC69E0740D377B6\",\n  \"return_url_prefix\": \"https://superkarigar.com/kyc/digilocker/return/\",\n  \"expires_in_minutes\": 60\n}"
+            },
+            {
+              "name": "422 · auto-verify switched off",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kyc/digilocker",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "kyc",
+                    "digilocker"
+                  ]
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"DigiLocker verification is not available right now. Enter your Aadhaar number instead.\",\n  \"code\": \"digilocker_unavailable\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "DigiLocker result",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kyc/digilocker/{{kyc_reference}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "kyc",
+                "digilocker",
+                "{{kyc_reference}}"
+              ]
+            },
+            "description": "How the DigiLocker attempt in `{{kyc_reference}}` went: `initiated` (not back yet), `passed`, `invalid` or `error` (show `message`). `kyc` comes along, because finishing DigiLocker can verify a submission that was waiting for review."
+          },
+          "response": [
+            {
+              "name": "200 · not back yet",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kyc/digilocker/{{kyc_reference}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "kyc",
+                    "digilocker",
+                    "{{kyc_reference}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"reference\": \"KRG-01M4Q5VX82NAFW3KB1S16HTWPQ\",\n  \"status\": \"initiated\",\n  \"name\": null,\n  \"masked_aadhaar\": null,\n  \"message\": null,\n  \"kyc\": {\n    \"status\": \"pending\",\n    \"status_label\": \"Pending review\",\n    \"masked_pan\": \"ABXXXXXF\",\n    \"masked_aadhaar\": \"XXXX XXXX 9012\",\n    \"business_type\": null,\n    \"documents\": [\n      {\n        \"type\": \"aadhaar\",\n        \"label\": \"Aadhaar card\",\n        \"missing\": false,\n        \"number\": \"XXXX XXXX 9012\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": null\n      },\n      {\n        \"type\": \"pan\",\n        \"label\": \"PAN card\",\n        \"missing\": false,\n        \"number\": \"ABXXXXXF\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": {\n          \"status\": \"passed\",\n          \"via\": \"registry\",\n          \"verified\": true,\n          \"name_matches\": null,\n          \"message\": null,\n          \"checked_at\": \"2026-10-12T04:27:51+00:00\"\n        }\n      }\n    ],\n    \"has_missing_documents\": false,\n    \"auto_verified\": false,\n    \"remarks\": null,\n    \"reviewed_at\": null,\n    \"submitted_at\": \"2026-10-12T04:27:51+00:00\"\n  }\n}"
+            },
+            {
+              "name": "200 · passed (a waiting KYC was verified)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kyc/digilocker/{{kyc_reference}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "kyc",
+                    "digilocker",
+                    "{{kyc_reference}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"reference\": \"KRG-01M4Q5VX82NAFW3KB1S16HTWPQ\",\n  \"status\": \"passed\",\n  \"name\": \"RAMESH KUMAR\",\n  \"masked_aadhaar\": \"XXXX XXXX 4321\",\n  \"message\": null,\n  \"kyc\": {\n    \"status\": \"verified\",\n    \"status_label\": \"Verified\",\n    \"masked_pan\": \"ABXXXXXF\",\n    \"masked_aadhaar\": \"XXXX XXXX 4321\",\n    \"business_type\": null,\n    \"documents\": [\n      {\n        \"type\": \"aadhaar\",\n        \"label\": \"Aadhaar card\",\n        \"missing\": false,\n        \"number\": \"XXXX XXXX 4321\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": {\n          \"status\": \"passed\",\n          \"via\": \"digilocker\",\n          \"verified\": true,\n          \"name_matches\": true,\n          \"message\": null,\n          \"checked_at\": \"2026-10-12T04:27:51+00:00\"\n        }\n      },\n      {\n        \"type\": \"pan\",\n        \"label\": \"PAN card\",\n        \"missing\": false,\n        \"number\": \"ABXXXXXF\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": {\n          \"status\": \"passed\",\n          \"via\": \"registry\",\n          \"verified\": true,\n          \"name_matches\": true,\n          \"message\": null,\n          \"checked_at\": \"2026-10-12T04:27:51+00:00\"\n        }\n      }\n    ],\n    \"has_missing_documents\": false,\n    \"auto_verified\": true,\n    \"remarks\": null,\n    \"reviewed_at\": \"2026-10-12T04:27:51+00:00\",\n    \"submitted_at\": \"2026-10-12T04:27:51+00:00\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Submit KYC (PAN only, after DigiLocker)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "pan_number",
+                  "value": "ABCDE1234F",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/kyc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "kyc"
+              ]
+            },
+            "description": "Once **DigiLocker result** says `passed`, leave `aadhaar_number` out and send only the PAN. When the PAN checks out and its name matches the Aadhaar name, `kyc.status` is `verified` and `verification.can_apply` is `true` straight away.\n\nThe saved examples were recorded against a test registry. The numbers in the bodies are placeholders, so the real registry answers `422 \"not found\"` to them: use real numbers to see a check pass."
+          },
+          "response": [
+            {
+              "name": "201 · verified on the spot",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "pan_number",
+                      "value": "ABCDE1234F",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kyc",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "kyc"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Your KYC is verified. You can apply to jobs now.\",\n  \"kyc\": {\n    \"status\": \"verified\",\n    \"status_label\": \"Verified\",\n    \"masked_pan\": \"ABXXXXXF\",\n    \"masked_aadhaar\": \"XXXX XXXX 4321\",\n    \"business_type\": null,\n    \"documents\": [\n      {\n        \"type\": \"aadhaar\",\n        \"label\": \"Aadhaar card\",\n        \"missing\": false,\n        \"number\": \"XXXX XXXX 4321\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": {\n          \"status\": \"passed\",\n          \"via\": \"digilocker\",\n          \"verified\": true,\n          \"name_matches\": true,\n          \"message\": null,\n          \"checked_at\": \"2026-10-12T04:27:51+00:00\"\n        }\n      },\n      {\n        \"type\": \"pan\",\n        \"label\": \"PAN card\",\n        \"missing\": false,\n        \"number\": \"ABXXXXXF\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": {\n          \"status\": \"passed\",\n          \"via\": \"registry\",\n          \"verified\": true,\n          \"name_matches\": true,\n          \"message\": null,\n          \"checked_at\": \"2026-10-12T04:27:51+00:00\"\n        }\n      }\n    ],\n    \"has_missing_documents\": false,\n    \"auto_verified\": true,\n    \"remarks\": null,\n    \"reviewed_at\": \"2026-10-12T04:27:51+00:00\",\n    \"submitted_at\": \"2026-10-12T04:27:51+00:00\"\n  },\n  \"verification\": {\n    \"required\": true,\n    \"status\": \"verified\",\n    \"can_apply\": true,\n    \"message\": null\n  }\n}"
+            }
+          ]
         },
         {
           "name": "Submit KYC",
@@ -1144,22 +1604,28 @@
                 {
                   "key": "aadhaar_number",
                   "value": "123456789012",
-                  "type": "text"
+                  "type": "text",
+                  "description": "Leave out once DigiLocker passed. Typed by hand, it goes to admin review."
                 },
                 {
                   "key": "aadhaar_doc",
                   "type": "file",
-                  "src": []
+                  "src": [],
+                  "disabled": true,
+                  "description": "Optional photo (jpg/png/pdf ≤5 MB). The number is what gets checked."
                 },
                 {
                   "key": "pan_number",
                   "value": "ABCDE1234F",
-                  "type": "text"
+                  "type": "text",
+                  "description": "Checked against the Income Tax record on submit."
                 },
                 {
                   "key": "pan_doc",
                   "type": "file",
-                  "src": []
+                  "src": [],
+                  "disabled": true,
+                  "description": "Optional photo (jpg/png/pdf ≤5 MB). The number is what gets checked."
                 },
                 {
                   "key": "pan_missing",
@@ -1204,10 +1670,119 @@
                 "kyc"
               ]
             },
-            "description": "multipart/form-data. Per document: number + {doc}_doc, OR {doc}_missing=1 + {doc}_alt_type/_alt_number/_alt_doc/_reason (enable the disabled rows to try it). Files jpg/png/pdf ≤5 MB, optional on re-submit. Spec: docs/worker-app-verification.md"
-          }
+            "description": "multipart/form-data. Per document: the number (photo `{doc}_doc` optional), OR `{doc}_missing=1` + `{doc}_alt_type` / `_alt_number` / `_alt_doc` (photo required) / `_reason` (enable the disabled rows to try it). Files jpg/png/pdf ≤5 MB.\n\nThe PAN is checked against the Income Tax record on submit: an unknown PAN is `422` on `pan_number`. An Aadhaar typed by hand cannot be checked automatically, so this goes to admin review (`pending`). Verify Aadhaar through DigiLocker instead to be approved at once. Limit 20/hour.\n\nThe saved examples were recorded against a test registry. The numbers in the bodies are placeholders, so the real registry answers `422 \"not found\"` to them: use real numbers to see a check pass.\n\nSpec: docs/worker-app-verification.md, docs/kyc-verification-decentro.md"
+          },
+          "response": [
+            {
+              "name": "201 · pending (Aadhaar typed by hand)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "aadhaar_number",
+                      "value": "123456789012",
+                      "type": "text"
+                    },
+                    {
+                      "key": "pan_number",
+                      "value": "ABCDE1234F",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kyc",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "kyc"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"KYC submitted for review.\",\n  \"kyc\": {\n    \"status\": \"pending\",\n    \"status_label\": \"Pending review\",\n    \"masked_pan\": \"ABXXXXXF\",\n    \"masked_aadhaar\": \"XXXX XXXX 9012\",\n    \"business_type\": null,\n    \"documents\": [\n      {\n        \"type\": \"aadhaar\",\n        \"label\": \"Aadhaar card\",\n        \"missing\": false,\n        \"number\": \"XXXX XXXX 9012\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": null\n      },\n      {\n        \"type\": \"pan\",\n        \"label\": \"PAN card\",\n        \"missing\": false,\n        \"number\": \"ABXXXXXF\",\n        \"has_file\": false,\n        \"alternate\": null,\n        \"check\": {\n          \"status\": \"passed\",\n          \"via\": \"registry\",\n          \"verified\": true,\n          \"name_matches\": null,\n          \"message\": null,\n          \"checked_at\": \"2026-10-12T04:27:51+00:00\"\n        }\n      }\n    ],\n    \"has_missing_documents\": false,\n    \"auto_verified\": false,\n    \"remarks\": null,\n    \"reviewed_at\": null,\n    \"submitted_at\": \"2026-10-12T04:27:51+00:00\"\n  },\n  \"verification\": {\n    \"required\": true,\n    \"status\": \"pending\",\n    \"can_apply\": false,\n    \"message\": \"Your KYC is under review. You can apply to jobs once it is approved.\"\n  }\n}"
+            },
+            {
+              "name": "422 · PAN not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "aadhaar_number",
+                      "value": "123456789012",
+                      "type": "text"
+                    },
+                    {
+                      "key": "pan_number",
+                      "value": "ZZZZZ9999Z",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kyc",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "kyc"
+                  ]
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"This PAN was not found in Income Tax records. Check the number.\",\n  \"errors\": {\n    \"pan_number\": [\n      \"This PAN was not found in Income Tax records. Check the number.\"\n    ]\n  }\n}"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "A verified KYC is needed to **apply to jobs** (admin rule \"Karigars must be verified to apply\", on by default). The PAN is checked against the Income Tax record on submit and Aadhaar is verified through **DigiLocker**. When both pass and the names agree, the KYC comes back `verified` straight away.\n\nFlow:\n1. **Start DigiLocker**, then open `authorization_url` in an in-app browser.\n2. When the browser URL starts with `return_url_prefix`, close it.\n3. **DigiLocker result** says `status: passed`.\n4. **Submit KYC (PAN only, after DigiLocker)** answers `kyc.status: verified`.\n\nNo DigiLocker? **Submit KYC** with the Aadhaar number goes to admin review.\n\nThe saved examples were recorded against a test registry. The numbers in the bodies are placeholders, so the real registry answers `422 \"not found\"` to them: use real numbers to see a check pass.\n\nSpec: docs/kyc-verification-decentro.md"
     },
     {
       "name": "Notifications",
@@ -1480,7 +2055,7 @@
                 }
               ]
             },
-            "description": "latest_jobs is the top 5 of the karigar's feed; send the phone's lat/lng."
+            "description": "latest_jobs is the top 5 of the karigar's feed; send the phone's lat/lng.\n\n`verification` says whether the karigar can apply (`can_apply`, `message`). `features.verification_required_to_apply` and `features.auto_verification_enabled` drive the KYC prompts."
           }
         },
         {

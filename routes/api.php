@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Employer\ReviewController as EmployerReviewControll
 use App\Http\Controllers\Api\Employer\ScreeningController;
 use App\Http\Controllers\Api\Employer\TeamController as EmployerTeamController;
 use App\Http\Controllers\Api\Employer\WorkerDirectoryController;
+use App\Http\Controllers\Api\KycDigilockerController;
 use App\Http\Controllers\Api\LegalController;
 use App\Http\Controllers\Api\LocaleController;
 use App\Http\Controllers\Api\PreferenceController;
@@ -159,7 +160,10 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             // KYC (optional; 404s while verification is switched off in admin)
             Route::middleware('kyc.enabled')->group(function () {
                 Route::get('kyc', [KycController::class, 'show'])->name('api.kyc.show');
-                Route::post('kyc', [KycController::class, 'store'])->name('api.kyc.store');
+                Route::post('kyc', [KycController::class, 'store'])->middleware('throttle:20,60')->name('api.kyc.store');
+                Route::post('kyc/digilocker', [KycDigilockerController::class, 'start'])
+                    ->middleware('throttle:10,60')->name('api.kyc.digilocker.start');
+                Route::get('kyc/digilocker/{reference}', [KycDigilockerController::class, 'status'])->name('api.kyc.digilocker.status');
             });
 
             // Reviews
@@ -227,7 +231,10 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             // Business verification (GST / PAN) — same admin toggle as worker KYC.
             Route::middleware('kyc.enabled')->group(function () {
                 Route::get('employer/kyc', [EmployerKycController::class, 'show'])->name('api.employer.kyc.show');
-                Route::post('employer/kyc', [EmployerKycController::class, 'store'])->name('api.employer.kyc.store');
+                Route::post('employer/kyc', [EmployerKycController::class, 'store'])->middleware('throttle:20,60')->name('api.employer.kyc.store');
+                Route::post('employer/kyc/digilocker', [KycDigilockerController::class, 'start'])
+                    ->middleware('throttle:10,60')->name('api.employer.kyc.digilocker.start');
+                Route::get('employer/kyc/digilocker/{reference}', [KycDigilockerController::class, 'status'])->name('api.employer.kyc.digilocker.status');
             });
 
             // Reviews — received from workers + rate a hired worker

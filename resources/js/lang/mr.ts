@@ -406,6 +406,7 @@ export default {
         submit: 'पडताळणीसाठी पाठवा',
         pending: 'तुमची KYC तपासली जात आहे.',
         verified: 'तुमची KYC पडताळली आहे.',
+        completeToApply: 'अर्ज करण्यासाठी KYC पूर्ण करा',
     },
     dashboard: {
         kycStatus: 'KYC स्थिती',

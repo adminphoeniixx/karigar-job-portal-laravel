@@ -10,7 +10,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
 /**
- * An admin approved or rejected this user's verification. For an employer an
+ * An admin, or the automatic checks, approved or rejected this user's verification. For an employer an
  * approval is what lets its jobs go live, so the push says so.
  */
 class KycReviewedNotification extends Notification
@@ -62,7 +62,7 @@ class KycReviewedNotification extends Notification
         if ($this->kyc->status === KycStatus::Verified) {
             return method_exists($notifiable, 'isEmployer') && $notifiable->isEmployer()
                 ? __('Your business is verified. You can post jobs now.')
-                : __('Your documents are verified. Your profile now shows the verified badge.');
+                : __('Your documents are verified. You can apply to jobs, and your profile shows the verified badge.');
         }
 
         return __('Reason: :reason. Fix it and submit again.', ['reason' => $this->kyc->remarks]);

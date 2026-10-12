@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\JobBrowseController;
 use App\Models\JobListing;
 use App\Support\JobSearch;
+use App\Support\WorkerVerification;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
@@ -59,6 +60,8 @@ class JobController extends Controller
             // Offered right inside the apply panel: applying is when a worker
             // cares that the employer's AI will read their resume.
             'resume' => $user->workerProfile?->resumeSummary(),
+            // can_apply false: show the message and a "Complete KYC" link instead of Apply.
+            'verification' => WorkerVerification::summary($user),
         ]);
     }
 }

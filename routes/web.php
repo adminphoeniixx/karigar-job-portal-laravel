@@ -30,6 +30,7 @@ use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\JobBrowseController;
 use App\Http\Controllers\JobListingController;
 use App\Http\Controllers\KycController;
+use App\Http\Controllers\KycDigilockerController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
@@ -61,6 +62,11 @@ Route::get('jobs/{job}', [JobBrowseController::class, 'show'])->name('jobs.show'
 
 // Language switch (works for guests and authenticated users)
 Route::post('locale', [LocaleController::class, 'update'])->name('locale.update');
+
+// Where DigiLocker sends the user back after sharing their Aadhaar. Public:
+// the apps' in-app browser carries no session; the reference finds the attempt.
+Route::get('kyc/digilocker/return/{reference}', [KycDigilockerController::class, 'return'])
+    ->middleware('throttle:30,1')->name('kyc.digilocker.return');
 
 // Separate, role-specific login & register URLs (post to shared Fortify endpoints)
 Route::middleware('guest')->group(function () {
@@ -103,7 +109,9 @@ Route::middleware(['auth'])->group(function () {
     // verification off in Settings.
     Route::middleware('kyc.enabled')->group(function () {
         Route::get('kyc', [KycController::class, 'show'])->name('kyc.show');
-        Route::post('kyc', [KycController::class, 'store'])->name('kyc.store');
+        Route::post('kyc', [KycController::class, 'store'])->middleware('throttle:20,60')->name('kyc.store');
+        Route::post('kyc/digilocker', [KycDigilockerController::class, 'start'])
+            ->middleware('throttle:10,60')->name('kyc.digilocker.start');
     });
 
     // Notifications (any authenticated user)

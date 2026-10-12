@@ -703,10 +703,19 @@ alternate, and the rule that **an unverified employer cannot publish a job**
 **Both routes `404` while `features.verification_enabled` is `false`** — that is
 the admin switch, not an error; hide the screens instead of showing "not found".
 
-- `GET /employer/kyc` → `{ business, gstin, required_documents, kyc, verification }`
+- `GET /employer/kyc` → `{ business, gstin, required_documents, kyc, verification, digilocker, auto_verification_enabled }`
 - `POST /employer/kyc` (multipart) → `business_type`, `legal_name`,
-  `registered_address` + per document either `{number}` + `{doc}_doc`, or
-  `{doc}_missing=1` + `{doc}_alt_type` / `{doc}_alt_number` / `{doc}_alt_doc` / `{doc}_reason`.
+  `registered_address` + per document either `{number}` + `{doc}_doc` (photo
+  **optional**), or `{doc}_missing=1` + `{doc}_alt_type` / `{doc}_alt_number` /
+  `{doc}_alt_doc` / `{doc}_reason`.
+- PAN and GSTIN are checked against government records on submit. When every
+  document checks out and the names agree, the answer is already
+  `kyc.status: "verified"` and `verification.can_post_jobs: true`. An unknown
+  PAN/GSTIN, or a GSTIN that is not Active, is `422` on `pan_number` / `gstin`.
+- Aadhaar (individual / proprietorship) through DigiLocker:
+  `POST /employer/kyc/digilocker` → `{ reference, authorization_url, return_url_prefix, expires_in_minutes }`,
+  then `GET /employer/kyc/digilocker/{reference}`. Full flow:
+  [`kyc-verification-decentro.md`](kyc-verification-decentro.md).
 
 ---
 

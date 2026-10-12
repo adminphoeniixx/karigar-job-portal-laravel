@@ -85,8 +85,9 @@ it('needs the alternate details when a document is marked missing', function () 
             'pan_missing' => true,
         ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['aadhaar_doc', 'pan_alt_type', 'pan_alt_doc', 'pan_reason'])
-        ->assertJsonMissingValidationErrors(['pan_number', 'pan_doc']);
+        ->assertJsonValidationErrors(['pan_alt_type', 'pan_alt_doc', 'pan_reason'])
+        // A document's own photo is optional; the number is what gets checked.
+        ->assertJsonMissingValidationErrors(['aadhaar_doc', 'pan_number', 'pan_doc']);
 });
 
 it('asks a company for its PAN and GST and saves the business details', function () {

@@ -424,6 +424,7 @@ export default {
         submit: 'Verification ke liye bhejein',
         pending: 'Aapki KYC review mein hai.',
         verified: 'Aapki KYC verified hai.',
+        completeToApply: 'Apply karne ke liye KYC poori karein',
     },
     dashboard: {
         kycStatus: 'KYC Status',

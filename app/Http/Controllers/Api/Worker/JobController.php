@@ -9,6 +9,7 @@ use App\Http\Resources\Api\JobResource;
 use App\Models\JobListing;
 use App\Support\JobFeed;
 use App\Support\JobSearch;
+use App\Support\WorkerVerification;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -93,6 +94,10 @@ class JobController extends Controller
                 // false once the job stops taking applications; show "No longer hiring".
                 'is_open' => $open,
                 'can_apply' => $application === null && $open,
+                // Whether the karigar's KYC lets them apply at all; when
+                // verification.can_apply is false show its message and a
+                // "Complete KYC" button instead of Apply.
+                'verification' => WorkerVerification::summary($user),
             ],
         ]);
     }

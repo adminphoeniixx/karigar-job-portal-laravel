@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\KycCheck;
 use App\Models\KycDocument;
+use App\Models\User;
+use App\Services\Kyc\KycAutoVerifier;
 use App\Support\KycRequirements;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,14 +14,15 @@ use Illuminate\Validation\Rule;
 /**
  * Verification submission, worker or employer. Which documents are asked for
  * comes from {@see KycRequirements}; for each one the user either gives its
- * number + a photo, or sets `{doc}_missing` and offers an alternate ID, its
- * photo and a reason instead.
- *
- * A photo already on file need not be sent again on a re-submission.
+ * number (a photo is optional), or sets `{doc}_missing` and offers an
+ * alternate ID, its photo and a reason instead. An Aadhaar verified through
+ * DigiLocker needs no number at all.
  */
 class KycSubmitRequest extends FormRequest
 {
     private ?KycDocument $existing = null;
+
+    private KycCheck|false|null $digilocker = null;
 
     public function authorize(): bool
     {
@@ -102,10 +106,12 @@ class KycSubmitRequest extends FormRequest
                 continue;
             }
 
-            $hasDoc = $kyc !== null && KycDocument::pathFor($kyc, $doc) !== null;
+            // An Aadhaar already verified through DigiLocker needs no number.
+            $numberRequired = ! ($doc === 'aadhaar' && $this->digilockerAadhaar() !== null);
 
-            $rules[$spec['number_field']] = ['required', 'string', 'regex:/'.$spec['pattern'].'/'];
-            $rules[$doc.'_doc'] = [$hasDoc ? 'nullable' : 'required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'];
+            $rules[$spec['number_field']] = [$numberRequired ? 'required' : 'nullable', 'string', 'regex:/'.$spec['pattern'].'/'];
+            // The photo is optional: the number is what gets checked.
+            $rules[$doc.'_doc'] = ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'];
         }
 
         return $rules;
@@ -147,11 +153,34 @@ class KycSubmitRequest extends FormRequest
         ];
     }
 
-    private function existing(): ?KycDocument
+    /**
+     * The account being verified: an employer's team member verifies the owner's.
+     */
+    public function account(): ?User
     {
         $user = $this->user();
-        $account = $user?->isEmployer() ? $user->employerAccount() : $user;
 
-        return $this->existing ??= $account?->kyc()->first();
+        return $user?->isEmployer() ? $user->employerAccount() : $user;
+    }
+
+    /**
+     * The Aadhaar this account already verified through DigiLocker, if any.
+     */
+    public function digilockerAadhaar(): ?KycCheck
+    {
+        if ($this->digilocker !== null) {
+            return $this->digilocker ?: null;
+        }
+
+        $account = $this->account();
+        $check = $account ? KycAutoVerifier::digilockerAadhaar($account) : null;
+        $this->digilocker = $check ?? false;
+
+        return $check;
+    }
+
+    private function existing(): ?KycDocument
+    {
+        return $this->existing ??= $this->account()?->kyc()->first();
     }
 }

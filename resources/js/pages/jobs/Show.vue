@@ -47,6 +47,8 @@ const props = defineProps<{
     application: { status: string; created_at: string } | null;
     isSaved: boolean;
     resume: Resume | null;
+    // can_apply false: the karigar's KYC is not verified yet.
+    verification: { required: boolean; can_apply: boolean; message: string | null } | null;
 }>();
 
 const page = usePage();
@@ -237,6 +239,17 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
 
                     <!-- Non-worker -->
                     <p v-else-if="isAuthed && !canApply" class="pt-7 text-sm text-muted-foreground">{{ $t('jobs.loginToApply') }}</p>
+
+                    <!-- Worker, KYC not verified yet -->
+                    <div v-else-if="isAuthed && applyAllowed && verification && !verification.can_apply" class="pt-7">
+                        <p class="text-sm text-muted-foreground">{{ verification.message }}</p>
+                        <Link
+                            href="/kyc"
+                            class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-sm bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground transition hover:bg-foreground"
+                        >
+                            {{ $t('kyc.completeToApply') }} <ArrowRight class="size-4" />
+                        </Link>
+                    </div>
 
                     <!-- Worker, not applied -->
                     <div v-else-if="isAuthed && applyAllowed" class="pt-7">

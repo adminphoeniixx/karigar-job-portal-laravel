@@ -50,6 +50,8 @@ const props = defineProps<{
     isOpen: boolean;
     isSaved: boolean;
     resume: Resume | null;
+    // can_apply false: the karigar's KYC is not verified yet.
+    verification: { required: boolean; can_apply: boolean; message: string | null };
 }>();
 
 const employerLine = (() => {
@@ -226,8 +228,18 @@ const fmtDate = (iso: string | null): string =>
                         </a>
                         <p v-if="canCall && contactPerson" class="mt-2 text-center text-xs text-muted-foreground">{{ $t('jobs.askFor') }}: <span class="font-semibold text-foreground">{{ contactPerson }}</span></p>
 
+                        <div v-if="canApply && !verification.can_apply" class="mt-4">
+                            <p class="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">{{ verification.message }}</p>
+                            <Link
+                                href="/kyc"
+                                class="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
+                            >
+                                {{ $t('kyc.completeToApply') }} <ArrowRight class="size-4" />
+                            </Link>
+                        </div>
+
                         <button
-                            v-if="canApply && !showForm"
+                            v-else-if="canApply && !showForm"
                             class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 transition hover:opacity-90 active:scale-95"
                             @click="showForm = true"
                         >

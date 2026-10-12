@@ -406,6 +406,7 @@ export default {
         submit: 'சரிபார்ப்புக்கு சமர்ப்பி',
         pending: 'உங்கள் KYC பரிசீலனையில் உள்ளது.',
         verified: 'உங்கள் KYC சரிபார்க்கப்பட்டது.',
+        completeToApply: 'விண்ணப்பிக்க KYC-ஐ முடிக்கவும்',
     },
     dashboard: {
         kycStatus: 'KYC நிலை',

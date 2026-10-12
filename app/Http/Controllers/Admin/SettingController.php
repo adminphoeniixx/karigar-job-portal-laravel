@@ -8,10 +8,13 @@ use App\Models\Plan;
 use App\Models\Setting;
 use App\Services\ApplicantAccess;
 use App\Services\Billing\Gst;
+use App\Services\Kyc\DecentroClient;
+use App\Services\Kyc\KycAutoVerifier;
 use App\Services\Screening\ScreeningService;
 use App\Support\GstStates;
 use App\Support\MobileApps;
 use App\Support\Verification;
+use App\Support\WorkerVerification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -31,6 +34,13 @@ class SettingController extends Controller
                     'employer_verification_required',
                     (bool) config('services.kyc.employer_required', true),
                 ),
+                'worker_verification_required' => Setting::bool(
+                    WorkerVerification::KEY,
+                    (bool) config('services.kyc.worker_required', true),
+                ),
+                'kyc_auto_verify_enabled' => Setting::bool(KycAutoVerifier::ENABLED_KEY, true),
+                // Without keys the auto-verify switch does nothing; the page says so.
+                'decentro_configured' => DecentroClient::configured(),
                 'ai_auto_shortlist_enabled' => Setting::bool(ScoreApplication::ENABLED_KEY, false),
                 'ai_auto_shortlist_threshold' => Setting::int(
                     ScoreApplication::THRESHOLD_KEY,
@@ -68,6 +78,8 @@ class SettingController extends Controller
             'kyc_verification_enabled' => ['required', 'boolean'],
             'worker_verification_enabled' => ['sometimes', 'boolean'],
             'employer_verification_required' => ['sometimes', 'boolean'],
+            'worker_verification_required' => ['sometimes', 'boolean'],
+            'kyc_auto_verify_enabled' => ['sometimes', 'boolean'],
             'ai_auto_shortlist_enabled' => ['required', 'boolean'],
             // Below 40 the model calls a candidate a "weak" match, so allow the
             // admin to be lenient but not to shortlist literally everyone.
@@ -89,6 +101,11 @@ class SettingController extends Controller
         }
         if (isset($data['employer_verification_required'])) {
             Setting::set('employer_verification_required', $data['employer_verification_required'] ? '1' : '0');
+        }
+        foreach (['worker_verification_required' => WorkerVerification::KEY, 'kyc_auto_verify_enabled' => KycAutoVerifier::ENABLED_KEY] as $field => $key) {
+            if (isset($data[$field])) {
+                Setting::set($key, $data[$field] ? '1' : '0');
+            }
         }
         Setting::set(ScoreApplication::ENABLED_KEY, $data['ai_auto_shortlist_enabled'] ? '1' : '0');
         Setting::set(ScoreApplication::THRESHOLD_KEY, (string) $data['ai_auto_shortlist_threshold']);

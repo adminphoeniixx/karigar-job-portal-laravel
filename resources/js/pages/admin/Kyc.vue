@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Building2, Check, FileQuestion, FileText, ShieldCheck, X } from '@lucide/vue';
+import { AlertTriangle, Building2, Check, CircleCheck, FileQuestion, FileText, ShieldCheck, Sparkles, X } from '@lucide/vue';
 import PageHeader from '@/components/PageHeader.vue';
 
 interface DocSummary {
@@ -10,6 +10,17 @@ interface DocSummary {
     number: string | null;
     has_file: boolean;
     alternate: { type: string; label: string; number: string | null; has_file: boolean; reason: string } | null;
+    // What Decentro found; null when the number was not checked automatically.
+    check: {
+        status: 'passed' | 'invalid' | 'error';
+        via: 'registry' | 'digilocker';
+        verified: boolean;
+        name_matches: boolean | null;
+        message: string | null;
+        name: string | null;
+        alt_name: string | null;
+        detail: string | null;
+    } | null;
 }
 
 interface KycRow {
@@ -18,6 +29,7 @@ interface KycRow {
     remarks: string | null;
     submitted_at: string | null;
     has_missing_documents: boolean;
+    auto_verified: boolean;
     user: { id: number; name: string; email: string | null; phone: string | null; role: string };
     business: {
         type: string | null;
@@ -84,7 +96,7 @@ const date = (iso: string | null) =>
     <Head title="Admin — KYC" />
 
     <div class="flex w-full flex-col gap-6 p-4 md:p-6 lg:p-8">
-        <PageHeader :icon="ShieldCheck" title="KYC Review" description="Check documents by hand, then approve or reject" />
+        <PageHeader :icon="ShieldCheck" title="KYC Review" description="What the automatic checks could not settle: compare, then approve or reject" />
 
         <div class="flex flex-wrap items-center gap-2">
             <button
@@ -135,6 +147,9 @@ const date = (iso: string | null) =>
                         <span v-if="row.has_missing_documents" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-500/20 ring-inset dark:text-amber-300">
                             <FileQuestion class="size-3" /> Alternate document
                         </span>
+                        <span v-if="row.auto_verified" class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-500/20 ring-inset dark:text-emerald-300">
+                            <Sparkles class="size-3" /> Auto-verified
+                        </span>
                         <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[row.status]">
                             {{ row.status }}
                         </span>
@@ -183,7 +198,22 @@ const date = (iso: string | null) =>
                             >
                                 <FileText class="size-3" /> View document
                             </a>
-                            <div v-else class="mt-2 text-xs text-rose-600">No file uploaded</div>
+                            <div v-else-if="!d.check?.verified" class="mt-2 text-xs text-rose-600">No file uploaded</div>
+
+                            <div v-if="d.check" class="mt-2 rounded-lg px-2 py-1.5 text-xs" :class="d.check.verified ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300' : 'bg-amber-500/10 text-amber-800 dark:text-amber-300'">
+                                <div class="flex items-center gap-1 font-semibold">
+                                    <CircleCheck v-if="d.check.verified" class="size-3.5" />
+                                    <AlertTriangle v-else class="size-3.5" />
+                                    <template v-if="d.check.status === 'passed'">
+                                        {{ d.check.via === 'digilocker' ? 'DigiLocker' : 'Registry' }}: {{ d.check.name_matches === false ? 'name mismatch' : 'match' }}
+                                    </template>
+                                    <template v-else>Not checked: {{ d.check.message ?? d.check.status }}</template>
+                                </div>
+                                <div v-if="d.check.name">On record: <span class="font-medium">{{ d.check.name }}</span></div>
+                                <div v-if="d.check.alt_name && d.check.alt_name !== d.check.name">Trade name: {{ d.check.alt_name }}</div>
+                                <div v-if="d.check.detail">Status: {{ d.check.detail }}</div>
+                            </div>
+                            <div v-else-if="!d.missing" class="mt-2 text-xs text-muted-foreground">Not checked automatically</div>
                         </template>
                     </li>
                 </ul>

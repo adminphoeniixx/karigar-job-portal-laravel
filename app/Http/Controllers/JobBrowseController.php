@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\JobListing;
 use App\Support\JobSearch;
+use App\Support\WorkerVerification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -51,6 +52,8 @@ class JobBrowseController extends Controller
             'isSaved' => $user ? $user->savedJobs()->where('job_listing_id', $job->id)->exists() : false,
             // Same as the in-app job page: the apply panel offers the resume.
             'resume' => $isWorker ? $user->workerProfile?->resumeSummary() : null,
+            // can_apply false: show the message and a "Complete KYC" link instead of Apply.
+            'verification' => $isWorker ? WorkerVerification::summary($user) : null,
         ]);
     }
 

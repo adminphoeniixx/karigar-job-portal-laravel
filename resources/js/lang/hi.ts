@@ -424,6 +424,7 @@ export default {
         submit: 'सत्यापन के लिए भेजें',
         pending: 'आपकी KYC की जांच हो रही है।',
         verified: 'आपकी KYC सत्यापित है।',
+        completeToApply: 'आवेदन के लिए KYC पूरी करें',
     },
     dashboard: {
         kycStatus: 'KYC स्थिति',

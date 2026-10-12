@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import { BadgeCheck, Building2, Clock, FileQuestion, ShieldCheck, Upload } from '@lucide/vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import { AlertTriangle, BadgeCheck, Building2, CircleCheck, Clock, FileQuestion, Fingerprint, ShieldCheck, Upload } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -9,6 +9,14 @@ import { Label } from '@/components/ui/label';
 
 type DocKey = 'aadhaar' | 'pan' | 'gst';
 
+interface DocCheck {
+    status: 'passed' | 'invalid' | 'error';
+    via: 'registry' | 'digilocker';
+    verified: boolean;
+    name_matches: boolean | null;
+    message: string | null;
+}
+
 interface DocSummary {
     type: DocKey;
     label: string;
@@ -16,12 +24,14 @@ interface DocSummary {
     number: string | null;
     has_file: boolean;
     alternate: { type: string; label: string; number: string | null; has_file: boolean; reason: string } | null;
+    check: DocCheck | null;
 }
 
 interface Kyc {
     status: 'pending' | 'verified' | 'rejected';
     remarks: string | null;
     business_type: string | null;
+    auto_verified: boolean;
     documents: DocSummary[];
 }
 
@@ -38,6 +48,9 @@ const props = defineProps<{
     kyc: Kyc | null;
     business: { business_type: string | null; legal_name: string | null; registered_address: string | null } | null;
     verification: { required: boolean; can_post_jobs: boolean; message: string | null } | null;
+    applyVerification: { required: boolean; can_apply: boolean; message: string | null } | null;
+    digilocker: { available: boolean; verified: boolean; name: string | null; masked_aadhaar: string | null };
+    autoVerify: boolean;
     reference: {
         business_types: { key: string; label: string; documents: DocKey[] }[];
         worker_documents: DocKey[];
@@ -105,6 +118,35 @@ const hasStoredFile = (doc: DocKey, alt: boolean) => {
 
 const err = (field: string) => (form.errors as Record<string, string | undefined>)[field];
 
+// DigiLocker: the server answers with a redirect to DigiLocker's sign-in.
+const openingDigilocker = ref(false);
+const startDigilocker = () => {
+    openingDigilocker.value = true;
+    router.post('/kyc/digilocker', {}, { onFinish: () => (openingDigilocker.value = false) });
+};
+
+// A pending submission whose Aadhaar was typed in can still be sped up through DigiLocker.
+const aadhaarAsked = computed(() => !!props.kyc?.documents.some((d) => d.type === 'aadhaar' && !d.missing));
+const offerDigilockerWhilePending = computed(
+    () => props.digilocker.available && !props.digilocker.verified && props.kyc?.status === 'pending' && aadhaarAsked.value,
+);
+
+const checkLine = (d: DocSummary): { tone: 'ok' | 'warn'; text: string } | null => {
+    if (!d.check) {
+        return null;
+    }
+
+    if (d.check.verified) {
+        return { tone: 'ok', text: d.check.via === 'digilocker' ? 'Verified through DigiLocker' : 'Checked with government records' };
+    }
+
+    if (d.check.status === 'passed' && d.check.name_matches === false) {
+        return { tone: 'warn', text: 'Name does not match your other documents — our team will check' };
+    }
+
+    return { tone: 'warn', text: d.check.message ?? 'Could not be checked automatically — our team will check' };
+};
+
 const submit = () =>
     form.post('/kyc', {
         preserveScroll: true,
@@ -120,7 +162,7 @@ const submit = () =>
         <PageHeader
             :icon="ShieldCheck"
             :title="isEmployer ? 'Business verification' : 'KYC Verification'"
-            :description="isEmployer ? 'Verify your business to post jobs' : 'Verify your Aadhaar and PAN to build trust'"
+            :description="isEmployer ? 'Verify your business to post jobs' : 'Verify your Aadhaar and PAN to apply to jobs'"
         />
 
         <div
@@ -128,6 +170,13 @@ const submit = () =>
             class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-300"
         >
             {{ verification.message }}
+        </div>
+
+        <div
+            v-if="applyVerification && !applyVerification.can_apply && applyVerification.message"
+            class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-300"
+        >
+            {{ applyVerification.message }}
         </div>
 
         <!-- Status card -->
@@ -145,6 +194,15 @@ const submit = () =>
                         not available — sent {{ d.alternate.label }}<span v-if="d.alternate.number" class="font-mono"> ({{ d.alternate.number }})</span>
                     </template>
                     <span v-else class="font-mono">{{ d.number ?? '—' }}</span>
+                    <span
+                        v-if="checkLine(d)"
+                        class="mt-0.5 flex items-center gap-1 text-xs"
+                        :class="checkLine(d)!.tone === 'ok' ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'"
+                    >
+                        <CircleCheck v-if="checkLine(d)!.tone === 'ok'" class="size-3.5" />
+                        <AlertTriangle v-else class="size-3.5" />
+                        {{ checkLine(d)!.text }}
+                    </span>
                 </li>
                 <li v-if="kyc.status === 'rejected' && kyc.remarks" class="text-rose-600 dark:text-rose-400">Reason: {{ kyc.remarks }}</li>
             </ul>
@@ -162,7 +220,10 @@ const submit = () =>
             <span class="flex size-10 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><BadgeCheck class="size-6" /></span>
             <div>
                 <p class="font-semibold">You're verified</p>
-                <p class="text-sm text-muted-foreground">Your documents have been approved.</p>
+                <p class="text-sm text-muted-foreground">
+                    {{ kyc.auto_verified ? 'Your documents matched government records.' : 'Your documents have been approved.' }}
+                    <template v-if="applyVerification?.required">You can apply to jobs.</template>
+                </p>
             </div>
         </div>
 
@@ -172,6 +233,21 @@ const submit = () =>
                 <p class="font-semibold">Under review</p>
                 <p class="text-sm text-muted-foreground">Our team checks submissions by hand, usually within a working day.</p>
             </div>
+        </div>
+
+        <div v-if="offerDigilockerWhilePending && !editing" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-5 shadow-sm">
+            <div>
+                <p class="font-semibold">Skip the wait</p>
+                <p class="text-sm text-muted-foreground">Verify your Aadhaar through DigiLocker and get verified in a minute.</p>
+            </div>
+            <button
+                type="button"
+                :disabled="openingDigilocker"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                @click="startDigilocker"
+            >
+                <Fingerprint class="size-4" /> Verify with DigiLocker
+            </button>
         </div>
 
         <form v-if="showForm" class="grid items-start gap-5 lg:grid-cols-2" @submit.prevent="submit">
@@ -212,14 +288,38 @@ const submit = () =>
                     </label>
                 </div>
 
-                <div v-if="!form[`${spec.key}_missing`]" class="grid gap-4 sm:grid-cols-2">
+                <!-- Aadhaar already verified through DigiLocker: nothing to type. -->
+                <div
+                    v-if="spec.key === 'aadhaar' && !form.aadhaar_missing && digilocker.verified"
+                    class="flex items-center gap-3 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-300"
+                >
+                    <CircleCheck class="size-5 shrink-0" />
+                    <div>
+                        <p class="font-semibold">Verified through DigiLocker</p>
+                        <p class="text-xs opacity-80">{{ digilocker.name }} · <span class="font-mono">{{ digilocker.masked_aadhaar }}</span></p>
+                    </div>
+                </div>
+
+                <template v-else-if="!form[`${spec.key}_missing`]">
+                <div v-if="spec.key === 'aadhaar' && digilocker.available" class="mb-4 grid gap-2">
+                    <button
+                        type="button"
+                        :disabled="openingDigilocker"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                        @click="startDigilocker"
+                    >
+                        <Fingerprint class="size-4" /> Verify with DigiLocker
+                    </button>
+                    <p class="text-center text-xs text-muted-foreground">Instant. Or type your Aadhaar number below and our team will check it.</p>
+                </div>
+                <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
                         <Label :for="spec.number_field">Number</Label>
                         <Input :id="spec.number_field" v-model="form[spec.number_field] as string" :placeholder="spec.hint" class="uppercase" />
                         <InputError :message="err(spec.number_field)" />
                     </div>
                     <div class="grid gap-2">
-                        <Label>Photo / PDF</Label>
+                        <Label>Photo / PDF <span class="font-normal text-muted-foreground">(optional)</span></Label>
                         <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed bg-muted/30 px-4 py-2.5 text-xs transition hover:border-orange-500/50">
                             <Upload class="size-4 text-orange-500" />
                             <span class="truncate">{{ fileName(`${spec.key}_doc`) ?? (hasStoredFile(spec.key, false) ? 'On file — upload to replace' : 'Upload image / PDF') }}</span>
@@ -228,6 +328,7 @@ const submit = () =>
                         <InputError :message="err(`${spec.key}_doc`)" />
                     </div>
                 </div>
+                </template>
 
                 <div v-else class="grid gap-4">
                     <p class="flex items-start gap-2 rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
@@ -274,6 +375,9 @@ const submit = () =>
             >
                 Submit for verification
             </button>
+            <p v-if="autoVerify" class="mt-2 text-xs text-muted-foreground">
+                {{ isEmployer ? 'PAN and GSTIN are' : 'Your PAN is' }} checked against government records the moment you submit.
+            </p>
             </div>
         </form>
     </div>

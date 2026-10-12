@@ -178,5 +178,7 @@ On this push, refetch `GET /kyc`.
   not be uploaded again.
 - Hide the whole screen while `features.verification_enabled` is `false`.
 
-Postman: `docs/karigar-worker-app.postman_collection.json` → "KYC (optional)" → "Submit KYC". It
-has disabled rows for the "I don't have it" case; enable them to try it.
+Postman: `docs/karigar-worker-app.postman_collection.json` → "KYC (needed to apply)" → "Submit KYC". It
+has disabled rows for the "I don't have it" case; enable them to try it. The DigiLocker flow is
+"Start DigiLocker" → "DigiLocker result" → "Submit KYC (PAN only, after DigiLocker)", and each
+request has saved example responses.
