@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\Worker\JobController;
 use App\Http\Controllers\Api\Worker\KycController;
 use App\Http\Controllers\Api\Worker\NotificationController;
 use App\Http\Controllers\Api\Worker\ProfileController;
+use App\Http\Controllers\Api\Worker\ResumeBuilderController as WorkerResumeBuilderController;
 use App\Http\Controllers\Api\Worker\ResumeController as WorkerResumeController;
 use App\Http\Controllers\Api\Worker\ReviewController;
 use App\Http\Controllers\Api\Worker\SavedJobController;
@@ -137,6 +138,13 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             Route::get('worker/resume', [WorkerResumeController::class, 'show'])->name('api.worker.resume.show');
             Route::post('worker/resume', [WorkerResumeController::class, 'store'])->name('api.worker.resume.store');
             Route::delete('worker/resume', [WorkerResumeController::class, 'destroy'])->name('api.worker.resume.destroy');
+            Route::get('worker/resume/file', [WorkerResumeController::class, 'file'])->name('api.worker.resume.file');
+
+            // AI resume builder: form → AI draft → save as the resume PDF.
+            Route::get('worker/resume/builder', [WorkerResumeBuilderController::class, 'show'])->name('api.worker.resume.builder.show');
+            Route::post('worker/resume/builder/draft', [WorkerResumeBuilderController::class, 'draft'])
+                ->middleware('throttle:10,1')->name('api.worker.resume.builder.draft');
+            Route::post('worker/resume/builder', [WorkerResumeBuilderController::class, 'store'])->name('api.worker.resume.builder.store');
             Route::patch('worker/availability', [ProfileController::class, 'availability'])->name('api.worker.availability');
 
             // Where the job feed looks around: current location, or a place picked.

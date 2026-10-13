@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Bookmark, BriefcaseBusiness, Building2, ChartColumn, ClipboardCheck, CreditCard, Crown, FileText, Gauge, HardHat, Layers, LayoutGrid, Mail, MessageSquare, PhoneCall, Plus, Search, Send, Settings, ShieldCheck, Star, Tags, TicketPercent, UserRound, Users, UsersRound } from '@lucide/vue';
+import { Bookmark, BriefcaseBusiness, Building2, ChartColumn, ClipboardCheck, CreditCard, Crown, FileText, Gauge, HardHat, Layers, LayoutGrid, Mail, MessageSquare, PhoneCall, Plus, Search, Send, Settings, ShieldCheck, Sparkles, Star, Tags, TicketPercent, UserRound, Users, UsersRound } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLogo from '@/components/AppLogo.vue';
@@ -31,6 +31,7 @@ const navByRole = computed((): Record<string, NavItem[]> => ({
         { title: t('nav.myApplications'), href: '/worker/applications', icon: FileText },
         { title: t('nav.savedJobs'), href: '/worker/saved', icon: Bookmark },
         { title: t('nav.myProfile'), href: '/worker/profile', icon: UserRound },
+        { title: t('nav.aiResume'), href: '/worker/resume/builder', icon: Sparkles },
         { title: t('nav.kyc'), href: '/kyc', icon: ShieldCheck },
     ],
     employer: [

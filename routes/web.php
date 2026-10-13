@@ -38,6 +38,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\RazorpayWebhookController;
+use App\Http\Controllers\ResumeBuilderController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SavedJobController;
@@ -147,6 +148,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('worker/resume', [ResumeController::class, 'show'])->name('worker.resume.show');
         Route::post('worker/resume', [ResumeController::class, 'store'])->name('worker.resume.store');
         Route::delete('worker/resume', [ResumeController::class, 'destroy'])->name('worker.resume.destroy');
+
+        // AI resume builder: fill a form, get an AI draft, save it as the resume PDF.
+        Route::get('worker/resume/builder', [ResumeBuilderController::class, 'edit'])->name('worker.resume.builder');
+        Route::post('worker/resume/builder/draft', [ResumeBuilderController::class, 'draft'])
+            ->middleware('throttle:10,1')->name('worker.resume.builder.draft');
+        Route::post('worker/resume/builder', [ResumeBuilderController::class, 'store'])->name('worker.resume.builder.store');
     });
 
     // Employer job management. An {application} route only opens applicants

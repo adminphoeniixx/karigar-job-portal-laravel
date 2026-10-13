@@ -180,6 +180,47 @@ extracted text, so later applications are scored on the profile alone.
 The PDF is stored on the private disk (same as KYC documents) and is never
 publicly reachable. Only an employer the worker has applied to can fetch it.
 
+`resume.source` is `"upload"` for an uploaded PDF and `"ai"` for one made in
+the AI resume builder below.
+
+#### `GET /worker/resume/file`
+The resume PDF itself (`application/pdf`, uploaded or built). `404` when there
+is none.
+
+### AI resume builder
+
+The karigar fills a form, the AI writes a resume from it (`en` or `hi`, Hindi
+in Devanagari), the karigar edits it, and saving makes it their resume PDF,
+replacing any upload. The AI only rewrites wording: name, phone, email, place,
+employers, dates and languages are copied from the form. With no AI key, or
+when the provider fails, the draft is a plain resume built from the answers
+(still `200`). Screens and field list: `docs/app-updates/2026-10-13/worker-app.md`.
+
+#### `GET /worker/resume/builder`
+```json
+{ "form": { "language": "en", "name": "Sunita Devi", "phone": "9876500011", "email": null,
+            "city": "Lucknow", "state": "Uttar Pradesh", "trade": null, "experience_years": 12,
+            "skills": ["Chikankari"], "tools": null, "work": [], "education": "8th pass",
+            "training": null, "languages": ["Hindi"], "about": null, "achievements": null,
+            "expected_wage": 18000, "relocate": false },
+  "saved": null, "resume": null, "languages": ["en", "hi"], "limits": { "jobs": 5, "skills": 20 } }
+```
+`form` is the last answers sent to the builder, or else filled from the
+profile. `saved` is the resume last saved from the builder (draft shape).
+
+#### `POST /worker/resume/builder/draft` (JSON, throttled 10/min)
+Body: the `form` fields. Required: `language`, `name`, `trade`; each
+`work[].role`. → `{ "resume": { language, name, phone, email, location,
+expected_wage, headline, summary, skills[], experience[{role, employer, place,
+period, points[]}], education[], languages[], extras[] } }`. Takes 8–15 s.
+The answers are remembered for the next `GET`.
+
+#### `POST /worker/resume/builder` (JSON)
+Body: the `form` fields **plus** `resume: { headline, summary, skills[],
+experience[{role, employer, place, period, points[]}], education[],
+languages[], extras[] }` (as edited). Contact fields inside `resume` are ignored.
+→ `201 { "message", "resume": { …, "source": "ai" }, "saved": { … } }`
+
 **WorkerProfileResource**
 ```json
 {

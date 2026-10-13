@@ -6,6 +6,8 @@ import InputError from '@/components/InputError.vue';
 
 export interface Resume {
     name: string | null;
+    // 'ai' when made in the AI resume builder, 'upload' for an uploaded PDF.
+    source?: 'ai' | 'upload';
     uploaded_ago: string | null;
     characters: number;
     max_characters: number;

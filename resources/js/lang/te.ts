@@ -58,6 +58,7 @@ export default {
         myApplications: 'నా దరఖాస్తులు',
         savedJobs: 'సేవ్ చేసిన ఉద్యోగాలు',
         myProfile: 'నా ప్రొఫైల్',
+        aiResume: 'AI రెజ్యూమ్',
         postJob: 'ఉద్యోగం పోస్ట్ చేయండి',
         shortlisted: 'షార్ట్‌లిస్ట్',
         messages: 'సందేశాలు',

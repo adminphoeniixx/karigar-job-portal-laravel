@@ -58,6 +58,7 @@ export default {
         myApplications: 'என் விண்ணப்பங்கள்',
         savedJobs: 'சேமித்த வேலைகள்',
         myProfile: 'என் சுயவிவரம்',
+        aiResume: 'AI ரெஸ்யூமே',
         postJob: 'வேலை பதிவிடு',
         shortlisted: 'தேர்வுப்பட்டியல்',
         messages: 'செய்திகள்',

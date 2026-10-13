@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\WorkerProfile;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Saves, replaces and removes a worker's resume PDF.
@@ -20,7 +21,11 @@ class ResumeStore
 
     public const DIRECTORY = 'resumes';
 
-    public function __construct(private ResumeParser $parser) {}
+    public function __construct(
+        private ResumeParser $parser,
+        private ResumeWriter $writer,
+        private ResumePdf $pdf,
+    ) {}
 
     /**
      * Store (or replace) the profile's resume. Returns false when the PDF had no
@@ -37,29 +42,76 @@ class ResumeStore
 
         $this->deleteFile($profile);
 
-        $profile->forceFill([
+        $this->save($profile, [
             'resume_path' => $file->store(self::DIRECTORY, self::DISK),
             'resume_name' => mb_substr($file->getClientOriginalName(), 0, 255),
             'resume_text' => $text,
             'resume_uploaded_at' => now(),
-        ])->save();
+            'resume_source' => 'upload',
+        ]);
 
         return true;
     }
 
     /**
-     * Drop the resume and everything derived from it.
+     * Save a resume made in the AI builder as the profile's resume: render the
+     * PDF, replace whatever file was there, and keep the form answers and the
+     * resume so the builder opens filled in next time. The matcher reads the
+     * resume's own text — there is no PDF to parse back.
+     *
+     * @param  array<string, mixed>  $input  the builder form answers
+     * @param  array<string, mixed>  $resume  the resume, as edited in the preview
+     */
+    public function build(WorkerProfile $profile, array $input, array $resume): void
+    {
+        $input = $this->writer->input($input);
+        $resume = $this->writer->clean($resume, $input);
+
+        $path = self::DIRECTORY.'/'.Str::random(40).'.pdf';
+        Storage::disk(self::DISK)->put($path, $this->pdf->render($resume));
+
+        $this->deleteFile($profile);
+
+        $name = trim(preg_replace('/[^\pL\pN ]+/u', '', (string) $resume['name']) ?? '');
+
+        $this->save($profile, [
+            'resume_path' => $path,
+            'resume_name' => 'Resume'.($name !== '' ? ' - '.$name : '').'.pdf',
+            'resume_text' => $this->writer->text($resume),
+            'resume_uploaded_at' => now(),
+            'resume_builder' => ['input' => $input, 'resume' => $resume],
+            'resume_source' => 'ai',
+        ]);
+    }
+
+    /**
+     * Keep the builder answers between visits, even before a resume is saved,
+     * so a karigar who drafts and walks away does not lose what they typed.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public function rememberInput(WorkerProfile $profile, array $input): void
+    {
+        $this->save($profile, [
+            'resume_builder' => [...($profile->resume_builder ?? []), 'input' => $this->writer->input($input)],
+        ]);
+    }
+
+    /**
+     * Drop the resume and everything derived from it. The builder answers
+     * stay, so the karigar can make it again in one tap.
      */
     public function forget(WorkerProfile $profile): void
     {
         $this->deleteFile($profile);
 
-        $profile->forceFill([
+        $this->save($profile, [
             'resume_path' => null,
             'resume_name' => null,
             'resume_text' => null,
             'resume_uploaded_at' => null,
-        ])->save();
+            'resume_source' => null,
+        ]);
     }
 
     private function deleteFile(WorkerProfile $profile): void
@@ -67,5 +119,17 @@ class ResumeStore
         if ($profile->resume_path && Storage::disk(self::DISK)->exists($profile->resume_path)) {
             Storage::disk(self::DISK)->delete($profile->resume_path);
         }
+    }
+
+    /**
+     * Write resume columns without re-indexing the profile: none of them are
+     * in the worker search index, and a sync here made every resume save wait
+     * on (or fail with) Typesense.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function save(WorkerProfile $profile, array $attributes): void
+    {
+        WorkerProfile::withoutSyncingToSearch(fn () => $profile->forceFill($attributes)->save());
     }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import { Camera, FileText, IndianRupee, LocateFixed, MapPin, UserRound } from '@lucide/vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Camera, FileText, IndianRupee, LocateFixed, MapPin, Sparkles, UserRound } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import JobMap from '@/components/JobMap.vue';
@@ -339,6 +339,23 @@ const submit = () => {
             <p class="mt-1 text-xs text-muted-foreground">{{ $t('resume.subtitle') }}</p>
 
             <ResumeUpload :resume="resume" class="mt-4" />
+
+            <!-- Or have the AI write one from a short form -->
+            <Link
+                href="/worker/resume/builder"
+                class="mt-4 flex items-center gap-3 rounded-xl border border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-transparent p-4 transition hover:border-orange-500/60"
+            >
+                <Sparkles class="size-5 shrink-0 text-orange-600" />
+                <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-semibold">
+                        {{ resume?.source === 'ai' ? $t('resume.editWithAi') : $t('resume.buildWithAi') }}
+                    </span>
+                    <span class="block text-xs text-muted-foreground">{{ $t('resume.buildWithAiHint') }}</span>
+                </span>
+                <span v-if="resume?.source === 'ai'" class="rounded-full bg-orange-500/15 px-2 py-0.5 text-[11px] font-semibold text-orange-700 dark:text-orange-300">
+                    {{ $t('resume.builtWithAi') }}
+                </span>
+            </Link>
         </section>
     </div>
 </template>

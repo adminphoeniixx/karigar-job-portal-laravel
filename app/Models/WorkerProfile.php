@@ -48,10 +48,11 @@ class WorkerProfile extends Model
     protected $appends = ['avatar_url'];
 
     // The stored resume text runs to 8k characters and the path points at a
-    // private disk — neither belongs in a serialized profile. Use
+    // private disk — neither belongs in a serialized profile, and nor do the
+    // resume builder's form answers. Use
     // {@see resumeSummary()} for the parts a UI may show.
     /** @var list<string> */
-    protected $hidden = ['resume_path', 'resume_text'];
+    protected $hidden = ['resume_path', 'resume_text', 'resume_builder'];
 
     protected function casts(): array
     {
@@ -64,6 +65,7 @@ class WorkerProfile extends Model
             'screening_calls_opted_out' => 'boolean',
             'expected_wage' => 'decimal:2',
             'resume_uploaded_at' => 'datetime',
+            'resume_builder' => 'array',
         ];
     }
 
@@ -84,7 +86,7 @@ class WorkerProfile extends Model
      * and how much text the matcher actually read out of it. Null when the
      * worker has not uploaded one. Shared by the web page and the app API.
      *
-     * @return array{name: string|null, uploaded_at: string|null, uploaded_ago: string|null, characters: int, max_characters: int}|null
+     * @return array{name: string|null, source: string, uploaded_at: string|null, uploaded_ago: string|null, characters: int, max_characters: int}|null
      */
     public function resumeSummary(): ?array
     {
@@ -94,6 +96,8 @@ class WorkerProfile extends Model
 
         return [
             'name' => $this->resume_name,
+            // 'ai' when made in the resume builder, 'upload' for a PDF.
+            'source' => $this->resume_source ?? 'upload',
             'uploaded_at' => $this->resume_uploaded_at?->toIso8601String(),
             'uploaded_ago' => $this->resume_uploaded_at?->diffForHumans(),
             // Length of the text the matcher will actually read, so the worker

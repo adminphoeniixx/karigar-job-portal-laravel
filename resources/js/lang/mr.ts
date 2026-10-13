@@ -58,6 +58,7 @@ export default {
         myApplications: 'माझे अर्ज',
         savedJobs: 'जतन केलेल्या नोकऱ्या',
         myProfile: 'माझे प्रोफाइल',
+        aiResume: 'AI रेझ्युमे',
         postJob: 'नोकरी पोस्ट करा',
         shortlisted: 'शॉर्टलिस्ट',
         messages: 'संदेश',

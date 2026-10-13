@@ -7,6 +7,8 @@ use App\Http\Requests\ResumeUploadRequest;
 use App\Services\ResumeStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Resume upload for the worker app — the mobile-side mirror of
@@ -21,6 +23,20 @@ class ResumeController extends Controller
         return response()->json([
             'resume' => $request->user()->workerProfile?->resumeSummary(),
         ]);
+    }
+
+    /**
+     * The resume PDF itself, so the app can show the karigar what employers
+     * will open — an upload or one made in the resume builder.
+     */
+    public function file(Request $request): StreamedResponse
+    {
+        $profile = $request->user()->workerProfile()->first();
+
+        abort_if($profile?->resume_path === null, 404);
+        abort_unless(Storage::disk(ResumeStore::DISK)->exists($profile->resume_path), 404);
+
+        return Storage::disk(ResumeStore::DISK)->download($profile->resume_path, $profile->resume_name ?: 'resume.pdf');
     }
 
     public function store(ResumeUploadRequest $request): JsonResponse
