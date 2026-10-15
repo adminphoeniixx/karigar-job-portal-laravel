@@ -68,7 +68,7 @@ class ResumeStore
         $resume = $this->writer->clean($resume, $input);
 
         $path = self::DIRECTORY.'/'.Str::random(40).'.pdf';
-        Storage::disk(self::DISK)->put($path, $this->pdf->render($resume));
+        Storage::disk(self::DISK)->put($path, $this->pdf->render($resume, $profile));
 
         $this->deleteFile($profile);
 
@@ -82,6 +82,18 @@ class ResumeStore
             'resume_builder' => ['input' => $input, 'resume' => $resume],
             'resume_source' => 'ai',
         ]);
+    }
+
+    /**
+     * The PDF the karigar would get, without saving anything — the builder's
+     * live preview re-renders it as they edit and switch designs.
+     *
+     * @param  array<string, mixed>  $input
+     * @param  array<string, mixed>  $resume
+     */
+    public function preview(WorkerProfile $profile, array $input, array $resume): string
+    {
+        return $this->pdf->render($this->writer->clean($resume, $this->writer->input($input)), $profile);
     }
 
     /**

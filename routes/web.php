@@ -153,6 +153,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('worker/resume/builder', [ResumeBuilderController::class, 'edit'])->name('worker.resume.builder');
         Route::post('worker/resume/builder/draft', [ResumeBuilderController::class, 'draft'])
             ->middleware('throttle:10,1')->name('worker.resume.builder.draft');
+        Route::post('worker/resume/builder/preview', [ResumeBuilderController::class, 'preview'])
+            ->middleware('throttle:60,1')->name('worker.resume.builder.preview');
         Route::post('worker/resume/builder', [ResumeBuilderController::class, 'store'])->name('worker.resume.builder.store');
     });
 

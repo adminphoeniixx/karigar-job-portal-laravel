@@ -69,6 +69,10 @@ test('the builder opens filled in from the profile', function () {
             ->where('form.city', 'Jaipur')
             ->where('form.skills', ['Zari', 'Aari work'])
             ->where('form.experience_years', 8)
+            ->where('form.template', 'modern')
+            ->where('form.show_photo', true)
+            ->where('templates', ['modern', 'classic', 'bold'])
+            ->where('verified', false)
             ->where('saved', null));
 });
 
@@ -245,6 +249,81 @@ test('the app API runs the same flow', function () {
         ->assertHeader('content-type', 'application/pdf');
 
     $this->getJson('/api/v1/worker/resume/builder')->assertJsonPath('saved.name', 'Ramesh Kumar');
+});
+
+test('every design renders, in both languages, and the choice is kept', function () {
+    foreach (['en', 'hi'] as $language) {
+        $draft = $this->actingAs($this->worker)
+            ->postJson('/worker/resume/builder/draft', builderInput(['language' => $language]))
+            ->json('resume');
+
+        foreach (['modern', 'classic', 'bold'] as $template) {
+            $input = builderInput(['template' => $template, 'accent' => '#4f6b4a', 'language' => $language]);
+
+            $pdf = $this->actingAs($this->worker)
+                ->postJson('/worker/resume/builder/preview', [...$input, 'resume' => $draft])
+                ->assertOk()
+                ->assertHeader('content-type', 'application/pdf')
+                ->getContent();
+
+            expect($pdf)->toStartWith('%PDF');
+        }
+    }
+
+    // The preview saves nothing.
+    expect($this->worker->workerProfile->fresh()->resume_path)->toBeNull();
+
+    $input = builderInput(['template' => 'bold', 'accent' => '#6b2d5c', 'show_photo' => false]);
+    $draft = $this->actingAs($this->worker)->postJson('/worker/resume/builder/draft', $input)->json('resume');
+    $this->actingAs($this->worker)->post('/worker/resume/builder', [...$input, 'resume' => $draft]);
+
+    $this->actingAs($this->worker)
+        ->get('/worker/resume/builder')
+        ->assertInertia(fn ($page) => $page
+            ->where('form.template', 'bold')
+            ->where('form.accent', '#6b2d5c')
+            ->where('form.show_photo', false));
+});
+
+test('an unknown design or colour is refused', function () {
+    $this->actingAs($this->worker)
+        ->postJson('/worker/resume/builder/draft', builderInput(['template' => 'fancy', 'accent' => '#000000']))
+        ->assertStatus(422)
+        ->assertJsonStructure(['errors' => ['template', 'accent']]);
+});
+
+test('the profile photo goes on the resume, cut round and fetched once', function () {
+    Http::fake(['cdn.test/*' => Http::response(file_get_contents(public_path('images/categories/clay-work.jpg')))]);
+    config(['services.bunnycdn.pull_zone_url' => 'https://cdn.test', 'services.bunnycdn.token_auth_key' => null]);
+    $this->worker->workerProfile->update(['avatar_path' => 'avatars/ramesh.jpg']);
+
+    $input = builderInput();
+    $draft = $this->actingAs($this->worker)->postJson('/worker/resume/builder/draft', $input)->json('resume');
+
+    $this->actingAs($this->worker)->postJson('/worker/resume/builder/preview', [...$input, 'resume' => $draft])->assertOk();
+    $this->actingAs($this->worker)->postJson('/worker/resume/builder/preview', [...$input, 'resume' => $draft])->assertOk();
+
+    Http::assertSentCount(1);
+    $round = Storage::disk(ResumeStore::DISK)->files('resume-photos');
+    expect($round)->toHaveCount(1);
+    expect(getimagesizefromstring(Storage::disk(ResumeStore::DISK)->get($round[0]))['mime'])->toBe('image/png');
+});
+
+test('the app API previews a design without saving', function () {
+    Sanctum::actingAs($this->worker);
+
+    $this->getJson('/api/v1/worker/resume/builder')
+        ->assertJsonPath('templates', ['modern', 'classic', 'bold'])
+        ->assertJsonPath('accents.0', '#bf3a16');
+
+    $input = builderInput(['template' => 'classic']);
+    $draft = $this->postJson('/api/v1/worker/resume/builder/draft', $input)->json('resume');
+
+    $this->post('/api/v1/worker/resume/builder/preview', [...$input, 'resume' => $draft], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
+
+    expect($this->worker->workerProfile->fresh()->resume_path)->toBeNull();
 });
 
 test('the resume file 404s before there is one', function () {

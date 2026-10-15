@@ -16,9 +16,18 @@ has a saved example response).
 |---|---|
 | `GET /worker/resume/builder` | The form, already filled in (last answers, or else the profile), plus the last saved resume |
 | `POST /worker/resume/builder/draft` | Form answers → AI draft. Nothing is saved as the resume yet. Throttled to 10 a minute |
+| `POST /worker/resume/builder/preview` | Same body as save → the PDF (`application/pdf`) **without saving**. For the live preview and the design picker. Throttled to 60 a minute |
 | `POST /worker/resume/builder` | Form answers + the (edited) draft → builds the PDF and makes it the resume. `201` |
 | `GET /worker/resume/file` | **New for any resume:** the PDF itself (`application/pdf`), so the app can show it. `404` when there is none |
 
+- **Three PDF designs and four colours.** `template`: `modern` (dark
+  sidebar with photo) · `classic` (serif, centred) · `bold` (colour header
+  with photo). `accent`: one of `#bf3a16` terracotta, `#1e3a5f` ink blue,
+  `#4f6b4a` olive, `#6b2d5c` plum. `show_photo`: puts the profile photo
+  (cut round) on the resume; with no photo the karigar's initials are used.
+  A KYC-verified karigar gets a "✔ Verified on Super Karigar" badge on
+  the PDF automatically. `GET /worker/resume/builder` lists `templates`,
+  `accents`, `photo_url` and `verified`.
 - `GET /worker/resume` (and the `resume` object everywhere) gains
   `source`: `"ai"` when made in the builder, `"upload"` for an uploaded PDF.
 - The draft takes ~8–15 s (it is an AI call). Show a loader that says the
@@ -53,6 +62,9 @@ has a saved example response).
    | Achievements | `achievements` | ≤600 |
    | Expected monthly salary (₹) | `expected_wage` | number |
    | Ready to travel / relocate | `relocate` | bool |
+   | Design | `template` | `modern` \| `classic` \| `bold`, default `modern` |
+   | Colour | `accent` | one of `accents`, default `#bf3a16` |
+   | Photo on resume | `show_photo` | bool, default `true` |
 
    Start with one empty job card. Drop a job card whose `role` is empty before
    sending. A karigar can type the details in Hinglish; the AI rewrites them
@@ -61,9 +73,18 @@ has a saved example response).
    with the fields above as JSON. `422` → show `errors.<field>[0]` under the
    field (job fields come as `work.0.role`). `429` → "Wait a minute and try
    again".
-3. **Screen 2: Check & save.** Render the returned `resume` like a paper resume
-   and make these editable: `headline` (one line), `summary` (multi-line),
-   `skills[]` (tags), each `experience[].role` / `period` (single line) and
+   Split the form into steps as the web does: **About you** (photo, language,
+   name, contact) → **Your work** (trade, years, skills, tools, jobs) →
+   **Education & more** → **Design & save**. A strength meter (how many of:
+   photo, trade, years, 3+ skills, a described job, tools, education,
+   languages, about/achievement are filled) nudges the karigar to add more.
+3. **Screen 2: Design & save.** At the top, three template cards and four
+   colour dots (and the photo switch when `photo_url` is set). Show the real
+   PDF as the preview: `POST /worker/resume/builder/preview` with the save
+   body, ~1 s after the karigar stops typing or right after a design tap, and
+   render the returned PDF (e.g. a PDF view / `pdfrx` / `react-native-pdf`).
+   Below it, the editable resume: `headline` (one line), `summary`
+   (multi-line), `skills[]` (tags), each `experience[].role` / `period` (single line) and
    `experience[].points[]` (one point per line), `education[]`, `languages[]`,
    `extras[]` (one per line). `name`, `phone`, `email`, `location` and
    `expected_wage` are read-only: they come from Screen 1 (the server ignores

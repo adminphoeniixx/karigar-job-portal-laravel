@@ -343,7 +343,7 @@ const submit = () => {
             <!-- Or have the AI write one from a short form -->
             <Link
                 href="/worker/resume/builder"
-                class="mt-4 flex items-center gap-3 rounded-xl border border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-transparent p-4 transition hover:border-orange-500/60"
+                class="mt-4 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 transition hover:border-primary/60"
             >
                 <Sparkles class="size-5 shrink-0 text-orange-600" />
                 <span class="min-w-0 flex-1">

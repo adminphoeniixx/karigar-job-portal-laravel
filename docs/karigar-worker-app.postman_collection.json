@@ -882,7 +882,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"form\": {\n    \"language\": \"en\",\n    \"name\": \"Sunita Devi\",\n    \"phone\": \"9876500011\",\n    \"email\": null,\n    \"city\": \"Lucknow\",\n    \"state\": \"Uttar Pradesh\",\n    \"trade\": \"Chikankari embroidery karigar\",\n    \"experience_years\": 12,\n    \"skills\": [\n      \"Chikankari\",\n      \"Hand embroidery\"\n    ],\n    \"tools\": \"needle, wooden frame\",\n    \"work\": [\n      {\n        \"role\": \"Chikan karigar\",\n        \"employer\": \"Awadh Chikan House\",\n        \"place\": \"Lucknow\",\n        \"from\": \"2016\",\n        \"to\": null,\n        \"current\": true,\n        \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n      }\n    ],\n    \"education\": \"8th pass\",\n    \"training\": null,\n    \"languages\": [\n      \"Hindi\",\n      \"Urdu\"\n    ],\n    \"about\": null,\n    \"achievements\": \"export order ke 200 kurte time pe diye\",\n    \"expected_wage\": 18000,\n    \"relocate\": false\n  },\n  \"saved\": null,\n  \"resume\": null,\n  \"languages\": [\n    \"en\",\n    \"hi\"\n  ],\n  \"limits\": {\n    \"jobs\": 5,\n    \"skills\": 20\n  }\n}"
+              "body": "{\n  \"form\": {\n    \"language\": \"en\",\n    \"name\": \"Sunita Devi\",\n    \"phone\": \"9876500011\",\n    \"email\": null,\n    \"city\": \"Lucknow\",\n    \"state\": \"Uttar Pradesh\",\n    \"trade\": \"Chikankari embroidery karigar\",\n    \"experience_years\": 12,\n    \"skills\": [\n      \"Chikankari\",\n      \"Hand embroidery\"\n    ],\n    \"tools\": \"needle, wooden frame\",\n    \"work\": [\n      {\n        \"role\": \"Chikan karigar\",\n        \"employer\": \"Awadh Chikan House\",\n        \"place\": \"Lucknow\",\n        \"from\": \"2016\",\n        \"to\": null,\n        \"current\": true,\n        \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n      }\n    ],\n    \"education\": \"8th pass\",\n    \"training\": null,\n    \"languages\": [\n      \"Hindi\",\n      \"Urdu\"\n    ],\n    \"about\": null,\n    \"achievements\": \"export order ke 200 kurte time pe diye\",\n    \"expected_wage\": 18000,\n    \"relocate\": false,\n    \"template\": \"modern\",\n    \"accent\": \"#bf3a16\",\n    \"show_photo\": true\n  },\n  \"saved\": null,\n  \"resume\": null,\n  \"languages\": [\n    \"en\",\n    \"hi\"\n  ],\n  \"limits\": {\n    \"jobs\": 5,\n    \"skills\": 20\n  },\n  \"templates\": [\n    \"modern\",\n    \"classic\",\n    \"bold\"\n  ],\n  \"accents\": [\n    \"#bf3a16\",\n    \"#1e3a5f\",\n    \"#4f6b4a\",\n    \"#6b2d5c\"\n  ],\n  \"photo_url\": null,\n  \"verified\": true\n}"
             }
           ]
         },
@@ -921,7 +921,7 @@
             "description": "Form answers → AI-written resume (not saved as the resume yet). Takes 8–15 s. Required: language, name, trade, each work[].role. Throttled 10/min. With no AI the server still returns 200 with a plain resume built from the answers.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false\n}",
+              "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false,\n  \"template\": \"modern\",\n  \"accent\": \"#bf3a16\",\n  \"show_photo\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -965,7 +965,7 @@
                 "description": "Form answers → AI-written resume (not saved as the resume yet). Takes 8–15 s. Required: language, name, trade, each work[].role. Throttled 10/min. With no AI the server still returns 200 with a plain resume built from the answers.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false\n}",
+                  "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false,\n  \"template\": \"modern\",\n  \"accent\": \"#bf3a16\",\n  \"show_photo\": true\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1019,7 +1019,7 @@
                 "description": "Form answers → AI-written resume (not saved as the resume yet). Takes 8–15 s. Required: language, name, trade, each work[].role. Throttled 10/min. With no AI the server still returns 200 with a plain resume built from the answers.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false\n}",
+                  "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false,\n  \"template\": \"modern\",\n  \"accent\": \"#bf3a16\",\n  \"show_photo\": true\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1037,6 +1037,106 @@
                 }
               ],
               "body": "{\n  \"message\": \"The trade field is required.\",\n  \"errors\": {\n    \"trade\": [\n      \"The trade field is required.\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "AI builder: preview PDF (no save)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/worker/resume/builder/preview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "worker",
+                "resume",
+                "builder",
+                "preview"
+              ]
+            },
+            "description": "Same body as **save** → the PDF (`application/pdf`) exactly as it would be saved, without saving. Use it for a live preview and for the template / colour picker. Throttled 60/min.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false,\n  \"resume\": {\n    \"headline\": \"Chikankari embroidery karigar with 12 years of experience\",\n    \"summary\": \"Does hand embroidery on kurtas and sarees, skilled in Chikankari. Looking for work.\",\n    \"skills\": [\n      \"Chikankari\",\n      \"Hand embroidery\"\n    ],\n    \"experience\": [\n      {\n        \"role\": \"Chikan karigar\",\n        \"employer\": \"Awadh Chikan House\",\n        \"place\": \"Lucknow\",\n        \"period\": \"2016 – Present\",\n        \"points\": [\n          \"Does Chikan work on kurta and saree daily\",\n          \"Makes one kurta every day\",\n          \"Does shadow work and murri stitch\"\n        ]\n      }\n    ],\n    \"education\": [\n      \"8th pass\"\n    ],\n    \"languages\": [\n      \"Hindi\",\n      \"Urdu\"\n    ],\n    \"extras\": [\n      \"Uses needle and wooden frame\",\n      \"Completed 200 kurtas for export order on time\"\n    ]\n  },\n  \"template\": \"modern\",\n  \"accent\": \"#bf3a16\",\n  \"show_photo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "PDF",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "worker"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/worker/resume/builder/preview",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "worker",
+                    "resume",
+                    "builder",
+                    "preview"
+                  ]
+                },
+                "description": "Same body as **save** → the PDF (`application/pdf`) exactly as it would be saved, without saving. Use it for a live preview and for the template / colour picker. Throttled 60/min.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false,\n  \"resume\": {\n    \"headline\": \"Chikankari embroidery karigar with 12 years of experience\",\n    \"summary\": \"Does hand embroidery on kurtas and sarees, skilled in Chikankari. Looking for work.\",\n    \"skills\": [\n      \"Chikankari\",\n      \"Hand embroidery\"\n    ],\n    \"experience\": [\n      {\n        \"role\": \"Chikan karigar\",\n        \"employer\": \"Awadh Chikan House\",\n        \"place\": \"Lucknow\",\n        \"period\": \"2016 – Present\",\n        \"points\": [\n          \"Does Chikan work on kurta and saree daily\",\n          \"Makes one kurta every day\",\n          \"Does shadow work and murri stitch\"\n        ]\n      }\n    ],\n    \"education\": [\n      \"8th pass\"\n    ],\n    \"languages\": [\n      \"Hindi\",\n      \"Urdu\"\n    ],\n    \"extras\": [\n      \"Uses needle and wooden frame\",\n      \"Completed 200 kurtas for export order on time\"\n    ]\n  },\n  \"template\": \"modern\",\n  \"accent\": \"#bf3a16\",\n  \"show_photo\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "text",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/pdf"
+                }
+              ],
+              "body": "%PDF-1.4 …"
             }
           ]
         },
@@ -1074,7 +1174,7 @@
             "description": "Form answers + the (edited) draft under `resume` → builds the PDF and makes it the karigar's resume (replacing any upload). Contact fields inside `resume` are ignored; they come from the form.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false,\n  \"resume\": {\n    \"headline\": \"Chikankari embroidery karigar with 12 years of experience\",\n    \"summary\": \"Does hand embroidery on kurtas and sarees, skilled in Chikankari. Looking for work.\",\n    \"skills\": [\n      \"Chikankari\",\n      \"Hand embroidery\"\n    ],\n    \"experience\": [\n      {\n        \"role\": \"Chikan karigar\",\n        \"employer\": \"Awadh Chikan House\",\n        \"place\": \"Lucknow\",\n        \"period\": \"2016 – Present\",\n        \"points\": [\n          \"Does Chikan work on kurta and saree daily\",\n          \"Makes one kurta every day\",\n          \"Does shadow work and murri stitch\"\n        ]\n      }\n    ],\n    \"education\": [\n      \"8th pass\"\n    ],\n    \"languages\": [\n      \"Hindi\",\n      \"Urdu\"\n    ],\n    \"extras\": [\n      \"Uses needle and wooden frame\",\n      \"Completed 200 kurtas for export order on time\"\n    ]\n  }\n}",
+              "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false,\n  \"resume\": {\n    \"headline\": \"Chikankari embroidery karigar with 12 years of experience\",\n    \"summary\": \"Does hand embroidery on kurtas and sarees, skilled in Chikankari. Looking for work.\",\n    \"skills\": [\n      \"Chikankari\",\n      \"Hand embroidery\"\n    ],\n    \"experience\": [\n      {\n        \"role\": \"Chikan karigar\",\n        \"employer\": \"Awadh Chikan House\",\n        \"place\": \"Lucknow\",\n        \"period\": \"2016 – Present\",\n        \"points\": [\n          \"Does Chikan work on kurta and saree daily\",\n          \"Makes one kurta every day\",\n          \"Does shadow work and murri stitch\"\n        ]\n      }\n    ],\n    \"education\": [\n      \"8th pass\"\n    ],\n    \"languages\": [\n      \"Hindi\",\n      \"Urdu\"\n    ],\n    \"extras\": [\n      \"Uses needle and wooden frame\",\n      \"Completed 200 kurtas for export order on time\"\n    ]\n  },\n  \"template\": \"modern\",\n  \"accent\": \"#bf3a16\",\n  \"show_photo\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1117,7 +1217,7 @@
                 "description": "Form answers + the (edited) draft under `resume` → builds the PDF and makes it the karigar's resume (replacing any upload). Contact fields inside `resume` are ignored; they come from the form.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false,\n  \"resume\": {\n    \"headline\": \"Chikankari embroidery karigar with 12 years of experience\",\n    \"summary\": \"Does hand embroidery on kurtas and sarees, skilled in Chikankari. Looking for work.\",\n    \"skills\": [\n      \"Chikankari\",\n      \"Hand embroidery\"\n    ],\n    \"experience\": [\n      {\n        \"role\": \"Chikan karigar\",\n        \"employer\": \"Awadh Chikan House\",\n        \"place\": \"Lucknow\",\n        \"period\": \"2016 – Present\",\n        \"points\": [\n          \"Does Chikan work on kurta and saree daily\",\n          \"Makes one kurta every day\",\n          \"Does shadow work and murri stitch\"\n        ]\n      }\n    ],\n    \"education\": [\n      \"8th pass\"\n    ],\n    \"languages\": [\n      \"Hindi\",\n      \"Urdu\"\n    ],\n    \"extras\": [\n      \"Uses needle and wooden frame\",\n      \"Completed 200 kurtas for export order on time\"\n    ]\n  }\n}",
+                  "raw": "{\n  \"language\": \"en\",\n  \"name\": \"Sunita Devi\",\n  \"phone\": \"9876500011\",\n  \"email\": null,\n  \"city\": \"Lucknow\",\n  \"state\": \"Uttar Pradesh\",\n  \"trade\": \"Chikankari embroidery karigar\",\n  \"experience_years\": 12,\n  \"skills\": [\n    \"Chikankari\",\n    \"Hand embroidery\"\n  ],\n  \"tools\": \"needle, wooden frame\",\n  \"work\": [\n    {\n      \"role\": \"Chikan karigar\",\n      \"employer\": \"Awadh Chikan House\",\n      \"place\": \"Lucknow\",\n      \"from\": \"2016\",\n      \"to\": null,\n      \"current\": true,\n      \"details\": \"kurta aur saree pe chikan ka kaam, roz 1 kurta, shadow work aur murri stitch\"\n    }\n  ],\n  \"education\": \"8th pass\",\n  \"training\": null,\n  \"languages\": [\n    \"Hindi\",\n    \"Urdu\"\n  ],\n  \"about\": null,\n  \"achievements\": \"export order ke 200 kurte time pe diye\",\n  \"expected_wage\": 18000,\n  \"relocate\": false,\n  \"resume\": {\n    \"headline\": \"Chikankari embroidery karigar with 12 years of experience\",\n    \"summary\": \"Does hand embroidery on kurtas and sarees, skilled in Chikankari. Looking for work.\",\n    \"skills\": [\n      \"Chikankari\",\n      \"Hand embroidery\"\n    ],\n    \"experience\": [\n      {\n        \"role\": \"Chikan karigar\",\n        \"employer\": \"Awadh Chikan House\",\n        \"place\": \"Lucknow\",\n        \"period\": \"2016 – Present\",\n        \"points\": [\n          \"Does Chikan work on kurta and saree daily\",\n          \"Makes one kurta every day\",\n          \"Does shadow work and murri stitch\"\n        ]\n      }\n    ],\n    \"education\": [\n      \"8th pass\"\n    ],\n    \"languages\": [\n      \"Hindi\",\n      \"Urdu\"\n    ],\n    \"extras\": [\n      \"Uses needle and wooden frame\",\n      \"Completed 200 kurtas for export order on time\"\n    ]\n  },\n  \"template\": \"modern\",\n  \"accent\": \"#bf3a16\",\n  \"show_photo\": true\n}",
                   "options": {
                     "raw": {
                       "language": "json"

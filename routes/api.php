@@ -144,6 +144,8 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             Route::get('worker/resume/builder', [WorkerResumeBuilderController::class, 'show'])->name('api.worker.resume.builder.show');
             Route::post('worker/resume/builder/draft', [WorkerResumeBuilderController::class, 'draft'])
                 ->middleware('throttle:10,1')->name('api.worker.resume.builder.draft');
+            Route::post('worker/resume/builder/preview', [WorkerResumeBuilderController::class, 'preview'])
+                ->middleware('throttle:60,1')->name('api.worker.resume.builder.preview');
             Route::post('worker/resume/builder', [WorkerResumeBuilderController::class, 'store'])->name('api.worker.resume.builder.store');
             Route::patch('worker/availability', [ProfileController::class, 'availability'])->name('api.worker.availability');
 

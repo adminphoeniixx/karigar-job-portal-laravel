@@ -45,6 +45,7 @@
         "clsx": "^2.1.1",
         "laravel-vite-plugin": "^3.0.0",
         "leaflet": "^1.9.4",
+        "pdfjs-dist": "4.10.38",
         "reka-ui": "^2.9.8",
         "tailwind-merge": "^3.2.0",
         "tailwindcss": "^4.1.1",

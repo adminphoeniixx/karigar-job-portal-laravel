@@ -28,6 +28,12 @@ class ResumeWriter
 
     public const MAX_SKILLS = 20;
 
+    /** PDF designs the karigar can pick from; see resources/views/resumes/. */
+    public const TEMPLATES = ['modern', 'classic', 'bold'];
+
+    /** Accent colours on offer: terracotta, ink blue, olive, plum. */
+    public const ACCENTS = ['#bf3a16', '#1e3a5f', '#4f6b4a', '#6b2d5c'];
+
     public function __construct(private AiClient $ai) {}
 
     /**
@@ -66,6 +72,9 @@ class ResumeWriter
             'achievements' => ['nullable', 'string', 'max:600'],
             'expected_wage' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
             'relocate' => ['nullable', 'boolean'],
+            'template' => ['nullable', Rule::in(self::TEMPLATES)],
+            'accent' => ['nullable', Rule::in(self::ACCENTS)],
+            'show_photo' => ['nullable', 'boolean'],
         ];
     }
 
@@ -107,7 +116,8 @@ class ResumeWriter
      */
     public function form(User $user): array
     {
-        $profile = $user->workerProfile;
+        // Read fresh: a loaded relation can predate the last builder save.
+        $profile = $user->workerProfile()->first();
         $saved = $profile?->resume_builder['input'] ?? null;
 
         if (is_array($saved)) {
@@ -266,6 +276,9 @@ class ResumeWriter
             'achievements' => $this->str($input['achievements'] ?? null),
             'expected_wage' => is_numeric($wage) && (float) $wage > 0 ? (int) round((float) $wage) : null,
             'relocate' => filter_var($input['relocate'] ?? false, FILTER_VALIDATE_BOOL),
+            'template' => in_array($input['template'] ?? null, self::TEMPLATES, true) ? $input['template'] : self::TEMPLATES[0],
+            'accent' => in_array($input['accent'] ?? null, self::ACCENTS, true) ? $input['accent'] : self::ACCENTS[0],
+            'show_photo' => filter_var($input['show_photo'] ?? true, FILTER_VALIDATE_BOOL),
         ];
     }
 
@@ -446,7 +459,8 @@ class ResumeWriter
     }
 
     /**
-     * The fields copied verbatim from the form onto every resume.
+     * The fields copied verbatim from the form onto every resume, design
+     * choices included.
      *
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
@@ -459,6 +473,11 @@ class ResumeWriter
             'phone' => $input['phone'],
             'email' => $input['email'],
             'location' => implode(', ', array_filter([$input['city'], $input['state']])) ?: null,
+            'experience_years' => $input['experience_years'],
+            'relocate' => $input['relocate'],
+            'template' => $input['template'],
+            'accent' => $input['accent'],
+            'show_photo' => $input['show_photo'],
             'expected_wage' => $input['expected_wage']
                 ? '₹'.number_format($input['expected_wage']).($input['language'] === 'hi' ? ' / महीना' : ' / month')
                 : null,

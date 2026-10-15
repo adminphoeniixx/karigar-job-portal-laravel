@@ -7,6 +7,7 @@ use App\Services\ResumeWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,6 +31,12 @@ class ResumeBuilderController extends Controller
             'saved' => $profile->resume_builder['resume'] ?? null,
             'resume' => $profile->resumeSummary(),
             'limits' => ['jobs' => ResumeWriter::MAX_JOBS, 'skills' => ResumeWriter::MAX_SKILLS],
+            'templates' => ResumeWriter::TEMPLATES,
+            'accents' => ResumeWriter::ACCENTS,
+            // For the photo switch and the strength meter: the photo itself
+            // is changed on the profile page.
+            'photoUrl' => $profile->avatar_url,
+            'verified' => $request->user()->isKycVerified(),
         ]);
     }
 
@@ -48,6 +55,32 @@ class ResumeBuilderController extends Controller
         $this->store->rememberInput($request->user()->workerProfile()->firstOrCreate([]), $validator->validated());
 
         return response()->json(['resume' => $this->writer->draft($validator->validated())]);
+    }
+
+    /**
+     * The PDF as it would be saved, for the live preview. Validated by hand
+     * for the same reason as draft(): it is fetched, not visited.
+     */
+    public function preview(Request $request): JsonResponse|HttpResponse
+    {
+        $validator = Validator::make($request->all(), [...ResumeWriter::inputRules(), ...ResumeWriter::resumeRules()]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+        $pdf = $this->store->preview(
+            $request->user()->workerProfile()->firstOrCreate([]),
+            collect($data)->except('resume')->all(),
+            $data['resume'],
+        );
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="resume-preview.pdf"',
+            'Cache-Control' => 'no-store',
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

@@ -215,6 +215,16 @@ expected_wage, headline, summary, skills[], experience[{role, employer, place,
 period, points[]}], education[], languages[], extras[] } }`. Takes 8–15 s.
 The answers are remembered for the next `GET`.
 
+Design fields (in the form, the draft, the preview and the save):
+`template` `modern|classic|bold`, `accent` one of `#bf3a16 #1e3a5f #4f6b4a
+#6b2d5c`, `show_photo` bool. `GET /worker/resume/builder` also returns
+`templates`, `accents`, `photo_url` and `verified` (a verified karigar's PDF
+carries a "Verified on Super Karigar" badge).
+
+#### `POST /worker/resume/builder/preview` (JSON, throttled 60/min)
+Same body as the save below → `200 application/pdf`, the resume as it would
+be saved, **nothing stored**. For a live preview and the design picker.
+
 #### `POST /worker/resume/builder` (JSON)
 Body: the `form` fields **plus** `resume: { headline, summary, skills[],
 experience[{role, employer, place, period, points[]}], education[],

@@ -7,6 +7,7 @@ use App\Services\ResumeStore;
 use App\Services\ResumeWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * The AI resume builder for the worker app — the mobile-side mirror of
@@ -26,6 +27,10 @@ class ResumeBuilderController extends Controller
             'saved' => $profile->resume_builder['resume'] ?? null,
             'resume' => $profile->resumeSummary(),
             'languages' => ResumeWriter::LANGUAGES,
+            'templates' => ResumeWriter::TEMPLATES,
+            'accents' => ResumeWriter::ACCENTS,
+            'photo_url' => $profile->avatar_url,
+            'verified' => $request->user()->isKycVerified(),
             'limits' => ['jobs' => ResumeWriter::MAX_JOBS, 'skills' => ResumeWriter::MAX_SKILLS],
         ]);
     }
@@ -37,6 +42,27 @@ class ResumeBuilderController extends Controller
         $this->store->rememberInput($request->user()->workerProfile()->firstOrCreate([]), $input);
 
         return response()->json(['resume' => $this->writer->draft($input)]);
+    }
+
+    /**
+     * The PDF as it would be saved (same body as store), without saving it —
+     * for a preview screen and the template / colour picker.
+     */
+    public function preview(Request $request): Response
+    {
+        $data = $request->validate([...ResumeWriter::inputRules(), ...ResumeWriter::resumeRules()]);
+
+        $pdf = $this->store->preview(
+            $request->user()->workerProfile()->firstOrCreate([]),
+            collect($data)->except('resume')->all(),
+            $data['resume'],
+        );
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="resume-preview.pdf"',
+            'Cache-Control' => 'no-store',
+        ]);
     }
 
     public function store(Request $request): JsonResponse
