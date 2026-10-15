@@ -202,7 +202,10 @@ return [
                     'default_sorting_field' => 'created_at',
                 ],
                 'search-parameters' => [
-                    'query_by' => 'title,description,skills,category',
+                    // city and state too: karigars type the place into the
+                    // search box ("kanpur"), and a job that only says Kanpur
+                    // in its city field was otherwise never found.
+                    'query_by' => 'title,description,skills,category,city,state',
                 ],
             ],
             WorkerProfile::class => [
