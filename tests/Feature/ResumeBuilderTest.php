@@ -293,6 +293,8 @@ test('an unknown design or colour is refused', function () {
 });
 
 test('the profile photo goes on the resume, cut round and fetched once', function () {
+    // The round copy is a cache mPDF reads by path, so it is on the local disk.
+    Storage::fake('local');
     Http::fake(['cdn.test/*' => Http::response(file_get_contents(public_path('images/categories/clay-work.jpg')))]);
     config(['services.bunnycdn.pull_zone_url' => 'https://cdn.test', 'services.bunnycdn.token_auth_key' => null]);
     $this->worker->workerProfile->update(['avatar_path' => 'avatars/ramesh.jpg']);
@@ -304,9 +306,9 @@ test('the profile photo goes on the resume, cut round and fetched once', functio
     $this->actingAs($this->worker)->postJson('/worker/resume/builder/preview', [...$input, 'resume' => $draft])->assertOk();
 
     Http::assertSentCount(1);
-    $round = Storage::disk(ResumeStore::DISK)->files('resume-photos');
+    $round = Storage::disk('local')->files('resume-photos');
     expect($round)->toHaveCount(1);
-    expect(getimagesizefromstring(Storage::disk(ResumeStore::DISK)->get($round[0]))['mime'])->toBe('image/png');
+    expect(getimagesizefromstring(Storage::disk('local')->get($round[0]))['mime'])->toBe('image/png');
 });
 
 test('the app API previews a design without saving', function () {
@@ -328,6 +330,26 @@ test('the app API previews a design without saving', function () {
 
 test('the resume file 404s before there is one', function () {
     Sanctum::actingAs($this->worker);
+
+    $this->get('/api/v1/worker/resume/file')->assertNotFound();
+});
+
+test('a builder resume whose file has gone is drawn again, an uploaded one 404s', function () {
+    $draft = $this->actingAs($this->worker)->postJson('/worker/resume/builder/draft', builderInput())->json('resume');
+    $this->actingAs($this->worker)->post('/worker/resume/builder', [...builderInput(), 'resume' => $draft]);
+    $path = $this->worker->workerProfile->fresh()->resume_path;
+
+    // The disk was wiped, as a deploy used to do.
+    Storage::disk(ResumeStore::DISK)->delete($path);
+
+    Sanctum::actingAs($this->worker);
+    $this->get('/api/v1/worker/resume/file')->assertOk()->assertDownload();
+    expect(Storage::disk(ResumeStore::DISK)->get($path))->toStartWith('%PDF');
+
+    $this->post('/api/v1/worker/resume', [
+        'resume' => new UploadedFile(base_path('tests/fixtures/resumes/plumber-strong-match.pdf'), 'cv.pdf', 'application/pdf', null, true),
+    ])->assertCreated();
+    Storage::disk(ResumeStore::DISK)->delete($this->worker->workerProfile->fresh()->resume_path);
 
     $this->get('/api/v1/worker/resume/file')->assertNotFound();
 });

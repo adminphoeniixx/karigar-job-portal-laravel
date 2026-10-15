@@ -13,8 +13,9 @@ use Throwable;
  *
  * mPDF cannot round an image's corners, so the circle is baked into a PNG with
  * a transparent edge. The avatar lives on BunnyCDN; it is fetched once per
- * avatar and the round copy is kept on the private disk, so a live preview
- * that re-renders on every edit does not fetch it again.
+ * avatar and the round copy is kept on the local disk (mPDF needs a file
+ * path; a wiped copy is just made again), so a live preview that re-renders
+ * on every edit does not fetch it again.
  */
 class ResumePhoto
 {
@@ -34,7 +35,7 @@ class ResumePhoto
             return null;
         }
 
-        $disk = Storage::disk(ResumeStore::DISK);
+        $disk = Storage::disk('local');
         $file = self::DIRECTORY.'/'.sha1($avatar).'.png';
 
         if (! $disk->exists($file)) {

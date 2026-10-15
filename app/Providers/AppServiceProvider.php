@@ -10,11 +10,17 @@ use App\Services\Screening\LiveKitVoiceAgent;
 use App\Services\Screening\StubVoiceAgent;
 use App\Services\Screening\VoiceAgent;
 use Carbon\CarbonImmutable;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Sanctum\Sanctum;
+use League\Flysystem\Filesystem;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,6 +50,16 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // The 'private' disk (resumes, KYC documents) on BunnyCDN storage.
+        Storage::extend('bunnycdn', function ($app, array $config) {
+            $adapter = new BunnyCDNAdapter(
+                new BunnyCDNClient((string) $config['storage_zone'], (string) $config['api_key'], (string) ($config['region'] ?? '') ?: BunnyCDNRegion::DEFAULT),
+                root: (string) ($config['root'] ?? ''),
+            );
+
+            return new FilesystemAdapter(new Filesystem($adapter, $config), $adapter, $config);
+        });
 
         // Writes last_used_at once a minute instead of on every API call.
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);

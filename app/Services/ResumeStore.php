@@ -10,14 +10,15 @@ use Illuminate\Support\Str;
 /**
  * Saves, replaces and removes a worker's resume PDF.
  *
- * The file lives on the private 'local' disk (same treatment as KYC documents —
- * a resume carries personal data and must never be publicly reachable, so it is
- * deliberately NOT pushed to BunnyCDN the way avatars are). The extracted text
- * is cached on the profile at upload time for {@see AiMatcher}.
+ * The file lives on the 'private' disk (same treatment as KYC documents): on
+ * BunnyCDN storage, so it survives deploys, but under private/ and only ever
+ * read through our controllers, never handed out as a CDN link the way avatars
+ * are. The extracted text is cached on the profile at upload time for
+ * {@see AiMatcher}.
  */
 class ResumeStore
 {
-    public const DISK = 'local';
+    public const DISK = 'private';
 
     public const DIRECTORY = 'resumes';
 
@@ -82,6 +83,35 @@ class ResumeStore
             'resume_builder' => ['input' => $input, 'resume' => $resume],
             'resume_source' => 'ai',
         ]);
+    }
+
+    /**
+     * Whether the profile's resume PDF can be served. A builder resume whose
+     * file has gone (the disk was wiped) is drawn again from the answers kept
+     * on the profile, so the karigar and employers never hit a dead link; an
+     * uploaded PDF that has gone cannot be, and the caller should 404.
+     */
+    public function available(?WorkerProfile $profile): bool
+    {
+        if ($profile?->resume_path === null) {
+            return false;
+        }
+
+        $disk = Storage::disk(self::DISK);
+
+        if ($disk->exists($profile->resume_path)) {
+            return true;
+        }
+
+        $resume = $profile->resume_builder['resume'] ?? null;
+
+        if ($profile->resume_source !== 'ai' || ! is_array($resume)) {
+            return false;
+        }
+
+        $disk->put($profile->resume_path, $this->pdf->render($resume, $profile));
+
+        return $disk->exists($profile->resume_path);
     }
 
     /**

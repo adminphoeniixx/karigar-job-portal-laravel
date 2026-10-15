@@ -38,6 +38,27 @@ return [
             'report' => false,
         ],
 
+        // Resumes and KYC documents. On BunnyCDN storage whenever it is
+        // configured: the app container's disk is thrown away on every deploy,
+        // and local and live share one database, so the files must sit where
+        // both can reach them. Under "private/", read only through our own
+        // controllers with the storage API key; the pull zone's token auth
+        // keeps them off the public CDN.
+        'private' => (env('PRIVATE_FILES_DRIVER') ?: (env('BUNNYCDN_API_KEY') ? 'bunnycdn' : 'local')) === 'bunnycdn' ? [
+            'driver' => 'bunnycdn',
+            'storage_zone' => env('BUNNYCDN_STORAGE_ZONE'),
+            'api_key' => env('BUNNYCDN_API_KEY'),
+            'region' => env('BUNNYCDN_REGION', ''),
+            'root' => 'private',
+            'throw' => false,
+            'report' => false,
+        ] : [
+            'driver' => 'local',
+            'root' => storage_path('app/private'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

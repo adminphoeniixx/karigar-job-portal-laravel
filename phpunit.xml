@@ -35,6 +35,7 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SCOUT_DRIVER" value="null"/>
+        <env name="PRIVATE_FILES_DRIVER" value="local"/>
         <env name="GEOCODER_ENABLED" value="false"/>
         <env name="EMPLOYER_VERIFICATION_REQUIRED" value="false"/>
         <env name="WORKER_VERIFICATION_REQUIRED" value="false"/>

@@ -101,7 +101,7 @@ it('blocks an employer from the worker profile route', function () {
 // ───────────────────────── KYC ─────────────────────────
 
 it('lets a worker submit KYC and stores it encrypted & pending', function () {
-    Storage::fake('local');
+    Storage::fake('private');
 
     $this->actingAs($this->worker)->get('/kyc')->assertOk();
 
@@ -117,7 +117,7 @@ it('lets a worker submit KYC and stores it encrypted & pending', function () {
         ->and($kyc->status)->toBe(KycStatus::Pending)
         ->and($kyc->pan_number)->toBe('ABCDE1234F') // decrypted via cast
         ->and($kyc->masked_pan)->toBe('ABXXXXXF');
-    Storage::disk('local')->assertExists($kyc->pan_doc_path);
+    Storage::disk('private')->assertExists($kyc->pan_doc_path);
 });
 
 it('rejects invalid KYC input', function () {

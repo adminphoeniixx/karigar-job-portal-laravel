@@ -6,6 +6,7 @@ use App\Enums\KycStatus;
 use App\Http\Controllers\Controller;
 use App\Models\KycDocument;
 use App\Notifications\KycReviewedNotification;
+use App\Services\KycSubmission;
 use App\Support\KycRequirements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -141,8 +142,8 @@ class KycController extends Controller
             ? ($kyc->missing_documents[$doc]['doc_path'] ?? null)
             : KycDocument::pathFor($kyc, $doc);
 
-        abort_if($path === null || ! Storage::disk('local')->exists($path), 404);
+        abort_if($path === null || ! Storage::disk(KycSubmission::DISK)->exists($path), 404);
 
-        return Storage::disk('local')->response($path);
+        return Storage::disk(KycSubmission::DISK)->response($path);
     }
 }

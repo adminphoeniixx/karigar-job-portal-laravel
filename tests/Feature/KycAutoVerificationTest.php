@@ -56,7 +56,7 @@ function fakeDecentro(array $registry = [], array $aadhaar = ['name' => 'RAMESH 
 }
 
 beforeEach(function () {
-    Storage::fake('local');
+    Storage::fake('private');
     config([
         'services.decentro.client_id' => 'test-client',
         'services.decentro.client_secret' => 'test-secret',

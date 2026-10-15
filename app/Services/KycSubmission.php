@@ -23,11 +23,12 @@ use Illuminate\Validation\ValidationException;
  * DigiLocker; when all of it checks out the submission is verified on the
  * spot, otherwise it waits for an admin (see KycAutoVerifier).
  *
- * Proof files stay on the local disk, never the CDN.
+ * Proof files go on the 'private' disk (BunnyCDN storage under private/,
+ * read only through the admin controller), never a public CDN link.
  */
 class KycSubmission
 {
-    private const DISK = 'local';
+    public const DISK = 'private';
 
     public static function save(KycSubmitRequest $request, User $account): KycDocument
     {

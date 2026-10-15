@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    Storage::fake('local');
+    Storage::fake('private');
 
     $this->worker = User::factory()->create(['role' => UserRole::Worker->value]);
     $this->employer = User::factory()->create(['role' => UserRole::Employer->value]);
@@ -75,7 +75,7 @@ it('lets a worker without PAN send an alternate ID and a reason instead', functi
     $kyc = $this->worker->fresh()->kyc;
     expect($kyc->pan_number)->toBeNull()
         ->and($kyc->missing_documents['pan']['reason'])->toBe('Never applied for a PAN');
-    Storage::disk('local')->assertExists($kyc->missing_documents['pan']['doc_path']);
+    Storage::disk('private')->assertExists($kyc->missing_documents['pan']['doc_path']);
 });
 
 it('needs the alternate details when a document is marked missing', function () {
@@ -235,6 +235,6 @@ it('drops files a resubmission no longer needs', function () {
         'pan_reason' => 'No PAN',
     ], ['Accept' => 'application/json'])->assertCreated();
 
-    Storage::disk('local')->assertMissing($oldPan);
+    Storage::disk('private')->assertMissing($oldPan);
     expect($this->worker->fresh()->kyc->aadhaar_doc_path)->not->toBeNull();
 });

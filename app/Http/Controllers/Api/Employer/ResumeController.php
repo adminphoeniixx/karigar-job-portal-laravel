@@ -19,14 +19,15 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ResumeController extends Controller
 {
+    public function __construct(private ResumeStore $store) {}
+
     public function download(JobApplication $application): StreamedResponse
     {
         $this->authorize('view', $application->job);
 
         $profile = $application->worker?->workerProfile;
 
-        abort_if($profile?->resume_path === null, 404);
-        abort_unless(Storage::disk(ResumeStore::DISK)->exists($profile->resume_path), 404);
+        abort_unless($this->store->available($profile), 404);
 
         return Storage::disk(ResumeStore::DISK)->download(
             $profile->resume_path,

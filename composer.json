@@ -22,6 +22,7 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "mpdf/mpdf": "^8.2",
+        "platformcommunity/flysystem-bunnycdn": "^3.4",
         "predis/predis": "^3.6",
         "razorpay/razorpay": "^2.9",
         "smalot/pdfparser": "^2.12",
