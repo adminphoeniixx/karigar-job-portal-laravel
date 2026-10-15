@@ -46,7 +46,7 @@ class ApplicantController extends Controller
         $access = ApplicantAccess::for($request->user());
 
         $applications = tap($job->applications(), fn ($q) => $access->constrain($q, $job))
-            ->with(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc')
+            ->with(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'latestScreeningCall')
             ->when($stage !== 'all', fn ($q) => $this->scopeStage($q, $stage))
             // Best-match sorts by AI score (unscored applicants fall to the bottom).
             ->when($sort === 'best_match', fn ($q) => $q->orderByRaw('ai_score DESC NULLS LAST'))
@@ -71,7 +71,7 @@ class ApplicantController extends Controller
     {
         $applications = JobApplication::whereNotNull('shortlisted_at')
             ->whereHas('job', fn ($q) => $q->where('employer_id', $request->user()->employerAccount()->id))
-            ->with(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title,city,state')
+            ->with(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title,city,state', 'latestScreeningCall')
             ->orderByDesc('shortlisted_at')
             ->paginate(20);
 
@@ -87,7 +87,7 @@ class ApplicantController extends Controller
     {
         $this->authorize('view', $application->job);
 
-        $application->load(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title');
+        $application->load(self::CONTACT_FIELDS, 'worker.workerProfile', 'worker.kyc', 'job:id,title', 'latestScreeningCall');
 
         return new ApplicantResource($application);
     }

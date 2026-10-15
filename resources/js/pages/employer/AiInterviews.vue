@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { BriefcaseBusiness, CalendarClock, MapPin, Phone, PhoneCall } from '@lucide/vue';
+import { BriefcaseBusiness, CalendarClock, MapPin, MessageSquare, Phone, PhoneCall } from '@lucide/vue';
+import { ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ScreeningConversation from '@/components/ScreeningConversation.vue';
 
 interface Row {
     id: number;
@@ -14,6 +16,7 @@ interface Row {
     outcome: string | null;
     outcome_label: string | null;
     summary: string | null;
+    has_conversation: boolean;
     failure_reason: string | null;
     proposed_interview_label: string | null;
     awaiting_confirmation: boolean;
@@ -42,6 +45,9 @@ const tabs: { key: Filter; label: string }[] = [
 const show = (filter: Filter) => router.get('/employer/ai-interviews', { filter }, { preserveScroll: true, replace: true });
 
 const cancel = (row: Row) => router.delete(`/employer/screening-calls/${row.id}`, { preserveScroll: true });
+
+// "View conversation" popup: the call whose transcript is open.
+const conversationFor = ref<number | null>(null);
 
 const go = (url: string | null) => {
     if (url) router.get(url, {}, { preserveScroll: true });
@@ -124,6 +130,14 @@ const sourceLabel: Record<string, string> = {
                         Offered {{ row.proposed_interview_label }} · confirm →
                     </Link>
                     <button v-if="row.can_cancel" type="button" class="text-xs font-semibold text-rose-600 hover:underline" @click="cancel(row)">Cancel call</button>
+                    <button
+                        v-if="row.has_conversation"
+                        type="button"
+                        class="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-700 hover:underline dark:text-orange-300"
+                        @click="conversationFor = row.id"
+                    >
+                        <MessageSquare class="size-3.5" /> {{ $t('applicants.screening.viewConversation') }}
+                    </button>
                 </div>
             </article>
         </div>
@@ -145,5 +159,8 @@ const sourceLabel: Record<string, string> = {
                 v-html="link.label"
             />
         </div>
+
+        <!-- What was said on a screening call -->
+        <ScreeningConversation :call-id="conversationFor" @close="conversationFor = null" />
     </div>
 </template>

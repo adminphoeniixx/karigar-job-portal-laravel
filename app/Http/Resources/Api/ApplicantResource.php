@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use App\Models\JobApplication;
+use App\Services\AiMatcher;
 use App\Support\ApplicantSignals;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -63,10 +64,26 @@ class ApplicantResource extends JsonResource
             'ai' => $this->ai_scored_at !== null ? [
                 'score' => $this->ai_score,
                 'recommendation' => $this->ai_recommendation,
+                // Show this, not `recommendation`: "Strong match", not "strong_match".
+                'recommendation_label' => AiMatcher::recommendationLabel($this->ai_recommendation),
                 'summary' => $this->ai_summary,
                 'matched_skills' => $this->ai_matched_skills ?? [],
                 'red_flags' => $this->ai_red_flags ?? [],
             ] : null,
+            // The newest AI screening call, for the card: what the karigar
+            // said, in short. The full conversation is on
+            // GET /employer/applicants/{id}/screening-calls?with_transcript=1.
+            // null when no call has been placed.
+            'screening_call' => $this->whenLoaded('latestScreeningCall', fn () => $this->latestScreeningCall === null ? null : [
+                'id' => $this->latestScreeningCall->id,
+                'status' => $this->latestScreeningCall->status->value,
+                'status_label' => $this->latestScreeningCall->status->label(),
+                'outcome' => $this->latestScreeningCall->outcome?->value,
+                'outcome_label' => $this->latestScreeningCall->outcome?->label(),
+                'summary' => $this->latestScreeningCall->summary,
+                'has_conversation' => $this->latestScreeningCall->hasConversation(),
+                'created_ago' => $this->latestScreeningCall->created_at?->diffForHumans(),
+            ]),
             'created_ago' => $this->created_at?->diffForHumans(),
             'created_at' => $this->created_at?->toIso8601String(),
             'tracking_steps' => $this->trackingSteps(),

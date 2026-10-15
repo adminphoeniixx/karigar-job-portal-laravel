@@ -1526,8 +1526,43 @@
                 "screening-calls"
               ]
             },
-            "description": "Calls placed for this applicant, newest first, plus `can_call` / `blocked_because`. Drive the \"Call & schedule\" button off `can_call`; when false show `blocked_because` as the disabled reason (`provider_not_configured`, `no_caller_id`, `application_closed`, `interview_already_scheduled`, `no_phone_number`, `worker_opted_out`, `call_in_progress`, `already_screened`). Pass `?with_transcript=1` on the detail screen to include transcripts."
+            "description": "Calls placed for this applicant, newest first, plus `can_call` / `blocked_because`. Drive the \"Call & schedule\" button off `can_call`; when false show `blocked_because` as the disabled reason (`provider_not_configured`, `no_caller_id`, `application_closed`, `interview_already_scheduled`, `no_phone_number`, `worker_opted_out`, `call_in_progress`, `already_screened`). Pass `?with_transcript=1` on the detail screen to include transcripts.\n\nAdd `?with_transcript=1` for `transcript` and `conversation` on each call."
           }
+        },
+        {
+          "name": "One call with its conversation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/screening-calls/{{call_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "screening-calls",
+                "{{call_id}}"
+              ]
+            },
+            "description": "One AI screening call, always with `transcript` and `conversation` (chat turns, speaker `agent` or `karigar`). Open it from the applicant card (`screening_call.id`) or an AI Interviews row (`id`) for the **View conversation** screen. 403 for another employer's call."
+          },
+          "response": []
         },
         {
           "name": "Place a screening call",

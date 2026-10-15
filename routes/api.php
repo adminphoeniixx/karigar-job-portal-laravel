@@ -227,6 +227,7 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             // are still interested, collect an interview time to confirm.
             Route::get('employer/applicants/{application}/screening-calls', [ScreeningController::class, 'index'])->name('api.employer.screening.index');
             Route::post('employer/applicants/{application}/screening-calls', [ScreeningController::class, 'store'])->name('api.employer.screening.store');
+            Route::get('employer/screening-calls/{call}', [ScreeningController::class, 'show'])->name('api.employer.screening.show');
             Route::post('employer/screening-calls/{call}/confirm', [ScreeningController::class, 'confirm'])->name('api.employer.screening.confirm');
             Route::delete('employer/screening-calls/{call}', [ScreeningController::class, 'destroy'])->name('api.employer.screening.destroy');
             // Every AI call across the account's jobs: ?filter=upcoming|done|all

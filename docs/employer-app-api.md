@@ -344,8 +344,12 @@ Karigars this employer rejected (§7) are left out. Each row also carries
   "interview": { "at": "2026-08-02T10:30:00+05:30", "at_label": "02 Aug 2026, 10:30 AM",
                  "mode": "site", "note": "Gate 2" } | null,
   "resume": { "name": "suresh-plumber.pdf", "uploaded_at": "...", "download_url": "..." } | null,
-  "ai": { "score": 82, "recommendation": "shortlist", "summary": "...",
-          "matched_skills": [...], "red_flags": [...] } | null,
+  "ai": { "score": 82, "recommendation": "strong_match", "recommendation_label": "Strong match",
+          "summary": "...", "matched_skills": [...], "red_flags": [...] } | null,
+  "screening_call": { "id": 79, "status": "completed", "status_label": "Completed",
+                      "outcome": "interested", "outcome_label": "Interested",
+                      "summary": "...", "has_conversation": true,
+                      "created_ago": "10 minutes ago" } | null,
   "created_at": "...", "created_ago": "3 hours ago", "tracking_steps": [...],
   "job": { "id": 12, "title": "..." },
   "worker": { "id", "name", "rating", "reviews_count", "avatar_url", "bio",
@@ -362,6 +366,13 @@ The distance is from the **job's site** (the employer's pin when the job has
 none), labelled as in §7: `"~4 km"` while the karigar only gave a city.
 `unlocked_by_count` = other employers who unlocked this karigar in the Worker
 Database.
+Show `ai.recommendation_label`, never `ai.recommendation`: the second is a code
+(`strong_match | good_match | maybe | weak`). `screening_call` is the newest AI
+screening call (§6b), `null` when none was placed: show `outcome_label` and
+`summary` on the card, and a **View conversation** button when
+`has_conversation` is true, which opens `GET /employer/screening-calls/{id}`.
+`screening_call` is on the applicant list, the shortlisted list, a single
+applicant and the dashboard's `recent_applicants`.
 Worker `phone` / `email` are always sent: an applicant's contact needs **no
 unlock** (changed 9 Oct 2026). `email` is `null` when the karigar has none.
 Unlocks are only for the Worker Database (§7). `stage` is
@@ -506,14 +517,22 @@ agent has no idea what the employer's week looks like.
   "proposed_mode": "site", "employer_confirmed": false,
   "awaiting_confirmation": true, "duration_seconds": 74,
   "failure_reason": null, "created_at": "...", "created_ago": "20 minutes ago",
-  "transcript": [...]
+  "has_conversation": true,
+  "transcript": "assistant: नमस्ते…\nuser: हाँ जी…",          // with ?with_transcript=1
+  "conversation": [                                         // with ?with_transcript=1
+    { "speaker": "agent",   "text": "नमस्ते। क्या आप अभी भी interested हैं?" },
+    { "speaker": "karigar", "text": "हाँ जी।" }
+  ]
 }
 ```
 `status` ∈ `queued | dialing | in_progress | completed | no_answer | busy |
 failed | cancelled`; `outcome` ∈ `interested | not_interested | callback_later |
 already_placed | unclear` (`null` until the call completes). `transcript` is
 only included when you pass `?with_transcript=1` — it is long, so ask for it on
-the call-detail screen only. The worker's phone number is deliberately **not**
+the call-detail screen only. **Show `conversation`, not `transcript`**: it is the
+same text already split into chat turns, `speaker` ∈ `agent | karigar` (agent on
+the left, karigar on the right). `has_conversation` is always sent and says
+whether there is anything to show. The worker's phone number is deliberately **not**
 in this payload; take it from the applicant (ApplicantResource).
 
 ### `GET /employer/applicants/{application}/screening-calls`
@@ -534,6 +553,15 @@ Drive the "Call & schedule" button off `can_call`. When it is `false`,
 | `worker_opted_out` | The worker opted out of automated calls (TRAI). |
 | `call_in_progress` | A call is already on its way. |
 | `already_screened` | This worker has already been screened. |
+
+### `GET /employer/screening-calls/{call}`
+One call, **always with** `transcript` and `conversation`. For the **View
+conversation** screen, opened from the applicant card (`screening_call.id`) or
+the AI Interviews list (`id`, where each row has `has_conversation` too).
+```json
+{ "call": { ...ScreeningCallResource, "conversation": [ ... ] } }
+```
+`403` for a call on another employer's job.
 
 ### `POST /employer/applicants/{application}/screening-calls`
 No body. → `202`

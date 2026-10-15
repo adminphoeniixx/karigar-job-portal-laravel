@@ -48,8 +48,12 @@ class ScreeningCallResource extends JsonResource
             'failure_reason' => $this->failure_reason,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),
+            // Whether "View conversation" has anything to show.
+            'has_conversation' => $this->hasConversation(),
             // Full transcripts are long and only useful on the detail screen.
             'transcript' => $this->when($request->boolean('with_transcript'), $this->transcript),
+            // The same transcript as chat turns: speaker "agent" or "karigar".
+            'conversation' => $this->when($request->boolean('with_transcript'), fn () => $this->conversation()),
         ];
     }
 }

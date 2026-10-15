@@ -189,6 +189,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('employer/applications/{application}/screening-call', [ScreeningController::class, 'store'])->name('screening.store');
         Route::post('employer/screening-calls/{call}/confirm', [ScreeningController::class, 'confirm'])->name('screening.confirm');
         Route::delete('employer/screening-calls/{call}', [ScreeningController::class, 'destroy'])->name('screening.destroy');
+        Route::get('employer/screening-calls/{call}/conversation', [ScreeningController::class, 'conversation'])->name('screening.conversation');
         Route::get('employer/ai-interviews', [AiInterviewController::class, 'index'])->name('employer.ai-interviews');
         Route::post('employer/jobs/{job}/ai-shortlist', [AiShortlistController::class, 'store'])
             ->middleware('throttle:10,60')->name('employer.jobs.ai-shortlist');

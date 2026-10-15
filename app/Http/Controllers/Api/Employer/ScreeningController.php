@@ -93,6 +93,23 @@ class ScreeningController extends Controller
     }
 
     /**
+     * One call with what was said on it, turn by turn — for opening "View
+     * conversation" from the applicant card or the AI Interviews list, where
+     * only the call id is at hand.
+     */
+    public function show(Request $request, ScreeningCall $call): JsonResponse
+    {
+        $application = $call->application;
+        abort_if($application === null, 404);
+        $this->authorize('view', $application->job);
+
+        // Always with the conversation: it is what this endpoint is for.
+        $request->merge(['with_transcript' => true]);
+
+        return response()->json(['call' => new ScreeningCallResource($call)]);
+    }
+
+    /**
      * Take back a booked call that has not rung yet.
      */
     public function destroy(ScreeningCall $call): JsonResponse

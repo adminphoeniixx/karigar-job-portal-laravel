@@ -293,4 +293,14 @@ class JobApplication extends Model
     {
         return $this->hasMany(ScreeningCall::class);
     }
+
+    /**
+     * The newest screening call, for the applicant card.
+     *
+     * @return HasOne<ScreeningCall, $this>
+     */
+    public function latestScreeningCall(): HasOne
+    {
+        return $this->hasOne(ScreeningCall::class)->latestOfMany();
+    }
 }

@@ -2605,7 +2605,7 @@
                 }
               ]
             },
-            "description": "latest_jobs is the top 5 of the karigar's feed; send the phone's lat/lng.\n\n`verification` says whether the karigar can apply (`can_apply`, `message`). `features.verification_required_to_apply` and `features.auto_verification_enabled` drive the KYC prompts."
+            "description": "latest_jobs is the top 5 of the karigar's feed; send the phone's lat/lng. It is a plain array of JobResource (read `latest_jobs`, not `latest_jobs.data`).\n\n`verification` says whether the karigar can apply (`can_apply`, `message`). `features.verification_required_to_apply` and `features.auto_verification_enabled` drive the KYC prompts."
           }
         },
         {

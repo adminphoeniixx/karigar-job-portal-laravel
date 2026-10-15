@@ -493,9 +493,11 @@ feed (see `GET /jobs`): send the phone's `lat`/`lng` for nearest first.
     "kyc_status": "not_submitted", "kyc_status_label": "Not submitted",
     "profile_completion": 70, "unread_notifications": 2
   },
-  "latest_jobs": { "data": [ { ...JobResource } ] }
+  "latest_jobs": [ { ...JobResource } ]
 }
 ```
+`latest_jobs` is a **plain array**, not `{ "data": [...] }` like the paginated
+lists: read `response.latest_jobs`, not `response.latest_jobs.data`.
 
 ### `POST /locale`
 `{ "locale": "hi" }` → `{ "locale": "hi", "supported": [...] }`

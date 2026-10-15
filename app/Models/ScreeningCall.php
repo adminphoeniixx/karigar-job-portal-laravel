@@ -97,4 +97,51 @@ class ScreeningCall extends Model
     {
         return $this->proposed_interview_at !== null && ! $this->employer_confirmed;
     }
+
+    public function hasConversation(): bool
+    {
+        return trim((string) $this->transcript) !== '';
+    }
+
+    /**
+     * The transcript as turns, for showing it like a chat. The agent stores
+     * one "assistant: …" or "user: …" line per utterance; a karigar who
+     * pauses mid-answer comes through as two "user" lines in a row, so
+     * consecutive lines from the same speaker are joined into one turn.
+     *
+     * @return list<array{speaker: 'agent'|'karigar', text: string}>
+     */
+    public function conversation(): array
+    {
+        $turns = [];
+
+        foreach (preg_split('/\R/u', (string) $this->transcript) ?: [] as $line) {
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            if (preg_match('/^(assistant|agent|user|worker)\s*:\s*(.*)$/iu', $line, $m) === 1) {
+                $speaker = in_array(strtolower($m[1]), ['assistant', 'agent'], true) ? 'agent' : 'karigar';
+                $text = trim($m[2]);
+            } else {
+                // A wrapped line with no speaker belongs to the turn before it.
+                $speaker = $turns === [] ? 'agent' : $turns[array_key_last($turns)]['speaker'];
+                $text = $line;
+            }
+
+            if ($text === '') {
+                continue;
+            }
+
+            if ($turns !== [] && $turns[array_key_last($turns)]['speaker'] === $speaker) {
+                $turns[array_key_last($turns)]['text'] .= ' '.$text;
+            } else {
+                $turns[] = ['speaker' => $speaker, 'text' => $text];
+            }
+        }
+
+        return $turns;
+    }
 }

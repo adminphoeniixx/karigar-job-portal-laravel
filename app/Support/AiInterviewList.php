@@ -85,6 +85,8 @@ final class AiInterviewList
             'outcome' => $call->outcome?->value,
             'outcome_label' => $call->outcome?->label(),
             'summary' => $call->summary,
+            // Whether "View conversation" has a transcript to show.
+            'has_conversation' => $call->hasConversation(),
             'failure_reason' => $call->failure_reason,
             'proposed_interview_label' => $call->proposed_interview_at?->format('d M Y, g:i A'),
             'awaiting_confirmation' => $call->awaitingConfirmation(),

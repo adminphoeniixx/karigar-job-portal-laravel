@@ -4,6 +4,7 @@ import { CalendarClock, Check, ChevronDown, FileText, IndianRupee, Lock, Mail, M
 import { computed, ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ScreeningConversation from '@/components/ScreeningConversation.vue';
 import { rupees } from '@/lib/utils';
 
 interface TrackStep { key: string; state: string; at: string | null; result: string | null }
@@ -23,6 +24,7 @@ interface ScreeningCall {
     outcome: string | null;
     outcome_label: string | null;
     summary: string | null;
+    has_conversation: boolean;
     attempt: number;
     proposed_interview_at: string | null;
     proposed_interview_label: string | null;
@@ -215,6 +217,9 @@ const screeningTone: Record<string, string> = {
 
 // Confirm-interview modal: pre-filled with what the worker offered, editable
 // because the employer may not be free then.
+// "View conversation" popup: the call whose transcript is open.
+const conversationFor = ref<number | null>(null);
+
 const confirmFor = ref<ScreeningCall | null>(null);
 const confirmForm = useForm({ interview_at: '', mode: 'site' });
 
@@ -394,6 +399,14 @@ const submitReview = () => {
                         <span class="text-xs text-muted-foreground">{{ a.screening.call.created_ago }}</span>
                     </div>
                     <p v-if="a.screening.call.summary" class="mt-2 text-sm text-muted-foreground">{{ a.screening.call.summary }}</p>
+                    <button
+                        v-if="a.screening.call.has_conversation"
+                        type="button"
+                        class="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-orange-700 hover:underline dark:text-orange-300"
+                        @click="conversationFor = a.screening.call.id"
+                    >
+                        <MessageSquare class="size-3.5" /> {{ $t('applicants.screening.viewConversation') }}
+                    </button>
 
                     <!-- The slot the worker offered, waiting on the employer -->
                     <div v-if="a.screening.call.awaiting_confirmation" class="mt-3 flex flex-wrap items-center gap-2 border-t border-orange-500/20 pt-3">
@@ -595,6 +608,9 @@ const submitReview = () => {
             </div>
         </div>
     </div>
+
+    <!-- What was said on a screening call -->
+    <ScreeningConversation :call-id="conversationFor" @close="conversationFor = null" />
 
     <!-- Confirm the interview the worker proposed on the screening call -->
     <div v-if="confirmFor !== null" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="confirmFor = null">

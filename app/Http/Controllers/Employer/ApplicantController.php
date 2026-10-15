@@ -143,6 +143,7 @@ class ApplicantController extends Controller
                 'outcome' => $call->outcome?->value,
                 'outcome_label' => $call->outcome?->label(),
                 'summary' => $call->summary,
+                'has_conversation' => $call->hasConversation(),
                 'attempt' => $call->attempt,
                 'proposed_interview_at' => $call->proposed_interview_at?->format('Y-m-d\TH:i'),
                 'proposed_interview_label' => $call->proposed_interview_at?->format('d M Y, g:i A'),

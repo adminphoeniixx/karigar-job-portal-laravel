@@ -53,7 +53,7 @@ class DashboardController extends Controller
         // job plan, or kept (ApplicantAccess). The newest few that qualify.
         $access = ApplicantAccess::for($user);
         $recentApplicants = JobApplication::whereIn('job_listing_id', $jobIds)
-            ->with('worker:id,name,email,phone', 'worker.workerProfile', 'worker.kyc', 'job')
+            ->with('worker:id,name,email,phone', 'worker.workerProfile', 'worker.kyc', 'job', 'latestScreeningCall')
             ->latest()
             ->limit(50)
             ->get()

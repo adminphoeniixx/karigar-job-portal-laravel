@@ -9,6 +9,7 @@ use App\Models\ScreeningCall;
 use App\Services\Screening\ScreeningService;
 use App\Support\ReferenceData;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -65,6 +66,27 @@ class ScreeningController extends Controller
             'message' => $callableAt->isFuture()
                 ? __('Call queued for :time.', ['time' => $callableAt->format('d M, g:i A')])
                 : __('Calling the worker now.'),
+        ]);
+    }
+
+    /**
+     * What was said on the call, turn by turn, for the "View conversation"
+     * popup. Fetched when the popup opens, so the applicants page does not
+     * carry every transcript.
+     */
+    public function conversation(ScreeningCall $call): JsonResponse
+    {
+        $application = $call->application;
+        abort_if($application === null, 404);
+        $this->authorize('view', $application->job);
+
+        return response()->json([
+            'id' => $call->id,
+            'worker_name' => $application->worker?->name,
+            'outcome_label' => $call->outcome?->label(),
+            'summary' => $call->summary,
+            'called_label' => ($call->started_at ?? $call->created_at)?->timezone(config('app.display_timezone'))->format('d M Y, g:i A'),
+            'conversation' => $call->conversation(),
         ]);
     }
 

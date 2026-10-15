@@ -24,6 +24,21 @@ class AiMatcher
 
     public function __construct(private AiClient $ai) {}
 
+    /**
+     * The words to show for a recommendation, so an app never prints the
+     * stored code ("strong_match"). Same wording as the web applicants page.
+     */
+    public static function recommendationLabel(?string $recommendation): ?string
+    {
+        return match ($recommendation) {
+            'strong_match' => __('Strong match'),
+            'good_match' => __('Good match'),
+            'maybe' => __('Maybe'),
+            'weak' => __('Weak match'),
+            default => null,
+        };
+    }
+
     public function configured(): bool
     {
         return $this->ai->configured();
