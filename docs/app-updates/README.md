@@ -11,6 +11,7 @@ apps can get its own file in the folder, linked from both.
 
 | Date | Employer app | Worker app |
 |---|---|---|
+| [2026-10-16](2026-10-16/) | [Hand shortlist starts the AI screening call (now or booked for the morning)](2026-10-16/employer-shortlist-starts-ai-call.md) | — |
 | [2026-10-15](2026-10-15/) | [AI call result on the applicant card, View conversation (`GET /employer/screening-calls/{call}`), "Strong match" label](2026-10-15/employer-app.md) | [Home "Latest jobs near you" is a plain array (doc was wrong) · search box finds jobs by city/state](2026-10-15/worker-app.md) |
 | [2026-10-13](2026-10-13/) | — | [AI resume builder: form → AI draft → edit → PDF resume; `GET /worker/resume/file`](2026-10-13/worker-app.md) |
 | [2026-10-12](2026-10-12/) | [Business verification checked automatically (PAN/GST, DigiLocker), instant approval · Worker Database: free reject, distance + area, "unlocked by"](2026-10-12/employer-app.md) · [30-day plans, job post limits](2026-10-12/employer-plans-30-days-job-post-limits.md) · [AI Interviews + booking AI calls](2026-10-12/employer-ai-interviews-and-call-scheduling.md) · [AI shortlist from database](2026-10-12/employer-ai-shortlist-from-database.md) · [Job safety check](2026-10-12/employer-job-safety-check.md) · [Applicant card fixes: no "Contact unlocked", rejected buttons, distance line](2026-10-12/employer-applicant-card-fixes.md) | [KYC needed to apply; DigiLocker Aadhaar, instant approval · faster "Jobs near" · karigar's area](2026-10-12/worker-app.md) |

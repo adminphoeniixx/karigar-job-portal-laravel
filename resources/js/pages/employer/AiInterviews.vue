@@ -64,6 +64,7 @@ const statusTone: Record<string, string> = {
 const sourceLabel: Record<string, string> = {
     manual: 'Booked by you',
     auto: 'After AI shortlist',
+    shortlist: 'After your shortlist',
     retry: 'Retry',
     invite: 'AI database pick',
 };

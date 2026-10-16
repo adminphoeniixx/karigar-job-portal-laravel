@@ -144,7 +144,7 @@ class ScreeningService
      * Create the call row and dial. Returns null when the application is not
      * callable — the reason is available from {@see blocker()}.
      */
-    public function start(JobApplication $application, int $attempt = 1, ?ScreeningCall $scheduled = null): ?ScreeningCall
+    public function start(JobApplication $application, int $attempt = 1, ?ScreeningCall $scheduled = null, ?string $source = null, ?User $by = null): ?ScreeningCall
     {
         if ($this->blocker($application, $scheduled) !== null) {
             return null;
@@ -158,6 +158,8 @@ class ScreeningService
             'job_application_id' => $application->id,
             'worker_id' => $application->worker_id,
             'attempt' => $attempt,
+            'source' => $source,
+            'scheduled_by' => $by?->id,
         ]);
         $call->fill([
             'provider' => $this->agent->name(),
@@ -364,7 +366,39 @@ class ScreeningService
             return $this->schedule($application, null, $source, $by);
         }
 
-        return $this->start($application);
+        return $this->start($application, source: $source, by: $by);
+    }
+
+    /**
+     * Ring (or book a call to) an applicant the employer just shortlisted by
+     * hand. Same switches as the auto-shortlist call: the admin's and the
+     * job's. Null when calls are off or the applicant cannot be called.
+     */
+    public function onShortlisted(JobApplication $application, ?User $by = null): ?ScreeningCall
+    {
+        if (! $this->autoEnabled() || ! $application->job->ai_call_enabled) {
+            return null;
+        }
+
+        return $this->callOrSchedule($application, 'shortlist', $by);
+    }
+
+    /**
+     * What to tell the employer about the call a shortlist set off.
+     */
+    public static function shortlistMessage(?ScreeningCall $call): string
+    {
+        if ($call === null || $call->status === ScreeningCallStatus::Failed) {
+            return __('Applicant shortlisted — the worker has been notified.');
+        }
+
+        if ($call->status === ScreeningCallStatus::Scheduled) {
+            return __('Applicant shortlisted — AI call booked for :time.', [
+                'time' => $call->scheduled_at->timezone(config('app.display_timezone'))->format('d M, g:i A'),
+            ]);
+        }
+
+        return __('Applicant shortlisted — the AI is calling them now.');
     }
 
     /**

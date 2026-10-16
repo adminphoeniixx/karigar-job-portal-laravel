@@ -438,6 +438,10 @@ note, the job address and a number to call. See
 
 ### `POST /employer/applicants/{application}/shortlist`
 Toggle shortlist. Shortlisting notifies + emails the worker; un-shortlisting is silent.
+When AI screening calls are on (admin setting + the job's `ai_call_enabled`),
+shortlisting also rings the worker: right away inside calling hours, otherwise
+booked for the morning (call `source: "shortlist"`). `message` says which, and
+`applicant.screening_call` carries the new call. Show `message` as sent.
 → `{ "message", "applicant": { ...ApplicantResource } }`
 
 ### `POST /employer/applicants/{application}/interview`

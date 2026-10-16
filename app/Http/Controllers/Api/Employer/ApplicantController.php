@@ -12,6 +12,7 @@ use App\Notifications\ApplicationStatusNotification;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ShortlistedNotification;
 use App\Services\ApplicantAccess;
+use App\Services\Screening\ScreeningService;
 use App\Support\ApplicantSignals;
 use App\Support\ReferenceData;
 use App\Support\TemplatedMailer;
@@ -147,7 +148,7 @@ class ApplicantController extends Controller
     /**
      * Shortlist / un-shortlist an applicant. Shortlisting notifies the worker.
      */
-    public function toggleShortlist(JobApplication $application): JsonResponse
+    public function toggleShortlist(Request $request, JobApplication $application, ScreeningService $screening): JsonResponse
     {
         $this->authorize('view', $application->job);
 
@@ -176,8 +177,13 @@ class ApplicantController extends Controller
             'action_url' => url('/worker/applications'),
         ]);
 
+        // The AI rings them to ask if they're still keen and when they could
+        // interview, just as it does after an auto-shortlist.
+        $call = $screening->onShortlisted($application, $request->user());
+        $application->load('latestScreeningCall');
+
         return response()->json([
-            'message' => __('Applicant shortlisted — the worker has been notified.'),
+            'message' => ScreeningService::shortlistMessage($call),
             'applicant' => new ApplicantResource($application),
         ]);
     }

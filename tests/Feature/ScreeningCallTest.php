@@ -654,3 +654,58 @@ it('does not call when the employer switched the AI call off on the job', functi
     expect($this->application->refresh()->shortlisted_at)->not->toBeNull();
     Queue::assertNotPushed(PlaceScreeningCall::class);
 });
+
+it('calls the applicant when the employer shortlists them by hand', function () {
+    Setting::set(ScreeningService::ENABLED_KEY, '1');
+
+    $this->actingAs($this->employer)
+        ->post("/employer/applications/{$this->application->id}/shortlist")
+        ->assertRedirect()
+        ->assertSessionHas('toast.message', 'Applicant shortlisted — the AI is calling them now.');
+
+    $call = ScreeningCall::sole();
+
+    expect($call->status)->toBe(ScreeningCallStatus::Dialing)
+        ->and($call->source)->toBe('shortlist')
+        ->and($call->scheduled_by)->toBe($this->employer->id);
+});
+
+it('books the shortlist call for the morning outside calling hours', function () {
+    Setting::set(ScreeningService::ENABLED_KEY, '1');
+    config(['screening.window.start' => '10:00', 'screening.window.end' => '19:00']);
+    $this->travelTo(now('Asia/Kolkata')->setTime(22, 0));
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->postJson("/api/v1/employer/applicants/{$this->application->id}/shortlist")
+        ->assertOk()
+        ->assertJsonPath('message', fn (string $message) => str_starts_with($message, 'Applicant shortlisted — AI call booked for'))
+        ->assertJsonPath('applicant.screening_call.status', ScreeningCallStatus::Scheduled->value);
+
+    $call = ScreeningCall::sole();
+
+    expect($call->status)->toBe(ScreeningCallStatus::Scheduled)
+        ->and($call->source)->toBe('shortlist')
+        ->and($call->scheduled_at->timezone('Asia/Kolkata')->format('H:i'))->toBe('10:00');
+});
+
+it('shortlists by hand without calling while screening calls are off', function () {
+    Setting::set(ScreeningService::ENABLED_KEY, '0');
+
+    $this->actingAs($this->employer)
+        ->post("/employer/applications/{$this->application->id}/shortlist")
+        ->assertSessionHas('toast.message', 'Applicant shortlisted — the worker has been notified.');
+
+    expect($this->application->refresh()->shortlisted_at)->not->toBeNull()
+        ->and(ScreeningCall::count())->toBe(0);
+});
+
+it('does not call a hand-shortlisted applicant when the job has the AI call off', function () {
+    Setting::set(ScreeningService::ENABLED_KEY, '1');
+    $this->job->update(['ai_call_enabled' => false]);
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->postJson("/api/v1/employer/applicants/{$this->application->id}/shortlist")
+        ->assertOk();
+
+    expect(ScreeningCall::count())->toBe(0);
+});

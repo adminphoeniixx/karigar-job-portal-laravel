@@ -268,7 +268,7 @@ class ApplicantController extends Controller
      * Shortlist (or un-shortlist) an applicant. Shortlisting notifies the
      * worker in-app and by email.
      */
-    public function toggleShortlist(JobApplication $application): RedirectResponse
+    public function toggleShortlist(Request $request, JobApplication $application, ScreeningService $screening): RedirectResponse
     {
         // Recruiters can shortlist too.
         $this->authorize('view', $application->job);
@@ -298,9 +298,13 @@ class ApplicantController extends Controller
             'action_url' => url('/worker/applications'),
         ]);
 
+        // The AI rings them to ask if they're still keen and when they could
+        // interview, just as it does after an auto-shortlist.
+        $call = $screening->onShortlisted($application, $request->user());
+
         return back()->with('toast', [
             'type' => 'success',
-            'message' => __('Applicant shortlisted — the worker has been notified.'),
+            'message' => ScreeningService::shortlistMessage($call),
         ]);
     }
 }
