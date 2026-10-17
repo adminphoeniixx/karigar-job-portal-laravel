@@ -165,11 +165,17 @@ class CallScript
         // at a full stop — about half a second at a "।", next to nothing at a
         // comma — so "नमस्ते।" on its own is what keeps the opening from
         // sounding like it was said in a single breath.
+        //
+        // The call is recorded (the employer can listen to it afterwards), and
+        // the worker is told so before anything else is asked: telling someone
+        // up front is the honest way, and the plain way to stay within Indian
+        // law on recording calls. Short and in Devanagari like the rest.
+        // Nothing about the job is in it, so the shared-phone rule above holds.
         $who = $name !== null
             ? sprintf('क्या मेरी बात %s से हो रही है?', $name)
             : 'क्या मेरी बात उन्हीं से हो रही है जिन्होंने हमारे यहाँ job के लिए apply किया था?';
 
-        return sprintf('नमस्ते। मैं %s से बोल रही हूँ। %s', $brand, $who);
+        return sprintf('नमस्ते। मैं %s से बोल रही हूँ। यह कॉल रिकॉर्ड हो रही है। %s', $brand, $who);
     }
 
     private static function instructions(string $brand, User $employer, JobListing $job, string $language, ?string $name): string

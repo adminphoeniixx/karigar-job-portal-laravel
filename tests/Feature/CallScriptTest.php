@@ -68,6 +68,8 @@ it('opens by checking who answered, without announcing an AI call', function () 
 
     expect($greeting)->toContain('Super Karigar')
         ->toContain('क्या मेरी बात Ramesh Kumar से हो रही है?')
+        // Told the call is recorded before anything is asked.
+        ->toContain('यह कॉल रिकॉर्ड हो रही है।')
         ->not->toContain('AI')
         ->not->toContain('(Test)')
         ->not->toContain('Plumber');

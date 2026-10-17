@@ -47,6 +47,7 @@ export default {
     },
     nav: {
         aiInterviews: 'AI ইন্টারভিউ',
+        aiCredits: 'AI ক্রেডিট',
         dashboard: 'ড্যাশবোর্ড',
         jobs: 'কাজ',
         myJobs: 'আমার কাজ',
@@ -293,6 +294,7 @@ export default {
             conversationWith: '{name}-এর সঙ্গে কথোপকথন',
             conversationFailed: 'কথোপকথন লোড করা যায়নি। আবার চেষ্টা করুন।',
             conversationEmpty: 'এই কলে কোনো কথোপকথন রেকর্ড হয়নি।',
+            recording: 'কল রেকর্ডিং',
             agent: 'AI সহকারী',
             karigar: 'কারিগর',
             modes: { site: 'কাজের জায়গায়', phone: 'ফোন', video: 'ভিডিও' },

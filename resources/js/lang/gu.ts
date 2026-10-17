@@ -47,6 +47,7 @@ export default {
     },
     nav: {
         aiInterviews: 'AI ઇન્ટરવ્યૂ',
+        aiCredits: 'AI ક્રેડિટ',
         dashboard: 'ડેશબોર્ડ',
         jobs: 'નોકરીઓ',
         myJobs: 'મારી નોકરીઓ',
@@ -293,6 +294,7 @@ export default {
             conversationWith: '{name} સાથે વાતચીત',
             conversationFailed: 'વાતચીત લોડ થઈ શકી નહીં. ફરી પ્રયાસ કરો.',
             conversationEmpty: 'આ કૉલ પર કોઈ વાતચીત રેકોર્ડ થઈ નથી.',
+            recording: 'કૉલ રેકોર્ડિંગ',
             agent: 'AI સહાયક',
             karigar: 'કારીગર',
             modes: { site: 'કામની જગ્યાએ', phone: 'ફોન', video: 'વીડિયો' },

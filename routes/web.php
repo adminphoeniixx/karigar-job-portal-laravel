@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AiCreditController as AdminAiCreditController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Auth\PhoneOtpController;
 use App\Http\Controllers\Auth\RoleAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeleteAccountController;
+use App\Http\Controllers\Employer\AiCreditController;
 use App\Http\Controllers\Employer\AiInterviewController;
 use App\Http\Controllers\Employer\AiShortlistController;
 use App\Http\Controllers\Employer\ApplicantController;
@@ -219,6 +221,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('employer/workers/{worker}/reject', [WorkerDirectoryController::class, 'reject'])->name('workers.reject');
         Route::delete('employer/workers/{worker}/reject', [WorkerDirectoryController::class, 'restore'])->name('workers.restore');
 
+        // AI call credits: balance, recharge packs and the ledger.
+        Route::get('employer/ai-credits', [AiCreditController::class, 'index'])->name('employer.ai-credits');
+        Route::post('employer/ai-credits/packs/{pack}/checkout', [AiCreditController::class, 'checkout'])->name('employer.ai-credits.checkout');
+        Route::post('employer/ai-credits/callback', [AiCreditController::class, 'callback'])->name('employer.ai-credits.callback');
+
         // Subscriptions
         Route::get('subscription', [SubscriptionController::class, 'pricing'])->name('subscription.pricing');
         Route::post('subscription/{plan}/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
@@ -253,6 +260,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('users/{user}/unsuspend', [AdminUserController::class, 'unsuspend'])->name('users.unsuspend');
     Route::post('users/{user}/quota', [AdminUserController::class, 'updateQuota'])->name('users.quota');
     Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+
+    // AI call credits: rate, packs, every employer's ledger, manual adjust.
+    Route::get('ai-credits', [AdminAiCreditController::class, 'index'])->name('ai-credits.index');
+    Route::patch('ai-credits/settings', [AdminAiCreditController::class, 'updateSettings'])->name('ai-credits.settings');
+    Route::post('ai-credits/packs', [AdminAiCreditController::class, 'storePack'])->name('ai-credits.packs.store');
+    Route::patch('ai-credits/packs/{pack}', [AdminAiCreditController::class, 'updatePack'])->name('ai-credits.packs.update');
+    Route::delete('ai-credits/packs/{pack}', [AdminAiCreditController::class, 'destroyPack'])->name('ai-credits.packs.destroy');
+    Route::post('ai-credits/adjust', [AdminAiCreditController::class, 'adjust'])->name('ai-credits.adjust');
 
     // Subscription plans & limits (incl. worker-database contact quota)
     Route::get('plans', [AdminPlanController::class, 'index'])->name('plans.index');

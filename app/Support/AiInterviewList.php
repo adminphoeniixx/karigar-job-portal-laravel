@@ -85,6 +85,7 @@ final class AiInterviewList
             'outcome' => $call->outcome?->value,
             'outcome_label' => $call->outcome?->label(),
             'summary' => $call->summary,
+            'credits_charged' => $call->credits_charged,
             // Whether "View conversation" has a transcript to show.
             'has_conversation' => $call->hasConversation(),
             'failure_reason' => $call->failure_reason,

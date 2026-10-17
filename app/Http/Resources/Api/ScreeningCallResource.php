@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api;
 
 use App\Enums\ScreeningCallStatus;
 use App\Models\ScreeningCall;
+use App\Services\Screening\CallRecordings;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -45,11 +46,18 @@ class ScreeningCallResource extends JsonResource
             'employer_confirmed' => $this->employer_confirmed,
             'awaiting_confirmation' => $this->awaitingConfirmation(),
             'duration_seconds' => $this->duration_seconds,
+            // AI call credits this call took; null when it was free (not picked up).
+            'credits_charged' => $this->credits_charged,
             'failure_reason' => $this->failure_reason,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),
             // Whether "View conversation" has anything to show.
             'has_conversation' => $this->hasConversation(),
+            // The call's audio (mono MP3). A signed link that works for
+            // CallRecordings::LINK_MINUTES with no token, so hand it straight
+            // to the audio player; re-fetch the call for a fresh one.
+            'has_recording' => $this->hasRecording(),
+            'recording_url' => app(CallRecordings::class)->url($this->resource),
             // Full transcripts are long and only useful on the detail screen.
             'transcript' => $this->when($request->boolean('with_transcript'), $this->transcript),
             // The same transcript as chat turns: speaker "agent" or "karigar".

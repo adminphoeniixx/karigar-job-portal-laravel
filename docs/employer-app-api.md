@@ -260,12 +260,20 @@ both or neither (a night shift may end before it starts) · `perks.*` any text
 `requires_worker_fee` boolean (defaults false;
 `worker_fee_amount` required when true) · `expires_at` optional, after today ·
 `ai_shortlist_enabled` / `ai_call_enabled` optional booleans (a new job gets
-both `true`; an edit that leaves them out keeps what the job had).
+both `true`; an edit that leaves them out keeps what the job had). AI calls are
+paid for with AI call credits (§6c): a new job that leaves `ai_call_enabled`
+out while the account is short of credits gets it **switched off** rather than
+refused.
 
 **Posting gate** — `422` before anything is created:
 - `"Subscribe to a plan to post jobs."` — no active plan and the free first post
   is used up / switched off in admin.
 - `"You have reached your plan's job posting limit."` — plan limit hit.
+- `code: "ai_credits_required"` — the job goes live with `ai_call_enabled: true`
+  and the account has fewer credits than `ai.credits.min_for_job`. The body
+  carries `ai_credits` (the §6c summary). Offer **Recharge** or switching AI
+  calls off. Drafts are never refused, and a live job whose AI calls were
+  already on can still be edited.
 
 No `latitude`/`longitude` but an `address` or `city`: the server finds the map
 pin from the address (or city and state), as the web form does.
@@ -278,8 +286,13 @@ What the Post Job form offers:
 { "category_skills": { "Weaving": ["Handloom weaving", "Powerloom operation", "Dyeing", ...], ... },
   "perks": ["ESI", "PF", "Food", "Accommodation", ..., "Diwali bonus"],
   "shifts": ["day", "night", "rotational", "flexible"],
-  "ai": { "shortlist_available": true, "call_available": false } }
+  "ai": { "shortlist_available": true, "call_available": false,
+          "credits": { "enabled": true, "balance": 4, "min_for_job": 10, "can_enable": false } } }
 ```
+`ai.credits.can_enable: false` → show the AI call switch off and disabled, with
+"AI call credits: 4 · needs at least 10 to switch AI calls on" and a
+**Recharge credits** link to the credits screen. `enabled: false` means the
+admin made AI calls free: hide the credits line.
 `ai` says which of the job's AI switches the admin has on platform-wide. Show a
 switch that is `false` here disabled, with "Switched off by the admin". See
 `docs/app-ai-switches-and-karigar-verification.md`.
@@ -522,6 +535,8 @@ agent has no idea what the employer's week looks like.
   "awaiting_confirmation": true, "duration_seconds": 74,
   "failure_reason": null, "created_at": "...", "created_ago": "20 minutes ago",
   "has_conversation": true,
+  "has_recording": true,
+  "recording_url": "https://superkarigar.com/api/v1/screening-calls/7/recording?expires=…&signature=…",
   "transcript": "assistant: नमस्ते…\nuser: हाँ जी…",          // with ?with_transcript=1
   "conversation": [                                         // with ?with_transcript=1
     { "speaker": "agent",   "text": "नमस्ते। क्या आप अभी भी interested हैं?" },
@@ -536,7 +551,19 @@ only included when you pass `?with_transcript=1` — it is long, so ask for it o
 the call-detail screen only. **Show `conversation`, not `transcript`**: it is the
 same text already split into chat turns, `speaker` ∈ `agent | karigar` (agent on
 the left, karigar on the right). `has_conversation` is always sent and says
-whether there is anything to show. The worker's phone number is deliberately **not**
+whether there is anything to show.
+
+**Call recording.** `recording_url` is the call's audio, one mono MP3 with both
+voices (`null` while `has_recording` is false: the agent uploads it a few
+seconds after the result, and calls that were not picked up have none). It is a
+**signed link that needs no token**: hand it straight to the audio player
+(just_audio / ExoPlayer / AVPlayer), no `Authorization` header. It works for
+**2 hours**; after that it answers 403, so re-fetch the call for a fresh link
+rather than caching it. The server answers byte-range requests, so seeking works
+and iOS plays it. Show a play bar with a seek slider at the top of the **View
+conversation** screen, above the summary.
+
+The worker's phone number is deliberately **not**
 in this payload; take it from the applicant (ApplicantResource).
 
 ### `GET /employer/applicants/{application}/screening-calls`
@@ -557,6 +584,7 @@ Drive the "Call & schedule" button off `can_call`. When it is `false`,
 | `worker_opted_out` | The worker opted out of automated calls (TRAI). |
 | `call_in_progress` | A call is already on its way. |
 | `already_screened` | This worker has already been screened. |
+| `no_credits` | Not enough AI call credits for one more call. Link to the credits screen (§6c). |
 
 ### `GET /employer/screening-calls/{call}`
 One call, **always with** `transcript` and `conversation`. For the **View
@@ -592,6 +620,101 @@ Send `interview_at` only to **move** the slot (must be in the future); `mode` is
 one of the interview modes from `GET /reference`. `422 { "code":
 "no_proposed_slot" }` when the call produced no time to confirm — e.g. the
 worker said no, or never answered.
+
+---
+
+## 6c. AI call credits 🔒
+
+AI screening calls are paid for from a prepaid balance of **AI call credits**.
+The admin sets the rate (default **1 credit = 1 minute**), the packs and their
+prices. Rules, also sent as `rules` for the app to show:
+
+- Charged **per started minute**: a 2 min 10 s call is 3 minutes.
+- Only a call the worker **picked up** is charged; no answer, busy and failed
+  calls are free.
+- While a call is on the line it **holds** enough credits for its longest
+  possible run (`max_call_minutes`); the rest comes back when it ends. So
+  `available` = `balance` − `held`.
+- No credits for one more call → the call is not placed (`no_credits`, §6b), a
+  booked call is cancelled with `failure_reason: "no_credits"`, and the
+  employer gets a push `type: "ai_credits.low"`.
+- Credits never expire. Recruiters and managers see the account's balance; only
+  the owner buys.
+
+### `GET /employer/ai-credits`
+```json
+{
+  "credits": {
+    "enabled": true,            // false = admin made AI calls free; hide the screen's balance warnings
+    "balance": 48, "held": 0, "available": 48,
+    "per_minute": 1, "minutes": 48,
+    "min_for_job": 10, "can_enable_on_job": true,
+    "low": false,               // under the admin's alert line: show a warning
+    "max_call_minutes": 6
+  },
+  "packs": [
+    { "id": 2, "name": "Growth", "price": 999, "gst_amount": 179.82, "price_with_gst": 1178.82,
+      "credits": 90, "bonus_credits": 10, "total_credits": 100, "minutes": 100, "popular": true }
+  ],
+  "rules": ["1 credit = 1 minute of AI calling.", "Charged per started minute: …", "…"],
+  "totals": { "added": 100, "spent": 52, "calls": 14, "recharged_amount": 1178.82 },
+  "can_buy": true,              // owner and payments on
+  "billing_email": "accounts@company.in",
+  "payment": { "configured": true, "key": "rzp_live_xxx" }
+}
+```
+
+### `GET /employer/ai-credits/ledger?filter=all|added|spent&page=1&per_page=20`
+Every change to the balance, newest first:
+```json
+{
+  "data": [
+    { "id": 31, "type": "call", "type_label": "AI call", "direction": "debit",
+      "credits": -3, "balance_after": 45,
+      "description": "AI call — Ramesh Kumar · Plumber for apartment project · 2 min 14 s",
+      "seconds": 134, "screening_call_id": 88, "amount_paid": null, "invoice": null,
+      "created_at": "2026-10-16T09:12:00+00:00", "created_label": "16 Oct 2026, 2:42 PM" },
+    { "id": 30, "type": "recharge", "type_label": "Recharge", "direction": "credit",
+      "credits": 90, "balance_after": 48, "description": "Recharge — Growth pack",
+      "amount_paid": 1178.82,
+      "invoice": { "id": 12, "number": "KRG/26-27/00012", "url": "…/api/v1/employer/invoices/12",
+                   "pdf_url": "…/pdf", "web_url": "…", "web_pdf_url": "…" } }
+  ],
+  "meta": { "current_page": 1, "last_page": 3, "per_page": 20, "total": 47 },
+  "balance": 45
+}
+```
+`type`: `recharge` · `bonus` (with a pack) · `welcome` (admin's gift to new
+employers) · `call` · `admin_credit` / `admin_debit` (by Super Karigar, the
+reason is the `description`) · `refund`. `screening_call_id` opens the call
+(`GET /employer/screening-calls/{call}`).
+
+### `POST /employer/ai-credits/packs/{pack}/checkout` (owner only)
+Body `{ "email": "accounts@company.in" }`, optional: where the GST invoice goes
+(saved on the account, same as plan checkout).
+```json
+// 201
+{ "purchase_id": 7, "razorpay_order_id": "order_Nxyz", "razorpay_key": "rzp_live_xxx",
+  "amount_paise": 117882, "currency": "INR",
+  "pack": { ...as in packs }, "amounts": { "subtotal": 999, "gst_percent": 18, "gst": 179.82,
+  "cgst": 89.91, "sgst": 89.91, "igst": 0, "place_of_supply": "Haryana (06)", "total": 1178.82 },
+  "billing_email": "accounts@company.in" }
+```
+Open the Razorpay checkout SDK with `key: razorpay_key`, `order_id:
+razorpay_order_id`, `amount: amount_paise`. This is a **one-time order**, not a
+subscription. `403` for a team member, `422 payments_off`, `502 checkout_failed`.
+
+### `POST /employer/ai-credits/callback`
+Send the three values the SDK returns on success:
+```json
+{ "razorpay_payment_id": "pay_xxx", "razorpay_order_id": "order_xxx", "razorpay_signature": "…" }
+// 200
+{ "message": "100 AI call credits added.", "credits": { ...as above }, "invoice_id": 12 }
+// 422 { "code": "verification_failed" }
+```
+Safe to retry: the credits and the GST invoice are added once. If the app dies
+before calling this, the Razorpay webhook credits the purchase anyway, so on
+reopening just re-fetch `GET /employer/ai-credits`.
 
 ---
 
@@ -1175,6 +1298,7 @@ Content is English only for now.
 | GET/POST/PATCH/DELETE | `/employer/jobs`, `/employer/jobs/{job}`, `/close`, `/matches`, `/invite`, `/employer/jobs/suggest-description` | 5 |
 | GET/PATCH/POST/DELETE | `/employer/jobs/{job}/applicants`, `/employer/shortlisted`, `/employer/applicants/{application}` (+ `/status`, `/shortlist`, `/unlock`, `/interview`, `/resume`), `/employer/jobs/{job}/rescore` | 6 |
 | GET/POST | `/employer/applicants/{application}/screening-calls` · `/employer/screening-calls/{call}/confirm` | 6b |
+| GET/POST | `/employer/ai-credits` (+ `/ledger`, `/packs/{pack}/checkout`, `/callback`) | 6c |
 | GET | `/employer/workers` · `/employer/workers/{worker}` | 7 |
 | GET/POST | `/employer/kyc` | 8 |
 | GET/POST | `/notifications` (+ `/{id}/read`, `/read-all`) · `/device-tokens` | 9 |

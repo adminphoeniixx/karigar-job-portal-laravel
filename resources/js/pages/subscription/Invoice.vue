@@ -6,6 +6,8 @@ import { computed } from 'vue';
 interface Invoice {
     number: string;
     date: string | null;
+    kind?: 'plan' | 'ai_credits';
+    item?: { title: string; detail: string };
     plan: { name: string; interval: string; interval_label?: string; price: number };
     coupon_code: string | null;
     discount: number | null;
@@ -39,6 +41,8 @@ const halfRate = computed(() => Number(props.invoice.gst_percent ?? 0) / 2);
 const inr = (v: string | number | null) => (v == null ? '—' : '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2 }));
 
 const printInvoice = () => window.print();
+
+const isCredits = computed(() => props.invoice.kind === 'ai_credits');
 </script>
 
 <template>
@@ -46,8 +50,8 @@ const printInvoice = () => window.print();
 
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
         <div class="flex items-center justify-between print:hidden">
-            <Link href="/subscription" class="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">
-                <ArrowLeft class="size-4" /> Back to subscription
+            <Link :href="isCredits ? '/employer/ai-credits' : '/subscription'" class="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">
+                <ArrowLeft class="size-4" /> {{ isCredits ? 'Back to AI credits' : 'Back to subscription' }}
             </Link>
             <div class="flex items-center gap-2">
                 <a
@@ -116,9 +120,9 @@ const printInvoice = () => window.print();
                 <tbody>
                     <tr class="border-b">
                         <td class="py-3.5">
-                            <div class="font-medium">{{ invoice.plan.name }} plan — subscription</div>
-                            <div class="text-xs capitalize text-muted-foreground">
-                                Billed every {{ invoice.plan.interval_label ?? invoice.plan.interval }}<template v-if="invoice.sac"> · SAC {{ invoice.sac }}</template>
+                            <div class="font-medium">{{ invoice.item?.title ?? `${invoice.plan.name} plan — subscription` }}</div>
+                            <div class="text-xs text-muted-foreground">
+                                {{ invoice.item?.detail ?? `Billed every ${invoice.plan.interval_label ?? invoice.plan.interval}` }}<template v-if="invoice.sac"> · SAC {{ invoice.sac }}</template>
                             </div>
                         </td>
                         <td class="py-3.5 text-right tabular-nums">{{ inr(invoice.plan.price) }}</td>

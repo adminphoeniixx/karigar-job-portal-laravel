@@ -246,6 +246,46 @@ HTML,
                 'placeholders' => ['app_name', 'employer_name', 'plan_name', 'invoice_number', 'invoice_date', 'amount_before_tax', 'gst_breakup', 'total_paid', 'valid_until', 'action_url'],
                 'is_active' => true,
             ],
+            [
+                'key' => 'ai_credits_recharged',
+                'name' => 'AI call credits recharged, with tax invoice (to employer)',
+                'description' => 'Sent once an AI call credit recharge goes through. The tax invoice is attached as a PDF.',
+                'subject' => 'AI call credits added — tax invoice {{ invoice_number }}',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>Thank you — your recharge has gone through and <strong>{{ credits }} AI call credits</strong> are in your account.</p>
+<table cellpadding="0" cellspacing="0" style="margin:20px 0;border-collapse:collapse;">
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Invoice</td><td style="padding:6px 0;font-weight:600;">{{ invoice_number }} ({{ invoice_date }})</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Pack</td><td style="padding:6px 0;">{{ plan_name }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Price</td><td style="padding:6px 0;">{{ amount_before_tax }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">GST</td><td style="padding:6px 0;">{{ gst_breakup }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Total paid</td><td style="padding:6px 0;font-weight:600;">{{ total_paid }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Balance now</td><td style="padding:6px 0;font-weight:600;">{{ balance }} credits</td></tr>
+</table>
+<p>Your tax invoice is attached to this email as a PDF. Credits never expire.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#bf3a16;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">See your credits</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'plan_name', 'credits', 'balance', 'invoice_number', 'invoice_date', 'amount_before_tax', 'gst_breakup', 'total_paid', 'action_url'],
+                'is_active' => true,
+            ],
+            [
+                'key' => 'ai_credits_low',
+                'name' => 'AI call credits low or used up (to employer)',
+                'description' => 'Sent when the employer’s AI call credits drop below the alert level in Admin → AI Credits, or run out while calls are waiting.',
+                'subject' => 'Your AI call credits: {{ balance }} left',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>{{ headline }}</p>
+<p>AI calls ring your shortlisted applicants, ask if they are still interested and when they can come for an interview. Recharge to keep them going.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#bf3a16;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Recharge credits</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'balance', 'headline', 'action_url'],
+                'is_active' => true,
+            ],
         ];
     }
 }

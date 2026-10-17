@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Auth\OtpAuthController;
 use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DeviceTokenController;
+use App\Http\Controllers\Api\Employer\AiCreditController;
 use App\Http\Controllers\Api\Employer\AiInterviewController;
 use App\Http\Controllers\Api\Employer\AiShortlistController;
 use App\Http\Controllers\Api\Employer\ApplicantController as EmployerApplicantController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\LegalController;
 use App\Http\Controllers\Api\LocaleController;
 use App\Http\Controllers\Api\PreferenceController;
 use App\Http\Controllers\Api\ReferenceController;
+use App\Http\Controllers\Api\ScreeningRecordingController;
 use App\Http\Controllers\Api\ScreeningWebhookController;
 use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\SupportController;
@@ -69,6 +71,12 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
     // Guarded by a shared secret, not a session — the provider has none.
     Route::post('webhooks/screening-call', ScreeningWebhookController::class)
         ->name('api.webhooks.screening');
+    Route::post('webhooks/screening-call/recording', [ScreeningWebhookController::class, 'recording'])
+        ->name('api.webhooks.screening.recording');
+
+    // ---- Public, signed: an AI call's recording, for the audio player ----
+    Route::get('screening-calls/{call}/recording', ScreeningRecordingController::class)
+        ->middleware('signed')->name('api.screening.recording');
 
     // ---- Public: Terms & Privacy and Help & Support ----
     // Readable without an account: the OTP screen links to the legal documents
@@ -230,6 +238,11 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             Route::get('employer/screening-calls/{call}', [ScreeningController::class, 'show'])->name('api.employer.screening.show');
             Route::post('employer/screening-calls/{call}/confirm', [ScreeningController::class, 'confirm'])->name('api.employer.screening.confirm');
             Route::delete('employer/screening-calls/{call}', [ScreeningController::class, 'destroy'])->name('api.employer.screening.destroy');
+            // AI call credits: balance + packs, ledger, recharge via Razorpay.
+            Route::get('employer/ai-credits', [AiCreditController::class, 'index'])->name('api.employer.ai-credits');
+            Route::get('employer/ai-credits/ledger', [AiCreditController::class, 'ledger'])->name('api.employer.ai-credits.ledger');
+            Route::post('employer/ai-credits/packs/{pack}/checkout', [AiCreditController::class, 'checkout'])->name('api.employer.ai-credits.checkout');
+            Route::post('employer/ai-credits/callback', [AiCreditController::class, 'callback'])->name('api.employer.ai-credits.callback');
             // Every AI call across the account's jobs: ?filter=upcoming|done|all
             Route::get('employer/ai-interviews', [AiInterviewController::class, 'index'])->name('api.employer.ai-interviews');
             // AI picks karigars from the database for a job and invites them.

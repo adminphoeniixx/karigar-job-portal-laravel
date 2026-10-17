@@ -17,6 +17,8 @@ interface Conversation {
     summary: string | null;
     called_label: string | null;
     conversation: Turn[];
+    // Signed link to the call's audio; null until the agent has uploaded it.
+    recording_url: string | null;
 }
 
 const props = defineProps<{ callId: number | null }>();
@@ -72,6 +74,11 @@ watch(
                 <p v-if="loading" class="text-sm text-muted-foreground">{{ $t('common.loading') }}</p>
                 <p v-else-if="failed" class="text-sm text-rose-600">{{ $t('applicants.screening.conversationFailed') }}</p>
                 <template v-else-if="data">
+                    <div v-if="data.recording_url" class="mb-4">
+                        <p class="mb-1.5 text-xs font-semibold text-muted-foreground">{{ $t('applicants.screening.recording') }}</p>
+                        <audio :src="data.recording_url" controls preload="metadata" class="w-full" />
+                    </div>
+
                     <p v-if="data.summary" class="mb-4 rounded-xl bg-muted/50 px-3 py-2 text-sm text-muted-foreground">{{ data.summary }}</p>
 
                     <p v-if="!data.conversation.length" class="text-sm text-muted-foreground">{{ $t('applicants.screening.conversationEmpty') }}</p>

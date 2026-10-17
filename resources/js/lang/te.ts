@@ -47,6 +47,7 @@ export default {
     },
     nav: {
         aiInterviews: 'AI ఇంటర్వ్యూలు',
+        aiCredits: 'AI క్రెడిట్స్',
         dashboard: 'డాష్‌బోర్డ్',
         jobs: 'ఉద్యోగాలు',
         myJobs: 'నా ఉద్యోగాలు',
@@ -293,6 +294,7 @@ export default {
             conversationWith: '{name}తో సంభాషణ',
             conversationFailed: 'సంభాషణను లోడ్ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి.',
             conversationEmpty: 'ఈ కాల్‌లో సంభాషణ ఏదీ రికార్డ్ కాలేదు.',
+            recording: 'కాల్ రికార్డింగ్',
             agent: 'AI సహాయకుడు',
             karigar: 'కారిగర్',
             modes: { site: 'పని ప్రదేశంలో', phone: 'ఫోన్', video: 'వీడియో' },

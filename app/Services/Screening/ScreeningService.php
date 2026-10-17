@@ -10,8 +10,10 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ScreeningCallCompleted;
+use App\Services\AiCredits;
 use App\Support\ReferenceData;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -32,6 +34,9 @@ class ScreeningService
 {
     /** Admin → Settings key: place a call automatically on auto-shortlist. */
     public const ENABLED_KEY = 'ai_screening_call_enabled';
+
+    /** @var array<int, bool> account id => can pay for one more call */
+    private array $canPay = [];
 
     public function __construct(private readonly VoiceAgent $agent) {}
 
@@ -116,7 +121,41 @@ class ScreeningService
             return 'already_screened';
         }
 
+        // Paid for with the employer's AI call credits: enough for one more
+        // call's longest run, on top of what calls on the line hold.
+        // Memoised per account: the applicants list asks this for every row.
+        // start() checks again, fresh and under a lock, before it dials.
+        $canPay = $ignore === null
+            ? ($this->canPay[$application->job->employer_id] ??= $this->creditsFor($application)->canPlaceCall())
+            : $this->creditsFor($application)->canPlaceCall($ignore);
+
+        if (! $canPay) {
+            return 'no_credits';
+        }
+
         return null;
+    }
+
+    /**
+     * The wallet that pays for calls on this application: the job's employer
+     * account.
+     */
+    private function creditsFor(JobApplication $application): AiCredits
+    {
+        $application->loadMissing('job.employer');
+
+        return AiCredits::for($application->job->employer);
+    }
+
+    /**
+     * A call held back for want of credits: tell the employer (twice a day at
+     * most), so shortlisted applicants do not sit there uncalled unnoticed.
+     */
+    private function noteBlocked(JobApplication $application, ?string $blocker): void
+    {
+        if ($blocker === 'no_credits') {
+            $this->creditsFor($application)->alertOutOfCredits();
+        }
     }
 
     /**
@@ -136,6 +175,7 @@ class ScreeningService
             'call_in_progress' => __('A call is already on its way.'),
             'call_scheduled' => __('An AI call is already scheduled for this applicant.'),
             'already_screened' => __('This worker has already been screened.'),
+            'no_credits' => __('Not enough AI call credits. Recharge to call this applicant.'),
             default => __('This applicant cannot be called right now.'),
         };
     }
@@ -146,7 +186,9 @@ class ScreeningService
      */
     public function start(JobApplication $application, int $attempt = 1, ?ScreeningCall $scheduled = null, ?string $source = null, ?User $by = null): ?ScreeningCall
     {
-        if ($this->blocker($application, $scheduled) !== null) {
+        if (($blocker = $this->blocker($application, $scheduled)) !== null) {
+            $this->noteBlocked($application, $blocker);
+
             return null;
         }
 
@@ -161,11 +203,34 @@ class ScreeningService
             'source' => $source,
             'scheduled_by' => $by?->id,
         ]);
-        $call->fill([
-            'provider' => $this->agent->name(),
-            'status' => ScreeningCallStatus::Queued,
-            'language' => $script->language,
-        ])->save();
+        // Checked again under a lock on the paying account: two calls placed
+        // at the same moment must not both spend the last credits. Once this
+        // row is saved as queued it holds its share of the balance.
+        $placed = DB::transaction(function () use ($application, $call, $scheduled, $script) {
+            if (AiCredits::enabled()) {
+                User::whereKey($application->job->employer_id)->lockForUpdate()->first();
+
+                if (! $this->creditsFor($application)->canPlaceCall($scheduled)) {
+                    return false;
+                }
+            }
+
+            $call->fill([
+                'provider' => $this->agent->name(),
+                'status' => ScreeningCallStatus::Queued,
+                'language' => $script->language,
+            ])->save();
+
+            unset($this->canPay[$application->job->employer_id]);
+
+            return true;
+        });
+
+        if (! $placed) {
+            $this->noteBlocked($application, 'no_credits');
+
+            return null;
+        }
 
         try {
             $providerCallId = $this->agent->place($call, $script, (string) $this->phoneFor($application));
@@ -230,6 +295,17 @@ class ScreeningService
         ]);
 
         $call->refresh()->loadMissing('application.job.employer', 'worker');
+
+        // The worker talked: charge the employer's credits for the minutes.
+        // A failure here must not lose the call's result, so it is reported
+        // and the webhook carries on.
+        if ($call->application?->job?->employer !== null) {
+            try {
+                AiCredits::for($call->application->job->employer)->chargeCall($call);
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
 
         if ($result->status->isRetryable()) {
             $this->scheduleRetry($call);
@@ -415,7 +491,9 @@ class ScreeningService
         int $attempt = 1,
         bool $force = false,
     ): ?ScreeningCall {
-        if (! $force && $this->blocker($application) !== null) {
+        if (! $force && ($blocker = $this->blocker($application)) !== null) {
+            $this->noteBlocked($application, $blocker);
+
             return null;
         }
 
@@ -447,6 +525,10 @@ class ScreeningService
 
         if ($blocker !== null) {
             $call->update(['status' => ScreeningCallStatus::Cancelled, 'failure_reason' => $blocker, 'ended_at' => now()]);
+
+            if ($application !== null) {
+                $this->noteBlocked($application, $blocker);
+            }
 
             return $call;
         }

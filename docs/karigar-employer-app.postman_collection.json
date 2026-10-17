@@ -92,6 +92,11 @@
     {
       "key": "kyc_reference",
       "value": ""
+    },
+    {
+      "key": "pack_id",
+      "value": "1",
+      "type": "string"
     }
   ],
   "item": [
@@ -1526,7 +1531,7 @@
                 "screening-calls"
               ]
             },
-            "description": "Calls placed for this applicant, newest first, plus `can_call` / `blocked_because`. Drive the \"Call & schedule\" button off `can_call`; when false show `blocked_because` as the disabled reason (`provider_not_configured`, `no_caller_id`, `application_closed`, `interview_already_scheduled`, `no_phone_number`, `worker_opted_out`, `call_in_progress`, `already_screened`). Pass `?with_transcript=1` on the detail screen to include transcripts.\n\nAdd `?with_transcript=1` for `transcript` and `conversation` on each call."
+            "description": "Calls placed for this applicant, newest first, plus `can_call` / `blocked_because`. Drive the \"Call & schedule\" button off `can_call`; when false show `blocked_because` as the disabled reason (`provider_not_configured`, `no_caller_id`, `application_closed`, `interview_already_scheduled`, `no_phone_number`, `worker_opted_out`, `call_in_progress`, `already_screened`, `no_credits`). Pass `?with_transcript=1` on the detail screen to include transcripts.\n\nAdd `?with_transcript=1` for `transcript` and `conversation` on each call."
           }
         },
         {
@@ -1748,6 +1753,159 @@
               ]
             },
             "description": "Every AI screening call across the account's jobs. filter = upcoming | done | all; `counts` for the tab badges."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Call Credits",
+      "description": "Prepaid credits that pay for AI screening calls. 1 credit = 1 minute by default (admin-set), charged per started minute, only when the worker picks up. See docs/employer-app-api.md §6c.",
+      "item": [
+        {
+          "name": "Balance, packs and rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/ai-credits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "ai-credits"
+              ]
+            },
+            "description": "`credits` (balance, held, available, minutes, min_for_job, can_enable_on_job, low), `packs` (price, price_with_gst, total_credits, minutes, popular), `rules` (lines to show under the packs), `totals`, `can_buy` (owner only), `billing_email`, `payment.key`."
+          }
+        },
+        {
+          "name": "Ledger",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/ai-credits/ledger?filter=all&page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "ai-credits",
+                "ledger"
+              ],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "all"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Every credit added or spent, newest first. `filter` = all | added | spent; `per_page` 5–50. Each row: type, type_label, direction, credits (signed), balance_after, description, invoice (for recharges)."
+          }
+        },
+        {
+          "name": "Recharge: open checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/ai-credits/packs/{{pack_id}}/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "ai-credits",
+                "packs",
+                "{{pack_id}}",
+                "checkout"
+              ]
+            },
+            "description": "Owner only (403 otherwise). Returns `razorpay_order_id`, `razorpay_key`, `amount_paise`, `amounts` (GST breakup). Open the Razorpay SDK with order_id = razorpay_order_id. `email` is optional: where the GST invoice goes when the account has none.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"accounts@company.in\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Recharge: confirm payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/ai-credits/callback",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "ai-credits",
+                "callback"
+              ]
+            },
+            "description": "Send what the Razorpay SDK returned. Credits land once, even if this is retried or the webhook got there first. Returns the new `credits` summary and `invoice_id`. 422 `verification_failed` on a bad signature.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_payment_id\": \"pay_xxx\",\n  \"razorpay_order_id\": \"order_xxx\",\n  \"razorpay_signature\": \"...\"\n}"
+            }
           }
         }
       ]

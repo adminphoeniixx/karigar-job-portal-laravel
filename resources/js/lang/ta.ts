@@ -47,6 +47,7 @@ export default {
     },
     nav: {
         aiInterviews: 'AI நேர்காணல்கள்',
+        aiCredits: 'AI கிரெடிட்ஸ்',
         dashboard: 'டாஷ்போர்டு',
         jobs: 'வேலைகள்',
         myJobs: 'என் வேலைகள்',
@@ -293,6 +294,7 @@ export default {
             conversationWith: '{name} உடன் உரையாடல்',
             conversationFailed: 'உரையாடலை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
             conversationEmpty: 'இந்த அழைப்பில் உரையாடல் எதுவும் பதிவாகவில்லை.',
+            recording: 'அழைப்பு பதிவு',
             agent: 'AI உதவியாளர்',
             karigar: 'கைவினைஞர்',
             modes: { site: 'வேலை இடத்தில்', phone: 'தொலைபேசி', video: 'வீடியோ' },

@@ -81,8 +81,8 @@
         <tbody>
             <tr>
                 <td>
-                    <b>{{ $invoice['plan']['name'] }} plan — subscription</b>
-                    <div class="muted small">Billed {{ $invoice['plan']['interval'] }}</div>
+                    <b>{{ $invoice['item']['title'] }}</b>
+                    <div class="muted small">{{ $invoice['item']['detail'] }}</div>
                 </td>
                 <td>{{ $invoice['sac'] ?: '—' }}</td>
                 <td class="right">{{ $inr($invoice['plan']['price']) }}</td>

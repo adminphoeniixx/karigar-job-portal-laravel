@@ -81,6 +81,13 @@ return [
     'slot_window_days' => (int) env('SCREENING_SLOT_WINDOW_DAYS', 5),
 
     /*
+    | The longest a call may run before the agent cuts it off — the same
+    | variable the agent service reads. AI credits hold enough for this
+    | while a call is on the line.
+    */
+    'max_call_seconds' => (int) env('SCREENING_MAX_CALL_SECONDS', 300),
+
+    /*
     |--------------------------------------------------------------------------
     | Webhook
     |--------------------------------------------------------------------------

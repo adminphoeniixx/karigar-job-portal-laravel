@@ -31,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property bool $employer_confirmed
  * @property string|null $summary
  * @property string|null $transcript
+ * @property string|null $recording_path
  * @property string|null $failure_reason
  * @property Carbon|null $started_at
  * @property Carbon|null $ended_at
@@ -55,10 +56,12 @@ class ScreeningCall extends Model
         'employer_confirmed',
         'summary',
         'transcript',
+        'recording_path',
         'failure_reason',
         'started_at',
         'ended_at',
         'duration_seconds',
+        'credits_charged',
     ];
 
     protected function casts(): array
@@ -96,6 +99,11 @@ class ScreeningCall extends Model
     public function awaitingConfirmation(): bool
     {
         return $this->proposed_interview_at !== null && ! $this->employer_confirmed;
+    }
+
+    public function hasRecording(): bool
+    {
+        return filled($this->recording_path);
     }
 
     public function hasConversation(): bool

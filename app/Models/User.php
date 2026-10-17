@@ -56,6 +56,9 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'suspended_at' => 'datetime',
+            'ai_credits' => 'integer',
+            'ai_welcome_credited_at' => 'datetime',
+            'ai_low_credit_alerted_at' => 'datetime',
             'role' => UserRole::class,
             'preferences' => 'array',
         ];
@@ -261,6 +264,16 @@ class User extends Authenticatable implements PasskeyUser
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class, 'employer_id');
+    }
+
+    /**
+     * This employer account's AI call credit ledger, one row per change.
+     *
+     * @return HasMany<AiCreditEntry, $this>
+     */
+    public function aiCreditEntries(): HasMany
+    {
+        return $this->hasMany(AiCreditEntry::class, 'employer_id');
     }
 
     /**

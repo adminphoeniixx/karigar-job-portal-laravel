@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SubscriptionStatus;
+use App\Models\AiCreditPurchase;
 use App\Models\Subscription;
+use App\Services\Billing\AiCreditCheckout;
 use App\Services\RazorpayService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -11,7 +13,7 @@ use Illuminate\Support\Carbon;
 
 class RazorpayWebhookController extends Controller
 {
-    public function handle(Request $request, RazorpayService $razorpay): Response
+    public function handle(Request $request, RazorpayService $razorpay, AiCreditCheckout $credits): Response
     {
         $signature = $request->header('X-Razorpay-Signature', '');
 
@@ -20,6 +22,21 @@ class RazorpayWebhookController extends Controller
         }
 
         $event = $request->input('event');
+
+        // An AI credit recharge: a one-time order, not a subscription. This
+        // credits it even when the employer closed the app before the
+        // checkout's own callback reached us.
+        if (in_array($event, ['payment.captured', 'order.paid'], true)) {
+            $orderId = $request->input('payload.payment.entity.order_id') ?? $request->input('payload.order.entity.id');
+            $purchase = $orderId ? AiCreditPurchase::where('razorpay_order_id', $orderId)->first() : null;
+
+            if ($purchase !== null) {
+                $credits->confirm($purchase, $request->input('payload.payment.entity.id') ?? $purchase->razorpay_payment_id);
+
+                return response('ok', 200);
+            }
+        }
+
         $entity = $request->input('payload.subscription.entity', []);
         $razorpaySubId = $entity['id'] ?? null;
 

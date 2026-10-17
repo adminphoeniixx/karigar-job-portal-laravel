@@ -7,6 +7,7 @@ use App\Http\Requests\JobListingRequest;
 use App\Models\JobListing;
 use App\Models\User;
 use App\Notifications\NewJobNotification;
+use App\Services\AiCredits;
 use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
 use App\Services\JobRepost;
@@ -133,9 +134,15 @@ class JobListingController extends Controller
             ]);
         }
 
+        $data = $request->validated();
+
+        // AI calls are paid for with credits: switching them on needs some.
+        if ($creditBlock = AiCredits::jobGate($account, $data)) {
+            return back()->withErrors(['ai_call_enabled' => $creditBlock])->with('toast', ['type' => 'error', 'message' => $creditBlock]);
+        }
+
         // Safety check: a job that looks harmful is held as a draft for review,
         // spending nothing from the plan.
-        $data = $request->validated();
         $held = $gate !== null ? JobModeration::screen($data) : null;
         $gate = $held === null ? $gate : null;
 
@@ -243,8 +250,13 @@ class JobListingController extends Controller
             return back()->with('toast', ['type' => 'error', 'message' => $gate['message']]);
         }
 
-        // Safety check when it goes live, or a live job's words change.
         $data = $request->validated();
+
+        if ($creditBlock = AiCredits::jobGate($account, $data, $job)) {
+            return back()->withErrors(['ai_call_enabled' => $creditBlock])->with('toast', ['type' => 'error', 'message' => $creditBlock]);
+        }
+
+        // Safety check when it goes live, or a live job's words change.
         $held = JobModeration::needsCheck($data, $job) ? JobModeration::screen($data, $job) : null;
         $gate = $held === null ? $gate : null;
 

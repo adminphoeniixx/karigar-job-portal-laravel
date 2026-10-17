@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\PlaceScreeningCall;
 use App\Models\JobApplication;
 use App\Models\ScreeningCall;
+use App\Services\Screening\CallRecordings;
 use App\Services\Screening\ScreeningService;
 use App\Support\ReferenceData;
 use Carbon\CarbonImmutable;
@@ -24,7 +25,10 @@ use Illuminate\Http\Request;
  */
 class ScreeningController extends Controller
 {
-    public function __construct(private readonly ScreeningService $screening) {}
+    public function __construct(
+        private readonly ScreeningService $screening,
+        private readonly CallRecordings $recordings,
+    ) {}
 
     /**
      * Queue a screening call to this applicant. Held until the permitted
@@ -87,6 +91,7 @@ class ScreeningController extends Controller
             'summary' => $call->summary,
             'called_label' => ($call->started_at ?? $call->created_at)?->timezone(config('app.display_timezone'))->format('d M Y, g:i A'),
             'conversation' => $call->conversation(),
+            'recording_url' => $this->recordings->url($call),
         ]);
     }
 

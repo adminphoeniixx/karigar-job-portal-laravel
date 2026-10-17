@@ -23,11 +23,14 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 import aiohttp
+import av
 from dotenv import load_dotenv
 from livekit import api
 from livekit.agents import (
@@ -82,6 +85,8 @@ TTS_PACE = float(os.getenv("SCREENING_TTS_PACE", "0.8"))
 
 WEBHOOK_URL = os.environ["SCREENING_WEBHOOK_URL"]
 WEBHOOK_SECRET = os.environ["SCREENING_WEBHOOK_SECRET"]
+# Where the call's audio goes, next to the result webhook unless set.
+RECORDING_URL = os.getenv("SCREENING_RECORDING_URL") or WEBHOOK_URL.rstrip("/") + "/recording"
 
 # Models. Plain "provider/model" strings run on LiveKit Inference — no separate
 # accounts or keys. Swap TTS to a Sarvam plugin here if the Indic voices win the
@@ -493,11 +498,20 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
         },
     )
 
+    # Talk time starts here, when the worker has answered: what the employer
+    # is charged for, so ringing and the extraction afterwards stay out of it.
+    talk_started = time.monotonic()
+
     await session.start(
         room=ctx.room,
         agent=ScreeningAgent(
             instructions=meta["instructions"], tools=[end_call], on_end_call=finished.set
         ),
+        # LiveKit's own recorder: the worker's audio and ours, side by side, to
+        # audio.ogg in the job's session directory, closed when the session is.
+        # Audio only. Traces, logs and transcript would go to LiveKit Cloud,
+        # which a self-hosted server does not have anyway.
+        record={"audio": True, "traces": False, "logs": False, "transcript": False},
     )
 
     # The call ends on whichever comes first: the worker hangs up, the agent
@@ -596,6 +610,8 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
         except Exception:
             logger.exception("could not hang up the call", extra={"call_id": call_id})
 
+    talk_seconds = round(time.monotonic() - talk_started)
+
     # Registered rather than awaited here, and that is the difference between
     # a result and an "extraction_failed".
     #
@@ -612,8 +628,13 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     # work is allowed to take as long as it takes. Nothing in it needs the
     # room: the transcript is already in memory and the rest is two HTTP
     # calls.
+    #
+    # The recording goes up last, on its own request: by now the session is
+    # closed, so audio.ogg is complete, and a slow or failed upload cannot cost
+    # the call its outcome.
     async def finish() -> None:
-        await report(call_id, **await extract(session, meta))
+        await report(call_id, duration_seconds=talk_seconds, **await extract(session, meta))
+        await upload_recording(call_id, ctx.session_directory / "audio.ogg")
 
     ctx.add_shutdown_callback(finish)
     ctx.shutdown()
@@ -754,6 +775,87 @@ async def report(call_id: str | None, **fields: Any) -> None:
                     logger.error("webhook rejected %s: %s", response.status, await response.text())
             except aiohttp.ClientError:
                 logger.exception("webhook unreachable")
+
+            await asyncio.sleep(2**attempt)
+
+
+def to_mp3(source: Path) -> Path:
+    """
+    The recorder's stereo Ogg (worker in one ear, agent in the other) as a
+    mono MP3: both voices in both ears, which is how a phone call sounds, and
+    a format every browser and phone plays. Ogg does not play on an iPhone.
+    48 kbps is plenty for audio that crossed a phone line; ~1 MB for 3 min.
+    """
+    target = source.with_suffix(".mp3")
+
+    with av.open(str(source)) as inp, av.open(str(target), "w", format="mp3") as out:
+        stream = out.add_stream("libmp3lame", rate=24000, layout="mono")
+        stream.bit_rate = 48_000
+        resampler = av.AudioResampler(format="fltp", layout="mono", rate=24000)
+
+        def write(frame: av.AudioFrame | None) -> None:
+            for resampled in resampler.resample(frame):
+                for packet in stream.encode(resampled):
+                    out.mux(packet)
+
+        for frame in inp.decode(audio=0):
+            frame.pts = None
+            write(frame)
+
+        write(None)
+        for packet in stream.encode(None):
+            out.mux(packet)
+
+    return target
+
+
+async def upload_recording(call_id: str | None, source: Path) -> None:
+    """
+    Send the call's audio to Laravel, which keeps it on BunnyCDN. Best effort:
+    the result is already in, and a call without its recording is still a
+    call, so this logs and gives up rather than holding the job open.
+    """
+    if not call_id:
+        # A rehearsal: nothing to attach it to. `console --record` keeps the
+        # file in the console's session directory if you want to listen.
+        return
+
+    if not source.is_file():
+        logger.warning("no recording to upload", extra={"call_id": call_id})
+        return
+
+    try:
+        recording = await asyncio.to_thread(to_mp3, source)
+    except Exception:
+        logger.exception("could not convert the recording", extra={"call_id": call_id})
+        return
+
+    async with aiohttp.ClientSession() as http:
+        for attempt in range(3):
+            form = aiohttp.FormData()
+            form.add_field("call_id", call_id)
+            form.add_field(
+                "recording",
+                recording.read_bytes(),
+                filename=f"{call_id}.mp3",
+                content_type="audio/mpeg",
+            )
+
+            try:
+                async with http.post(
+                    RECORDING_URL,
+                    data=form,
+                    headers={"X-Screening-Signature": WEBHOOK_SECRET, "Accept": "application/json"},
+                    timeout=aiohttp.ClientTimeout(total=60),
+                ) as response:
+                    if response.status < 300:
+                        return
+
+                    logger.error(
+                        "recording upload rejected %s: %s", response.status, await response.text()
+                    )
+            except aiohttp.ClientError:
+                logger.exception("recording upload failed")
 
             await asyncio.sleep(2**attempt)
 

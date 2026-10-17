@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\SubscriptionStatus;
+use App\Models\AiCreditEntry;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\AiCredits;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -70,4 +72,13 @@ function giveJobPlan(User $employer): Subscription
         'employer_id' => $employer->id, 'plan_id' => $plan->id,
         'status' => SubscriptionStatus::Active->value, 'starts_at' => now(), 'ends_at' => now()->addMonth(),
     ]);
+}
+
+/**
+ * AI call credits on an employer account, as an admin top-up. AI screening
+ * calls take credits, so tests that place calls start with some.
+ */
+function giveCredits(User $employer, int $credits = 1000): void
+{
+    AiCredits::for($employer)->record(AiCreditEntry::TYPE_ADMIN_CREDIT, $credits, 'Test credits');
 }

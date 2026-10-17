@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\JobListing;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\AiCredits;
 use App\Services\Screening\ScreeningService;
 
 /**
@@ -54,7 +55,7 @@ final class JobFormOptions
     }
 
     /**
-     * @return array{category_skills: array<string, list<string>>, perks: list<string>, shifts: list<string>, ai: array{shortlist_available: bool, call_available: bool}}
+     * @return array{category_skills: array<string, list<string>>, perks: list<string>, shifts: list<string>, ai: array<string, mixed>}
      */
     public static function for(User $account): array
     {
@@ -62,7 +63,27 @@ final class JobFormOptions
             'category_skills' => Category::cachedSkillsMap(),
             'perks' => self::perks($account),
             'shifts' => ReferenceData::SHIFTS,
-            'ai' => self::ai(),
+            'ai' => [...self::ai(), 'credits' => self::credits($account)],
+        ];
+    }
+
+    /**
+     * The AI call credits the job form shows beside the AI call switch. With
+     * `can_enable` false the switch needs a recharge first.
+     *
+     * @return array{enabled: bool, balance: int, min_for_job: int, can_enable: bool}
+     */
+    public static function credits(User $account): array
+    {
+        $wallet = AiCredits::for($account);
+        $wallet->grantWelcome();
+
+        return [
+            // Off: AI calls are free and need no credits.
+            'enabled' => AiCredits::enabled(),
+            'balance' => $wallet->balance(),
+            'min_for_job' => AiCredits::jobMinimum(),
+            'can_enable' => $wallet->meetsJobMinimum(),
         ];
     }
 }

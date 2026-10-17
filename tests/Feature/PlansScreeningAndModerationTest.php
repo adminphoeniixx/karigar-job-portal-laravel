@@ -34,6 +34,7 @@ beforeEach(function () {
     $this->employer = User::factory()->create(['role' => UserRole::Employer->value]);
     $this->employer->employerProfile()->create(['company_name' => 'Sri Sai Interiors', 'city' => 'Jaipur', 'state' => 'Rajasthan']);
     giveJobPlan($this->employer);
+    giveCredits($this->employer);
 
     $this->job = $this->employer->jobListings()->create([
         'title' => 'Handloom weaver', 'description' => 'Weave sarees on a handloom.', 'category' => 'Weaving',

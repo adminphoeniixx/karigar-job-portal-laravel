@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\WorkerProfile;
 use App\Notifications\JobInviteNotification;
 use App\Notifications\NewJobNotification;
+use App\Services\AiCredits;
 use App\Services\ContactUnlocks;
 use App\Services\JobDescriptionWriter;
 use App\Services\JobPostingGate;
@@ -103,9 +104,19 @@ class JobController extends Controller
             ], 422);
         }
 
+        $data = $request->validated();
+
+        // AI calls are paid for with credits: switching them on needs some.
+        if ($creditBlock = AiCredits::jobGate($account, $data)) {
+            return response()->json([
+                'message' => $creditBlock,
+                'code' => 'ai_credits_required',
+                'ai_credits' => AiCredits::for($account)->summary(),
+            ], 422);
+        }
+
         // Safety check: a job that looks harmful is held as a draft for review,
         // spending nothing from the plan.
-        $data = $request->validated();
         $held = $gate !== null ? JobModeration::screen($data) : null;
         $gate = $held === null ? $gate : null;
 
@@ -155,8 +166,17 @@ class JobController extends Controller
 
         $wasActive = $job->status === JobStatus::Active;
 
-        // Safety check when it goes live, or a live job's words change.
         $data = $request->validated();
+
+        if ($creditBlock = AiCredits::jobGate($account, $data, $job)) {
+            return response()->json([
+                'message' => $creditBlock,
+                'code' => 'ai_credits_required',
+                'ai_credits' => AiCredits::for($account)->summary(),
+            ], 422);
+        }
+
+        // Safety check when it goes live, or a live job's words change.
         $held = JobModeration::needsCheck($data, $job) ? JobModeration::screen($data, $job) : null;
         $gate = $held === null ? $gate : null;
 

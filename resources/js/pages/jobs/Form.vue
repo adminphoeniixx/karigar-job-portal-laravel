@@ -56,7 +56,12 @@ const props = defineProps<{
     categorySkills: Record<string, string[]>;
     perkOptions: string[];
     // Which AI switches the admin has on platform-wide; the rest show disabled.
-    aiOptions: { shortlist_available: boolean; call_available: boolean };
+    aiOptions: {
+        shortlist_available: boolean;
+        call_available: boolean;
+        // AI calls are paid for with credits; `can_enable` false = recharge first.
+        credits?: { enabled: boolean; balance: number; min_for_job: number; can_enable: boolean };
+    };
 }>();
 
 const isEdit = props.job !== null;
@@ -98,7 +103,8 @@ const form = useForm({
     requires_worker_fee: props.job?.requires_worker_fee ?? false,
     worker_fee_amount: props.job?.worker_fee_amount ?? '',
     ai_shortlist_enabled: props.job?.ai_shortlist_enabled ?? true,
-    ai_call_enabled: props.job?.ai_call_enabled ?? true,
+    // A new job starts with AI calls on only when there are credits to pay for them.
+    ai_call_enabled: props.job?.ai_call_enabled ?? (props.aiOptions.credits?.can_enable ?? true),
 });
 
 // The chosen category's skills; the employer can still type any other.
@@ -123,6 +129,12 @@ const addPerk = () => {
     newPerk.value = '';
 };
 
+// Switching AI calls on needs credits, unless the job already had them on.
+const credits = computed(() => props.aiOptions.credits);
+const needsRecharge = computed(
+    () => !!credits.value?.enabled && !credits.value.can_enable && !(props.job?.ai_call_enabled && props.job?.published_at),
+);
+
 // A switch the admin has off stays visible but disabled, with the reason.
 const aiSwitches = computed(() => [
     {
@@ -136,7 +148,7 @@ const aiSwitches = computed(() => [
         key: 'ai_call_enabled' as const,
         title: 'jobForm.aiCall',
         desc: 'jobForm.aiCallDesc',
-        available: props.aiOptions.call_available && form.ai_shortlist_enabled,
+        available: props.aiOptions.call_available && form.ai_shortlist_enabled && (!needsRecharge.value || form.ai_call_enabled),
         note: !props.aiOptions.call_available ? 'jobForm.aiOffByAdmin' : !form.ai_shortlist_enabled ? 'jobForm.aiCallNeedsShortlist' : null,
     },
 ]);
@@ -666,6 +678,21 @@ const submit = () => {
                             </span>
                             <input v-model="form[sw.key]" type="checkbox" :disabled="!sw.available" class="mt-1 size-5 shrink-0 accent-orange-600" />
                         </label>
+                        <!-- AI calls are paid for with credits -->
+                        <div
+                            v-if="aiOptions.call_available && credits?.enabled"
+                            class="flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-3 text-xs"
+                            :class="needsRecharge ? 'bg-amber-500/10 text-amber-800 dark:text-amber-200' : 'bg-muted/60 text-muted-foreground'"
+                        >
+                            <span>
+                                {{ $t('jobForm.aiCredits', { balance: credits.balance }) }}
+                                <template v-if="needsRecharge"> · {{ $t('jobForm.aiCreditsNeeded', { min: credits.min_for_job }) }}</template>
+                            </span>
+                            <a href="/employer/ai-credits" target="_blank" class="font-semibold text-orange-700 underline-offset-2 hover:underline dark:text-orange-300">
+                                {{ $t('jobForm.aiCreditsRecharge') }}
+                            </a>
+                        </div>
+                        <InputError :message="form.errors.ai_call_enabled" />
                     </div>
                 </section>
 

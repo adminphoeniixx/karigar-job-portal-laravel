@@ -228,6 +228,33 @@ Expected body:
 A slot in the past is treated as a mis-transcription and dropped. A repeat
 callback for a call already finished is ignored, so provider retries are safe.
 
+`duration_seconds` is talk time, from the worker answering to the hang-up, and
+is what the employer's AI call credits are charged on. Without it the charge
+falls back to `started_at` → `ended_at`, which includes the ringing.
+
+### 6. Recording
+
+Every answered call is recorded by the agent with LiveKit's own recorder
+(`session.start(record={"audio": True, ...})`): the worker on one channel and
+the agent on the other, in an Ogg file in the job's session directory. When the
+call is over and the result has been posted, the agent mixes it down to one
+mono MP3 (48 kbps, ~1 MB for 3 minutes, plays on iPhones too) and uploads it on
+its own request, so a failed upload never costs the call its result:
+
+```
+POST https://superkarigar.com/api/v1/webhooks/screening-call/recording
+X-Screening-Signature: <SCREENING_WEBHOOK_SECRET>
+Content-Type: multipart/form-data   call_id=…  recording=<file.mp3>
+```
+
+The agent works this URL out from `SCREENING_WEBHOOK_URL` + `/recording`
+(override with `SCREENING_RECORDING_URL`). Laravel keeps the file on the
+`private` disk (BunnyCDN, `private/call-recordings/`), the same as resumes, and
+saves the path in `screening_calls.recording_path`. Employers play it through
+a signed, 2-hour link (`GET /api/v1/screening-calls/{call}/recording`), served
+from a local copy so byte-range requests work. The copy in
+`storage/app/recording-cache/` is only a cache and is rebuilt after a deploy.
+
 ## Testing without a phone line
 
 Every carrier wants money or a KYC review before it will let you dial out, and
@@ -430,6 +457,8 @@ the call is dropped rather than dialled at the wrong hour.
 | `POST` | `/api/v1/employer/applicants/{application}/screening-calls` | employer |
 | `POST` | `/api/v1/employer/screening-calls/{call}/confirm` | employer |
 | `POST` | `/api/v1/webhooks/screening-call` | provider |
+| `POST` | `/api/v1/webhooks/screening-call/recording` | provider (the agent) |
+| `GET` | `/api/v1/screening-calls/{call}/recording` | signed link from `recording_url` |
 
 `confirm` accepts optional `interview_at` and `mode` so the employer can move
 the slot the worker suggested rather than accepting it as-is.

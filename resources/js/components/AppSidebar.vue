@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Bookmark, BriefcaseBusiness, Building2, ChartColumn, ClipboardCheck, CreditCard, Crown, FileText, Gauge, HardHat, Layers, LayoutGrid, Mail, MessageSquare, PhoneCall, Plus, Search, Send, Settings, ShieldCheck, Sparkles, Star, Tags, TicketPercent, UserRound, Users, UsersRound } from '@lucide/vue';
+import { Bookmark, BriefcaseBusiness, Building2, ChartColumn, ClipboardCheck, Coins, CreditCard, Crown, FileText, Gauge, HardHat, Layers, LayoutGrid, Mail, MessageSquare, PhoneCall, Plus, Search, Send, Settings, ShieldCheck, Sparkles, Star, Tags, TicketPercent, UserRound, Users, UsersRound } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLogo from '@/components/AppLogo.vue';
@@ -40,6 +40,7 @@ const navByRole = computed((): Record<string, NavItem[]> => ({
         { title: t('nav.postJob'), href: '/employer/jobs/create', icon: Plus },
         { title: t('nav.shortlisted'), href: '/employer/shortlisted', icon: Star },
         { title: t('nav.aiInterviews'), href: '/employer/ai-interviews', icon: PhoneCall },
+        { title: t('nav.aiCredits'), href: '/employer/ai-credits', icon: Coins },
         { title: t('nav.messages'), href: '/messages', icon: MessageSquare, badge: chatUnread.value },
         { title: t('nav.findWorkers'), href: '/employer/workers', icon: Users },
         { title: t('nav.team'), href: '/employer/team', icon: UsersRound },
@@ -59,6 +60,7 @@ const navByRole = computed((): Record<string, NavItem[]> => ({
         { title: 'KYC Review', href: '/admin/kyc', icon: ClipboardCheck },
         { title: 'Categories', href: '/admin/categories', icon: Tags },
         { title: 'Plans & Limits', href: '/admin/plans', icon: Layers },
+        { title: 'AI Credits', href: '/admin/ai-credits', icon: Coins },
         { title: 'Coupons', href: '/admin/coupons', icon: TicketPercent },
         { title: 'Email Templates', href: '/admin/email-templates', icon: Mail },
         { title: 'Push Notifications', href: '/admin/push-notifications', icon: Send },

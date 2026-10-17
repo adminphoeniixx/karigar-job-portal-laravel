@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\DB;
  * of that payment, so later price or GST changes never rewrite it.
  *
  * @property int $id
- * @property int $subscription_id
+ * @property int|null $subscription_id
+ * @property int|null $ai_credit_purchase_id
  * @property int $employer_id
  * @property int $cycle
  * @property string $number
@@ -30,7 +31,7 @@ use Illuminate\Support\Facades\DB;
 class Invoice extends Model
 {
     protected $fillable = [
-        'subscription_id', 'employer_id', 'cycle', 'number', 'financial_year', 'sequence',
+        'subscription_id', 'ai_credit_purchase_id', 'employer_id', 'cycle', 'number', 'financial_year', 'sequence',
         'issued_at', 'razorpay_payment_id', 'plan_name', 'period_start', 'period_end',
         'discount_amount', 'subtotal_amount', 'gst_percent', 'gst_amount',
         'cgst_amount', 'sgst_amount', 'igst_amount', 'total_amount',
@@ -109,6 +110,45 @@ class Invoice extends Model
     }
 
     /**
+     * Issue the invoice for a paid AI credit recharge, unless it has one. The
+     * purchase row is locked, so the payment callback and the webhook racing
+     * each other issue exactly one.
+     */
+    public static function issueForPurchase(AiCreditPurchase $purchase): ?self
+    {
+        return DB::transaction(function () use ($purchase) {
+            AiCreditPurchase::whereKey($purchase->id)->lockForUpdate()->first();
+
+            if (static::where('ai_credit_purchase_id', $purchase->id)->exists()) {
+                return null;
+            }
+
+            $issuedAt = now();
+
+            return static::create([
+                ...InvoiceNumber::next($issuedAt),
+                'discount_amount' => null,
+                'subtotal_amount' => (float) $purchase->subtotal_amount,
+                'gst_percent' => (float) $purchase->gst_percent,
+                'gst_amount' => (float) $purchase->gst_amount,
+                'cgst_amount' => $purchase->cgst_amount !== null ? (float) $purchase->cgst_amount : null,
+                'sgst_amount' => $purchase->sgst_amount !== null ? (float) $purchase->sgst_amount : null,
+                'igst_amount' => $purchase->igst_amount !== null ? (float) $purchase->igst_amount : null,
+                'total_amount' => (float) $purchase->total_amount,
+                'place_of_supply' => $purchase->place_of_supply,
+                'seller_gstin' => $purchase->seller_gstin,
+                'sac_code' => $purchase->sac_code,
+                'ai_credit_purchase_id' => $purchase->id,
+                'employer_id' => $purchase->employer_id,
+                'cycle' => 1,
+                'issued_at' => $issuedAt,
+                'razorpay_payment_id' => $purchase->razorpay_payment_id,
+                'plan_name' => __('AI call credits — :pack pack', ['pack' => $purchase->pack_name]),
+            ]);
+        });
+    }
+
+    /**
      * The PDF's file name. Slashes in the number cannot go in a file name.
      */
     public function filename(): string
@@ -122,6 +162,21 @@ class Invoice extends Model
     public function subscription(): BelongsTo
     {
         return $this->belongsTo(Subscription::class);
+    }
+
+    /**
+     * The AI credit recharge this invoice is for; null on a plan invoice.
+     *
+     * @return BelongsTo<AiCreditPurchase, $this>
+     */
+    public function aiCreditPurchase(): BelongsTo
+    {
+        return $this->belongsTo(AiCreditPurchase::class);
+    }
+
+    public function isAiCreditRecharge(): bool
+    {
+        return $this->ai_credit_purchase_id !== null;
     }
 
     /**

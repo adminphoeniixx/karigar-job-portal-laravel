@@ -14,10 +14,13 @@ use App\Models\User;
 use App\Notifications\InterviewScheduledNotification;
 use App\Notifications\ScreeningCallCompleted;
 use App\Services\AiMatcher;
+use App\Services\Screening\CallRecordings;
 use App\Services\Screening\ScreeningService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 
 uses(RefreshDatabase::class);
@@ -39,6 +42,8 @@ beforeEach(function () {
 
     giveJobPlan($this->employer);
     $this->employer->employerProfile()->create(['company_name' => 'Sri Sai Constructions', 'city' => 'Chennai']);
+    // AI calls are paid for with credits.
+    giveCredits($this->employer);
 
     $this->worker = User::factory()->create(['role' => UserRole::Worker->value, 'phone' => '9876500011']);
     $this->worker->workerProfile()->create([
@@ -708,4 +713,55 @@ it('does not call a hand-shortlisted applicant when the job has the AI call off'
         ->assertOk();
 
     expect(ScreeningCall::count())->toBe(0);
+});
+
+it('keeps the call recording the agent uploads, on the private disk', function () {
+    Storage::fake('private');
+    $call = placeCall();
+
+    $this->post('/api/v1/webhooks/screening-call/recording', [
+        'call_id' => $call->provider_call_id,
+        'recording' => UploadedFile::fake()->create('call.mp3', 200, 'audio/mpeg'),
+    ], ['X-Screening-Signature' => 'test-secret', 'Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('handled', true);
+
+    $call->refresh();
+
+    expect($call->hasRecording())->toBeTrue();
+    Storage::disk('private')->assertExists($call->recording_path);
+});
+
+it('refuses a recording without the webhook secret', function () {
+    Storage::fake('private');
+    $call = placeCall();
+
+    $this->post('/api/v1/webhooks/screening-call/recording', [
+        'call_id' => $call->provider_call_id,
+        'recording' => UploadedFile::fake()->create('call.mp3', 200, 'audio/mpeg'),
+    ], ['X-Screening-Signature' => 'wrong', 'Accept' => 'application/json'])->assertStatus(401);
+
+    expect($call->refresh()->hasRecording())->toBeFalse();
+});
+
+it('plays the recording only through the signed link the employer gets', function () {
+    Storage::fake('private');
+    $call = placeCall();
+    Storage::disk('private')->put('call-recordings/'.$call->id.'.mp3', 'ID3-fake-audio');
+    $call->update(['recording_path' => 'call-recordings/'.$call->id.'.mp3']);
+
+    $url = $this->actingAs($this->employer, 'sanctum')
+        ->getJson("/api/v1/employer/screening-calls/{$call->id}")
+        ->assertOk()
+        ->assertJsonPath('call.has_recording', true)
+        ->json('call.recording_url');
+
+    auth()->forgetGuards();
+
+    $this->get($url)->assertOk()->assertHeader('Content-Type', 'audio/mpeg');
+    // The same path without the signature is refused.
+    $this->get("/api/v1/screening-calls/{$call->id}/recording")->assertForbidden();
+
+    // Drop the local play cache, which lives outside the faked disk.
+    app(CallRecordings::class)->delete($call);
 });

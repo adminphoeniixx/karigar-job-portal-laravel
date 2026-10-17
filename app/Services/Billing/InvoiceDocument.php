@@ -18,7 +18,7 @@ class InvoiceDocument
 
     public static function for(Invoice $invoice): self
     {
-        return new self($invoice->loadMissing('subscription.plan', 'subscription.coupon', 'employer.employerProfile'));
+        return new self($invoice->loadMissing('subscription.plan', 'subscription.coupon', 'aiCreditPurchase', 'employer.employerProfile'));
     }
 
     /**
@@ -28,6 +28,7 @@ class InvoiceDocument
     {
         $i = $this->invoice;
         $s = $i->subscription;
+        $purchase = $i->aiCreditPurchase;
         $account = $i->employer;
         $profile = $account->employerProfile;
         $money = fn ($v) => $v !== null ? (float) $v : null;
@@ -39,14 +40,26 @@ class InvoiceDocument
                 'date' => $local($i->issued_at),
                 // 1 is the first payment; 2 onwards are monthly/yearly renewals.
                 'cycle' => $i->cycle,
+                // plan | ai_credits
+                'kind' => $purchase !== null ? 'ai_credits' : 'plan',
+                // The invoice's one line item, worded for what was bought.
+                'item' => $purchase !== null ? [
+                    'title' => __('AI call credits — :pack pack', ['pack' => $purchase->pack_name]),
+                    'detail' => trans_choice('{1} 1 credit, one-time recharge|[2,*] :count credits, one-time recharge', $purchase->totalCredits(), ['count' => $purchase->totalCredits()])
+                        .($purchase->bonus_credits > 0 ? ' '.__('(incl. :bonus bonus)', ['bonus' => $purchase->bonus_credits]) : ''),
+                ] : [
+                    'title' => __(':plan plan — subscription', ['plan' => $i->plan_name]),
+                    'detail' => __('Billed every :interval', ['interval' => $s?->plan?->interval_label ?? $s?->plan?->interval]),
+                ],
                 'plan' => [
                     'name' => $i->plan_name,
-                    'interval' => $s->plan->interval,
-                    'interval_label' => $s->plan->interval_label,
+                    'interval' => $s?->plan?->interval ?? 'one_time',
+                    'interval_label' => $s?->plan?->interval_label ?? __('one-time'),
                     // What the plan cost on this invoice, not what it costs now.
                     'price' => (float) $i->subtotal_amount + (float) ($i->discount_amount ?? 0),
                 ],
-                'coupon_code' => $i->discount_amount > 0 ? $s->coupon?->code : null,
+                'credits' => $purchase?->totalCredits(),
+                'coupon_code' => $i->discount_amount > 0 ? $s?->coupon?->code : null,
                 'discount' => $money($i->discount_amount),
                 'subtotal' => $money($i->subtotal_amount),
                 'gst_percent' => $money($i->gst_percent),
@@ -62,7 +75,7 @@ class InvoiceDocument
                     'from' => $local($i->period_start),
                     'to' => $local($i->period_end),
                 ],
-                'payment_ref' => $i->razorpay_payment_id ?: $s->razorpay_subscription_id,
+                'payment_ref' => $i->razorpay_payment_id ?: ($s?->razorpay_subscription_id ?? $purchase?->razorpay_order_id),
             ],
             // The GSTIN the invoice was issued under, even if it has changed since.
             'seller' => [...Gst::seller(), 'gstin' => $i->seller_gstin ?: Gst::seller()['gstin']],
@@ -129,14 +142,23 @@ class InvoiceDocument
             'action_url' => route('invoices.show', $i),
         ];
 
+        $template = 'payment_received';
+
+        if ($i->isAiCreditRecharge()) {
+            $template = 'ai_credits_recharged';
+            $fields['credits'] = (string) ($data['invoice']['credits'] ?? 0);
+            $fields['balance'] = (string) $i->employer->fresh()->ai_credits;
+            $fields['action_url'] = url('/employer/ai-credits');
+        }
+
         $to = $i->employer->contactEmail();
 
-        TemplatedMailer::send('payment_received', $to, $fields, $attachments);
+        TemplatedMailer::send($template, $to, $fields, $attachments);
 
         $copyTo = Gst::invoiceCopyTo();
 
         if ($copyTo !== null && strcasecmp($copyTo, (string) $to) !== 0) {
-            TemplatedMailer::send('payment_received', $copyTo, $fields, $attachments);
+            TemplatedMailer::send($template, $copyTo, $fields, $attachments);
         }
     }
 

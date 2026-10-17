@@ -60,7 +60,7 @@ class ScreeningController extends Controller
 
         if ($blocker !== null) {
             return response()->json([
-                'message' => __('This applicant cannot be called right now.'),
+                'message' => ScreeningService::blockerLabel($blocker),
                 'code' => $blocker,
             ], 422);
         }

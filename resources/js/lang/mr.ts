@@ -47,6 +47,7 @@ export default {
     },
     nav: {
         aiInterviews: 'AI मुलाखती',
+        aiCredits: 'AI क्रेडिट',
         dashboard: 'डॅशबोर्ड',
         jobs: 'नोकऱ्या',
         myJobs: 'माझ्या नोकऱ्या',
@@ -293,6 +294,7 @@ export default {
             conversationWith: '{name} यांच्याशी संभाषण',
             conversationFailed: 'संभाषण लोड झाले नाही. पुन्हा प्रयत्न करा.',
             conversationEmpty: 'या कॉलवर कोणतेही संभाषण रेकॉर्ड झाले नाही.',
+            recording: 'कॉल रेकॉर्डिंग',
             agent: 'AI सहाय्यक',
             karigar: 'कारागीर',
             modes: { site: 'कामाच्या ठिकाणी', phone: 'फोन', video: 'व्हिडिओ' },
