@@ -38,6 +38,7 @@ use App\Http\Controllers\KycDigilockerController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PricingController;
 use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\RazorpayWebhookController;
 use App\Http\Controllers\ResumeBuilderController;
@@ -56,6 +57,9 @@ Route::get('/', HomeController::class)->name('home');
 // Legal. Public and unauthenticated on purpose — someone deciding whether to
 // sign up must be able to read this first.
 Route::get('privacy', PrivacyController::class)->name('privacy');
+
+// The employer price list, public so a visitor can see what it costs before signing up.
+Route::get('pricing', PricingController::class)->name('pricing');
 
 // App-store requirement: a deletion route reachable without signing in, for
 // someone who has lost access to the number their account is tied to.

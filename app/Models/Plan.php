@@ -161,9 +161,17 @@ class Plan extends Model
             ]));
         }
 
+        // A post stays live for the plan's period, so the line says how long it
+        // runs rather than "every 30 days", which read like a monthly drip.
+        $live = match ($this->interval) {
+            self::INTERVAL_YEARLY => __('1 year'),
+            self::INTERVAL_MONTHLY => __('1 month'),
+            default => __('30 days'),
+        };
+
         return array_values(array_filter([
             $jobs > 0
-                ? trans_choice(':count job post|:count job posts', $jobs, ['count' => number_format($jobs)]).' '.$per
+                ? trans_choice(':count job post, live for :period|:count job posts, each live for :period', $jobs, ['count' => number_format($jobs), 'period' => $live])
                 : __('Unlimited job posts'),
             $unlockLine,
             $database > 0

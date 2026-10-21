@@ -364,6 +364,7 @@ const sections = computed(() => [
                 <div class="flex flex-wrap gap-6">
                     <Link href="/" class="transition hover:text-background">Home</Link>
                     <Link href="/jobs" class="transition hover:text-background">{{ $t('nav.browseJobs') }}</Link>
+                    <Link href="/pricing" class="transition hover:text-background">Pricing</Link>
                     <Link href="/privacy" class="text-background">Privacy</Link>
                 </div>
             </div>

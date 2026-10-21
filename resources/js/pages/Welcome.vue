@@ -209,6 +209,7 @@ const wage = (j: Job) => {
                     <a href="#jobs" class="link-underline">Jobs</a>
                     <a href="#how" class="link-underline">How it works</a>
                     <a href="#why" class="link-underline">Why us</a>
+                    <Link href="/pricing" class="link-underline">Pricing</Link>
                 </nav>
                 <div class="flex items-center gap-3">
                     <LanguageSwitcher />
@@ -511,6 +512,7 @@ const wage = (j: Job) => {
                     <div class="mt-4 space-y-2.5 text-sm">
                         <Link href="/jobs" class="block transition hover:text-background">Browse jobs</Link>
                         <Link href="/employer/register" class="block transition hover:text-background">Post a job</Link>
+                        <Link href="/pricing" class="block transition hover:text-background">Pricing</Link>
                         <a href="#trades" class="block transition hover:text-background">Crafts</a>
                     </div>
                 </div>

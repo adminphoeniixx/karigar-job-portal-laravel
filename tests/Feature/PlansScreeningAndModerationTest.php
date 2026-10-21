@@ -61,7 +61,7 @@ it('seeds 30-day plans: Basic posts 1 job, Standard 3', function () {
         ->and($basic->jobPostLimit())->toBe(1)
         ->and(Plan::where('slug', 'standard')->first()->jobPostLimit())->toBe(3)
         ->and($basic->interval_label)->toBe('30 days')
-        ->and($basic->featureList())->toContain('1 job post every 30 days');
+        ->and($basic->featureList())->toContain('1 job post, live for 30 days');
 });
 
 it('runs a 30-day plan for exactly 30 days', function () {

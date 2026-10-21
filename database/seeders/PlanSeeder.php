@@ -46,7 +46,7 @@ class PlanSeeder extends Seeder
                 'type' => Plan::TYPE_JOB,
                 'price' => 1999,
                 'interval' => Plan::INTERVAL_30_DAYS,
-                'features' => ['job_post_limit' => 25, 'contact_unlock_limit' => 150, 'contact_database_limit' => 10000, 'featured' => false],
+                'features' => ['job_post_limit' => 7, 'contact_unlock_limit' => 150, 'contact_database_limit' => 10000, 'featured' => false],
             ],
             [
                 'name' => 'Enterprise',
@@ -54,7 +54,7 @@ class PlanSeeder extends Seeder
                 'type' => Plan::TYPE_JOB,
                 'price' => 4999,
                 'interval' => Plan::INTERVAL_30_DAYS,
-                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 500, 'contact_database_limit' => 50000, 'featured' => false],
+                'features' => ['job_post_limit' => 20, 'contact_unlock_limit' => 500, 'contact_database_limit' => 50000, 'featured' => false],
             ],
             [
                 'name' => 'Database Basic',

@@ -118,6 +118,7 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
             <Link href="/jobs" class="link-underline">{{ $t('nav.browseJobs') }}</Link>
             <Link href="/worker/register" class="link-underline">{{ $t('landing.forWorkers') }}</Link>
             <Link href="/employer/register" class="link-underline">{{ $t('landing.forEmployers') }}</Link>
+            <Link href="/pricing" class="link-underline">Pricing</Link>
         </PublicNav>
 
         <main class="mx-auto max-w-[64rem] px-6 py-14 lg:px-10">

@@ -93,6 +93,7 @@ const selectClass = inputClass;
             <Link href="/jobs" class="link-underline">{{ t('nav.browseJobs') }}</Link>
             <Link href="/worker/register" class="link-underline">{{ t('landing.forWorkers') }}</Link>
             <Link href="/employer/register" class="link-underline">{{ t('landing.forEmployers') }}</Link>
+            <Link href="/pricing" class="link-underline">Pricing</Link>
         </PublicNav>
 
         <main class="mx-auto max-w-[88rem] px-6 py-16 lg:px-10">

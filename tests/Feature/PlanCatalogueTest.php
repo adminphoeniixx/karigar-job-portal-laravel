@@ -30,9 +30,19 @@ it('reads the plan limits the way the pricing page shows them', function () {
     $this->seed(PlanSeeder::class);
 
     expect(Plan::where('slug', 'basic')->first()->featureList())
-        ->toContain('1 job post every 30 days', '25 database unlocks every 30 days', 'Access to 1,000 karigar contacts')
+        ->toContain('1 job post, live for 30 days', '25 database unlocks every 30 days', 'Access to 1,000 karigar contacts')
         ->and(Plan::where('slug', 'enterprise')->first()->featureList())
-        ->toContain('Unlimited job posts', '500 database unlocks every 30 days');
+        ->toContain('20 job posts, each live for 30 days', '500 database unlocks every 30 days');
+});
+
+it('caps job posts on every job plan, cheaper per post as the plan grows', function () {
+    $this->seed(PlanSeeder::class);
+
+    $jobPlans = Plan::where('type', Plan::TYPE_JOB)->orderBy('price')->get();
+    $perPost = $jobPlans->map(fn (Plan $plan) => (float) $plan->price / $plan->jobPostLimit())->all();
+
+    expect($jobPlans->every(fn (Plan $plan) => $plan->jobPostLimit() > 0))->toBeTrue()
+        ->and($perPost)->toBe(collect($perPost)->sortDesc()->values()->all());
 });
 
 it('seeds three database plans that post no jobs', function () {

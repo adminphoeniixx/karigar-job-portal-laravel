@@ -21,6 +21,8 @@ createInertiaApp({
             // Legal pages carry their own nav and footer, and are read by people
             // who have not signed up yet.
             case name === 'Privacy':
+            // The public employer price list, read before signing up.
+            case name === 'Pricing':
             case name === 'DeleteAccount':
                 return null;
             case name.startsWith('auth/'):

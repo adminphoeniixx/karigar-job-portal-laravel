@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { ArrowDownLeft, ArrowUpRight, Coins, FileText, Info, Loader2, PhoneCall, Sparkles, TriangleAlert } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -90,6 +90,17 @@ const buy = (pack: Pack) => {
     );
 };
 
+// "Buy" on the public /pricing page lands here with ?pack=<id>: point at that pack.
+const wantedPack = ref<number | null>(null);
+
+onMounted(() => {
+    const id = Number(new URLSearchParams(window.location.search).get('pack'));
+    if (props.packs.some((pack) => pack.id === id)) {
+        wantedPack.value = id;
+        document.getElementById(`pack-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+});
+
 const typeTone: Record<string, string> = {
     recharge: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
     bonus: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
@@ -171,9 +182,10 @@ const typeTone: Record<string, string> = {
             <div v-if="packs.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <article
                     v-for="pack in packs"
+                    :id="`pack-${pack.id}`"
                     :key="pack.id"
                     class="relative flex flex-col rounded-2xl border bg-card p-5 shadow-sm"
-                    :class="pack.popular ? 'border-orange-500/60 ring-1 ring-orange-500/30' : ''"
+                    :class="wantedPack === pack.id ? 'border-orange-500 ring-2 ring-orange-500/50' : pack.popular ? 'border-orange-500/60 ring-1 ring-orange-500/30' : ''"
                 >
                     <span v-if="pack.popular" class="absolute -top-2.5 right-4 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold text-white">Popular</span>
                     <h3 class="font-semibold">{{ pack.name }}</h3>

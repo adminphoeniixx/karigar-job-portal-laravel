@@ -109,10 +109,33 @@ class PhoneOtpController extends Controller
 
         Auth::login($user, remember: true);
 
+        // A new employer who pressed "Buy" on /pricing carries on to that
+        // checkout; the profile can wait until the plan is paid for.
+        if ($role === 'employer' && self::isCheckoutPath($request->session()->get('url.intended'))) {
+            return redirect()->intended()->with('toast', [
+                'type' => 'success',
+                'message' => __('Welcome to Super Karigar! Finish the payment to start your plan.'),
+            ]);
+        }
+
         return redirect($role === 'worker' ? '/worker/profile' : '/employer/profile')
             ->with('toast', [
                 'type' => 'success',
                 'message' => __('Welcome to Super Karigar! Complete your profile to get started.'),
             ]);
+    }
+
+    /**
+     * The pages "Buy" on /pricing sends a guest to after sign-in.
+     */
+    private static function isCheckoutPath(mixed $intended): bool
+    {
+        if (! is_string($intended)) {
+            return false;
+        }
+
+        $path = '/'.ltrim((string) parse_url($intended, PHP_URL_PATH), '/');
+
+        return $path === '/subscription' || $path === '/employer/ai-credits';
     }
 }

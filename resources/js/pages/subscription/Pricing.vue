@@ -86,10 +86,16 @@ const planPill: Record<PlanStatus, string> = {
     none: '',
 };
 
-// "Buy Database" on the dashboard lands here with #database.
+// "Buy Database" on the dashboard lands here with #database; "Buy" on the
+// public /pricing page lands here with ?plan=<id> and opens that plan's checkout.
 onMounted(() => {
     if (window.location.hash === '#database') {
         document.getElementById('database')?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    const wanted = props.plans.find((p) => String(p.id) === new URLSearchParams(window.location.search).get('plan'));
+    if (wanted && !isCurrent(wanted)) {
+        openPlan(wanted);
     }
 });
 
