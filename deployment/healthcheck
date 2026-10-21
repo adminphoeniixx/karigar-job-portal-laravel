@@ -5,7 +5,11 @@ set -e
 container_mode=${CONTAINER_MODE:-"http"}
 
 if [ "${container_mode}" = "http" ]; then
-    php "${ROOT}/artisan" octane:status
+    # Ask the app itself rather than `octane:status`: that boots all of
+    # Laravel every few seconds and reads a state file plus the FrankenPHP
+    # admin port, and it reported "not running" while the app was serving,
+    # so the container went unhealthy (yellow) and got restarted mid-traffic.
+    curl -fsS -m 4 -o /dev/null http://127.0.0.1:8000/up
 elif [ "${container_mode}" = "horizon" ]; then
     php "${ROOT}/artisan" horizon:status
 elif [ "${container_mode}" = "scheduler" ]; then

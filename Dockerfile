@@ -181,4 +181,5 @@ EXPOSE 2019
 
 ENTRYPOINT ["start-container"]
 
-HEALTHCHECK --start-period=5s --interval=10s --timeout=5s --retries=8 CMD healthcheck || exit 1
+# Boot runs migrations (optionally) and `optimize`, so give it a minute before failures count.
+HEALTHCHECK --start-period=60s --interval=15s --timeout=8s --retries=4 CMD healthcheck || exit 1
