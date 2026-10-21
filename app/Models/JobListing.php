@@ -97,7 +97,32 @@ class JobListing extends Model
             if ($job->status === JobStatus::Active && $job->published_at === null) {
                 $job->published_at = now();
             }
+
+            if ($job->published_at !== null && ($job->isDirty('published_at') || $job->isDirty('expires_at'))) {
+                $job->capExpiryToPlan();
+            }
         });
+    }
+
+    /**
+     * A job runs for its plan's job-live days from going live (15 on the
+     * apna-style plans). An earlier date the employer picked stands; a later
+     * one is pulled back. Without a job plan (the free first post) the job
+     * runs as long as the employer said.
+     */
+    private function capExpiryToPlan(): void
+    {
+        $plan = $this->employer?->employerAccount()->activeSubscription()?->plan;
+
+        if ($plan === null) {
+            return;
+        }
+
+        $latest = $this->published_at->copy()->addDays($plan->jobLiveDays());
+
+        if ($this->expires_at === null || $this->expires_at->greaterThan($latest)) {
+            $this->expires_at = $latest;
+        }
     }
 
     public function isDraft(): bool

@@ -35,8 +35,9 @@ class RazorpayService
      * whatever its plan says, so a plan made at the bare price (as these used
      * to be) collected ₹499 while the invoice said ₹588.82.
      *
-     * Razorpay `period` accepts daily|weekly|monthly|yearly. A 30-day plan
-     * is `daily` every 30; older monthly / yearly plans map straight across.
+     * Razorpay `period` accepts daily|weekly|monthly|yearly. A plan that runs
+     * for N days is `daily` every N (Razorpay wants N >= 7, which the admin
+     * form enforces); older monthly / yearly plans map straight across.
      */
     public function createPlan(Plan $plan): string
     {
@@ -46,7 +47,7 @@ class RazorpayService
             ...match ($plan->interval) {
                 Plan::INTERVAL_YEARLY => ['period' => 'yearly', 'interval' => 1],
                 Plan::INTERVAL_MONTHLY => ['period' => 'monthly', 'interval' => 1],
-                default => ['period' => 'daily', 'interval' => 30],
+                default => ['period' => 'daily', 'interval' => $plan->durationDays()],
             },
             'item' => [
                 'name' => $plan->name,

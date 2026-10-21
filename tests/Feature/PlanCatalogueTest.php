@@ -6,14 +6,28 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('seeds four plans, cheapest first, with one recommended', function () {
+it('seeds the apna-priced job plans, cheapest first, with one recommended', function () {
     $this->seed(PlanSeeder::class);
 
     $plans = Plan::where('is_active', true)->where('type', Plan::TYPE_JOB)->orderBy('price')->get();
 
-    expect($plans->pluck('slug')->all())->toBe(['basic', 'standard', 'pro', 'enterprise'])
-        ->and($plans->pluck('price')->map(fn ($p) => (float) $p)->all())->toBe([499.0, 999.0, 1999.0, 4999.0])
-        ->and($plans->filter->isRecommended()->pluck('slug')->all())->toBe(['standard']);
+    expect($plans->pluck('slug')->all())->toBe(['single-job', 'job-1-month', 'job-3-months', 'job-6-months'])
+        ->and($plans->pluck('price')->map(fn ($p) => (float) $p)->all())->toBe([699.0, 1949.0, 3649.0, 7099.0])
+        ->and($plans->map->durationDays()->all())->toBe([30, 30, 90, 180])
+        ->and($plans->map->jobLiveDays()->all())->toBe([15, 15, 15, 15])
+        ->and($plans->pluck('discount_percent')->all())->toBe([null, 7, 13, 22])
+        ->and($plans->filter->isRecommended()->pluck('slug')->all())->toBe(['job-3-months']);
+});
+
+it('hides the old job plans and leaves admin edits alone when seeded again', function () {
+    $old = Plan::create(['name' => 'Basic', 'slug' => 'basic', 'type' => Plan::TYPE_JOB, 'price' => 499, 'currency' => 'INR', 'interval' => Plan::INTERVAL_DAYS, 'duration_days' => 30, 'features' => ['job_post_limit' => 1], 'is_active' => true]);
+    $this->seed(PlanSeeder::class);
+    Plan::where('slug', 'job-1-month')->update(['price' => 1799]);
+
+    $this->seed(PlanSeeder::class);
+
+    expect($old->fresh()->is_active)->toBeFalse()
+        ->and((float) Plan::where('slug', 'job-1-month')->value('price'))->toBe(1799.0);
 });
 
 it('makes an unlock cheaper on every step up', function () {
@@ -29,10 +43,11 @@ it('makes an unlock cheaper on every step up', function () {
 it('reads the plan limits the way the pricing page shows them', function () {
     $this->seed(PlanSeeder::class);
 
-    expect(Plan::where('slug', 'basic')->first()->featureList())
-        ->toContain('1 job post, live for 30 days', '25 database unlocks every 30 days', 'Access to 1,000 karigar contacts')
-        ->and(Plan::where('slug', 'enterprise')->first()->featureList())
-        ->toContain('20 job posts, each live for 30 days', '500 database unlocks every 30 days');
+    expect(Plan::where('slug', 'single-job')->first()->featureList())
+        ->toContain('1 job post, live for 15 days', '20 database unlocks every 30 days', 'Access to 1,000 karigar contacts')
+        ->and(Plan::where('slug', 'job-6-months')->first()->featureList())
+        ->toContain('13 job posts, each live for 15 days', '400 database unlocks every 180 days')
+        ->and(Plan::where('slug', 'job-6-months')->first()->interval_label)->toBe('180 days');
 });
 
 it('caps job posts on every job plan, cheaper per post as the plan grows', function () {

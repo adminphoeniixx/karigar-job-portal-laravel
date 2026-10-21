@@ -15,7 +15,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $type
  * @property string $price
  * @property string $currency
+ * @property string|null $tagline
+ * @property string|null $mrp
  * @property string $interval
+ * @property int|null $duration_days
+ * @property int|null $job_live_days
  * @property string|null $razorpay_plan_id
  * @property string|null $razorpay_amount
  * @property array<string, mixed>|null $features
@@ -29,7 +33,10 @@ class Plan extends Model
     /** Opens the Worker Database only. Held on its own or next to a job plan. */
     public const TYPE_DATABASE = 'database';
 
-    /** Every plan runs for 30 days at a time (not a calendar month). */
+    /** Runs for `duration_days` at a time: 30, 90, 180 … set by the admin. */
+    public const INTERVAL_DAYS = 'days';
+
+    /** The fixed 30-day plans from before `duration_days`; read as 30 days. */
     public const INTERVAL_30_DAYS = '30_days';
 
     /** Older plans, before the 30-day switch; still read correctly. */
@@ -38,12 +45,12 @@ class Plan extends Model
     public const INTERVAL_YEARLY = 'yearly';
 
     protected $fillable = [
-        'name', 'slug', 'type', 'price', 'currency', 'interval',
-        'razorpay_plan_id', 'razorpay_amount', 'features', 'is_active',
+        'name', 'tagline', 'slug', 'type', 'price', 'mrp', 'currency', 'interval',
+        'duration_days', 'job_live_days', 'razorpay_plan_id', 'razorpay_amount', 'features', 'is_active',
     ];
 
     /** @var list<string> */
-    protected $appends = ['interval_label'];
+    protected $appends = ['interval_label', 'discount_percent'];
 
     protected function casts(): array
     {
@@ -51,6 +58,9 @@ class Plan extends Model
             'features' => 'array',
             'is_active' => 'boolean',
             'price' => 'decimal:2',
+            'mrp' => 'decimal:2',
+            'duration_days' => 'integer',
+            'job_live_days' => 'integer',
             'razorpay_amount' => 'decimal:2',
         ];
     }
@@ -63,7 +73,7 @@ class Plan extends Model
         return match ($this->interval) {
             self::INTERVAL_YEARLY => $start->copy()->addYear(),
             self::INTERVAL_MONTHLY => $start->copy()->addMonth(),
-            default => $start->copy()->addDays(30),
+            default => $start->copy()->addDays($this->durationDays()),
         };
     }
 
@@ -75,12 +85,35 @@ class Plan extends Model
         return match ($this->interval) {
             self::INTERVAL_YEARLY => $end->copy()->subYear(),
             self::INTERVAL_MONTHLY => $end->copy()->subMonth(),
-            default => $end->copy()->subDays(30),
+            default => $end->copy()->subDays($this->durationDays()),
         };
     }
 
     /**
-     * "30 days", "month" or "year", for "₹499 / 30 days".
+     * How many days one period runs: `duration_days`, or 30 for the plans
+     * from before it. Monthly and yearly plans are calendar-based and go
+     * through periodEnd() instead; this is their rough length.
+     */
+    public function durationDays(): int
+    {
+        return match ($this->interval) {
+            self::INTERVAL_YEARLY => 365,
+            self::INTERVAL_MONTHLY => 30,
+            default => max(1, (int) ($this->duration_days ?? 30)),
+        };
+    }
+
+    /**
+     * How long each job posted on this plan stays live. Without a setting a
+     * job runs for the whole plan period, as it did before.
+     */
+    public function jobLiveDays(): int
+    {
+        return $this->job_live_days ?: $this->durationDays();
+    }
+
+    /**
+     * "30 days", "90 days", "month" or "year", for "₹1,949 / 30 days".
      *
      * @return Attribute<string, never>
      */
@@ -89,7 +122,23 @@ class Plan extends Model
         return Attribute::get(fn (): string => match ($this->interval) {
             self::INTERVAL_YEARLY => __('year'),
             self::INTERVAL_MONTHLY => __('month'),
-            default => __('30 days'),
+            default => trans_choice(':count day|:count days', $this->durationDays(), ['count' => $this->durationDays()]),
+        });
+    }
+
+    /**
+     * "15" for "15% OFF" next to the struck-out MRP, or null without an MRP
+     * above the price.
+     *
+     * @return Attribute<int|null, never>
+     */
+    protected function discountPercent(): Attribute
+    {
+        return Attribute::get(function (): ?int {
+            $mrp = (float) $this->mrp;
+            $price = (float) $this->price;
+
+            return $mrp > $price && $price > 0 ? (int) round(($mrp - $price) / $mrp * 100) : null;
         });
     }
 
@@ -138,7 +187,7 @@ class Plan extends Model
         $per = match ($this->interval) {
             self::INTERVAL_YEARLY => __('per year'),
             self::INTERVAL_MONTHLY => __('per month'),
-            default => __('every 30 days'),
+            default => __('every :count days', ['count' => $this->durationDays()]),
         };
 
         $jobs = $this->jobPostLimit();
@@ -161,12 +210,12 @@ class Plan extends Model
             ]));
         }
 
-        // A post stays live for the plan's period, so the line says how long it
-        // runs rather than "every 30 days", which read like a monthly drip.
-        $live = match ($this->interval) {
-            self::INTERVAL_YEARLY => __('1 year'),
-            self::INTERVAL_MONTHLY => __('1 month'),
-            default => __('30 days'),
+        // Says how long each post runs rather than "every 30 days", which
+        // read like a monthly drip.
+        $live = match (true) {
+            $this->job_live_days === null && $this->interval === self::INTERVAL_YEARLY => __('1 year'),
+            $this->job_live_days === null && $this->interval === self::INTERVAL_MONTHLY => __('1 month'),
+            default => trans_choice(':count day|:count days', $this->jobLiveDays(), ['count' => $this->jobLiveDays()]),
         };
 
         return array_values(array_filter([

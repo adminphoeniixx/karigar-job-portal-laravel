@@ -14,8 +14,11 @@ import PublicNav from '@/components/PublicNav.vue';
 interface Plan {
     id: number;
     name: string;
+    tagline: string | null;
     type: 'job' | 'database';
     price: number;
+    mrp: number | null;
+    discount_percent: number | null;
     price_with_gst: number;
     interval_label: string;
     featured: boolean;
@@ -79,6 +82,10 @@ const faqs = computed(() => [
     {
         q: 'Job plan or Worker Database — which one do I need?',
         a: 'A job plan is for posting jobs and receiving applicants. The Worker Database is for finding karigars yourself and calling them. You can hold one of each at the same time, and every job plan already opens part of the database.',
+    },
+    {
+        q: 'How long does a job stay live?',
+        a: 'Each job stays live for the number of days written on its plan, counted from the moment it goes live. When it ends, repost it from My Jobs — that uses one more job post from your plan.',
     },
     {
         q: 'Does the plan renew on its own?',
@@ -168,7 +175,12 @@ const faqs = computed(() => [
                                 <h3 class="text-lg font-semibold">{{ plan.name }}</h3>
                                 <span v-if="plan.featured" class="label-rule whitespace-nowrap text-primary">Most popular</span>
                             </div>
-                            <div class="mt-5 flex items-end gap-1.5">
+                            <p v-if="plan.tagline" class="mt-1 text-sm text-muted-foreground">{{ plan.tagline }}</p>
+                            <p v-if="plan.mrp" class="mt-4 flex items-center gap-2 text-sm">
+                                <span class="text-muted-foreground line-through">{{ money(plan.mrp) }}</span>
+                                <span class="font-semibold text-primary">{{ plan.discount_percent }}% OFF</span>
+                            </p>
+                            <div :class="plan.mrp ? 'mt-1' : 'mt-5'" class="flex items-end gap-1.5">
                                 <span class="text-[2.75rem] leading-none font-semibold tracking-tight tabular-nums">{{ money(plan.price) }}</span>
                                 <span class="pb-1 text-sm whitespace-nowrap text-muted-foreground">/ {{ plan.interval_label }}</span>
                             </div>

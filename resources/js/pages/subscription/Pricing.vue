@@ -12,6 +12,9 @@ interface Plan {
     price: string;
     interval: string;
     interval_label?: string;
+    tagline: string | null;
+    mrp: string | null;
+    discount_percent: number | null;
     features: { job_post_limit?: number; contact_unlock_limit?: number; featured?: boolean } | null;
     razorpay_plan_id: string | null;
     feature_list: string[];
@@ -237,6 +240,12 @@ const subscribe = () => {
                     </span>
                     <div class="relative">
                         <h3 class="text-lg font-bold">{{ plan.name }}</h3>
+                        <p v-if="plan.tagline" class="mt-0.5 text-xs text-muted-foreground">{{ plan.tagline }}</p>
+                    </div>
+                    <!-- The plan's own MRP, struck out; a coupon's saving shows further down. -->
+                    <div v-if="plan.discount_percent && plan.mrp" class="relative mt-3 flex items-center gap-2 text-sm">
+                        <span class="text-muted-foreground line-through">{{ money(parseFloat(plan.mrp)) }}</span>
+                        <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-300">{{ plan.discount_percent }}% OFF</span>
                     </div>
                     <div class="relative mt-3 flex items-end gap-1">
                         <span

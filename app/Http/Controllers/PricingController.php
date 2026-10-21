@@ -29,8 +29,12 @@ class PricingController extends Controller
                 ->map(fn (Plan $plan) => [
                     'id' => $plan->id,
                     'name' => $plan->name,
+                    'tagline' => $plan->tagline,
                     'type' => $plan->type,
                     'price' => (float) $plan->price,
+                    // Struck out next to the price, with "15% OFF"; null shows neither.
+                    'mrp' => $plan->discount_percent ? (float) $plan->mrp : null,
+                    'discount_percent' => $plan->discount_percent,
                     'price_with_gst' => Gst::gross((float) $plan->price),
                     'interval_label' => $plan->interval_label,
                     'featured' => $plan->isRecommended(),

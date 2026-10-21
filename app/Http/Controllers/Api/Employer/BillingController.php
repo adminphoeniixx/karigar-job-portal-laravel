@@ -43,6 +43,8 @@ class BillingController extends Controller
             'plans' => Plan::where('is_active', true)->orderBy('price')->get()->map(fn (Plan $plan) => [
                 'id' => $plan->id,
                 'name' => $plan->name,
+                // "Ideal for small teams" under the name; may be null.
+                'tagline' => $plan->tagline,
                 'slug' => $plan->slug,
                 // job: posts jobs and shows applicants; database: the Worker
                 // Database only. One of each can run at the same time.
@@ -51,6 +53,12 @@ class BillingController extends Controller
                 'price' => (float) $plan->price,
                 'gst_amount' => round($plan->grossPrice() - (float) $plan->price, 2),
                 'price_with_gst' => $plan->grossPrice(),
+                // Show `mrp` struck out with "`discount_percent`% OFF"; both null when there is no MRP.
+                'mrp' => $plan->discount_percent ? (float) $plan->mrp : null,
+                'discount_percent' => $plan->discount_percent,
+                // How long the plan runs, and how long each job posted on it stays live.
+                'duration_days' => $plan->durationDays(),
+                'job_live_days' => $plan->isDatabase() ? null : $plan->jobLiveDays(),
                 'currency' => $plan->currency,
                 'interval' => $plan->interval,
                 // "30 days" for "₹499 / 30 days"; show this, not `interval`.
