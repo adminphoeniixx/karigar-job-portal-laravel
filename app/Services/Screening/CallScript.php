@@ -286,6 +286,18 @@ class CallScript
             ? ' For example: "माफ़ कीजिए, ठीक से सुनाई नहीं दिया।" and then the question again, put more simply.'
             : '';
 
+        // On a live test call the first thing transcribed was "म्यूज़िक" — a
+        // caller tune or background noise before the worker spoke — and the
+        // agent took it as a wrong number and hung up 48 seconds in. Only an
+        // explicit "wrong number" ends the call at this step; anything else
+        // gets the question again.
+        [$sayNotHeard, $sayNoAnswer] = $hindi
+            ? [
+                ' For example: "हैलो? माफ़ कीजिए, आवाज़ ठीक से नहीं आई। क्या मेरी बात '.$applicant.' से हो रही है?"',
+                ' For example: "लगता है आवाज़ नहीं आ रही। मैं थोड़ी देर बाद फिर call करूँगी। धन्यवाद।"',
+            ]
+            : ['', ''];
+
         $payExample = $hindi
             ? ' For example: "Employer ने '.$wage.' लिखा है। Final amount employer ही तय करेगा।"'
             : '';
@@ -325,7 +337,13 @@ class CallScript
            - If someone else answered, ask whether you can speak to {$applicant}. If they are not
              available, say you will call later, thank them and end the call. Tell someone else
              nothing about the job or the application.{$sayWrongPerson}
-           - If it is a wrong number, apologise briefly and end the call.
+           - Only if they clearly say it is the wrong number, or that no one by that name is there,
+             apologise briefly and end the call.
+           - If the reply is unclear — music, a caller tune, noise, silence, a single word, or something
+             that does not answer the question — it is NOT a wrong number. Say you could not hear
+             properly and ask again whether you are speaking to {$applicant}.{$sayNotHeard}
+             Ask up to two more times. If there is still no clear answer, say you will call again
+             later, thank them and end the call.{$sayNoAnswer}
         2. ASK IF THEY ARE STILL INTERESTED. Tell them which job it is and ask.{$sayJob}
            - If not interested, or they already have work: thank them and end. Do not try to convince them.
            - If they are busy right now: say you will call later, thank them and end.
