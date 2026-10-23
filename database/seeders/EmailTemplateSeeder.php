@@ -286,6 +286,56 @@ HTML,
                 'placeholders' => ['app_name', 'employer_name', 'balance', 'headline', 'action_url'],
                 'is_active' => true,
             ],
+            [
+                'key' => 'job_under_review',
+                'name' => 'Job held for review (to employer)',
+                'description' => 'Sent when the automatic safety check holds a job for an admin to look at, instead of putting it live.',
+                'subject' => 'Your job “{{ job_title }}” is being reviewed',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>Before <strong>“{{ job_title }}”</strong> goes live, our team needs to take a quick look at it. This usually takes less than a working day.</p>
+<p>Nothing from your plan has been used. We will let you know as soon as it is decided. If something in the job needs changing, you can edit it in the meantime.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View my job</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'job_title', 'reason', 'action_url'],
+                'is_active' => true,
+            ],
+            [
+                'key' => 'job_not_approved',
+                'name' => 'Job not approved (to employer)',
+                'description' => 'Sent when an admin turns down a job the safety check held, with the admin’s reason.',
+                'subject' => 'Your job “{{ job_title }}” was not approved',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>We could not put <strong>“{{ job_title }}”</strong> live.</p>
+<p style="border-left:3px solid #e5e5e5;padding-left:14px;color:#4a4a4a;">{{ reason }}</p>
+<p>Nothing from your plan has been used. You can change the job and post it again.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#bf3a16;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Edit the job</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'job_title', 'reason', 'action_url'],
+                'is_active' => true,
+            ],
+            [
+                'key' => 'job_review_needed',
+                'name' => 'Job needs review (to admins)',
+                'description' => 'Sent to every admin when the safety check holds a job. Approve or reject it in Admin → Job Moderation.',
+                'subject' => 'Job held for review: “{{ job_title }}”',
+                'body_html' => <<<'HTML'
+<p>The safety check held a job by <strong>{{ employer_name }}</strong>:</p>
+<p style="font-size:18px;font-weight:600;margin:16px 0 4px;">{{ job_title }}</p>
+<p style="border-left:3px solid #e5e5e5;padding-left:14px;color:#4a4a4a;">{{ reasons }}</p>
+<p>It stays off the site until someone approves or rejects it. The employer has been told it is under review.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#bf3a16;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Review it</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'job_title', 'reasons', 'action_url'],
+                'is_active' => true,
+            ],
         ];
     }
 }

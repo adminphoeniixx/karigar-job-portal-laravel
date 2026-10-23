@@ -32,6 +32,7 @@ export default {
     },
     status: {
         underReview: 'Review mein',
+        checking: 'Check ho raha hai…',
         notApproved: 'Approve nahi hua',
         paused: 'Ruki hui',
         active: 'Active',
@@ -122,6 +123,11 @@ export default {
     },
     myJobs: {
         repost: 'Dobara post karein',
+        checkingHint: 'Hamara safety check is job ko padh raha hai. Ek-do minute mein live ho jaayegi.',
+        aiChecked: 'AI se checked',
+        basicChecked: 'Basic check',
+        aiCheckedOn: 'AI ne {date} ko check kiya',
+        basicCheckedOn: '{date} ko check hua (AI available nahi tha, sirf basic check chala)',
         pausedInfo: 'Aapka job plan khatam ho gaya hai, isliye aapki live jobs ruki hui hain: karigar na unhe dhoondh sakte hain na apply kar sakte hain. Dobara kholne ke liye plan renew karein.',
         renewPlan: 'Plan renew karein',
         title: 'Meri Naukriyan',

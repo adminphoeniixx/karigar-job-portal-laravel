@@ -32,6 +32,7 @@ export default {
     },
     status: {
         underReview: 'સમીક્ષામાં',
+        checking: 'તપાસ ચાલુ છે…',
         notApproved: 'મંજૂર નથી',
         paused: 'અટકેલી',
         active: 'સક્રિય',
@@ -122,6 +123,11 @@ export default {
     },
     myJobs: {
         repost: 'ફરી પોસ્ટ કરો',
+        checkingHint: 'અમારી સલામતી તપાસ આ નોકરી વાંચી રહી છે. એક-બે મિનિટમાં લાઇવ થશે.',
+        aiChecked: 'AI એ તપાસી',
+        basicChecked: 'સામાન્ય તપાસ',
+        aiCheckedOn: '{date} ના રોજ AI એ તપાસી',
+        basicCheckedOn: '{date} ના રોજ તપાસી (AI ઉપલબ્ધ ન હતું, માત્ર સામાન્ય તપાસ થઈ)',
         pausedInfo: 'તમારો જૉબ પ્લાન પૂરો થયો છે, તેથી તમારી લાઇવ જૉબ્સ અટકી ગઈ છે: કારીગરો તેને શોધી કે અરજી કરી શકતા નથી. ફરી ખોલવા માટે પ્લાન રિન્યૂ કરો.',
         renewPlan: 'પ્લાન રિન્યૂ કરો',
         title: 'મારી નોકરીઓ',

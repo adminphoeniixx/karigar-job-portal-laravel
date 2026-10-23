@@ -32,6 +32,7 @@ export default {
     },
     status: {
         underReview: 'Under review',
+        checking: 'Checking…',
         notApproved: 'Not approved',
         paused: 'Paused',
         active: 'Active',
@@ -122,6 +123,11 @@ export default {
     },
     myJobs: {
         repost: 'Repost',
+        checkingHint: 'Our safety check is reading this job. It goes live in a minute or two.',
+        aiChecked: 'AI checked',
+        basicChecked: 'Basic check',
+        aiCheckedOn: 'Checked by AI on {date}',
+        basicCheckedOn: 'Checked on {date} (the AI was unavailable, so only the basic check ran)',
         pausedInfo: 'Your job plan has ended, so your live jobs are paused: karigars can\'t find them or apply. Renew to open them again.',
         renewPlan: 'Renew plan',
         title: 'My Jobs',

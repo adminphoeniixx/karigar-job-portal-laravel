@@ -12,7 +12,6 @@ use App\Models\JobListing;
 use App\Models\User;
 use App\Models\WorkerProfile;
 use App\Notifications\JobInviteNotification;
-use App\Notifications\NewJobNotification;
 use App\Services\AiCredits;
 use App\Services\ContactUnlocks;
 use App\Services\JobDescriptionWriter;
@@ -20,14 +19,13 @@ use App\Services\JobPostingGate;
 use App\Services\JobRepost;
 use App\Services\WorkerRejections;
 use App\Support\EmployerVerification;
+use App\Support\JobAnnouncer;
 use App\Support\JobFormOptions;
 use App\Support\JobModeration;
 use App\Support\KarigarLocation;
-use App\Support\TemplatedMailer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Facades\Notification;
 
 /**
  * Job management for the employer app — the "My Jobs" and "Post Job" screens.
@@ -115,35 +113,37 @@ class JobController extends Controller
             ], 422);
         }
 
-        // Safety check: a job that looks harmful is held as a draft for review,
-        // spending nothing from the plan.
-        $held = $gate !== null ? JobModeration::screen($data) : null;
-        $gate = $held === null ? $gate : null;
+        // Safety check, on the queue: the job waits as a draft until it
+        // passes, and only then goes live, spends the free post and alerts
+        // karigars (JobModeration).
+        $check = JobModeration::needsCheck($data);
+
+        if ($check) {
+            JobModeration::begin($data);
+        }
 
         $job = $account->jobListings()->create($data);
 
-        if ($held !== null) {
-            JobModeration::hold($job, $held, $account);
+        if ($check) {
+            JobModeration::queue($job);
+        } elseif ($job->status === JobStatus::Active) {
+            if ($gate !== null && $gate['consumesFreePost']) {
+                JobPostingGate::consumeFreePost($account);
+            }
+
+            JobAnnouncer::announce($job);
         }
 
-        if ($gate !== null && $gate['consumesFreePost']) {
-            JobPostingGate::consumeFreePost($account);
-        }
-
-        if ($job->status === JobStatus::Active) {
-            $this->notifyWorkers($job);
-            $this->sendPostedEmail($job, $account);
-        }
+        $job = $job->fresh();
+        $outcome = $check ? JobModeration::outcome($job) : ['message' => null, 'code' => null];
 
         return response()->json([
-            'message' => match (true) {
-                $held !== null => JobModeration::heldMessage(),
-                $job->isDraft() => __('Draft saved.'),
-                default => __('Job posted.'),
-            },
-            // Set when the safety check held the job: show it, it is not live.
-            'code' => $held !== null ? 'job_under_review' : null,
-            'job' => new EmployerJobResource($job->fresh()),
+            'message' => $outcome['message'] ?? ($job->isDraft() ? __('Draft saved.') : __('Job posted.')),
+            // job_checking: the safety check is running, the job goes live
+            // (or is held) in a minute and a push says which.
+            // job_under_review: the check held it; it is not live.
+            'code' => $outcome['code'],
+            'job' => new EmployerJobResource($job),
         ], 201);
     }
 
@@ -153,6 +153,11 @@ class JobController extends Controller
     public function update(JobListingRequest $request, JobListing $job): JsonResponse
     {
         $this->authorize('update', $job);
+
+        // Its check decides in a minute; an edit now would race it.
+        if (JobModeration::isChecking($job)) {
+            return response()->json(['message' => JobModeration::busyMessage(), 'code' => 'job_checking'], 409);
+        }
 
         $account = $request->user()->employerAccount();
 
@@ -176,37 +181,40 @@ class JobController extends Controller
             ], 422);
         }
 
-        // Safety check when it goes live, or a live job's words change.
-        $held = JobModeration::needsCheck($data, $job) ? JobModeration::screen($data, $job) : null;
-        $gate = $held === null ? $gate : null;
+        // Safety check when it goes live, or a live job's words change: off
+        // the site until the queued check passes it.
+        $check = JobModeration::needsCheck($data, $job);
+
+        if ($check) {
+            JobModeration::begin($data);
+        }
 
         $job->update($data);
 
-        if ($held !== null) {
-            JobModeration::hold($job, $held, $account);
-        } elseif ($job->status === JobStatus::Active && $job->moderation_status !== null) {
-            $job->update(['moderation_status' => null, 'moderation_reasons' => null]);
+        if ($check) {
+            JobModeration::queue($job);
+        } else {
+            if ($gate !== null && $gate['consumesFreePost']) {
+                JobPostingGate::consumeFreePost($account);
+            }
+
+            // Newly-activated job → notify workers, same as the web flow.
+            if (! $wasActive && $job->status === JobStatus::Active) {
+                JobAnnouncer::announce($job);
+            }
         }
 
-        if ($gate !== null && $gate['consumesFreePost']) {
-            JobPostingGate::consumeFreePost($account);
-        }
-
-        // Newly-activated job → notify workers, same as the web flow.
-        if (! $wasActive && $job->status === JobStatus::Active) {
-            $this->notifyWorkers($job);
-            $this->sendPostedEmail($job, $account);
-        }
+        $job = $job->fresh();
+        $outcome = $check ? JobModeration::outcome($job) : ['message' => null, 'code' => null];
 
         return response()->json([
-            'message' => match (true) {
-                $held !== null => JobModeration::heldMessage(),
+            'message' => $outcome['message'] ?? match (true) {
                 $goingLive => __('Job posted.'),
                 $job->isDraft() => __('Draft saved.'),
                 default => __('Job updated.'),
             },
-            'code' => $held !== null ? 'job_under_review' : null,
-            'job' => new EmployerJobResource($job->fresh()),
+            'code' => $outcome['code'],
+            'job' => new EmployerJobResource($job),
         ]);
     }
 
@@ -216,6 +224,10 @@ class JobController extends Controller
     public function close(Request $request, JobListing $job): JsonResponse
     {
         $this->authorize('update', $job);
+
+        if (JobModeration::isChecking($job)) {
+            return response()->json(['message' => JobModeration::busyMessage(), 'code' => 'job_checking'], 409);
+        }
 
         $job->update(['status' => JobStatus::Closed]);
 
@@ -343,10 +355,6 @@ class JobController extends Controller
     }
 
     /**
-     * Email the employer a confirmation that their job is live. Uses the
-     * admin-editable "job_posted" template; no-ops if it is missing/inactive.
-     */
-    /**
      * AI-drafted descriptions for the Post Job screen, so the employer is not
      * staring at a blank box. Mirrors the web jobs.suggestDescription route;
      * with no AI key configured the writer falls back to a template draft.
@@ -374,48 +382,6 @@ class JobController extends Controller
                 $data['language'] ?? 'en',
             ),
         ]);
-    }
-
-    private function sendPostedEmail(JobListing $job, User $account): void
-    {
-        TemplatedMailer::send('job_posted', $account->email, [
-            'employer_name' => $account->name,
-            'job_title' => $job->title,
-            'job_location' => trim(implode(', ', array_filter([$job->city, $job->state]))) ?: '—',
-            'action_url' => url("/employer/jobs/{$job->id}/applicants"),
-        ]);
-    }
-
-    /**
-     * Notify relevant workers about a newly active job. Same targeting as the
-     * web JobListingController: same city or overlapping skill, else everyone.
-     */
-    private function notifyWorkers(JobListing $job): void
-    {
-        $workers = User::where('role', 'worker')
-            ->whereHas('workerProfile', function ($q) use ($job) {
-                $q->where('available', true)
-                    ->where(function ($q) use ($job) {
-                        if ($job->city) {
-                            $q->orWhere('city', $job->city);
-                        }
-                        foreach ($job->skills ?? [] as $skill) {
-                            $q->orWhereJsonContains('skills', $skill);
-                        }
-                    });
-            })
-            ->get();
-
-        // Nobody matched: every karigar who is available for work.
-        if ($workers->isEmpty()) {
-            $workers = User::where('role', 'worker')
-                ->whereDoesntHave('workerProfile', fn ($q) => $q->where('available', false))
-                ->get();
-        }
-
-        if ($workers->isNotEmpty()) {
-            Notification::send($workers, new NewJobNotification($job));
-        }
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\CheckJobSafety;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -15,13 +16,23 @@ use Throwable;
  * Two layers. A list of tell-tale phrases (English, Hindi, Hinglish) always
  * runs and catches the obvious; the AI model, when one is configured, reads
  * the job as a whole. Either one flagging it sends the job to admin review.
- * If the model is down, the job is not held for that: only the phrase list
- * decides, so a provider outage never stops honest employers posting.
+ *
+ * Asked "strict", a model that is down or rate-limited throws, so the queued
+ * check ({@see CheckJobSafety}) tries again later rather than
+ * waving the job through on the phrase list. Otherwise (its last attempt)
+ * only the phrase list decides, so a provider outage never stops honest
+ * employers posting; the result says which way it was checked.
  */
 class JobModerator
 {
     /** Admin → Settings: "AI checks new jobs". */
     public const ENABLED_KEY = 'ai_job_check_enabled';
+
+    /** The model read the job. */
+    public const METHOD_AI = 'ai';
+
+    /** No model configured, or it was down: only the phrase list ran. */
+    public const METHOD_PHRASES = 'phrases';
 
     /**
      * Phrases that say a job is harmful, each with the reason shown to the
@@ -54,12 +65,15 @@ class JobModerator
 
     /**
      * @param  array<string, mixed>  $job  the job's fields (title, description, skills, perks, fee…)
-     * @return array{flagged: bool, reasons: list<string>}
+     * @param  bool  $strict  throw when the model cannot be asked, instead of falling back to the phrase list
+     * @return array{flagged: bool, reasons: list<string>, method: string} method: "ai" | "phrases"
+     *
+     * @throws Throwable when strict and the model is down
      */
-    public function check(array $job): array
+    public function check(array $job, bool $strict = false): array
     {
         if (! self::enabled()) {
-            return ['flagged' => false, 'reasons' => []];
+            return ['flagged' => false, 'reasons' => [], 'method' => self::METHOD_PHRASES];
         }
 
         $text = $this->text($job);
@@ -71,33 +85,43 @@ class JobModerator
             }
         }
 
-        foreach ($this->askModel($text) as $reason) {
+        $model = $this->askModel($text, $strict);
+
+        foreach ($model ?? [] as $reason) {
             $reasons[] = $reason;
         }
 
         $reasons = array_values(array_unique($reasons));
 
-        return ['flagged' => $reasons !== [], 'reasons' => $reasons];
+        return [
+            'flagged' => $reasons !== [],
+            'reasons' => $reasons,
+            'method' => $model === null ? self::METHOD_PHRASES : self::METHOD_AI,
+        ];
     }
 
     /**
-     * The model's reasons to hold the job, none when it looks fine or the
-     * model could not be asked.
+     * The model's reasons to hold the job, none when it looks fine, null when
+     * the model could not be asked.
      *
-     * @return list<string>
+     * @return list<string>|null
      */
-    private function askModel(string $text): array
+    private function askModel(string $text, bool $strict): ?array
     {
         if (! $this->ai->configured()) {
-            return [];
+            return null;
         }
 
         try {
             $raw = $this->ai->chat($this->systemPrompt(), $text, maxTokens: 250, temperature: 0.0, json: true);
         } catch (Throwable $e) {
+            if ($strict) {
+                throw $e;
+            }
+
             Log::warning('JobModerator: model unavailable, phrase list only: '.$e->getMessage());
 
-            return [];
+            return null;
         }
 
         $decoded = json_decode((string) preg_replace('/^```(json)?|```$/m', '', trim($raw)), true);

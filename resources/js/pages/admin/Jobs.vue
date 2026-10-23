@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Briefcase, Check, Eye, EyeOff, Search, ShieldAlert, X } from '@lucide/vue';
+import { Briefcase, Check, Eye, EyeOff, LoaderCircle, Search, ShieldAlert, ShieldCheck, X } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -14,15 +14,19 @@ interface Row {
     created_at: string;
     description: string | null;
     // Held by the AI safety check: pending (waiting for you), approved, rejected.
-    moderation_status: 'pending' | 'approved' | 'rejected' | null;
+    moderation_status: 'checking' | 'pending' | 'approved' | 'rejected' | null;
     moderation_reasons: string[];
     moderation_note: string | null;
+    // ai | phrases (the model was down: only the phrase list ran) | null
+    moderation_method: 'ai' | 'phrases' | null;
+    moderated_by_admin: boolean;
 }
 
 const props = defineProps<{
     jobs: { data: Row[]; links: { url: string | null; label: string; active: boolean }[] };
     filters: { q?: string; status?: string };
     reviewCount: number;
+    checkingCount: number;
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Job Moderation', href: '/admin/jobs' }] } });
@@ -78,6 +82,7 @@ const statusBadge: Record<string, string> = {
             <select v-model="status" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40">
                 <option value="">All statuses</option>
                 <option value="review">Waiting for review ({{ reviewCount }})</option>
+                <option value="checking">Safety check running ({{ checkingCount }})</option>
                 <option value="active">Active</option>
                 <option value="closed">Closed</option>
                 <option value="draft">Draft</option>
@@ -95,6 +100,17 @@ const statusBadge: Record<string, string> = {
                             <ShieldAlert class="size-3" /> Review
                         </span>
                         <span v-else-if="j.moderation_status === 'rejected'" class="rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-600">Rejected</span>
+                        <span v-else-if="j.moderation_status === 'checking'" class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:text-sky-300">
+                            <LoaderCircle class="size-3 animate-spin" /> Checking
+                        </span>
+                        <span
+                            v-else-if="j.moderation_status === 'approved'"
+                            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
+                            :class="j.moderation_method === 'phrases' && !j.moderated_by_admin ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'"
+                            :title="j.moderation_method === 'phrases' && !j.moderated_by_admin ? 'The AI was unavailable: only the phrase list checked this job' : undefined"
+                        >
+                            <ShieldCheck class="size-3" /> {{ j.moderated_by_admin ? 'Approved by admin' : j.moderation_method === 'phrases' ? 'Basic check only' : 'AI checked' }}
+                        </span>
                     </div>
                     <ul v-if="j.moderation_status === 'pending' && j.moderation_reasons.length" class="mt-1 list-inside list-disc text-xs text-sky-800 dark:text-sky-300">
                         <li v-for="r in j.moderation_reasons" :key="r">{{ r }}</li>

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\JobStatus;
 use App\Models\JobListing;
+use App\Support\JobModeration;
 use Carbon\CarbonInterface;
 
 /**
@@ -26,6 +27,12 @@ class JobRepost
 
         if ($job->status === JobStatus::Active && ! $expired) {
             return __('This job is still live.');
+        }
+
+        // An edit the safety check is reading, held or turned down: a copy
+        // would put those words live past it.
+        if (in_array($job->moderation_status, [JobModeration::CHECKING, JobModeration::PENDING, JobModeration::REJECTED], true)) {
+            return __('This job has not passed the safety check, so it cannot be reposted. Edit it instead.');
         }
 
         $account = $job->employer;

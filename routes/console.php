@@ -1,11 +1,13 @@
 <?php
 
 use App\Enums\ScreeningCallStatus;
+use App\Jobs\CheckJobSafety;
 use App\Models\JobListing;
 use App\Models\ScreeningCall;
 use App\Models\User;
 use App\Services\Geocoder;
 use App\Services\Screening\ScreeningService;
+use App\Support\JobModeration;
 use App\Support\LocateByCity;
 use App\Support\WageConversion;
 use Illuminate\Foundation\Inspiring;
@@ -49,6 +51,21 @@ Artisan::command('screening:place-due', function (ScreeningService $screening) {
 })->purpose('Dial the AI screening calls whose booked time has come');
 
 Schedule::command('screening:place-due')->everyMinute()->withoutOverlapping();
+
+// A job safety check that never ran (the queue was down, or the dispatch was
+// lost) leaves the job on "Checking…" for good: queue it again. One still
+// waiting in the queue is not doubled (CheckJobSafety is unique per job).
+Artisan::command('jobs:recheck-stuck {--minutes=15 : Checking for longer than this}', function () {
+    $stuck = JobListing::where('moderation_status', JobModeration::CHECKING)
+        ->where('updated_at', '<=', now()->subMinutes((int) $this->option('minutes')))
+        ->pluck('id');
+
+    $stuck->each(fn (int $id) => CheckJobSafety::dispatch($id));
+
+    $this->info("Queued {$stuck->count()} job safety checks again.");
+})->purpose('Queue again the job safety checks stuck on "checking"');
+
+Schedule::command('jobs:recheck-stuck')->everyTenMinutes()->withoutOverlapping();
 
 // Wages are monthly (App\Support\Wage). The migration converted what was
 // there; run this after deploying to catch rows older code wrote in between,

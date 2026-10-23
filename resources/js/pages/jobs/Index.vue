@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { BriefcaseBusiness, CalendarDays, MapPin, Pencil, Phone, Plus, RotateCcw, Search, Trash2, Users, UsersRound, X } from '@lucide/vue';
-import { reactive, watch } from 'vue';
+import { BriefcaseBusiness, CalendarDays, LoaderCircle, MapPin, Pencil, Phone, Plus, RotateCcw, Search, ShieldCheck, Trash2, Users, UsersRound, X } from '@lucide/vue';
+import { onUnmounted, reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -9,9 +9,13 @@ interface Job {
     id: number;
     title: string;
     status: 'draft' | 'active' | 'closed';
-    // Held by the safety check (a draft until an admin approves it).
-    moderation_status: 'pending' | 'approved' | 'rejected' | null;
+    // The safety check: checking (queued, a draft until it decides), held
+    // for an admin (pending), or passed/turned down. Null: never checked.
+    moderation_status: 'checking' | 'pending' | 'approved' | 'rejected' | null;
     moderation_note: string | null;
+    // How it was checked: the AI read it, or only the phrase list ran.
+    moderation_method: 'ai' | 'phrases' | null;
+    moderated_at: string | null;
     city: string | null;
     state: string | null;
     vacancies: number;
@@ -72,6 +76,26 @@ const canRepost = (job: Job): boolean => job.status === 'closed' || (job.status 
 const repost = (id: number) => {
     router.post(`/employer/jobs/${id}/repost`, {}, { preserveScroll: true });
 };
+
+// While a safety check runs, look again every few seconds so the row turns
+// live (or "Under review") by itself.
+let poll: ReturnType<typeof setInterval> | undefined;
+
+watch(
+    () => props.jobs.data.some((job) => job.moderation_status === 'checking'),
+    (checking) => {
+        clearInterval(poll);
+        poll = checking ? setInterval(() => router.reload({ only: ['jobs'] }), 4000) : undefined;
+    },
+    { immediate: true },
+);
+
+onUnmounted(() => clearInterval(poll));
+
+const checkedTitle = (job: Job): string =>
+    t(job.moderation_method === 'phrases' ? 'myJobs.basicCheckedOn' : 'myJobs.aiCheckedOn', {
+        date: job.moderated_at ? new Date(job.moderated_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '—',
+    });
 
 const destroy = (id: number) => {
     if (window.confirm(t('myJobs.deleteConfirm'))) {
@@ -193,6 +217,13 @@ const destroy = (id: number) => {
                                     {{ $t('status.expired') }}
                                 </span>
                                 <span
+                                    v-else-if="job.moderation_status === 'checking'"
+                                    class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:text-sky-300"
+                                    :title="$t('myJobs.checkingHint')"
+                                >
+                                    <LoaderCircle class="size-3 animate-spin" /> {{ $t('status.checking') }}
+                                </span>
+                                <span
                                     v-else-if="job.moderation_status === 'pending' || job.moderation_status === 'rejected'"
                                     class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset"
                                     :class="job.moderation_status === 'pending' ? 'bg-sky-500/10 text-sky-700 ring-sky-500/20 dark:text-sky-300' : 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300'"
@@ -209,6 +240,15 @@ const destroy = (id: number) => {
                                 <span v-else class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset" :class="statusPill[job.status]">
                                     {{ $t(`status.${job.status}`) }}
                                 </span>
+                                <!-- Passed the safety check: when, and whether the AI read it. -->
+                                <div
+                                    v-if="job.moderation_status === 'approved' && job.status === 'active' && !isExpired(job)"
+                                    class="mt-1 inline-flex items-center gap-1 text-[11px] font-medium whitespace-nowrap"
+                                    :class="job.moderation_method === 'phrases' ? 'text-muted-foreground' : 'text-emerald-700 dark:text-emerald-300'"
+                                    :title="checkedTitle(job)"
+                                >
+                                    <ShieldCheck class="size-3" /> {{ job.moderation_method === 'phrases' ? $t('myJobs.basicChecked') : $t('myJobs.aiChecked') }}
+                                </div>
                             </td>
                             <td class="px-5 py-3.5">
                                 <div class="flex items-center justify-end gap-1">
@@ -226,6 +266,7 @@ const destroy = (id: number) => {
                                         <RotateCcw class="size-3.5" /> {{ $t('myJobs.repost') }}
                                     </button>
                                     <Link
+                                        v-if="job.moderation_status !== 'checking'"
                                         :href="`/employer/jobs/${job.id}/edit`"
                                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                                     >

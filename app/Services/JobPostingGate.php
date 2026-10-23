@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\EmployerVerification;
+use App\Support\JobModeration;
 
 /**
  * Decides whether an employer account may post another job. Shared by the web
@@ -54,7 +55,9 @@ class JobPostingGate
     }
 
     /**
-     * Jobs this account has put live in the current billing cycle.
+     * Jobs this account has put live in the current billing cycle, plus new
+     * ones waiting on the safety check: they go live in a minute, so posting
+     * more in the meantime must not get past the limit.
      */
     public static function postedThisCycle(User $account): int
     {
@@ -65,7 +68,8 @@ class JobPostingGate
         }
 
         return $account->jobListings()
-            ->where('published_at', '>=', $subscription->currentCycleStart())
+            ->where(fn ($q) => $q->where('published_at', '>=', $subscription->currentCycleStart())
+                ->orWhere(fn ($q) => $q->whereNull('published_at')->where('moderation_status', JobModeration::CHECKING)))
             ->count();
     }
 
@@ -93,17 +97,20 @@ class JobPostingGate
     }
 
     /**
-     * Whether this account still has its one lifetime free post.
+     * Whether this account still has its one lifetime free post. A new job
+     * waiting on the safety check is about to spend it.
      */
     public static function freePostAvailable(User $account): bool
     {
         return $account->employerProfile !== null
-            && $account->employerProfile->free_post_used_at === null;
+            && $account->employerProfile->free_post_used_at === null
+            && ! $account->jobListings()->whereNull('published_at')->where('moderation_status', JobModeration::CHECKING)->exists();
     }
 
     /**
      * Mark the account's free post as consumed. Call once, after the job that
-     * used the free post is created.
+     * used the free post goes live (a job held by the safety check spends it
+     * when the check passes, {@see JobModeration}).
      */
     public static function consumeFreePost(User $account): void
     {
