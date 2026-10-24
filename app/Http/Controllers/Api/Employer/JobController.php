@@ -326,6 +326,15 @@ class JobController extends Controller
 
         $worker = User::where('id', $data['worker_id'])->where('role', 'worker')->firstOrFail();
 
+        // Paused by a lapsed plan, closed or expired: the invite would lead
+        // the karigar to a job page they cannot open.
+        if (! $job->isOpenForApplications()) {
+            return response()->json([
+                'message' => __('This job is not taking applications, so nobody can be invited to it.'),
+                'code' => 'job_not_hiring',
+            ], 422);
+        }
+
         if ($worker->isUnavailableWorker()) {
             return response()->json([
                 'message' => __('This karigar is not available for work right now.'),

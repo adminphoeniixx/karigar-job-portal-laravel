@@ -46,6 +46,14 @@ class JobPostingGate
             return self::allow(false);
         }
 
+        // A plan that ran out is not a way back to the free post. An account
+        // that bought a plan straight away never spent it, and its jobs are
+        // paused anyway — the post would say "live", alert karigars, and show
+        // nobody.
+        if ($account->jobPlanLapsed()) {
+            return self::deny(__('Your plan has ended. Renew it to post jobs.'), 'subscription_required');
+        }
+
         // No active subscription — the free post is the only way in.
         if (Setting::bool('first_post_free_enabled', true) && self::freePostAvailable($account)) {
             return self::allow(true);

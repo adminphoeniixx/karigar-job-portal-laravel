@@ -3,10 +3,12 @@
 use App\Enums\JobStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
+use App\Models\JobInvite;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\Billing\Gst;
 use App\Services\JobPostingGate;
+use App\Services\JobRepost;
 use App\Services\RazorpayService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -100,6 +102,56 @@ it('stops posting and pauses jobs once the 30 days are over', function () {
         ->and($job->fresh()->isOpenForApplications())->toBeFalse()
         ->and(JobPostingGate::evaluate($employer)['code'])->toBe('subscription_required')
         ->and($employer->contactDatabaseQuota())->toBe(0);
+});
+
+it('does not hand a lapsed plan the free post it never spent', function () {
+    $this->travelTo(now()->startOfMinute());
+    // Bought a plan straight away, so the free post is still unspent.
+    $this->employer->employerProfile->update(['free_post_used_at' => null]);
+    payBasic();
+    $old = $this->employer->jobListings()->create([
+        'title' => 'Weaver', 'description' => 'Handloom', 'status' => JobStatus::Closed, 'vacancies' => 1, 'published_at' => now(),
+    ]);
+
+    $this->travel(31)->days();
+
+    $this->actingAs($this->employer, 'sanctum')->postJson('/api/v1/employer/jobs', [
+        'title' => 'Block printer', 'description' => 'Hand block printing on cotton', 'category' => 'Block Printing',
+        'vacancies' => 1, 'city' => 'Jaipur', 'state' => 'Rajasthan', 'status' => 'active',
+    ])->assertStatus(422)->assertJsonPath('code', 'subscription_required');
+
+    expect(JobRepost::repost($old))->toBe(__('Your plan has ended. Renew it to post jobs.'))
+        ->and($this->employer->jobListings()->count())->toBe(1)
+        ->and($this->employer->employerProfile->fresh()->free_post_used_at)->toBeNull();
+});
+
+it('takes a lapsed plan\'s jobs away from karigars everywhere', function () {
+    $this->travelTo(now()->startOfMinute());
+    payBasic();
+    $job = $this->employer->jobListings()->create([
+        'title' => 'Weaver', 'description' => 'Handloom', 'category' => 'Handloom Weaving', 'city' => 'Jaipur',
+        'status' => JobStatus::Active, 'vacancies' => 1, 'published_at' => now(),
+    ]);
+    $worker = User::factory()->create(['role' => UserRole::Worker->value]);
+    $worker->workerProfile()->create(['skills' => ['Handloom Weaving'], 'city' => 'Jaipur', 'available' => true]);
+    $worker->savedJobs()->create(['job_listing_id' => $job->id]);
+
+    // On the plan, the karigar sees it in the feed and in saved jobs.
+    $this->actingAs($worker, 'sanctum');
+    $this->getJson('/api/v1/jobs')->assertOk()->assertJsonPath('data.0.id', $job->id);
+    $this->getJson('/api/v1/worker/saved')->assertOk()->assertJsonCount(1, 'data');
+
+    $this->travel(31)->days();
+
+    $this->getJson('/api/v1/jobs')->assertOk()->assertJsonCount(0, 'data');
+    $this->getJson('/api/v1/worker/saved')->assertOk()->assertJsonCount(0, 'data');
+    $this->getJson("/api/v1/jobs/{$job->id}")->assertNotFound();
+    $this->postJson("/api/v1/jobs/{$job->id}/apply")->assertStatus(422)->assertJsonPath('code', 'job_not_hiring');
+    $this->get("/jobs/{$job->id}")->assertNotFound();
+
+    $this->actingAs($this->employer, 'sanctum')->postJson("/api/v1/employer/jobs/{$job->id}/invite", ['worker_id' => $worker->id])
+        ->assertStatus(422)->assertJsonPath('code', 'job_not_hiring');
+    expect(JobInvite::count())->toBe(0);
 });
 
 it('takes the end date Razorpay reports, and moves it 30 days on each renewal', function () {

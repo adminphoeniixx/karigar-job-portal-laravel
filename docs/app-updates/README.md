@@ -11,6 +11,7 @@ apps can get its own file in the folder, linked from both.
 
 | Date | Employer app | Worker app |
 |---|---|---|
+| [2026-10-24](2026-10-24/) | [Plan ended: no free post to fall back on (`subscription_required`), invite refuses paused jobs (`job_not_hiring`), booked AI calls cancelled](2026-10-24/employer-plan-lapse-checks.md) | — |
 | [2026-10-23](2026-10-23/) | [Job safety check runs in the background: `job_checking` code, `moderation` on every job (`approved` + `method`), 409 while checking, `passed`/`updated` push states](2026-10-23/employer-job-safety-check-queued.md) · [Plan renews / ends / payment failed / ended reminders: `plan.reminder` push](2026-10-23/employer-plan-reminders.md) | — |
 | [2026-10-21](2026-10-21/) | [Apna-priced plans: `tagline`, `mrp` + `discount_percent`, `duration_days`, `job_live_days`; jobs end after the plan's job days](2026-10-21/employer-plans-mrp-and-lengths.md) | — |
 | [2026-10-16](2026-10-16/) | [Hand shortlist starts the AI screening call (now or booked for the morning)](2026-10-16/employer-shortlist-starts-ai-call.md) · [AI call credits: recharge packs, per-minute charge, ledger, job-form gate](2026-10-16/employer-ai-call-credits.md) · [AI call recording: `recording_url` on every call, play bar on View conversation](2026-10-16/employer-ai-call-recording.md) | — |

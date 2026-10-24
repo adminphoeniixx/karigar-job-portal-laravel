@@ -38,6 +38,9 @@ class ScreeningService
     /** @var array<int, bool> account id => can pay for one more call */
     private array $canPay = [];
 
+    /** @var array<int, bool> */
+    private array $hiringPaused = [];
+
     public function __construct(private readonly VoiceAgent $agent) {}
 
     public function agent(): VoiceAgent
@@ -70,6 +73,13 @@ class ScreeningService
 
         if (in_array($application->status, [ApplicationStatus::Rejected, ApplicationStatus::Withdrawn], true)) {
             return 'application_closed';
+        }
+
+        // The employer's job plan ran out: the job is paused and its
+        // applicants hidden, so a booked or retried call must not ring
+        // anyone about it. Memoised per account like $canPay below.
+        if ($this->hiringPaused[$application->job->employer_id] ??= $application->job->isHiringPaused()) {
+            return 'job_not_hiring';
         }
 
         // An interview already on the books makes the whole call pointless.
@@ -168,6 +178,7 @@ class ScreeningService
             'provider_not_configured' => __('Calling is not switched on yet.'),
             'no_caller_id' => __('No calling number is configured yet.'),
             'application_closed' => __('This application is closed.'),
+            'job_not_hiring' => __('Your plan has ended, so this job is paused. Renew it to call applicants.'),
             'interview_already_scheduled' => __('An interview is already booked.'),
             'no_phone_number' => __('This worker has no phone number on file.'),
             'worker_opted_out' => __('This worker has opted out of automated calls.'),

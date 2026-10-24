@@ -433,6 +433,16 @@ it('cancels a booked call whose applicant can no longer be rung', function () {
     expect($call->refresh())->status->toBe(ScreeningCallStatus::Cancelled)->failure_reason->toBe('application_closed');
 });
 
+it('cancels a booked call once the employer\'s plan has run out', function () {
+    $call = app(ScreeningService::class)->schedule($this->application, now()->addHour()->toImmutable());
+    $this->employer->subscriptions()->update(['ends_at' => now()->subMinute()]);
+
+    $this->travel(61)->minutes();
+    $this->artisan('screening:place-due');
+
+    expect($call->refresh())->status->toBe(ScreeningCallStatus::Cancelled)->failure_reason->toBe('job_not_hiring');
+});
+
 /**
  * Place a call through the stub agent and return its row.
  *
