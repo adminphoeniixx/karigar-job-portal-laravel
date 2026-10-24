@@ -287,6 +287,73 @@ HTML,
                 'is_active' => true,
             ],
             [
+                'key' => 'plan_renewing',
+                'name' => 'Plan renews in a few days (to employer)',
+                'description' => 'Sent 3 days before a plan that renews by itself is charged again.',
+                'subject' => 'Your {{ plan_name }} plan renews on {{ end_date }}',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>Your <strong>{{ plan_name }}</strong> plan renews by itself on <strong>{{ end_date }}</strong>, and <strong>{{ amount }}</strong> (GST included) will be charged to the card or UPI you paid with.</p>
+<p>You do not need to do anything. The tax invoice comes by email once the payment goes through.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#bf3a16;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">See my plan</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'plan_name', 'end_date', 'amount', 'effect', 'action_url'],
+                'is_active' => true,
+            ],
+            [
+                'key' => 'plan_ending',
+                'name' => 'Plan ends in a few days (to employer)',
+                'description' => 'Sent 3 days before a plan that will not renew by itself runs out.',
+                'subject' => 'Your {{ plan_name }} plan ends on {{ end_date }}',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>Your <strong>{{ plan_name }}</strong> plan ends on <strong>{{ end_date }}</strong>.</p>
+<p>{{ effect }}</p>
+<p>Renew before then to keep hiring without a break.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#bf3a16;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Renew my plan</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'plan_name', 'end_date', 'amount', 'effect', 'action_url'],
+                'is_active' => true,
+            ],
+            [
+                'key' => 'plan_payment_failed',
+                'name' => 'Plan renewal payment failed (to employer)',
+                'description' => 'Sent when Razorpay could not charge a plan renewal. Razorpay tries again for a few days.',
+                'subject' => 'We could not renew your {{ plan_name }} plan',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>We tried to charge <strong>{{ amount }}</strong> to renew your <strong>{{ plan_name }}</strong> plan, but the payment did not go through.</p>
+<p>{{ effect }}</p>
+<p>Please check that your card or UPI account has enough balance and is still valid. We will try again over the next few days, or you can buy the plan again now.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#bf3a16;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Renew my plan</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'plan_name', 'end_date', 'amount', 'effect', 'action_url'],
+                'is_active' => true,
+            ],
+            [
+                'key' => 'plan_ended',
+                'name' => 'Plan has ended (to employer)',
+                'description' => 'Sent when a plan runs out without renewing, or its renewal payments failed for good.',
+                'subject' => 'Your {{ plan_name }} plan has ended',
+                'body_html' => <<<'HTML'
+<p>Hi {{ employer_name }},</p>
+<p>Your <strong>{{ plan_name }}</strong> plan ended on <strong>{{ end_date }}</strong>.</p>
+<p>{{ effect }}</p>
+<p>Nothing is deleted: your jobs, applicants and messages are all kept, and renewing picks up where you left off.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#bf3a16;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Renew my plan</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'employer_name', 'plan_name', 'end_date', 'amount', 'effect', 'action_url'],
+                'is_active' => true,
+            ],
+            [
                 'key' => 'job_under_review',
                 'name' => 'Job held for review (to employer)',
                 'description' => 'Sent when the automatic safety check holds a job for an admin to look at, instead of putting it live.',

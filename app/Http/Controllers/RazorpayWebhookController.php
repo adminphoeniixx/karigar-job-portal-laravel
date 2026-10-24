@@ -6,6 +6,7 @@ use App\Enums\SubscriptionStatus;
 use App\Models\AiCreditPurchase;
 use App\Models\Subscription;
 use App\Services\Billing\AiCreditCheckout;
+use App\Services\Billing\PlanReminders;
 use App\Services\RazorpayService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -13,7 +14,7 @@ use Illuminate\Support\Carbon;
 
 class RazorpayWebhookController extends Controller
 {
-    public function handle(Request $request, RazorpayService $razorpay, AiCreditCheckout $credits): Response
+    public function handle(Request $request, RazorpayService $razorpay, AiCreditCheckout $credits, PlanReminders $reminders): Response
     {
         $signature = $request->header('X-Razorpay-Signature', '');
 
@@ -68,9 +69,12 @@ class RazorpayWebhookController extends Controller
             in_array($event, ['subscription.activated', 'subscription.charged', 'subscription.authenticated'], true) => tap($subscription)->activateWithInvoice($paymentId)->update([
                 'ends_at' => $time('current_end') ?? $subscription->ends_at,
             ]),
-            $event === 'subscription.halted' => $subscription->update(['status' => SubscriptionStatus::Halted]),
-            $event === 'subscription.cancelled' => $subscription->update(['status' => SubscriptionStatus::Cancelled]),
-            $event === 'subscription.completed' => $subscription->update(['status' => SubscriptionStatus::Completed]),
+            // A renewal charge failed; Razorpay tries again for a few days.
+            $event === 'subscription.pending' => $reminders->paymentFailed(tap($subscription)->update(['status' => SubscriptionStatus::Pending])),
+            // It stopped for good: all retries failed, it was cancelled, or its cycles ran out.
+            $event === 'subscription.halted' => $reminders->lapsed(tap($subscription)->update(['status' => SubscriptionStatus::Halted])),
+            $event === 'subscription.cancelled' => $reminders->lapsed(tap($subscription)->update(['status' => SubscriptionStatus::Cancelled])),
+            $event === 'subscription.completed' => $reminders->lapsed(tap($subscription)->update(['status' => SubscriptionStatus::Completed])),
             default => null,
         };
 

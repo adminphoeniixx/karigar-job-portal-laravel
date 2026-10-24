@@ -4,7 +4,9 @@ use App\Enums\ScreeningCallStatus;
 use App\Jobs\CheckJobSafety;
 use App\Models\JobListing;
 use App\Models\ScreeningCall;
+use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Billing\PlanReminders;
 use App\Services\Geocoder;
 use App\Services\Screening\ScreeningService;
 use App\Support\JobModeration;
@@ -66,6 +68,29 @@ Artisan::command('jobs:recheck-stuck {--minutes=15 : Checking for longer than th
 })->purpose('Queue again the job safety checks stuck on "checking"');
 
 Schedule::command('jobs:recheck-stuck')->everyTenMinutes()->withoutOverlapping();
+
+// Employers hear about their plan before it renews or ends, and once it has
+// ended; each notice goes once a billing cycle. The webhook announces a halted
+// or cancelled plan itself; this also catches plans that simply ran out.
+Artisan::command('plans:remind {--dry-run : List who would be told, send nothing}', function (PlanReminders $reminders) {
+    $upcoming = $reminders->upcoming();
+    $lapses = $reminders->lapses();
+
+    if ($this->option('dry-run')) {
+        $upcoming->each(fn (Subscription $s) => $this->line("remind #{$s->id} {$s->employer->name} ({$s->plan->name}) ends {$s->ends_at}".($s->willRenew() ? ', renews' : '')));
+        $lapses->each(fn (Subscription $s) => $this->line("ended #{$s->id} {$s->employer->name} ({$s->plan->name}) {$s->status->value}, ended {$s->ends_at}"));
+        $this->info("{$upcoming->count()} reminders and {$lapses->count()} ended notices would go.");
+
+        return;
+    }
+
+    $upcoming->each(fn (Subscription $s) => $reminders->remind($s));
+    $ended = $lapses->filter(fn (Subscription $s) => $reminders->lapsed($s))->count();
+
+    $this->info("Sent {$upcoming->count()} plan reminders and {$ended} ended notices.");
+})->purpose('Tell employers their plan renews, ends or has ended');
+
+Schedule::command('plans:remind')->hourly()->withoutOverlapping();
 
 // Wages are monthly (App\Support\Wage). The migration converted what was
 // there; run this after deploying to catch rows older code wrote in between,

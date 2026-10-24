@@ -23,6 +23,9 @@ use Throwable;
  * @property SubscriptionStatus $status
  * @property Carbon|null $starts_at
  * @property Carbon|null $ends_at
+ * @property Carbon|null $reminded_for
+ * @property Carbon|null $payment_failed_for
+ * @property Carbon|null $lapse_notified_for
  */
 class Subscription extends Model
 {
@@ -35,6 +38,8 @@ class Subscription extends Model
         'invoice_number', 'invoiced_at',
         'razorpay_subscription_id', 'razorpay_customer_id',
         'status', 'starts_at', 'ends_at',
+        // The ends_at each notice of App\Services\Billing\PlanReminders was sent for.
+        'reminded_for', 'payment_failed_for', 'lapse_notified_for',
     ];
 
     protected function casts(): array
@@ -52,6 +57,9 @@ class Subscription extends Model
             'invoiced_at' => 'datetime',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'reminded_for' => 'datetime',
+            'payment_failed_for' => 'datetime',
+            'lapse_notified_for' => 'datetime',
         ];
     }
 
@@ -210,6 +218,29 @@ class Subscription extends Model
         }
 
         return $this->starts_at ?? $this->created_at;
+    }
+
+    /**
+     * Whether Razorpay will charge the next cycle by itself: a live
+     * subscription that has not used up its cycles. One retired for a newer
+     * plan is cancelled, so it does not count.
+     */
+    public function willRenew(): bool
+    {
+        return $this->razorpay_subscription_id !== null
+            && $this->status === SubscriptionStatus::Active
+            && (int) ($this->invoices()->max('cycle') ?? 1) < RazorpayService::SUBSCRIPTION_CYCLES;
+    }
+
+    /**
+     * What the next renewal charges, GST included. A coupon took money off
+     * the first payment only, so a discounted plan renews at its full price.
+     */
+    public function renewalAmount(): float
+    {
+        return $this->coupon_id !== null && (float) $this->discount_amount > 0
+            ? Gst::gross((float) $this->subtotal_amount + (float) $this->discount_amount)
+            : (float) $this->total_amount;
     }
 
     public function isActive(): bool

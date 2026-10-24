@@ -10,6 +10,9 @@ use Throwable;
 
 class RazorpayService
 {
+    /** How many cycles a plan subscription is opened for; Razorpay charges each one by itself. */
+    public const SUBSCRIPTION_CYCLES = 12;
+
     public function configured(): bool
     {
         return ! empty(config('services.razorpay.key'))
@@ -97,7 +100,7 @@ class RazorpayService
      *
      * @return array<string, mixed>
      */
-    public function createSubscription(Plan $plan, int $totalCount = 12, ?string $offerId = null): array
+    public function createSubscription(Plan $plan, int $totalCount = self::SUBSCRIPTION_CYCLES, ?string $offerId = null): array
     {
         $payload = [
             'plan_id' => $plan->razorpay_plan_id,
