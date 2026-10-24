@@ -23,7 +23,7 @@ class TemplatedMailer
         // No address, or a phone-OTP placeholder address (<phone>@phone.karigar)
         // that has no real inbox — skip rather than send a guaranteed bounce,
         // which would waste quota and hurt sender reputation.
-        if (empty($email) || str_ends_with($email, '@phone.karigar')) {
+        if (empty($email) || str_ends_with($email, '@phone.karigar') || static::reservedDomain($email)) {
             return;
         }
 
@@ -59,6 +59,20 @@ class TemplatedMailer
             // surfaces in failed_jobs after its retries.
             report($e);
         }
+    }
+
+    /**
+     * RFC 2606 TLDs that can never resolve. The seeded demo karigars live on
+     *
+     * @dummy.karigar.test and @karigar.test (1,300+ of them on the shared DB),
+     * and every job post mails the matching workers — each one a guaranteed
+     * bounce that burns Brevo's daily quota and the sender's reputation.
+     */
+    protected static function reservedDomain(string $email): bool
+    {
+        $tld = strtolower((string) substr(strrchr($email, '.') ?: '', 1));
+
+        return in_array($tld, ['test', 'example', 'invalid', 'localhost'], true);
     }
 
     /**

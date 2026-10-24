@@ -113,6 +113,17 @@ it('skips the phone-OTP placeholder address rather than bouncing off it', functi
     Mail::assertNothingQueued();
 });
 
+it('skips addresses on reserved test domains, like the seeded demo karigars', function () {
+    Mail::fake();
+    seedTemplate('interview_scheduled', 'Interview', '<p>x</p>');
+
+    $this->worker->update(['email' => '9000010001@dummy.karigar.test']);
+
+    $this->worker->fresh()->notify(new InterviewScheduledNotification($this->application));
+
+    Mail::assertNothingQueued();
+});
+
 it('queues transactional mail instead of sending it inside the request', function () {
     Mail::fake();
     seedTemplate('interview_scheduled', 'Interview', '<p>x</p>');
