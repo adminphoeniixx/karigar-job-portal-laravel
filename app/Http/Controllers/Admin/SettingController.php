@@ -14,6 +14,7 @@ use App\Services\Kyc\KycAutoVerifier;
 use App\Services\Screening\ScreeningService;
 use App\Support\GstStates;
 use App\Support\MobileApps;
+use App\Support\SiteInfo;
 use App\Support\Verification;
 use App\Support\WorkerVerification;
 use Illuminate\Http\RedirectResponse;
@@ -57,6 +58,7 @@ class SettingController extends Controller
                 'applicant_first_batch' => ApplicantAccess::firstBatch(),
                 'applicant_next_batch' => ApplicantAccess::nextBatch(),
             ],
+            'website' => SiteInfo::all(),
             'billing' => $this->billing(),
             'apps' => [
                 'versions' => MobileApps::versions(),
@@ -122,6 +124,38 @@ class SettingController extends Controller
         }
 
         return back()->with('toast', ['type' => 'success', 'message' => __('Settings updated.')]);
+    }
+
+    /**
+     * The company behind the brand and the ways to reach it: footers, the
+     * privacy page and terms, mail footers, the apps' Help & Support screen,
+     * and invoices while Billing names no seller of its own.
+     */
+    public function updateWebsite(Request $request): RedirectResponse
+    {
+        $request->merge(['gstin' => strtoupper(trim((string) $request->input('gstin')))]);
+
+        $data = $request->validate([
+            'legal_name' => ['required', 'string', 'max:150'],
+            'address' => ['required', 'string', 'max:300'],
+            'gstin' => ['nullable', 'string', 'regex:/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/'],
+            'email' => ['nullable', 'email', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'support_email' => ['nullable', 'email', 'max:150'],
+            'support_phone' => ['nullable', 'string', 'max:30'],
+            // Digits with country code, no "+": the app builds the wa.me link.
+            'support_whatsapp' => ['nullable', 'regex:/^\d{10,15}$/'],
+            'support_hours' => ['nullable', 'string', 'max:150'],
+            'grievance_email' => ['required', 'email', 'max:150'],
+            'jurisdiction' => ['required', 'string', 'max:100'],
+        ], [
+            'gstin.regex' => __('That is not a valid GSTIN (15 characters, e.g. 06AAFCP6967R1ZF).'),
+            'support_whatsapp.regex' => __('Digits only, with the country code: 919876543210.'),
+        ]);
+
+        SiteInfo::save($data);
+
+        return back()->with('toast', ['type' => 'success', 'message' => __('Website details updated.')]);
     }
 
     /**

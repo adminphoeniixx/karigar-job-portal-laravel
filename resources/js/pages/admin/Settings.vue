@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, Layers, Receipt, Settings as SettingsIcon, Smartphone } from '@lucide/vue';
+import { Building2, Check, Layers, Receipt, Settings as SettingsIcon, Smartphone } from '@lucide/vue';
 import { computed, reactive } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
@@ -8,6 +8,19 @@ type AppName = 'worker' | 'employer';
 type Platform = 'android' | 'ios';
 type AppVersion = { latest: string | null; min: string | null; store_url: string | null };
 type AppSettings = { update_message: string; maintenance: boolean; maintenance_message: string; maintenance_until: string };
+
+type WebsiteKey =
+    | 'legal_name'
+    | 'address'
+    | 'gstin'
+    | 'email'
+    | 'phone'
+    | 'support_email'
+    | 'support_phone'
+    | 'support_whatsapp'
+    | 'support_hours'
+    | 'grievance_email'
+    | 'jurisdiction';
 
 type SettingKey =
     | 'first_post_free_enabled'
@@ -29,6 +42,7 @@ const props = defineProps<{
         applicant_next_batch: number;
         decentro_configured: boolean;
     };
+    website: Record<WebsiteKey, string>;
     billing: {
         gst_enabled: boolean;
         gst_percent: number;
@@ -187,6 +201,45 @@ const rejectHint = computed(() => {
 
 const save = () => {
     router.patch('/admin/settings', form, { preserveScroll: true });
+};
+
+// ── Website: company + contact details ──────────────────────────────
+const website = useForm({ ...props.website });
+
+const websiteFields: { group: string; hint: string; fields: { key: WebsiteKey; label: string; type?: string; long?: boolean; placeholder?: string; help?: string }[] }[] = [
+    {
+        group: 'Company',
+        hint: 'The registered company behind Super Karigar. Shown in every website footer, on the privacy page and at the bottom of every email.',
+        fields: [
+            { key: 'legal_name', label: 'Legal name', placeholder: 'Phoeniixx Designs Private Limited' },
+            { key: 'gstin', label: 'GSTIN', placeholder: '06AAFCP6967R1ZF', help: 'Leave empty to hide it.' },
+            { key: 'address', label: 'Registered address', long: true },
+            { key: 'email', label: 'Email', type: 'email' },
+            { key: 'phone', label: 'Phone', type: 'tel', help: 'Leave empty to hide it.' },
+        ],
+    },
+    {
+        group: 'Help & support',
+        hint: 'The contact options on the Help & Support screen of both apps. An empty one is not shown.',
+        fields: [
+            { key: 'support_email', label: 'Support email', type: 'email' },
+            { key: 'support_phone', label: 'Support phone', type: 'tel' },
+            { key: 'support_whatsapp', label: 'WhatsApp number', placeholder: '919876543210', help: 'Digits only, with the country code.' },
+            { key: 'support_hours', label: 'Support hours', placeholder: 'Monday to Saturday, 10 AM to 7 PM IST' },
+        ],
+    },
+    {
+        group: 'Legal',
+        hint: 'Written into the privacy policy and the terms of use.',
+        fields: [
+            { key: 'grievance_email', label: 'Grievance Officer email', type: 'email' },
+            { key: 'jurisdiction', label: 'Courts of', placeholder: 'Jaipur, Rajasthan' },
+        ],
+    },
+];
+
+const saveWebsite = () => {
+    website.patch('/admin/settings/website', { preserveScroll: true });
 };
 
 // ── Billing & GST ───────────────────────────────────────────────────
@@ -385,6 +438,44 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                 </button>
             </div>
         </section>
+
+        <div class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+            <h2 class="flex items-center gap-2 text-lg font-semibold"><Building2 class="size-4 text-primary" /> Website</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+                Company and contact details printed across the website, the emails and both apps. Tax invoices use
+                the company here too, unless a seller is set under Billing &amp; GST below.
+            </p>
+
+            <div v-for="group in websiteFields" :key="group.group" class="mt-5 border-t pt-4">
+                <h3 class="text-base font-semibold">{{ group.group }}</h3>
+                <p class="mt-0.5 text-xs text-muted-foreground">{{ group.hint }}</p>
+                <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                    <label v-for="field in group.fields" :key="field.key" class="text-sm font-medium" :class="field.long ? 'sm:col-span-2' : ''">
+                        {{ field.label }}
+                        <textarea v-if="field.long" v-model="website[field.key]" rows="2" :class="inputClass" />
+                        <input
+                            v-else
+                            v-model="website[field.key]"
+                            :type="field.type ?? 'text'"
+                            :placeholder="field.placeholder"
+                            :class="[inputClass, field.key === 'gstin' ? 'uppercase tracking-wider' : '']"
+                        />
+                        <span v-if="website.errors[field.key]" class="mt-1 block text-xs text-rose-600">{{ website.errors[field.key] }}</span>
+                        <span v-else-if="field.help" class="mt-1 block text-xs font-normal text-muted-foreground">{{ field.help }}</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="mt-5 flex justify-end border-t pt-4">
+                <button
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                    :disabled="website.processing"
+                    @click="saveWebsite"
+                >
+                    <Check class="size-4" /> Save website
+                </button>
+            </div>
+        </div>
 
         <div class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
             <div class="flex items-start justify-between gap-4">

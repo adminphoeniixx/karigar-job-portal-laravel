@@ -184,7 +184,7 @@ class LegalDocuments
                     self::paragraph('When we change this page we update the date at the top. If a change materially affects your rights, we will tell you in the app or by message rather than quietly editing it.'),
                 ]),
                 self::section('contact', 'Contact and grievances', [
-                    self::paragraph('For anything about your privacy — a request, a complaint, or a question about this page — reach our Grievance Officer at '.config('support.grievance_email').'. We acknowledge every request within 72 hours and resolve it within the period the law allows.'),
+                    self::paragraph('For anything about your privacy — a request, a complaint, or a question about this page — reach our Grievance Officer at '.SiteInfo::get('grievance_email').'. We acknowledge every request within 72 hours and resolve it within the period the law allows.'),
                     self::paragraph('If you are not satisfied with how we have handled a complaint, you may escalate it to the Data Protection Board of India.'),
                 ]),
             ],
@@ -284,8 +284,8 @@ class LegalDocuments
                     self::paragraph('We update the date at the top when these terms change. If a change materially affects you, we will tell you in the app or by message rather than quietly editing this page. Continuing to use Super Karigar after that means you accept the new terms.'),
                 ]),
                 self::section('contact', 'Law and contact', [
-                    self::paragraph('These terms are governed by the laws of India, and the courts of '.config('support.jurisdiction').' have exclusive jurisdiction over any dispute.'),
-                    self::paragraph('For a complaint about the service, or anything in these terms, write to our Grievance Officer at '.config('support.grievance_email').'. We acknowledge every complaint within 72 hours.'),
+                    self::paragraph('These terms are governed by the laws of India, and the courts of '.SiteInfo::get('jurisdiction').' have exclusive jurisdiction over any dispute.'),
+                    self::paragraph('For a complaint about the service, or anything in these terms, write to our Grievance Officer at '.SiteInfo::get('grievance_email').'. We acknowledge every complaint within 72 hours.'),
                 ]),
             ],
         ];

@@ -12,7 +12,8 @@ return [
     | rules both want the registered name and GSTIN visible, not just the
     | brand — so it lives here once and is read everywhere else.
     |
-    | Shared with the front end by HandleInertiaRequests as the `company` prop.
+    | These are only the defaults: Admin → Settings → Website edits them, and
+    | everything reads them through App\Support\SiteInfo.
     */
 
     'legal_name' => env('COMPANY_LEGAL_NAME', 'Phoeniixx Designs Private Limited'),

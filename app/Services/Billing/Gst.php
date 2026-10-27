@@ -6,6 +6,7 @@ use App\Models\EmployerProfile;
 use App\Models\Setting;
 use App\Models\Subscription;
 use App\Support\GstStates;
+use App\Support\SiteInfo;
 
 /**
  * GST on what Super Karigar sells: the admin-set rate and seller details, and
@@ -81,13 +82,15 @@ class Gst
      */
     public static function seller(): array
     {
-        $gstin = strtoupper((string) (Setting::get(self::SELLER_GSTIN_KEY) ?: config('billing.seller.gstin')));
+        // Billing's own seller first, then the INVOICE_SELLER_* override, then
+        // the company on Admin → Settings → Website.
+        $gstin = strtoupper((string) (Setting::get(self::SELLER_GSTIN_KEY) ?: config('billing.seller.gstin') ?: SiteInfo::get('gstin')));
 
         return [
-            'name' => (string) (Setting::get(self::SELLER_NAME_KEY) ?: config('billing.seller.name')),
-            'address' => (string) (Setting::get(self::SELLER_ADDRESS_KEY) ?: config('billing.seller.address')),
+            'name' => (string) (Setting::get(self::SELLER_NAME_KEY) ?: config('billing.seller.name') ?: SiteInfo::get('legal_name')),
+            'address' => (string) (Setting::get(self::SELLER_ADDRESS_KEY) ?: config('billing.seller.address') ?: SiteInfo::get('address')),
             'gstin' => $gstin,
-            'email' => (string) config('billing.seller.email'),
+            'email' => (string) (config('billing.seller.email') ?: SiteInfo::get('email')),
             'state_code' => GstStates::codeFromGstin($gstin),
             'sac' => (string) (Setting::get(self::SAC_KEY) ?: self::DEFAULT_SAC),
         ];

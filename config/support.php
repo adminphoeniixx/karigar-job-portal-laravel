@@ -7,8 +7,9 @@ return [
     | Help & Support contact channels
     |--------------------------------------------------------------------------
     | Shown on the apps' "Help & Support" screen. A channel left empty is
-    | omitted from the API response, so the app never renders a dead row —
-    | switch one on by filling its env var, not by editing the app.
+    | omitted from the API response, so the app never renders a dead row.
+    | These are only the defaults: Admin → Settings → Website edits them,
+    | and everything reads them through App\Support\SiteInfo.
     */
 
     'email' => env('SUPPORT_EMAIL', 'support@superkarigar.com'),

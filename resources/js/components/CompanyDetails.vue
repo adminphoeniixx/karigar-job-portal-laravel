@@ -4,9 +4,9 @@
  * reach it. Razorpay and the GST rules both want this visible on the site, not
  * only on the invoice, so every public footer carries it.
  *
- * The values come from config/company.php via the shared `company` prop, so
- * they are set in one place and printed the same way here, on tax invoices and
- * in outgoing mail.
+ * The values come from Admin → Settings → Website via the shared `company`
+ * prop (App\Support\SiteInfo), so they are set in one place and printed the
+ * same way here, on tax invoices and in outgoing mail.
  *
  * `variant` picks the shape:
  *   block — stacked lines, for the landing page's tall footer column

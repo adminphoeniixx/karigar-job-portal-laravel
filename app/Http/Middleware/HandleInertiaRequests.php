@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Category;
 use App\Support\Chat;
+use App\Support\SiteInfo;
 use App\Support\Verification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -48,7 +49,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             // The registered entity behind the brand — footers and the privacy
             // page print it, so every public page gets it without asking.
-            'company' => config('company'),
+            'company' => SiteInfo::company(),
             'auth' => [
                 'user' => $user,
                 'teamRole' => $user?->isEmployer() ? $user->teamRole() : null,

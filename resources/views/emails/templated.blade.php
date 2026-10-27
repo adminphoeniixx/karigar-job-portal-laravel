@@ -25,9 +25,10 @@
                             &copy; {{ date('Y') }} {{ config('app.name') }}. This is an automated message, please do not reply.
                             {{-- The sending entity, spelled out: a bulk sender that names only its brand is what filters treat as unidentified. --}}
                             <br><br>
-                            <span style="color:#94a3b8;">{{ config('company.legal_name') }}@if (config('company.address')), {{ config('company.address') }}@endif</span>
-                            @if (config('company.email'))
-                                <br><a href="mailto:{{ config('company.email') }}" style="color:#94a3b8;">{{ config('company.email') }}</a>
+                            @php($company = \App\Support\SiteInfo::company())
+                            <span style="color:#94a3b8;">{{ $company['legal_name'] }}@if ($company['address']), {{ $company['address'] }}@endif</span>
+                            @if ($company['email'])
+                                <br><a href="mailto:{{ $company['email'] }}" style="color:#94a3b8;">{{ $company['email'] }}</a>
                             @endif
                         </td>
                     </tr>

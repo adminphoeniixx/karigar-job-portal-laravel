@@ -322,6 +322,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // App-wide settings (feature toggles)
     Route::get('settings', [AdminSettingController::class, 'index'])->name('settings.index');
     Route::patch('settings', [AdminSettingController::class, 'update'])->name('settings.update');
+    Route::patch('settings/website', [AdminSettingController::class, 'updateWebsite'])->name('settings.website');
     Route::patch('settings/billing', [AdminSettingController::class, 'updateBilling'])->name('settings.billing');
     Route::patch('settings/apps', [AdminSettingController::class, 'updateApps'])->name('settings.apps');
 });

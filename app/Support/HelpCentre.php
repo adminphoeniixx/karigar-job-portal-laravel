@@ -23,10 +23,10 @@ class HelpCentre
     public static function channels(): array
     {
         return array_filter([
-            'email' => config('support.email'),
-            'whatsapp' => config('support.whatsapp'),
-            'phone' => config('support.phone'),
-            'hours' => config('support.hours'),
+            'email' => SiteInfo::get('support_email'),
+            'whatsapp' => SiteInfo::get('support_whatsapp'),
+            'phone' => SiteInfo::get('support_phone'),
+            'hours' => SiteInfo::get('support_hours'),
         ], fn ($value) => filled($value));
     }
 
