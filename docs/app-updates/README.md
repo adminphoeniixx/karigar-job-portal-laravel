@@ -11,6 +11,7 @@ apps can get its own file in the folder, linked from both.
 
 | Date | Employer app | Worker app |
 |---|---|---|
+| [2026-10-27](2026-10-27/) | — | [A job leaves the feed and home "Latest jobs" once the karigar applies (search still finds it)](2026-10-27/worker-applied-jobs-leave-the-feed.md) |
 | [2026-10-26](2026-10-26/) | [A cancelled plan (UPI AutoPay turned off) runs to its `ends_at`; `current.status` can be `cancelled` / `completed` while on](2026-10-26/employer-cancelled-plan-runs-to-its-end.md) | — |
 | [2026-10-24](2026-10-24/) | [Plan ended: no free post to fall back on (`subscription_required`), invite refuses paused jobs (`job_not_hiring`), booked AI calls cancelled](2026-10-24/employer-plan-lapse-checks.md) · [Plan `badge` text, admin-written `feature_list`, AI call credits included with each plan payment](2026-10-24/employer-plan-badge-and-feature-lines.md) | — |
 | [2026-10-23](2026-10-23/) | [Job safety check runs in the background: `job_checking` code, `moderation` on every job (`approved` + `method`), 409 while checking, `passed`/`updated` push states](2026-10-23/employer-job-safety-check-queued.md) · [Plan renews / ends / payment failed / ended reminders: `plan.reminder` push](2026-10-23/employer-plan-reminders.md) | — |

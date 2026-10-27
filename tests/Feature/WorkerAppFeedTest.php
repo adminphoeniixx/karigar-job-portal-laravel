@@ -124,6 +124,23 @@ it('leaves paused jobs out of the feed', function () {
     expect(feedTitles($this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/jobs')))->toBe([]);
 });
 
+it('leaves the jobs the karigar applied to out of the feed and the home screen', function () {
+    feedJob($this->employer, 'Loom weaver');
+    $pending = feedJob($this->employer, 'Carpet weaver');
+    $withdrawn = feedJob($this->employer, 'Dhurrie weaver');
+    $pending->applications()->create(['worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending]);
+    $withdrawn->applications()->create(['worker_id' => $this->worker->id, 'status' => ApplicationStatus::Withdrawn]);
+
+    // Someone else's application hides nothing from this karigar.
+    $other = User::factory()->create(['role' => UserRole::Worker->value]);
+    feedJob($this->employer, 'Shawl weaver')->applications()->create(['worker_id' => $other->id, 'status' => ApplicationStatus::Pending]);
+
+    expect(feedTitles($this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/jobs')))
+        ->toEqualCanonicalizing(['Loom weaver', 'Shawl weaver'])
+        ->and(collect($this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/worker/dashboard')->json('latest_jobs'))->pluck('title')->all())
+        ->toEqualCanonicalizing(['Loom weaver', 'Shawl weaver']);
+});
+
 it('uses the full search when the karigar searches', function () {
     feedJob($this->employer, 'Loom weaver');
 

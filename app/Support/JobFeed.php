@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Builder;
  *   the profile. Without either, the profile's city first, then its
  *   state, then the rest. Jobs with no map pin come after the pinned ones.
  * - Only jobs taking applications: active, and the employer hiring.
+ * - Not the jobs the karigar already applied to, whatever became of the
+ *   application; those live under My Applications.
  *
  * A search or a filter the karigar types goes to {@see JobSearch} instead.
  */
@@ -75,7 +77,8 @@ final class JobFeed
      */
     public function query(?float $radiusKm = null): Builder
     {
-        $query = JobListing::query()->active()->hiring()->with('employer:id,name', 'employer.kyc');
+        $query = JobListing::query()->active()->hiring()->with('employer:id,name', 'employer.kyc')
+            ->whereDoesntHave('applications', fn (Builder $q) => $q->where('worker_id', $this->worker->id));
 
         if ($this->skills !== []) {
             $lower = array_map(fn ($skill) => mb_strtolower($skill), $this->skills);

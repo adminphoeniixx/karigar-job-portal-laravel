@@ -286,7 +286,7 @@ it('does not spend the free first post on a draft', function () {
 it('stops the old plan renewing when a new plan of the same type is bought', function () {
     Mail::fake();
     $razorpay = Mockery::mock(RazorpayService::class);
-    $razorpay->shouldReceive('cancelSubscription')->once()->with('sub_old');
+    $razorpay->shouldReceive('cancelSubscription')->once()->with('sub_old', false);
     app()->instance(RazorpayService::class, $razorpay);
 
     $old = subscribeActive($this->employer, $this->plan);
