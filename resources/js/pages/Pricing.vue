@@ -166,10 +166,7 @@ const num = (n: number) => n.toLocaleString('en-IN');
                                 <span class="text-muted-foreground line-through">{{ money(plan.mrp) }}</span>
                                 <span class="font-semibold text-primary">{{ plan.discount_percent }}% OFF</span>
                             </p>
-                            <div :class="plan.mrp ? 'mt-1' : 'mt-5'" class="flex items-end gap-1.5">
-                                <span class="text-[2.75rem] leading-none font-semibold tracking-tight tabular-nums">{{ money(plan.price) }}</span>
-                                <span class="pb-1 text-sm whitespace-nowrap text-muted-foreground">/ {{ plan.interval_label }}</span>
-                            </div>
+                            <div :class="plan.mrp ? 'mt-1' : 'mt-5'" class="text-[2.75rem] leading-none font-semibold tracking-tight tabular-nums">{{ money(plan.price) }}</div>
                             <p v-if="gstPercent > 0" class="mt-1.5 text-xs text-muted-foreground">
                                 + {{ gstPercent }}% GST · {{ money(plan.price_with_gst) }} total
                             </p>

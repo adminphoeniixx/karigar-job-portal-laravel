@@ -258,7 +258,6 @@ const subscribe = () => {
                             class="text-4xl font-bold tracking-tight"
                             :class="discountFor(plan) > 0 ? 'text-orange-600 dark:text-orange-400' : ''"
                         >{{ money(finalPrice(plan)) }}</span>
-                        <span class="pb-1 text-sm text-muted-foreground">/{{ plan.interval_label ?? plan.interval }}</span>
                     </div>
                     <div v-if="gstPercent > 0" class="relative mt-0.5 text-[11px] text-muted-foreground">
                         + {{ gstPercent }}% GST · {{ money(totalFor(plan)) }} total
@@ -423,7 +422,7 @@ const subscribe = () => {
                 </div>
                 <div class="flex justify-between border-t pt-2 text-base font-bold">
                     <span>{{ $t('subscription.totalPayable') }}</span>
-                    <span>{{ money(totalFor(selected)) }} <span class="text-xs font-normal text-muted-foreground">/{{ selected.interval_label ?? selected.interval }}</span></span>
+                    <span>{{ money(totalFor(selected)) }}</span>
                 </div>
             </div>
 
