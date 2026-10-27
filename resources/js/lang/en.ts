@@ -371,6 +371,7 @@ export default {
         title: 'Plans',
         subtitle: 'Choose a plan to start posting jobs',
         activePlan: 'Active plan',
+        wontRenew: "Won't renew · ends",
         jobPosts: 'job posts',
         contactUnlocks: 'contact unlocks',
         featured: 'Featured listings',

@@ -117,6 +117,8 @@ class OrderHistory
         }
 
         return match (true) {
+            // Cancelled or completed, but the days paid for still run.
+            $order->status->isRunningOut() && $order->isActive() => 'active',
             $order->status === SubscriptionStatus::Cancelled => 'cancelled',
             $order->status === SubscriptionStatus::Completed => 'completed',
             $order->status->isEntitled() && ($order->ends_at === null || $order->ends_at->isFuture()) => 'active',

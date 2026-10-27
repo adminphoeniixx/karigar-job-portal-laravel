@@ -5,13 +5,18 @@ use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use App\Models\JobInvite;
 use App\Models\Plan;
+use App\Models\TeamMember;
 use App\Models\User;
+use App\Services\AiCredits;
 use App\Services\Billing\Gst;
+use App\Services\Billing\OrderHistory;
+use App\Services\Billing\PlanReminders;
 use App\Services\JobPostingGate;
 use App\Services\JobRepost;
 use App\Services\RazorpayService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Razorpay\Api\Api;
 
 /**
@@ -171,12 +176,103 @@ it('takes the end date Razorpay reports, and moves it 30 days on each renewal', 
         ->and($subscription->isActive())->toBeTrue();
 });
 
-it('lets a cancelled plan go at once', function () {
+it('keeps the days paid for when the plan is cancelled mid-cycle, then lets it go', function () {
+    Notification::fake();
     payBasic();
 
+    // The employer stopped the UPI mandate ten days in: no more charges, but
+    // the 30 days are paid for.
+    $this->travel(10)->days();
     signedWebhook('subscription.cancelled', ['id' => 'sub_30', 'paid_count' => 1]);
 
-    expect($this->employer->fresh()->activeSubscription())->toBeNull();
+    $subscription = $this->subscription->fresh();
+    expect($subscription->status)->toBe(SubscriptionStatus::Cancelled)
+        ->and($this->employer->fresh()->activeSubscription()?->id)->toBe($subscription->id)
+        ->and($subscription->willRenew())->toBeFalse()
+        ->and(OrderHistory::for($this->employer->fresh())[0]['plan_status'])->toBe('active');
+    Notification::assertNothingSent();
+
+    $this->travel(21)->days();
+
+    expect($this->employer->fresh()->activeSubscription())->toBeNull()
+        ->and(app(PlanReminders::class)->lapses()->pluck('id')->all())->toBe([$subscription->id]);
+});
+
+it('keeps the last cycle running after Razorpay marks the plan completed', function () {
+    $this->travelTo(now()->startOfMinute());
+    $end = now()->addDays(30)->timestamp;
+
+    // Razorpay can report the plan completed before the last charge itself.
+    signedWebhook('subscription.charged', ['id' => 'sub_30', 'paid_count' => 1, 'current_end' => $end]);
+    signedWebhook('subscription.completed', ['id' => 'sub_30', 'paid_count' => 12]);
+    signedWebhook('subscription.charged', ['id' => 'sub_30', 'paid_count' => 12, 'current_start' => $end, 'current_end' => $end + 30 * 86400]);
+
+    $subscription = $this->subscription->fresh();
+    expect($subscription->status)->toBe(SubscriptionStatus::Completed)
+        ->and($subscription->ends_at->timestamp)->toBe($end + 30 * 86400)
+        ->and($subscription->isActive())->toBeTrue();
+});
+
+it('stops an older plan at Razorpay when a new one is bought, even one whose renewal is failing', function () {
+    $razorpay = Mockery::mock(RazorpayService::class)->makePartial();
+    $razorpay->shouldReceive('cancelSubscription')->once()->with('sub_old', false);
+    app()->instance(RazorpayService::class, $razorpay);
+
+    // Last month's plan: its renewal failed and Razorpay is still retrying.
+    $old = $this->employer->subscriptions()->create([
+        'plan_id' => $this->plan->id, 'razorpay_subscription_id' => 'sub_old',
+        'status' => SubscriptionStatus::Pending,
+        'starts_at' => now()->subDays(31), 'ends_at' => now()->subDay(),
+    ]);
+
+    payBasic();
+
+    expect($old->fresh()->status)->toBe(SubscriptionStatus::Cancelled)
+        ->and($this->employer->fresh()->activeSubscription()?->id)->toBe($this->subscription->id);
+});
+
+it('ends a replaced plan at the switch, and a late report of its payment does not bring it back', function () {
+    $razorpay = Mockery::mock(RazorpayService::class)->makePartial();
+    $razorpay->shouldReceive('cancelSubscription')->once()->with('sub_30', false);
+    app()->instance(RazorpayService::class, $razorpay);
+
+    payBasic();
+
+    $standard = Plan::create([
+        'name' => 'Standard', 'slug' => 'standard', 'type' => Plan::TYPE_JOB, 'price' => 999, 'currency' => 'INR',
+        'interval' => Plan::INTERVAL_30_DAYS, 'features' => ['job_post_limit' => 3], 'is_active' => true,
+    ]);
+    $new = $this->employer->subscriptions()->create([
+        'plan_id' => $standard->id, 'razorpay_subscription_id' => 'sub_std', 'status' => SubscriptionStatus::Created,
+        ...Gst::subscriptionColumns(Gst::quote(999.0, $this->employer->employerProfile)),
+    ]);
+    $new->activateWithInvoice('pay_std');
+
+    $old = $this->subscription->fresh();
+    expect($old->status)->toBe(SubscriptionStatus::Cancelled)
+        ->and($old->isActive())->toBeFalse();
+
+    // Razorpay retries the old plan's first-payment webhook hours later.
+    signedWebhook('subscription.charged', ['id' => 'sub_30', 'paid_count' => 1, 'current_end' => now()->addDays(30)->timestamp]);
+
+    expect($this->subscription->fresh()->status)->toBe(SubscriptionStatus::Cancelled)
+        ->and($this->subscription->fresh()->isActive())->toBeFalse()
+        ->and($this->employer->fresh()->activeSubscription()?->id)->toBe($new->id);
+});
+
+it('puts a plan a team member opens on the account, and lets only the owner buy one', function () {
+    payBasic();
+
+    $manager = User::factory()->create(['role' => UserRole::Employer->value]);
+    TeamMember::create(['employer_id' => $this->employer->id, 'user_id' => $manager->id, 'role' => 'manager']);
+
+    $this->actingAs($manager)->get('/subscription')
+        ->assertInertia(fn ($page) => $page->where('current.id', $this->subscription->id));
+
+    $this->actingAs($manager)->post("/subscription/{$this->plan->id}/subscribe")
+        ->assertSessionHas('toast.message', 'Only the account owner can change the plan.');
+
+    expect($manager->subscriptions()->count())->toBe(0);
 });
 
 it('asks Razorpay for a plan that bills every 30 days', function () {
@@ -204,4 +300,23 @@ it('asks Razorpay for a plan that bills every 30 days', function () {
 
     expect($sent['period'])->toBe('daily')->and($sent['interval'])->toBe(30)
         ->and($this->plan->fresh()->razorpay_plan_id)->toBe('plan_30d');
+});
+
+it('puts the plan\'s AI call credits in the wallet once per payment', function () {
+    $this->travelTo(now()->startOfMinute());
+    $this->plan->update(['features' => [...$this->plan->features, 'ai_call_credits' => 5]]);
+    $wallet = fn () => AiCredits::for($this->employer->fresh())->balance();
+    $start = now()->timestamp;
+    $end = now()->addDays(30)->timestamp;
+
+    // The app's callback and Razorpay's webhook both report the first payment.
+    payBasic();
+    signedWebhook('subscription.charged', ['id' => 'sub_30', 'paid_count' => 1, 'current_start' => $start, 'current_end' => $end]);
+    expect($wallet())->toBe(5);
+
+    // Each renewal brings the plan's credits again.
+    $this->travel(30)->days();
+    signedWebhook('subscription.charged', ['id' => 'sub_30', 'paid_count' => 2, 'current_start' => $end, 'current_end' => $end + 30 * 86400]);
+    expect($wallet())->toBe(10)
+        ->and($this->plan->fresh()->featureList())->toContain('5 AI calling credits');
 });

@@ -28,69 +28,77 @@ class PlanSeeder extends Seeder
      */
     public function run(): void
     {
-        $job = ['type' => Plan::TYPE_JOB, 'interval' => Plan::INTERVAL_DAYS, 'job_live_days' => 15];
+        $job = ['type' => Plan::TYPE_JOB, 'interval' => Plan::INTERVAL_DAYS];
         $database = ['type' => Plan::TYPE_DATABASE, 'interval' => Plan::INTERVAL_DAYS, 'duration_days' => 30];
 
+        // The 24 Oct 2026 catalogue. No struck-out MRP: a discount is shown
+        // only against a price that was genuinely charged. Each job plan puts
+        // AI call credits in the wallet with every payment.
         $plans = [
             [
                 ...$job,
                 'name' => 'Single Job',
                 'slug' => 'single-job',
-                'tagline' => 'Try it with one job',
-                'price' => 699,
-                'duration_days' => 30,
-                'features' => ['job_post_limit' => 1, 'contact_unlock_limit' => 20, 'contact_database_limit' => 1000, 'featured' => false],
+                'tagline' => 'For small shops hiring occasionally',
+                'price' => 499,
+                'duration_days' => 15,
+                'job_live_days' => 15,
+                'features' => ['job_post_limit' => 1, 'contact_unlock_limit' => 20, 'contact_database_limit' => 20, 'ai_call_credits' => 5, 'featured' => false,
+                    'highlights' => ['1 job post, live for 15 days', '20 database contact unlocks', 'AI-ranked applicants', '5 AI calling credits']],
             ],
             [
                 ...$job,
-                'name' => '1 Month',
+                'name' => 'Starter',
                 'slug' => 'job-1-month',
-                'tagline' => 'Ideal for small teams',
-                'price' => 1949,
-                'mrp' => 2097,
+                'tagline' => 'For boutiques and small teams',
+                'price' => 999,
                 'duration_days' => 30,
-                'features' => ['job_post_limit' => 3, 'contact_unlock_limit' => 75, 'contact_database_limit' => 3000, 'featured' => false],
+                'job_live_days' => 30,
+                'features' => ['job_post_limit' => 1, 'contact_unlock_limit' => 50, 'contact_database_limit' => 50, 'ai_call_credits' => 10, 'featured' => false,
+                    'highlights' => ['1 job post, live for 30 days', '50 database contact unlocks', 'AI-ranked applicants', '10 AI calling credits']],
             ],
             [
                 ...$job,
-                'name' => '3 Months',
-                'slug' => 'job-3-months',
-                'tagline' => 'Steady hiring through the quarter',
-                'price' => 3649,
-                'mrp' => 4194,
-                'duration_days' => 90,
-                'features' => ['job_post_limit' => 6, 'contact_unlock_limit' => 175, 'contact_database_limit' => 10000, 'featured' => true],
-            ],
-            [
-                ...$job,
-                'name' => '6 Months',
+                'name' => 'Growth',
                 'slug' => 'job-6-months',
-                'tagline' => 'Best fit for larger hiring needs',
-                'price' => 7099,
-                'mrp' => 9087,
-                'duration_days' => 180,
-                'features' => ['job_post_limit' => 13, 'contact_unlock_limit' => 400, 'contact_database_limit' => 50000, 'featured' => false],
+                'tagline' => 'For growing brands and manufacturers',
+                'price' => 1499,
+                'duration_days' => 30,
+                'job_live_days' => 30,
+                'features' => ['job_post_limit' => 1, 'contact_unlock_limit' => 100, 'contact_database_limit' => 100, 'ai_call_credits' => 20, 'featured' => true, 'badge' => 'Most popular',
+                    'highlights' => ['1 job post, live for 30 days', '100 database contact unlocks', 'AI-ranked applicants and skill matching', '20 AI calling credits']],
+            ],
+            [
+                ...$job,
+                'name' => 'Factory',
+                'slug' => 'job-3-months',
+                'tagline' => 'For larger, recurring hiring needs',
+                'price' => 2499,
+                'duration_days' => 30,
+                'job_live_days' => 30,
+                'features' => ['job_post_limit' => 3, 'contact_unlock_limit' => 250, 'contact_database_limit' => 250, 'ai_call_credits' => 40, 'featured' => false,
+                    'highlights' => ['3 job posts, each live for 30 days', '250 database contact unlocks', 'AI-ranked applicants and advanced filters', '40 AI calling credits']],
             ],
             [
                 ...$database,
                 'name' => 'Database Basic',
                 'slug' => 'database-basic',
                 'price' => 299,
-                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 50, 'contact_database_limit' => 1000, 'featured' => false],
+                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 30, 'contact_database_limit' => 1000, 'featured' => false],
             ],
             [
                 ...$database,
                 'name' => 'Database Standard',
                 'slug' => 'database-standard',
                 'price' => 599,
-                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 125, 'contact_database_limit' => 3000, 'featured' => true],
+                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 60, 'contact_database_limit' => 3000, 'featured' => true],
             ],
             [
                 ...$database,
                 'name' => 'Database Pro',
                 'slug' => 'database-pro',
                 'price' => 999,
-                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 300, 'contact_database_limit' => 10000, 'featured' => false],
+                'features' => ['job_post_limit' => 0, 'contact_unlock_limit' => 100, 'contact_database_limit' => 10000, 'featured' => false],
             ],
         ];
 

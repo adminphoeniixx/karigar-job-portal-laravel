@@ -371,6 +371,7 @@ export default {
         title: 'प्लान',
         subtitle: 'नौकरी पोस्ट करने के लिए प्लान चुनें',
         activePlan: 'सक्रिय प्लान',
+        wontRenew: 'रिन्यू नहीं होगा · खत्म',
         jobPosts: 'नौकरी पोस्ट',
         contactUnlocks: 'संपर्क अनलॉक',
         featured: 'फीचर्ड लिस्टिंग',

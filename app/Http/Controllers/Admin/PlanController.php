@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Services\Billing\Gst;
+use App\Support\PricingPage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -24,8 +25,10 @@ class PlanController extends Controller
         return Inertia::render('admin/Plans', [
             'plans' => Plan::orderBy('type', 'desc')->orderBy('is_active', 'desc')->orderBy('price')->withCount('subscriptions')->get([
                 'id', 'name', 'tagline', 'slug', 'type', 'price', 'mrp', 'interval', 'duration_days', 'job_live_days', 'features', 'is_active',
-            ]),
+            ])->each(fn (Plan $plan) => $plan->setAttribute('auto_feature_list', $plan->limitFeatureList())),
             'gstPercent' => Gst::percent(),
+            'pageText' => PricingPage::content(),
+            'pageDefaults' => PricingPage::defaults(),
         ]);
     }
 
@@ -99,7 +102,13 @@ class PlanController extends Controller
             'job_post_limit' => ['required', 'integer', 'min:0', 'max:1000000'],
             'contact_unlock_limit' => ['required', 'integer', 'min:0', 'max:1000000'],
             'contact_database_limit' => ['required', 'integer', 'min:0', 'max:10000000'],
+            // AI call credits added to the wallet with each payment.
+            'ai_call_credits' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'featured' => ['required', 'boolean'],
+            'badge' => ['nullable', 'string', 'max:30'],
+            // Blank keeps the lines built from the limits above.
+            'highlights' => ['nullable', 'array', 'max:12'],
+            'highlights.*' => ['nullable', 'string', 'max:120'],
             'is_active' => ['required', 'boolean'],
         ]);
     }
@@ -114,7 +123,10 @@ class PlanController extends Controller
         $features['job_post_limit'] = $plan->type === Plan::TYPE_DATABASE ? 0 : $data['job_post_limit'];
         $features['contact_unlock_limit'] = $data['contact_unlock_limit'];
         $features['contact_database_limit'] = $data['contact_database_limit'];
+        $features['ai_call_credits'] = (int) ($data['ai_call_credits'] ?? 0);
         $features['featured'] = $data['featured'];
+        $features['badge'] = trim((string) ($data['badge'] ?? '')) ?: null;
+        $features['highlights'] = array_values(array_filter(array_map('trim', $data['highlights'] ?? []), 'strlen'));
 
         $plan->fill([
             'features' => $features,
@@ -137,6 +149,29 @@ class PlanController extends Controller
         }
 
         return $plan;
+    }
+
+    /**
+     * The words on the public /pricing page around the plans: masthead,
+     * section headings, FAQ, closing block. A field left blank falls back
+     * to the built-in text.
+     */
+    public function updatePage(Request $request): RedirectResponse
+    {
+        $text = collect(PricingPage::defaults())->except('faqs')
+            ->map(fn ($default, $key) => ['nullable', 'string', 'max:'.(in_array($key, PricingPage::LONG, true) ? 600 : 160)])
+            ->all();
+
+        $data = $request->validate([
+            ...$text,
+            'faqs' => ['present', 'array', 'max:20'],
+            'faqs.*.q' => ['required', 'string', 'max:200'],
+            'faqs.*.a' => ['required', 'string', 'max:1500'],
+        ]);
+
+        PricingPage::save($data);
+
+        return back()->with('toast', ['type' => 'success', 'message' => __('Pricing page updated.')]);
     }
 
     private function uniqueSlug(string $name): string

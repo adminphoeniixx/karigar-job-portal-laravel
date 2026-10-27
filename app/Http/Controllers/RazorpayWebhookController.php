@@ -66,9 +66,7 @@ class RazorpayWebhookController extends Controller
                 periodStart: $time('current_start'),
                 periodEnd: $time('current_end'),
             ),
-            in_array($event, ['subscription.activated', 'subscription.charged', 'subscription.authenticated'], true) => tap($subscription)->activateWithInvoice($paymentId)->update([
-                'ends_at' => $time('current_end') ?? $subscription->ends_at,
-            ]),
+            in_array($event, ['subscription.activated', 'subscription.charged', 'subscription.authenticated'], true) => $subscription->activateWithInvoice($paymentId, $time('current_end')),
             // A renewal charge failed; Razorpay tries again for a few days.
             $event === 'subscription.pending' => $reminders->paymentFailed(tap($subscription)->update(['status' => SubscriptionStatus::Pending])),
             // It stopped for good: all retries failed, it was cancelled, or its cycles ran out.

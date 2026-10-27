@@ -3,6 +3,7 @@
 use App\Enums\UserRole;
 use App\Models\Plan;
 use App\Models\User;
+use App\Support\PricingPage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Testing\AssertableInertia;
@@ -56,4 +57,40 @@ it('still sends a new employer to the profile form when they did not come from B
 
     $this->post('/employer/otp/verify', ['phone' => '9876501235', 'otp' => Cache::get('phone_otp.9876501235')])
         ->assertRedirect('/employer/profile');
+});
+
+it('shows the page text the admin wrote, built-in text where they left a box blank', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin->value]);
+
+    $this->actingAs($admin)->put('/admin/plans/page', [
+        'headline' => 'Hire karigars without the guesswork.',
+        'job_title' => 'Hiring plans',
+        'intro' => '',
+        'gst_note' => 'All prices + {gst}% GST.',
+        'faqs' => [['q' => 'Refunds?', 'a' => 'Within 7 days, plus {gst}% GST back.']],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    auth()->logout();
+
+    $this->get('/pricing')->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('page.headline', 'Hire karigars without the guesswork.')
+        ->where('page.job_title', 'Hiring plans')
+        ->where('page.intro', PricingPage::defaults()['intro'])
+        ->where('page.gst_note', 'All prices + 18% GST.')
+        ->has('page.faqs', 1)
+        ->where('page.faqs.0.a', 'Within 7 days, plus 18% GST back.'));
+});
+
+it('hides the FAQ when the admin removes every question', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin->value]);
+
+    $this->actingAs($admin)->put('/admin/plans/page', ['faqs' => []])->assertSessionHasNoErrors();
+
+    expect(PricingPage::forPage()['faqs'])->toBe([]);
+});
+
+it('keeps the page text out of reach of employers', function () {
+    $employer = User::factory()->create(['role' => UserRole::Employer->value]);
+
+    $this->actingAs($employer)->put('/admin/plans/page', ['headline' => 'x', 'faqs' => []])->assertForbidden();
 });

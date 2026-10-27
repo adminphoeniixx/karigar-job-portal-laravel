@@ -368,6 +368,7 @@ export default {
         title: 'প্ল্যান',
         subtitle: 'কাজ পোস্ট করতে প্ল্যান নির্বাচন করুন',
         activePlan: 'সক্রিয় প্ল্যান',
+        wontRenew: 'রিনিউ হবে না · শেষ',
         jobPosts: 'কাজ পোস্ট',
         contactUnlocks: 'যোগাযোগ আনলক',
         featured: 'ফিচার্ড লিস্টিং',

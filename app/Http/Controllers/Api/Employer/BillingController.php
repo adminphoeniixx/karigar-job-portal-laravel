@@ -69,6 +69,8 @@ class BillingController extends Controller
                 'features' => $plan->features ?? [],
                 'feature_list' => $plan->featureList(),
                 'recommended' => $plan->isRecommended(),
+                // The admin's badge text when `recommended`; null = show "Most popular".
+                'badge' => $plan->badgeLabel(),
                 'is_current' => in_array($plan->id, [$current?->plan_id, $currentDatabase?->plan_id], true),
                 // Razorpay plans are created on demand at checkout now.
                 'purchasable' => $razorpay->configured(),

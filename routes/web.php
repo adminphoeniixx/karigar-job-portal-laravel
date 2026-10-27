@@ -276,6 +276,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Subscription plans & limits (incl. worker-database contact quota)
     Route::get('plans', [AdminPlanController::class, 'index'])->name('plans.index');
     Route::post('plans', [AdminPlanController::class, 'store'])->name('plans.store');
+    Route::put('plans/page', [AdminPlanController::class, 'updatePage'])->name('plans.page');
     Route::patch('plans/{plan}', [AdminPlanController::class, 'update'])->name('plans.update');
     Route::delete('plans/{plan}', [AdminPlanController::class, 'destroy'])->name('plans.destroy');
 

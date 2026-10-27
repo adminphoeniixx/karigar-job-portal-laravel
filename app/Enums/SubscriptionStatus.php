@@ -27,4 +27,21 @@ enum SubscriptionStatus: string
     {
         return in_array($this, self::entitled(), true);
     }
+
+    /**
+     * Statuses that will not renew but keep the period already paid for:
+     * cancelled (say, the employer stopped the UPI mandate) or completed
+     * (every cycle charged). They grant access until `ends_at`.
+     *
+     * @return array<int, self>
+     */
+    public static function runningOut(): array
+    {
+        return [self::Cancelled, self::Completed];
+    }
+
+    public function isRunningOut(): bool
+    {
+        return in_array($this, self::runningOut(), true);
+    }
 }

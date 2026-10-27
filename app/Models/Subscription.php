@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\SubscriptionStatus;
+use App\Services\AiCredits;
 use App\Services\Billing\Gst;
 use App\Services\Billing\InvoiceDocument;
 use App\Services\RazorpayService;
@@ -70,13 +71,22 @@ class Subscription extends Model
      * The app's payment callback and Razorpay's webhooks all call this for the
      * same payment, in any order; only the first one issues the invoice, so
      * the email goes once and an older plan is retired once.
+     *
+     * `$periodEnd` is Razorpay's end of the cycle, when the report carries it.
      */
-    public function activateWithInvoice(?string $paymentId = null): void
+    public function activateWithInvoice(?string $paymentId = null, ?CarbonInterface $periodEnd = null): void
     {
+        // A late report of the first payment must not bring back a plan that
+        // was replaced or stopped since.
+        if ($this->status->isRunningOut()) {
+            return;
+        }
+
         $this->fill([
             'status' => SubscriptionStatus::Active,
             'starts_at' => $this->starts_at ?? now(),
-            'ends_at' => $this->plan->periodEnd(now()),
+            // An earlier report of this payment may have set it already.
+            'ends_at' => $periodEnd ?? $this->ends_at ?? $this->plan->periodEnd(now()),
         ]);
 
         $this->save();
@@ -93,6 +103,7 @@ class Subscription extends Model
         if ($invoice !== null) {
             InvoiceDocument::for($invoice)->email();
             $this->retireOlderPlans();
+            $this->creditIncludedAiCalls();
         }
 
         // A renewed job plan puts the employer's paused jobs back in search.
@@ -117,7 +128,9 @@ class Subscription extends Model
         $periodEnd ??= $this->plan->periodEnd($periodStart);
 
         $this->update([
-            'status' => SubscriptionStatus::Active,
+            // The last cycle's charge can arrive after `subscription.completed`;
+            // that plan still ends with this cycle.
+            'status' => $this->status->isRunningOut() ? $this->status : SubscriptionStatus::Active,
             'ends_at' => $periodEnd,
         ]);
 
@@ -130,7 +143,10 @@ class Subscription extends Model
             periodEnd: $periodEnd,
         );
 
-        $invoice && InvoiceDocument::for($invoice)->email();
+        if ($invoice !== null) {
+            InvoiceDocument::for($invoice)->email();
+            $this->creditIncludedAiCalls();
+        }
 
         if (! $this->plan->isDatabase()) {
             JobListing::syncSearchFor($this->employer);
@@ -138,29 +154,57 @@ class Subscription extends Model
     }
 
     /**
+     * The AI call credits that come with the plan, once per paid cycle. Call
+     * only after issuing that cycle's invoice: the invoice is what makes a
+     * payment reported twice (callback and webhook) count once.
+     */
+    public function creditIncludedAiCalls(): void
+    {
+        $credits = $this->plan->includedAiCredits();
+
+        if ($credits > 0) {
+            AiCredits::for($this->employer)->record(
+                AiCreditEntry::TYPE_BONUS,
+                $credits,
+                __('Included with your :plan plan', ['plan' => $this->plan->name]),
+            );
+        }
+    }
+
+    /**
      * Switching plans: the account holds one plan of each type, so a plan
      * bought while another of its type still runs replaces it. The old one
      * is stopped at Razorpay, or it would keep charging every month next to
-     * the new one.
+     * the new one. That includes one whose renewal failed: Razorpay retries
+     * it for days, and a retry that goes through would charge for both.
      */
     private function retireOlderPlans(): void
     {
         $older = static::where('employer_id', $this->employer_id)
             ->whereKeyNot($this->id)
-            ->entitled()
             ->ofType($this->plan->type)
+            ->where(fn (Builder $q) => $q
+                ->entitled()
+                ->orWhereIn('status', array_map(fn ($s) => $s->value, [
+                    ...SubscriptionStatus::entitled(), SubscriptionStatus::Pending, SubscriptionStatus::Halted,
+                ])))
             ->get();
 
         foreach ($older as $subscription) {
-            if ($subscription->razorpay_subscription_id) {
+            // A cancelled or completed one has nothing left to charge.
+            if ($subscription->razorpay_subscription_id && ! $subscription->status->isRunningOut()) {
                 try {
-                    app(RazorpayService::class)->cancelSubscription($subscription->razorpay_subscription_id);
+                    app(RazorpayService::class)->cancelSubscription($subscription->razorpay_subscription_id, atCycleEnd: false);
                 } catch (Throwable $e) {
                     report($e);
                 }
             }
 
-            $subscription->update(['status' => SubscriptionStatus::Cancelled]);
+            // Its days end now: a cancelled plan otherwise runs to its end.
+            $subscription->update([
+                'status' => SubscriptionStatus::Cancelled,
+                'ends_at' => $subscription->ends_at?->isFuture() ? now() : $subscription->ends_at,
+            ]);
         }
     }
 
@@ -171,8 +215,14 @@ class Subscription extends Model
      */
     public function scopeEntitled(Builder $query): void
     {
-        $query->whereIn('status', array_map(fn ($s) => $s->value, SubscriptionStatus::entitled()))
-            ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now()));
+        $query->where(fn (Builder $q) => $q
+            ->where(fn (Builder $q) => $q
+                ->whereIn('status', array_map(fn ($s) => $s->value, SubscriptionStatus::entitled()))
+                ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now())))
+            // Stopped renewing: still runs to the end of the period paid for.
+            ->orWhere(fn (Builder $q) => $q
+                ->whereIn('status', array_map(fn ($s) => $s->value, SubscriptionStatus::runningOut()))
+                ->where('ends_at', '>', now())));
     }
 
     /**
@@ -245,6 +295,10 @@ class Subscription extends Model
 
     public function isActive(): bool
     {
+        if ($this->status->isRunningOut()) {
+            return $this->ends_at?->isFuture() === true;
+        }
+
         return $this->status->isEntitled()
             && ($this->ends_at === null || $this->ends_at->isFuture());
     }

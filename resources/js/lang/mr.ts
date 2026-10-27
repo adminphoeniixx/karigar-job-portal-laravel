@@ -368,6 +368,7 @@ export default {
         title: 'प्लॅन्स',
         subtitle: 'नोकरी पोस्ट करण्यासाठी प्लॅन निवडा',
         activePlan: 'सक्रिय प्लॅन',
+        wontRenew: 'रिन्यू होणार नाही · संपेल',
         jobPosts: 'नोकरी पोस्ट',
         contactUnlocks: 'संपर्क अनलॉक',
         featured: 'फीचर्ड लिस्टिंग',

@@ -166,6 +166,15 @@ class Plan extends Model
     }
 
     /**
+     * AI call credits the plan puts in the employer's wallet with each
+     * payment, the first and every renewal. They never expire, like bought ones.
+     */
+    public function includedAiCredits(): int
+    {
+        return (int) ($this->features['ai_call_credits'] ?? 0);
+    }
+
+    /**
      * Whether this is the plan the catalogue highlights. It is a badge, not
      * something the employer gets, so it is not in {@see featureList()}.
      */
@@ -175,19 +184,51 @@ class Plan extends Model
     }
 
     /**
+     * The admin's own words for the highlight badge, or null for each
+     * surface's default ("Most popular", in the viewer's language).
+     */
+    public function badgeLabel(): ?string
+    {
+        return $this->isRecommended() ? (($this->features['badge'] ?? null) ?: null) : null;
+    }
+
+    /**
+     * Feature lines the admin wrote for this plan, one per line, in place of
+     * the ones {@see featureList()} builds from the limits.
+     *
+     * @return list<string>
+     */
+    public function customFeatureLines(): array
+    {
+        return array_values(array_filter(array_map('trim', (array) ($this->features['highlights'] ?? [])), 'strlen'));
+    }
+
+    /**
      * What the plan gives, as lines a person reads: "5 job posts per month",
      * "20 database unlocks". The apps show these as they are, so the catalogue
      * never has to know what a limit key means. 0 means unlimited everywhere
-     * the limits are enforced, and is said that way here.
+     * the limits are enforced, and is said that way here. Lines the admin
+     * wrote for the plan replace these wholesale.
      *
      * @return list<string>
      */
     public function featureList(): array
     {
+        return $this->customFeatureLines() ?: $this->limitFeatureList();
+    }
+
+    /**
+     * The lines built from the plan's limits alone. The admin form shows them
+     * as the placeholder for its own lines.
+     *
+     * @return list<string>
+     */
+    public function limitFeatureList(): array
+    {
         $per = match ($this->interval) {
             self::INTERVAL_YEARLY => __('per year'),
             self::INTERVAL_MONTHLY => __('per month'),
-            default => __('every :count days', ['count' => $this->durationDays()]),
+            default => __('for :count days', ['count' => $this->durationDays()]),
         };
 
         $jobs = $this->jobPostLimit();
@@ -196,6 +237,10 @@ class Plan extends Model
 
         // Unlocks open Worker Database numbers only; applicants' numbers
         // show without one.
+        $credits = $this->includedAiCredits() > 0
+            ? trans_choice(':count AI calling credit|:count AI calling credits', $this->includedAiCredits(), ['count' => number_format($this->includedAiCredits())])
+            : null;
+
         $unlockLine = $unlocks > 0
             ? trans_choice(':count database unlock|:count database unlocks', $unlocks, ['count' => number_format($unlocks)]).' '.$per
             : __('Unlimited database unlocks');
@@ -205,6 +250,7 @@ class Plan extends Model
                 $database > 0 ? __('Access to :count karigar contacts', ['count' => number_format($database)]) : null,
                 $unlockLine,
                 __('Search karigars by skill and location'),
+                $credits,
                 __('Works on its own or with a job plan'),
                 __('GST invoice for every payment'),
             ]));
@@ -227,6 +273,7 @@ class Plan extends Model
                 ? __('Access to :count karigar contacts', ['count' => number_format($database)])
                 : null,
             __('AI-ranked applicants'),
+            $credits,
             __('GST invoice for every payment'),
         ]));
     }

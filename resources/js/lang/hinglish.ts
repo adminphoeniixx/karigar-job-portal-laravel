@@ -371,6 +371,7 @@ export default {
         title: 'Plans',
         subtitle: 'Naukri post karne ke liye plan chunein',
         activePlan: 'Active plan',
+        wontRenew: 'Renew nahi hoga · khatam',
         jobPosts: 'naukri posts',
         contactUnlocks: 'contact unlocks',
         featured: 'Featured listings',

@@ -22,7 +22,34 @@ interface Plan {
     price_with_gst: number;
     interval_label: string;
     featured: boolean;
+    badge: string | null;
     feature_list: string[];
+}
+
+/** Every word around the plans, edited in Admin → Plans; `{gst}` already filled in. */
+interface PageText {
+    meta_title: string;
+    meta_description: string;
+    eyebrow: string;
+    headline: string;
+    intro: string;
+    gst_note: string;
+    job_label: string;
+    job_title: string;
+    job_lede: string;
+    database_label: string;
+    database_title: string;
+    database_lede: string;
+    credits_label: string;
+    credits_title: string;
+    credits_lede: string;
+    credits_badge: string;
+    faq_label: string;
+    faq_title: string;
+    faqs: { q: string; a: string }[];
+    cta_title: string;
+    cta_text: string;
+    cta_button: string;
 }
 
 interface Pack {
@@ -44,22 +71,23 @@ const props = defineProps<{
     gstPercent: number;
     viewer: 'guest' | 'employer' | 'other';
     canBuyCredits: boolean;
+    page: PageText;
 }>();
 
 const sections = computed(() =>
     [
         {
             id: 'job-plans',
-            label: 'Hire',
-            title: 'Job plans',
-            lede: 'Post jobs, get applicants from your area, and let the AI rank them so the best karigar is on top.',
+            label: props.page.job_label,
+            title: props.page.job_title,
+            lede: props.page.job_lede,
             plans: props.plans.filter((p) => p.type !== 'database'),
         },
         {
             id: 'database-plans',
-            label: 'Search',
-            title: 'Worker Database',
-            lede: 'Skip the wait. Search verified karigars by craft and location and call them directly.',
+            label: props.page.database_label,
+            title: props.page.database_title,
+            lede: props.page.database_lede,
             plans: props.plans.filter((p) => p.type === 'database'),
         },
     ].filter((section) => section.plans.length),
@@ -74,61 +102,19 @@ const money = (n: number) =>
     '₹' + n.toLocaleString('en-IN', Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const num = (n: number) => n.toLocaleString('en-IN');
 
-const faqs = computed(() => [
-    {
-        q: 'How do I buy a plan?',
-        a: 'Press Buy, enter your mobile number and the OTP we send. If you are new, that same step creates your employer account. You land on the checkout for the plan you picked and pay through Razorpay — UPI, cards or net banking.',
-    },
-    {
-        q: 'Job plan or Worker Database — which one do I need?',
-        a: 'A job plan is for posting jobs and receiving applicants. The Worker Database is for finding karigars yourself and calling them. You can hold one of each at the same time, and every job plan already opens part of the database.',
-    },
-    {
-        q: 'How long does a job stay live?',
-        a: 'Each job stays live for the number of days written on its plan, counted from the moment it goes live. When it ends, repost it from My Jobs — that uses one more job post from your plan.',
-    },
-    {
-        q: 'Does the plan renew on its own?',
-        a: 'Yes. Plans renew every cycle through Razorpay, so your jobs keep running without a gap. To stop a renewal, write to us at the address at the bottom of this page.',
-    },
-    ...(props.gstPercent > 0
-        ? [
-              {
-                  q: 'Is GST included?',
-                  a: `Prices are shown before GST; ${props.gstPercent}% GST is added at checkout. Every payment, including each renewal, comes with a GST tax invoice by email — add your GSTIN in your profile to claim input credit.`,
-              },
-          ]
-        : []),
-    ...(props.packs.length
-        ? [
-              {
-                  q: 'What are AI call credits?',
-                  a: 'When AI calling is on for a job, our voice agent rings shortlisted applicants, asks your screening questions and books an interview slot. Credits pay for those minutes. They never expire, and calls that are not picked up cost nothing.',
-              },
-          ]
-        : []),
-    {
-        q: 'Have a coupon code?',
-        a: 'Apply it on the checkout screen, after you press Buy. The discount and the GST on the discounted price are shown before you pay.',
-    },
-]);
 </script>
 
 <template>
-    <Head title="Pricing for employers — Super Karigar">
-        <meta
-            name="description"
-            content="Super Karigar plans for employers: job posting plans, Worker Database access and AI call credits. Prices in rupees, GST invoice with every payment."
-        />
+    <Head :title="page.meta_title">
+        <meta name="description" :content="page.meta_description" />
     </Head>
 
     <div class="theme-paper bg-noise min-h-screen bg-background text-foreground antialiased">
         <PublicNav>
             <Link href="/jobs" class="link-underline">{{ $t('nav.browseJobs') }}</Link>
-            <a href="#job-plans" class="link-underline">Job plans</a>
-            <a href="#database-plans" class="link-underline">Worker Database</a>
-            <a v-if="packs.length" href="#ai-credits" class="link-underline">AI calls</a>
-            <a href="#faq" class="link-underline">FAQ</a>
+            <a v-for="section in sections" :key="section.id" :href="`#${section.id}`" class="link-underline">{{ section.title }}</a>
+            <a v-if="packs.length" href="#ai-credits" class="link-underline">{{ page.credits_title }}</a>
+            <a v-if="page.faqs.length" href="#faq" class="link-underline">FAQ</a>
         </PublicNav>
 
         <!-- Masthead -->
@@ -136,14 +122,14 @@ const faqs = computed(() => [
             <div class="mx-auto max-w-[88rem] px-6 py-14 lg:px-10 lg:py-20">
                 <div class="flex items-center gap-3 text-primary">
                     <span class="h-px w-10 bg-primary"></span>
-                    <span class="label-rule">Pricing · For employers</span>
+                    <span class="label-rule">{{ page.eyebrow }}</span>
                 </div>
                 <h1 class="mt-6 max-w-4xl text-4xl leading-[1.05] font-semibold tracking-tight lg:text-6xl">
-                    Pay for the hiring you do. Nothing hidden.
+                    {{ page.headline }}
                 </h1>
                 <p class="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-                    Pick a plan, sign in with your mobile number and pay — your plan starts the moment the payment goes through.
-                    <template v-if="gstPercent > 0">Prices below are before {{ gstPercent }}% GST; you get a GST invoice for every payment.</template>
+                    {{ page.intro }}
+                    <template v-if="gstPercent > 0">{{ page.gst_note }}</template>
                 </p>
                 <p v-if="viewer === 'other'" class="mt-6 max-w-2xl border-l-2 border-primary pl-4 text-sm text-muted-foreground">
                     You are signed in with a karigar account. Plans are bought from an employer account — sign out and sign in as an employer to buy one.
@@ -173,7 +159,7 @@ const faqs = computed(() => [
                             <span v-if="plan.featured" class="absolute inset-x-0 -top-px h-0.5 bg-primary"></span>
                             <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                                 <h3 class="text-lg font-semibold">{{ plan.name }}</h3>
-                                <span v-if="plan.featured" class="label-rule whitespace-nowrap text-primary">Most popular</span>
+                                <span v-if="plan.featured" class="label-rule whitespace-nowrap text-primary">{{ plan.badge || 'Most popular' }}</span>
                             </div>
                             <p v-if="plan.tagline" class="mt-1 text-sm text-muted-foreground">{{ plan.tagline }}</p>
                             <p v-if="plan.mrp" class="mt-4 flex items-center gap-2 text-sm">
@@ -214,11 +200,9 @@ const faqs = computed(() => [
             <div class="mx-auto max-w-[88rem] px-6 py-14 lg:px-10 lg:py-20">
                 <div class="grid gap-6 lg:grid-cols-[16rem_1fr] lg:gap-16">
                     <div>
-                        <div class="label-rule text-primary">Add-on</div>
-                        <h2 class="mt-3 text-3xl font-semibold tracking-tight">AI call credits</h2>
-                        <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
-                            Our AI voice agent calls shortlisted applicants in Hindi, screens them and books the interview. Prepaid, one-time — no renewal.
-                        </p>
+                        <div class="label-rule text-primary">{{ page.credits_label }}</div>
+                        <h2 class="mt-3 text-3xl font-semibold tracking-tight">{{ page.credits_title }}</h2>
+                        <p class="mt-3 text-sm leading-relaxed text-muted-foreground">{{ page.credits_lede }}</p>
                     </div>
 
                     <div>
@@ -231,7 +215,7 @@ const faqs = computed(() => [
                                 <span v-if="pack.popular" class="absolute inset-x-0 -top-px h-0.5 bg-primary"></span>
                                 <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                                     <h3 class="text-lg font-semibold">{{ pack.name }}</h3>
-                                    <span v-if="pack.popular" class="label-rule whitespace-nowrap text-primary">Best value</span>
+                                    <span v-if="pack.popular" class="label-rule whitespace-nowrap text-primary">{{ page.credits_badge }}</span>
                                 </div>
                                 <div class="mt-5 text-5xl font-semibold tracking-tight tabular-nums">{{ num(pack.total_credits) }}</div>
                                 <p class="mt-1 text-sm text-muted-foreground">
@@ -267,14 +251,14 @@ const faqs = computed(() => [
         </section>
 
         <!-- FAQ -->
-        <section id="faq" class="scroll-mt-20 border-b border-foreground/10">
+        <section v-if="page.faqs.length" id="faq" class="scroll-mt-20 border-b border-foreground/10">
             <div class="mx-auto grid max-w-[88rem] gap-6 px-6 py-14 lg:grid-cols-[16rem_1fr] lg:gap-16 lg:px-10 lg:py-20">
                 <div>
-                    <div class="label-rule text-primary">Questions</div>
-                    <h2 class="mt-3 text-3xl font-semibold tracking-tight">Before you pay</h2>
+                    <div class="label-rule text-primary">{{ page.faq_label }}</div>
+                    <h2 class="mt-3 text-3xl font-semibold tracking-tight">{{ page.faq_title }}</h2>
                 </div>
                 <dl class="divide-y divide-foreground/10 border-t border-foreground/15">
-                    <div v-for="item in faqs" :key="item.q" class="grid gap-2 py-6 md:grid-cols-[minmax(0,20rem)_1fr] md:gap-10">
+                    <div v-for="item in page.faqs" :key="item.q" class="grid gap-2 py-6 md:grid-cols-[minmax(0,20rem)_1fr] md:gap-10">
                         <dt class="font-semibold">{{ item.q }}</dt>
                         <dd class="leading-relaxed text-muted-foreground">{{ item.a }}</dd>
                     </div>
@@ -286,14 +270,14 @@ const faqs = computed(() => [
         <section class="bg-foreground text-background">
             <div class="mx-auto flex max-w-[88rem] flex-col items-start justify-between gap-8 px-6 py-16 lg:flex-row lg:items-end lg:px-10 lg:py-20">
                 <div>
-                    <h2 class="max-w-2xl text-3xl leading-tight font-semibold tracking-tight lg:text-5xl">Not sure yet? Look around first.</h2>
-                    <p class="mt-4 max-w-xl text-background/70">Create your employer account for free, set up your profile and see karigars near you before you buy.</p>
+                    <h2 class="max-w-2xl text-3xl leading-tight font-semibold tracking-tight lg:text-5xl">{{ page.cta_title }}</h2>
+                    <p class="mt-4 max-w-xl text-background/70">{{ page.cta_text }}</p>
                 </div>
                 <Link
                     :href="viewer === 'guest' ? '/employer/register' : '/dashboard'"
                     class="inline-flex shrink-0 items-center gap-2 rounded-sm bg-primary px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-background hover:text-foreground"
                 >
-                    {{ viewer === 'guest' ? 'Create employer account' : $t('nav.dashboard') }} <ArrowRight class="size-4" />
+                    {{ viewer === 'guest' ? page.cta_button : $t('nav.dashboard') }} <ArrowRight class="size-4" />
                 </Link>
             </div>
         </section>

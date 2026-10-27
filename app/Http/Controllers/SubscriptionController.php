@@ -21,20 +21,23 @@ class SubscriptionController extends Controller
 {
     public function pricing(Request $request): Response
     {
+        // A team member sees the plan of the account they work in.
+        $account = $request->user()->employerAccount();
+
         return Inertia::render('subscription/Pricing', [
             'plans' => Plan::where('is_active', true)->orderBy('price')->get()
                 ->map(fn (Plan $plan) => [...$plan->toArray(), 'feature_list' => $plan->featureList()]),
             // The job plan and the database plan run side by side.
-            'current' => $request->user()->activeSubscription()?->load('plan'),
-            'currentDatabase' => $request->user()->activeSubscription(Plan::TYPE_DATABASE)?->load('plan'),
+            'current' => $account->activeSubscription()?->load('plan'),
+            'currentDatabase' => $account->activeSubscription(Plan::TYPE_DATABASE)?->load('plan'),
             'razorpayConfigured' => app(RazorpayService::class)->configured(),
             'gstPercent' => Gst::percent(),
             // Every checkout, paid or not, with its payments and invoices.
-            'orders' => OrderHistory::for($request->user()->employerAccount()),
+            'orders' => OrderHistory::for($account),
             // Where the invoice email goes; the checkout asks for one when null.
-            'billingEmail' => $request->user()->contactEmail(),
+            'billingEmail' => $account->contactEmail(),
             // Partial-reloaded when the employer applies a coupon (?coupon=CODE).
-            'couponResult' => $this->previewCoupon($request->query('coupon'), $request->user()),
+            'couponResult' => $this->previewCoupon($request->query('coupon'), $account),
         ]);
     }
 
@@ -47,18 +50,26 @@ class SubscriptionController extends Controller
             ]);
         }
 
-        if ($active = SubscriptionCheckout::alreadyOwned($request->user()->employerAccount(), $plan)) {
+        // The plan belongs to the account: one a team member paid for would
+        // sit on their own login, and the account would stay without it.
+        $account = $request->user()->employerAccount();
+
+        if ($request->user()->id !== $account->id) {
+            return back()->with('toast', ['type' => 'error', 'message' => __('Only the account owner can change the plan.')]);
+        }
+
+        if ($active = SubscriptionCheckout::alreadyOwned($account, $plan)) {
             return back()->with('toast', ['type' => 'error', 'message' => SubscriptionCheckout::alreadyOwnedMessage($active)]);
         }
 
         $data = $request->validate([
             'coupon' => ['nullable', 'string', 'max:60'],
-            'email' => SubscriptionCheckout::emailRules($request->user()),
+            'email' => SubscriptionCheckout::emailRules($account),
         ]);
 
-        SubscriptionCheckout::saveBillingEmail($request->user(), $data['email'] ?? null);
+        SubscriptionCheckout::saveBillingEmail($account, $data['email'] ?? null);
 
-        if ($request->user()->contactEmail() === null) {
+        if ($account->contactEmail() === null) {
             return back()->withErrors(['email' => __('Enter the email your GST invoice should go to.')]);
         }
 
@@ -68,7 +79,7 @@ class SubscriptionController extends Controller
 
         if (! empty($data['coupon'])) {
             $coupon = $this->findCoupon($data['coupon']);
-            $reason = $coupon?->reasonInvalidFor($request->user(), $plan, (float) $plan->price);
+            $reason = $coupon?->reasonInvalidFor($account, $plan, (float) $plan->price);
 
             if (! $coupon || $reason !== null) {
                 return back()->with('toast', [
@@ -81,7 +92,7 @@ class SubscriptionController extends Controller
         }
 
         try {
-            $subscription = $checkout->start($request->user(), $plan, $coupon, $discount);
+            $subscription = $checkout->start($account, $plan, $coupon, $discount);
         } catch (Throwable $e) {
             report($e);
 
@@ -111,7 +122,7 @@ class SubscriptionController extends Controller
         $verified = $razorpay->verifyPaymentSignature($data);
 
         $subscription = Subscription::where('razorpay_subscription_id', $data['razorpay_subscription_id'])
-            ->where('employer_id', $request->user()->id)
+            ->where('employer_id', $request->user()->employerAccount()->id)
             ->firstOrFail();
 
         if (! $verified) {

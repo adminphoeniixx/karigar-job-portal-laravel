@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Plan;
 use App\Services\AiCredits;
 use App\Services\Billing\Gst;
+use App\Support\PricingPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 use Inertia\Inertia;
@@ -38,11 +39,14 @@ class PricingController extends Controller
                     'price_with_gst' => Gst::gross((float) $plan->price),
                     'interval_label' => $plan->interval_label,
                     'featured' => $plan->isRecommended(),
+                    'badge' => $plan->badgeLabel(),
                     'feature_list' => $plan->featureList(),
                 ]),
             'packs' => AiCredits::enabled() ? AiCredits::packs() : [],
             'creditRules' => AiCredits::enabled() ? AiCredits::rules() : [],
             'gstPercent' => Gst::percent(),
+            // Every word around the plans, from Admin → Plans.
+            'page' => PricingPage::forPage(),
             // Who is looking decides where "Buy" goes: guests sign in first,
             // employers go straight to checkout, karigars are told it is for employers.
             'viewer' => match (true) {

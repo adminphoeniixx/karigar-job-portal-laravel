@@ -58,15 +58,15 @@ beforeEach(function () {
 
 // ───────────────────────── 30-day plans ─────────────────────────
 
-it('seeds day-based plans: Single Job posts 1 job, 1 Month 3', function () {
+it('seeds day-based plans: Single Job posts 1 job, Factory 3', function () {
     $this->seed(PlanSeeder::class);
 
     $single = Plan::where('slug', 'single-job')->first();
 
     expect($single->interval)->toBe(Plan::INTERVAL_DAYS)
         ->and($single->jobPostLimit())->toBe(1)
-        ->and(Plan::where('slug', 'job-1-month')->first()->jobPostLimit())->toBe(3)
-        ->and($single->interval_label)->toBe('30 days')
+        ->and(Plan::where('name', 'Factory')->first()->jobPostLimit())->toBe(3)
+        ->and($single->interval_label)->toBe('15 days')
         ->and($single->featureList())->toContain('1 job post, live for 15 days');
 });
 

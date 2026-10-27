@@ -111,3 +111,29 @@ it('sends the apps the MRP, discount and lengths', function () {
         ->assertJsonPath('plans.0.job_live_days', 15)
         ->assertJsonPath('plans.0.interval_label', '90 days');
 });
+
+it('shows the admin\'s own feature lines and badge in place of the built ones', function () {
+    $this->actingAs($this->admin)->patch("/admin/plans/{$this->plan->id}", planForm([
+        'featured' => true,
+        'badge' => 'Best seller',
+        'highlights' => ['  6 job posts in 90 days ', '', 'Priority support'],
+    ]))->assertSessionHasNoErrors();
+
+    $plan = $this->plan->fresh();
+
+    expect($plan->featureList())->toBe(['6 job posts in 90 days', 'Priority support'])
+        ->and($plan->badgeLabel())->toBe('Best seller')
+        ->and($plan->limitFeatureList())->toContain('3 job posts, each live for 15 days');
+
+    // Emptied again: back to the lines built from the limits.
+    $this->actingAs($this->admin)->patch("/admin/plans/{$this->plan->id}", planForm(['highlights' => []]));
+
+    expect($this->plan->fresh()->featureList())->toContain('3 job posts, each live for 15 days')
+        ->and($this->plan->fresh()->badgeLabel())->toBeNull();
+});
+
+it('lets an admin set the AI call credits a plan comes with', function () {
+    $this->actingAs($this->admin)->patch("/admin/plans/{$this->plan->id}", planForm(['ai_call_credits' => 20]))->assertSessionHasNoErrors();
+
+    expect($this->plan->fresh()->includedAiCredits())->toBe(20);
+});

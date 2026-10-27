@@ -368,6 +368,7 @@ export default {
         title: 'પ્લાન',
         subtitle: 'નોકરી પોસ્ટ કરવા પ્લાન પસંદ કરો',
         activePlan: 'સક્રિય પ્લાન',
+        wontRenew: 'રિન્યૂ નહીં થાય · પૂરો',
         jobPosts: 'નોકરી પોસ્ટ',
         contactUnlocks: 'સંપર્ક અનલૉક',
         featured: 'ફીચર્ડ લિસ્ટિંગ',

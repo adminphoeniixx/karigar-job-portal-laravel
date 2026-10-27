@@ -94,6 +94,8 @@ class InvoiceMissedRenewals extends Command
                     InvoiceDocument::for($invoice)->email();
                 }
 
+                $subscription->creditIncludedAiCalls();
+
                 $this->line("  <info>✓</info> {$invoice->number} for {$label}");
                 $issued++;
             }

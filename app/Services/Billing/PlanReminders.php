@@ -76,11 +76,13 @@ class PlanReminders
             ->where(fn (Builder $q) => $q->whereNull('lapse_notified_for')->orWhereColumn('lapse_notified_for', '<>', 'ends_at'))
             ->where(fn (Builder $q) => $q
                 ->where(fn (Builder $q) => $q
-                    ->whereIn('status', array_map(fn ($s) => $s->value, SubscriptionStatus::entitled()))
+                    // Cancelled or completed ones run to their end too.
+                    ->whereIn('status', array_map(fn ($s) => $s->value, [...SubscriptionStatus::entitled(), ...SubscriptionStatus::runningOut()]))
                     ->whereBetween('ends_at', [$since, now()]))
                 ->orWhere(fn (Builder $q) => $q
                     ->whereIn('status', array_map(fn ($s) => $s->value, $stopped))
-                    ->where('updated_at', '>=', $since)))
+                    ->where('updated_at', '>=', $since)
+                    ->where('ends_at', '<=', now())))
             ->get()
             ->reject(fn (Subscription $s) => $this->awaitingRenewal($s))
             ->values();

@@ -15,7 +15,7 @@ interface Plan {
     tagline: string | null;
     mrp: string | null;
     discount_percent: number | null;
-    features: { job_post_limit?: number; contact_unlock_limit?: number; featured?: boolean } | null;
+    features: { job_post_limit?: number; contact_unlock_limit?: number; featured?: boolean; badge?: string | null } | null;
     razorpay_plan_id: string | null;
     feature_list: string[];
 }
@@ -118,6 +118,12 @@ const activeTill = (plan: Plan): string | null => {
     return sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : null;
 };
 
+// A cancelled or completed plan still runs to its end; it only stops renewing.
+const wontRenew = (sub: { status: string; ends_at: string | null }): string | null =>
+    (sub.status === 'cancelled' || sub.status === 'completed') && sub.ends_at
+        ? new Date(sub.ends_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
+        : null;
+
 // ── Plan details popup ──────────────────────────────────────────────
 const selected = ref<Plan | null>(null);
 
@@ -211,7 +217,7 @@ const subscribe = () => {
                 <span class="flex size-9 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><Check class="size-5" /></span>
                 <span>
                     {{ sub.plan.type === 'database' ? $t('subscription.databasePlan') : $t('subscription.activePlan') }}: <strong>{{ sub.plan.name }}</strong>
-                    <span class="ml-2 inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold capitalize text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300">{{ sub.status }}</span>
+                    <span class="ml-2 inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold capitalize text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:text-orange-300">{{ wontRenew(sub) ? `${$t('subscription.wontRenew')} ${wontRenew(sub)}` : sub.status }}</span>
                 </span>
             </div>
         </div>
@@ -236,7 +242,7 @@ const subscribe = () => {
                     <div v-if="plan.features?.featured" class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/15 blur-2xl"></div>
                     <!-- Hangs from the top edge so a long plan name keeps the full width -->
                     <span v-if="plan.features?.featured" class="absolute right-6 top-0 inline-flex items-center gap-1 rounded-b-lg bg-primary px-2.5 py-0.5 text-xs font-semibold text-white">
-                        <Sparkles class="size-3" /> {{ $t('subscription.popular') }}
+                        <Sparkles class="size-3" /> {{ plan.features?.badge || $t('subscription.popular') }}
                     </span>
                     <div class="relative">
                         <h3 class="text-lg font-bold">{{ plan.name }}</h3>
@@ -355,7 +361,7 @@ const subscribe = () => {
                     <h3 class="flex items-center gap-2 text-lg font-bold">
                         {{ selected.name }}
                         <span v-if="selected.features?.featured" class="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-white">
-                            <Sparkles class="size-2.5" /> {{ $t('subscription.popular') }}
+                            <Sparkles class="size-2.5" /> {{ selected.features?.badge || $t('subscription.popular') }}
                         </span>
                     </h3>
                     <p class="mt-0.5 text-sm capitalize text-muted-foreground">{{ $t('subscription.billedEvery', { period: selected.interval_label ?? selected.interval }) }}</p>
