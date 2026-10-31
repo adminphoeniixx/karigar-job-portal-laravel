@@ -496,6 +496,10 @@ feed (see `GET /jobs`): send the phone's `lat`/`lng` for nearest first.
   "latest_jobs": [ { ...JobResource } ]
 }
 ```
+`stats.available_jobs` is the size of that same feed: the karigar's
+categories, jobs taking applications, minus jobs already applied to; `0` while
+not available for work. It matches the website dashboard.
+
 `latest_jobs` is a **plain array**, not `{ "data": [...] }` like the paginated
 lists: read `response.latest_jobs`, not `response.latest_jobs.data`.
 

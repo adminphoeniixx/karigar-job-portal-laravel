@@ -11,6 +11,7 @@ apps can get its own file in the folder, linked from both.
 
 | Date | Employer app | Worker app |
 |---|---|---|
+| [2026-10-30](2026-10-30/) | — | [AI resume builder in the app, same as the website: 4 steps, 3 designs × 4 colours, strength meter, live PDF preview (no server change)](2026-10-30/worker-ai-resume-builder-same-as-web.md) · [Home "Available Jobs" counts the karigar's own feed, same as the website (140 → 72)](2026-10-30/worker-available-jobs-count-matches-web.md) |
 | [2026-10-27](2026-10-27/) | — | [A job leaves the feed and home "Latest jobs" once the karigar applies (search still finds it)](2026-10-27/worker-applied-jobs-leave-the-feed.md) |
 | [2026-10-26](2026-10-26/) | [A cancelled plan (UPI AutoPay turned off) runs to its `ends_at`; `current.status` can be `cancelled` / `completed` while on](2026-10-26/employer-cancelled-plan-runs-to-its-end.md) | — |
 | [2026-10-24](2026-10-24/) | [Plan ended: no free post to fall back on (`subscription_required`), invite refuses paused jobs (`job_not_hiring`), booked AI calls cancelled](2026-10-24/employer-plan-lapse-checks.md) · [Plan `badge` text, admin-written `feature_list`, AI call credits included with each plan payment](2026-10-24/employer-plan-badge-and-feature-lines.md) | — |

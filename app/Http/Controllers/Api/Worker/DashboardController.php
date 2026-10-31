@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Worker;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\JobResource;
 use App\Http\Resources\Api\WorkerProfileResource;
-use App\Models\JobListing;
 use App\Services\Kyc\KycAutoVerifier;
 use App\Support\JobFeed;
 use App\Support\Verification;
@@ -36,17 +35,20 @@ class DashboardController extends Controller
             'lng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:lat'],
         ]);
         // Not available for work: no jobs on the home screen either.
-        $latest = $profile->available === false ? collect() : JobFeed::for(
+        $feed = $profile->available === false ? null : JobFeed::for(
             $user,
             isset($point['lat']) ? (float) $point['lat'] : null,
             isset($point['lng']) ? (float) $point['lng'] : null,
-        )->query()->limit(5)->get();
+        )->query();
+        $latest = $feed ? (clone $feed)->limit(5)->get() : collect();
 
         return response()->json([
             'greeting' => $user->name,
             'profile' => $profileData,
             'stats' => [
-                'available_jobs' => JobListing::active()->hiring()->count(),
+                // The karigar's own feed, as the web dashboard counts it: their
+                // categories, minus jobs they already applied to.
+                'available_jobs' => $feed ? (clone $feed)->reorder()->count() : 0,
                 'applications' => $user->applications()->count(),
                 'saved_jobs' => $user->savedJobs()->count(),
                 // null while verification is switched off, so the app shows no
