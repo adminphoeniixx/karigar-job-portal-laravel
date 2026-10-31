@@ -35,7 +35,24 @@ it('404s the web KYC route while verification is off', function () {
 it('404s the API KYC route while verification is off', function () {
     Setting::set('kyc_verification_enabled', '0');
 
-    $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/kyc')->assertNotFound();
+    $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/kyc')
+        ->assertNotFound()
+        ->assertJsonPath('code', 'verification_disabled');
+});
+
+it('lets a karigar verify when they choose to, without making it a rule', function () {
+    Setting::set('kyc_verification_enabled', '1');
+    Setting::set('worker_verification_required', '0');
+    $this->worker->kyc()->delete();
+
+    $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/worker/dashboard')
+        ->assertJsonPath('stats.kyc_status', 'not_submitted')
+        ->assertJsonPath('features.verification_enabled', true)
+        ->assertJsonPath('verification.can_apply', true);
+    $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/kyc')
+        ->assertOk()
+        ->assertJsonPath('kyc', null)
+        ->assertJsonPath('verification.required', false);
 });
 
 it('drops the verified badge while verification is off', function () {

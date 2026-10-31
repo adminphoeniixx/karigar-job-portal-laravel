@@ -74,6 +74,10 @@ Route::post('locale', [LocaleController::class, 'update'])->name('locale.update'
 
 // Where DigiLocker sends the user back after sharing their Aadhaar. Public:
 // the apps' in-app browser carries no session; the reference finds the attempt.
+// `callback` is our own MeriPehchaan sign-in (must match the Call Back URL on
+// API Setu); it finishes the sign-in and moves on to `return`.
+Route::get('kyc/digilocker/callback', [KycDigilockerController::class, 'callback'])
+    ->middleware('throttle:30,1')->name('kyc.digilocker.callback');
 Route::get('kyc/digilocker/return/{reference}', [KycDigilockerController::class, 'return'])
     ->middleware('throttle:30,1')->name('kyc.digilocker.return');
 

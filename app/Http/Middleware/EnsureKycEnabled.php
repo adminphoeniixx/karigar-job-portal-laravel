@@ -17,8 +17,18 @@ class EnsureKycEnabled
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless(Verification::enabledFor($request->user()), 404);
+        if (Verification::enabledFor($request->user())) {
+            return $next($request);
+        }
 
-        return $next($request);
+        // The apps get a reason with the 404, not a bare empty message.
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => __('Verification is switched off right now.'),
+                'code' => 'verification_disabled',
+            ], 404);
+        }
+
+        abort(404);
     }
 }

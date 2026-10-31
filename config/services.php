@@ -69,6 +69,18 @@ return [
         'timeout' => (int) env('DECENTRO_TIMEOUT', 25),
     ],
 
+    // DigiLocker sign-in (MeriPehchaan OAuth 2.0 + OpenID), credentials from
+    // API Setu → Consume APIs → MeriPehchaan Auth. Once set, Aadhaar comes
+    // straight from DigiLocker instead of through Decentro.
+    'digilocker' => [
+        'base_url' => rtrim((string) env('DIGILOCKER_BASE_URL', 'https://digilocker.meripehchaan.gov.in'), '/'),
+        'client_id' => env('DIGILOCKER_CLIENT_ID'),
+        'client_secret' => env('DIGILOCKER_CLIENT_SECRET'),
+        // Must equal the Call Back URL registered on API Setu; blank = this site's own.
+        'redirect_uri' => env('DIGILOCKER_REDIRECT_URI'),
+        'timeout' => (int) env('DIGILOCKER_TIMEOUT', 20),
+    ],
+
     // OpenStreetMap's geocoder, placing a job's map pin from its address when
     // the client sent none (the employer app). Off in tests.
     'geocoder' => [

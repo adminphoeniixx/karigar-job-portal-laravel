@@ -21,7 +21,11 @@ class DecentroClient
 {
     public static function configured(): bool
     {
-        return filled(config('services.decentro.client_id')) && filled(config('services.decentro.client_secret'));
+        // Commented out on 2026-10-31: DigiLocker comes through our own API
+        // Setu sign-in now (DigilockerClient), and nothing is sent to
+        // Decentro. Put the line back to bring its PAN/GSTIN checks back.
+        // return filled(config('services.decentro.client_id')) && filled(config('services.decentro.client_secret'));
+        return false;
     }
 
     /**

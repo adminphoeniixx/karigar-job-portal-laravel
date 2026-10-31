@@ -99,7 +99,7 @@ const specs = computed(() => {
 const showForm = computed(() => !props.kyc || props.kyc.status === 'rejected' || editing.value);
 
 const statusPill: Record<string, string> = {
-    verified: 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300',
+    verified: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-300',
     rejected: 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300',
     pending: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-300',
 };
@@ -216,8 +216,8 @@ const submit = () =>
             </button>
         </div>
 
-        <div v-if="kyc && kyc.status === 'verified' && !editing" class="flex items-center gap-3 rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5">
-            <span class="flex size-10 items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"><BadgeCheck class="size-6" /></span>
+        <div v-if="kyc && kyc.status === 'verified' && !editing" class="flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+            <span class="flex size-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"><BadgeCheck class="size-6" /></span>
             <div>
                 <p class="font-semibold">You're verified</p>
                 <p class="text-sm text-muted-foreground">
@@ -376,7 +376,7 @@ const submit = () =>
                 Submit for verification
             </button>
             <p v-if="autoVerify" class="mt-2 text-xs text-muted-foreground">
-                {{ isEmployer ? 'PAN and GSTIN are' : 'Your PAN is' }} checked against government records the moment you submit.
+                Verify Aadhaar with DigiLocker first: a PAN that matches your DigiLocker is approved the moment you submit.
             </p>
             </div>
         </form>

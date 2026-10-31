@@ -57,7 +57,7 @@ const statuses = ['pending', 'verified', 'rejected', 'all'];
 const roles = ['all', 'worker', 'employer'] as const;
 
 const statusPill: Record<string, string> = {
-    verified: 'bg-orange-500/10 text-orange-600 ring-orange-500/20 dark:text-orange-300',
+    verified: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-300',
     rejected: 'bg-rose-500/10 text-rose-600 ring-rose-500/20 dark:text-rose-300',
     pending: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-300',
 };

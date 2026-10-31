@@ -405,6 +405,10 @@ Withdraw your own application. → `{ "message": "Application withdrawn." }`
 
 ## 7. KYC 🔒 (worker, needed to apply)
 
+The home **KYC Status** card opens this screen; hide the card while
+`features.verification_enabled` is `false`. While verification is switched off
+every route below answers `404 { "message", "code": "verification_disabled" }`.
+
 Full spec, including the **"I don't have this document"** alternate:
 [`worker-app-verification.md`](worker-app-verification.md). Automatic checks
 (PAN against Income Tax records, Aadhaar through DigiLocker, instant approval):

@@ -40,7 +40,7 @@ const props = defineProps<{
         ai_auto_reject_below: number;
         applicant_first_batch: number;
         applicant_next_batch: number;
-        decentro_configured: boolean;
+        auto_verify_configured: boolean;
     };
     website: Record<WebsiteKey, string>;
     billing: {
@@ -129,13 +129,12 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
     },
     {
         key: 'kyc_auto_verify_enabled',
-        title: 'Auto-verify with Decentro',
+        title: 'Auto-verify with DigiLocker',
         description:
-            'When on, PAN and GSTIN numbers are checked against government records and Aadhaar can be ' +
-            'verified through DigiLocker. If every document checks out and the names match, the user ' +
-            'is verified instantly; anything else (alternate IDs, name mismatch, Aadhaar typed by hand) ' +
-            'still comes to KYC Review. A PAN or GSTIN that does not exist is refused at once. ' +
-            'Each check is billed by Decentro. When off, everything waits for you as before.',
+            'When on, Aadhaar can be verified through DigiLocker (API Setu), and a PAN that matches the ' +
+            'one in the same DigiLocker is verified with it. If every document checks out and the names ' +
+            'match, the user is verified instantly; anything else (other PANs, GSTINs, alternate IDs, ' +
+            'Aadhaar typed by hand) still comes to KYC Review. When off, everything waits for you as before.',
     },
     {
         key: 'ai_job_check_enabled',
@@ -348,10 +347,10 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                 </div>
 
                 <p
-                    v-if="toggle.key === 'kyc_auto_verify_enabled' && !settings.decentro_configured"
+                    v-if="toggle.key === 'kyc_auto_verify_enabled' && !settings.auto_verify_configured"
                     class="mt-4 rounded-xl bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300"
                 >
-                    Decentro keys are not set on this server (DECENTRO_CLIENT_ID / DECENTRO_CLIENT_SECRET), so nothing is checked automatically yet.
+                    DigiLocker keys are not set on this server (DIGILOCKER_CLIENT_ID / DIGILOCKER_CLIENT_SECRET), so nothing is checked automatically yet.
                 </p>
 
                 <!-- Threshold only matters while auto-shortlisting is on. -->

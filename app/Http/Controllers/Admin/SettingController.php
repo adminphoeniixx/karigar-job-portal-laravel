@@ -10,6 +10,7 @@ use App\Services\ApplicantAccess;
 use App\Services\Billing\Gst;
 use App\Services\JobModerator;
 use App\Services\Kyc\DecentroClient;
+use App\Services\Kyc\DigilockerClient;
 use App\Services\Kyc\KycAutoVerifier;
 use App\Services\Screening\ScreeningService;
 use App\Support\GstStates;
@@ -43,7 +44,7 @@ class SettingController extends Controller
                 'kyc_auto_verify_enabled' => Setting::bool(KycAutoVerifier::ENABLED_KEY, true),
                 'ai_job_check_enabled' => JobModerator::enabled(),
                 // Without keys the auto-verify switch does nothing; the page says so.
-                'decentro_configured' => DecentroClient::configured(),
+                'auto_verify_configured' => DigilockerClient::configured() || DecentroClient::configured(),
                 'ai_auto_shortlist_enabled' => Setting::bool(ScoreApplication::ENABLED_KEY, false),
                 'ai_auto_shortlist_threshold' => Setting::int(
                     ScoreApplication::THRESHOLD_KEY,

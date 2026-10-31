@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\KycStatus;
 use App\Enums\UserRole;
 use App\Models\JobApplication;
 use App\Models\KycDocument;
@@ -97,11 +98,13 @@ class DashboardController extends Controller
         $keys = [];
         $labels = [];
 
+        // Step back from the start of the current period: on the 31st,
+        // now()->subMonths(1) overflows into this month again.
         for ($i = $count - 1; $i >= 0; $i--) {
             $date = match ($unit) {
-                'week' => now()->subWeeks($i)->startOfWeek(CarbonInterface::MONDAY),
-                'month' => now()->subMonths($i)->startOfMonth(),
-                default => now()->subDays($i)->startOfDay(),
+                'week' => now()->startOfWeek(CarbonInterface::MONDAY)->subWeeks($i),
+                'month' => now()->startOfMonth()->subMonths($i),
+                default => now()->startOfDay()->subDays($i),
             };
 
             $keys[] = match ($unit) {
@@ -116,9 +119,9 @@ class DashboardController extends Controller
         }
 
         $start = match ($unit) {
-            'week' => now()->subWeeks($count - 1)->startOfWeek(CarbonInterface::MONDAY),
-            'month' => now()->subMonths($count - 1)->startOfMonth(),
-            default => now()->subDays($count - 1)->startOfDay(),
+            'week' => now()->startOfWeek(CarbonInterface::MONDAY)->subWeeks($count - 1),
+            'month' => now()->startOfMonth()->subMonths($count - 1),
+            default => now()->startOfDay()->subDays($count - 1),
         };
 
         return [$keys, $labels, $start];
@@ -157,12 +160,19 @@ class DashboardController extends Controller
 
         return [
             // The KYC tile drops out entirely while verification is switched off.
+            // Each tile opens the page it counts; `state` colours the KYC tile
+            // (verified green, pending amber, rejected red).
             'stats' => array_values(array_filter([
                 Verification::forWorkers()
-                    ? ['label' => 'KYC Status', 'value' => $kyc?->status->label() ?? 'Not submitted', 'hint' => 'Verification', 'tone' => 'amber']
+                    ? ['label' => 'KYC Status', 'value' => $kyc?->status->label() ?? 'Not submitted', 'hint' => 'Verification', 'tone' => 'amber', 'href' => '/kyc', 'state' => match ($kyc?->status) {
+                        KycStatus::Verified => 'good',
+                        KycStatus::Pending => 'warn',
+                        KycStatus::Rejected => 'bad',
+                        null => null,
+                    }]
                     : null,
-                ['label' => 'Available Jobs', 'value' => (string) ($feed ? (clone $feed)->reorder()->count() : 0), 'hint' => 'Near you', 'tone' => 'emerald'],
-                ['label' => 'Profile', 'value' => $user->workerProfile?->skills ? 'Active' : 'Incomplete', 'hint' => 'Skills', 'tone' => 'violet'],
+                ['label' => 'Available Jobs', 'value' => (string) ($feed ? (clone $feed)->reorder()->count() : 0), 'hint' => 'Near you', 'tone' => 'emerald', 'href' => '/worker/jobs'],
+                ['label' => 'Profile', 'value' => $user->workerProfile?->skills ? 'Active' : 'Incomplete', 'hint' => 'Skills', 'tone' => 'violet', 'href' => '/worker/profile'],
             ])),
             'table' => [
                 'title' => 'Jobs for you',
@@ -186,9 +196,9 @@ class DashboardController extends Controller
 
         return [
             'stats' => [
-                ['label' => 'My Jobs', 'value' => (string) $user->jobListings()->count(), 'hint' => 'Total posted', 'tone' => 'emerald'],
-                ['label' => 'Active Jobs', 'value' => (string) $user->jobListings()->where('status', 'active')->count(), 'hint' => 'Live now', 'tone' => 'amber'],
-                ['label' => 'Subscription', 'value' => $sub?->plan->name ?? 'None', 'hint' => $sub ? 'Active' : 'Subscribe', 'tone' => 'violet'],
+                ['label' => 'My Jobs', 'value' => (string) $user->jobListings()->count(), 'hint' => 'Total posted', 'tone' => 'emerald', 'href' => '/employer/jobs'],
+                ['label' => 'Active Jobs', 'value' => (string) $user->jobListings()->where('status', 'active')->count(), 'hint' => 'Live now', 'tone' => 'amber', 'href' => '/employer/jobs?status=active'],
+                ['label' => 'Subscription', 'value' => $sub?->plan->name ?? 'None', 'hint' => $sub ? 'Active' : 'Subscribe', 'tone' => 'violet', 'href' => '/subscription'],
             ],
             // The "Worker Database" card, the same one the employer app shows.
             'database' => ContactUnlocks::for($user)->database(),
@@ -211,10 +221,11 @@ class DashboardController extends Controller
     private function admin(): array
     {
         return [
+            // KYC Review opens on the pending submissions by default.
             'stats' => [
-                ['label' => 'Pending KYC', 'value' => (string) KycDocument::where('status', 'pending')->count(), 'hint' => 'Needs review', 'tone' => 'amber'],
-                ['label' => 'Workers', 'value' => (string) User::where('role', 'worker')->count(), 'hint' => 'Registered', 'tone' => 'emerald'],
-                ['label' => 'Employers', 'value' => (string) User::where('role', 'employer')->count(), 'hint' => 'Registered', 'tone' => 'violet'],
+                ['label' => 'Pending KYC', 'value' => (string) KycDocument::where('status', 'pending')->count(), 'hint' => 'Needs review', 'tone' => 'amber', 'href' => '/admin/kyc'],
+                ['label' => 'Workers', 'value' => (string) User::where('role', 'worker')->count(), 'hint' => 'Registered', 'tone' => 'emerald', 'href' => '/admin/karigars'],
+                ['label' => 'Employers', 'value' => (string) User::where('role', 'employer')->count(), 'hint' => 'Registered', 'tone' => 'violet', 'href' => '/admin/employers'],
             ],
             'table' => [
                 'title' => 'Pending KYC submissions',

@@ -12,10 +12,15 @@ use App\Support\KycRequirements;
 use Illuminate\Support\Str;
 
 /**
- * Verification without waiting for an admin. PAN and GSTIN numbers are looked
- * up in the government registry, Aadhaar comes verified out of the user's
- * DigiLocker; when every document asked for checks out and the names on them
- * agree, the submission is approved on the spot.
+ * Verification without waiting for an admin. Aadhaar comes verified out of
+ * the user's DigiLocker, signed in through MeriPehchaan with our own API Setu
+ * credentials. A PAN that matches the one DigiLocker holds is verified with
+ * it; other PAN and GSTIN numbers go to an admin. When every document asked
+ * for checks out and the names on them agree, the submission is approved on
+ * the spot.
+ *
+ * The Decentro paths (registry lookups, its DigiLocker) are still here but
+ * switched off: {@see DecentroClient::configured()} is commented out.
  *
  * Anything short of that — a document swapped for an alternate ID, Aadhaar
  * typed in by hand, a name that doesn't match, Decentro not answering —
@@ -25,7 +30,7 @@ use Illuminate\Support\Str;
  */
 class KycAutoVerifier
 {
-    /** Admin → Settings: "Auto-verify with Decentro". */
+    /** Admin → Settings: "Auto-verify with DigiLocker". */
     public const ENABLED_KEY = 'kyc_auto_verify_enabled';
 
     /** A passed lookup of the same number is reused for this long instead of paying again. */
@@ -34,11 +39,12 @@ class KycAutoVerifier
     /** Registry document type for each of our documents. */
     private const REGISTRY_TYPES = ['pan' => 'PAN', 'gst' => 'GSTIN'];
 
-    public function __construct(private DecentroClient $client) {}
+    public function __construct(private DecentroClient $client, private DigilockerClient $digilocker) {}
 
     public static function enabled(): bool
     {
-        return DecentroClient::configured() && Setting::bool(self::ENABLED_KEY, true);
+        return (DigilockerClient::configured() || DecentroClient::configured())
+            && Setting::bool(self::ENABLED_KEY, true);
     }
 
     /**
@@ -68,6 +74,23 @@ class KycAutoVerifier
             return $recent;
         }
 
+        if ($doc === 'pan' && ($fromDigilocker = $this->panFromDigilocker($account, $number, $hash)) !== null) {
+            return $fromDigilocker;
+        }
+
+        if (! DecentroClient::configured()) {
+            // No registry to ask: an admin checks the number. Not saved, as
+            // nothing was looked up.
+            return new KycCheck([
+                'user_id' => $account->id,
+                'document' => $doc,
+                'method' => KycCheck::METHOD_REGISTRY,
+                'status' => KycCheck::ERROR,
+                'message' => __('Our team will check this number.'),
+                'completed_at' => now(),
+            ]);
+        }
+
         $reference = self::newReference();
         $result = $this->client->validate(self::REGISTRY_TYPES[$doc], $number, $reference, self::purpose($account));
 
@@ -95,12 +118,55 @@ class KycAutoVerifier
     }
 
     /**
+     * A typed PAN equal to the one DigiLocker holds for the person who signed
+     * in is theirs: verified, under their Aadhaar name, without a lookup.
+     */
+    private function panFromDigilocker(User $account, string $number, string $hash): ?KycCheck
+    {
+        $aadhaar = self::digilockerAadhaar($account);
+        $pan = $aadhaar?->details['pan'] ?? null;
+
+        if ($pan === null || strcasecmp($pan, $number) !== 0) {
+            return null;
+        }
+
+        return KycCheck::create([
+            'user_id' => $account->id,
+            'document' => 'pan',
+            'method' => KycCheck::METHOD_DIGILOCKER,
+            'reference' => self::newReference(),
+            'number_hash' => $hash,
+            'status' => KycCheck::PASSED,
+            'name' => $aadhaar->name,
+            'completed_at' => now(),
+        ]);
+    }
+
+    /**
      * Open a DigiLocker session. The check stays `initiated` until the user
      * comes back to {@see completeDigilocker()}; its details hold the link.
      */
     public function startDigilocker(User $account): KycCheck
     {
         $reference = self::newReference();
+
+        // Our own sign-in: the link is built here, no call needed. The PKCE
+        // verifier waits in the (encrypted) details for the callback.
+        if (DigilockerClient::configured()) {
+            $verifier = DigilockerClient::newCodeVerifier();
+
+            return KycCheck::create([
+                'user_id' => $account->id,
+                'document' => 'aadhaar',
+                'method' => KycCheck::METHOD_DIGILOCKER,
+                'reference' => $reference,
+                'status' => KycCheck::INITIATED,
+                'details' => [
+                    'code_verifier' => $verifier,
+                    'authorization_url' => $this->digilocker->authorizationUrl($reference, $verifier),
+                ],
+            ]);
+        }
 
         $check = KycCheck::create([
             'user_id' => $account->id,
@@ -141,14 +207,32 @@ class KycAutoVerifier
      * The user is back from DigiLocker: fetch the Aadhaar they shared. A
      * submission already waiting on the account picks it up and may be
      * approved there and then.
+     *
+     * `$digilockerError` is the error DigiLocker sent them back with (closed
+     * the page, said no to sharing); there is nothing to fetch then. `$code`
+     * is what our own sign-in comes back with.
      */
-    public function completeDigilocker(KycCheck $check): KycCheck
+    public function completeDigilocker(KycCheck $check, ?string $digilockerError = null, ?string $code = null): KycCheck
     {
         if ($check->status !== KycCheck::INITIATED) {
             return $check;
         }
 
-        if ($check->created_at?->lt(now()->subMinutes(KycCheck::DIGILOCKER_TTL_MINUTES)) || $check->provider_txn_id === null) {
+        if ($digilockerError !== null) {
+            $check->update([
+                'status' => KycCheck::ERROR,
+                // Kept for whoever looks into it; the user gets the plain message.
+                'details' => ['digilocker_error' => Str::limit($digilockerError, 250)],
+                'message' => self::notSharedMessage(),
+                'completed_at' => now(),
+            ]);
+
+            return $check;
+        }
+
+        $codeVerifier = $check->details['code_verifier'] ?? null;
+
+        if ($check->created_at?->lt(now()->subMinutes(KycCheck::DIGILOCKER_TTL_MINUTES)) || ($check->provider_txn_id === null && $codeVerifier === null)) {
             $check->update([
                 'status' => KycCheck::ERROR,
                 'message' => __('This DigiLocker session expired. Start again.'),
@@ -158,12 +242,23 @@ class KycAutoVerifier
             return $check;
         }
 
+        // Started with our own credentials, so finished with them too, even
+        // if they have been switched off since.
+        if ($codeVerifier !== null) {
+            return $this->completeSignIn($check, $code, $codeVerifier);
+        }
+
         $result = $this->client->eAadhaar($check->provider_txn_id, self::newReference(), self::purpose($check->user));
 
         if (! $result->isOk()) {
+            // Decentro's "invalid transaction id" means the user never finished
+            // sharing in DigiLocker, worded for developers; say it plainly.
+            $unfinished = $result->key === 'error_invalid_transaction_id';
+
             $check->update([
                 'status' => $result->isNotFound() ? KycCheck::INVALID : KycCheck::ERROR,
-                'message' => $result->message ?: __('DigiLocker did not share an Aadhaar.'),
+                'details' => ['provider_message' => $result->message, 'provider_key' => $result->key],
+                'message' => $unfinished ? self::notSharedMessage() : ($result->message ?: __('DigiLocker did not share an Aadhaar.')),
                 'completed_at' => now(),
             ]);
 
@@ -192,6 +287,87 @@ class KycAutoVerifier
         $this->applyDigilockerToWaitingSubmission($check);
 
         return $check;
+    }
+
+    /**
+     * Our own sign-in came back with a code: swap it for tokens and read the
+     * e-Aadhaar. The id_token's masked Aadhaar stands in if the e-Aadhaar
+     * cannot be read, and its PAN is kept for {@see panFromDigilocker()}.
+     */
+    private function completeSignIn(KycCheck $check, ?string $code, string $codeVerifier): KycCheck
+    {
+        if (blank($code)) {
+            return $this->failSignIn($check, new DigilockerException('', 'no_code'));
+        }
+
+        try {
+            $token = $this->digilocker->token($code, $codeVerifier);
+        } catch (DigilockerException $e) {
+            return $this->failSignIn($check, $e);
+        }
+
+        $claims = DigilockerClient::claims($token['id_token'] ?? null);
+        $aadhaar = [];
+        $eAadhaarError = null;
+
+        try {
+            $aadhaar = DigilockerClient::readEAadhaar($this->digilocker->eAadhaar($token['access_token']));
+        } catch (DigilockerException $e) {
+            $eAadhaarError = $e->error;
+        }
+
+        $masked = preg_replace('/\D+/', '', (string) ($claims['masked_aadhaar'] ?? ''));
+        $last4 = $aadhaar['last4'] ?? (strlen($masked) >= 4 ? substr($masked, -4) : null);
+
+        if ($last4 === null) {
+            return $this->failSignIn($check, new DigilockerException('', $eAadhaarError ?? 'aadhaar_not_linked'));
+        }
+
+        $pan = strtoupper(trim((string) ($claims['pan_number'] ?? '')));
+
+        $check->update([
+            'status' => KycCheck::PASSED,
+            'name' => $aadhaar['name'] ?? $claims['given_name'] ?? $token['name'] ?? null,
+            // The code verifier goes: it was good for this one sign-in.
+            'details' => array_filter([
+                'last4' => $last4,
+                'dob' => $aadhaar['dob'] ?? $claims['birthdate'] ?? null,
+                'gender' => $aadhaar['gender'] ?? null,
+                'district' => $aadhaar['district'] ?? null,
+                'state' => $aadhaar['state'] ?? null,
+                'pincode' => $aadhaar['pincode'] ?? null,
+                'pan' => preg_match('/^[A-Z]{5}[0-9]{4}[A-Z]$/', $pan) ? $pan : null,
+                'via' => 'meripehchaan',
+                'eaadhaar_error' => $eAadhaarError,
+            ], fn ($value) => $value !== null),
+            'message' => null,
+            'completed_at' => now(),
+        ]);
+
+        $this->applyDigilockerToWaitingSubmission($check);
+
+        return $check;
+    }
+
+    private function failSignIn(KycCheck $check, DigilockerException $e): KycCheck
+    {
+        $check->update([
+            'status' => KycCheck::ERROR,
+            'details' => ['provider_key' => $e->error, 'provider_message' => $e->getMessage() ?: null],
+            'message' => match ($e->error) {
+                'aadhaar_not_linked', 'aadhaar_not_available' => __('Your DigiLocker has no Aadhaar linked yet. Link it in the DigiLocker app, or type your Aadhaar number instead.'),
+                'unreachable' => $e->getMessage(),
+                default => self::notSharedMessage(),
+            },
+            'completed_at' => now(),
+        ]);
+
+        return $check;
+    }
+
+    private static function notSharedMessage(): string
+    {
+        return __('DigiLocker did not share your Aadhaar. Try again and tap "Allow" at the end, or type your Aadhaar number instead.');
     }
 
     /**

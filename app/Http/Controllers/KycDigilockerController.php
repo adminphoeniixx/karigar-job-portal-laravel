@@ -33,13 +33,30 @@ class KycDigilockerController extends Controller
         return Inertia::location($url);
     }
 
+    /**
+     * Where DigiLocker sends the user back from our own sign-in (the Call
+     * Back URL registered on API Setu), `state` being our reference. The
+     * sign-in is finished here; the user then goes on to {@see return()},
+     * the URL the apps' in-app browser watches for.
+     */
+    public function callback(Request $request, KycAutoVerifier $verifier): RedirectResponse
+    {
+        $check = KycCheck::where('reference', $request->string('state')->toString())
+            ->where('method', KycCheck::METHOD_DIGILOCKER)
+            ->firstOrFail();
+
+        $verifier->completeDigilocker($check, $this->digilockerError($request), $request->string('code')->toString() ?: null);
+
+        return to_route('kyc.digilocker.return', $check->reference);
+    }
+
     public function return(Request $request, string $reference, KycAutoVerifier $verifier): RedirectResponse|HttpResponse
     {
         $check = KycCheck::where('reference', $reference)
             ->where('method', KycCheck::METHOD_DIGILOCKER)
             ->firstOrFail();
 
-        $check = $verifier->completeDigilocker($check);
+        $check = $verifier->completeDigilocker($check, $this->digilockerError($request));
         $passed = $check->passed();
         $message = $passed
             ? __('Aadhaar verified through DigiLocker.')
@@ -59,5 +76,16 @@ class KycDigilockerController extends Controller
             'passed' => $passed,
             'message' => $message,
         ]);
+    }
+
+    /**
+     * Closing DigiLocker or refusing to share still comes back, with the
+     * OAuth `error` (passed through by Decentro on its own route).
+     */
+    private function digilockerError(Request $request): ?string
+    {
+        return $request->filled('error')
+            ? trim($request->string('error').': '.$request->string('error_description'), ': ')
+            : null;
     }
 }

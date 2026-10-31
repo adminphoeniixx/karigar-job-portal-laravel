@@ -40,6 +40,8 @@
         <env name="EMPLOYER_VERIFICATION_REQUIRED" value="false"/>
         <env name="WORKER_VERIFICATION_REQUIRED" value="false"/>
         <env name="DECENTRO_CLIENT_ID" value=""/>
+        <env name="DIGILOCKER_CLIENT_ID" value=""/>
+        <env name="DIGILOCKER_CLIENT_SECRET" value=""/>
         <env name="AI_KEY" value=""/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

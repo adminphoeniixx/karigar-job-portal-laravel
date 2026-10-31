@@ -1,5 +1,11 @@
 # KYC verification with Decentro
 
+> **2026-10-31: Decentro is commented out.** Aadhaar comes through our own
+> API Setu (MeriPehchaan) sign-in; see
+> [`kyc-digilocker-meripehchaan.md`](kyc-digilocker-meripehchaan.md).
+> `DecentroClient::configured()` returns `false`, so this page describes code
+> that is kept but not running.
+
 Super Karigar now verifies identity documents automatically through
 [Decentro](https://docs.decentro.tech/docs/kyc-and-onboarding-overview-and-guide).
 When every document checks out against government records, the user is
