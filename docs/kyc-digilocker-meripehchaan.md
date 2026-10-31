@@ -6,8 +6,11 @@ credentials**. Decentro is no longer in the middle. The flow follows the
 OAuth 2.0 with PKCE, plus OpenID.
 
 It switches on by itself once `DIGILOCKER_CLIENT_ID` and
-`DIGILOCKER_CLIENT_SECRET` are set. Existing apps need no change; see
-[app note](app-updates/2026-10-31/both-digilocker-signin-via-apisetu.md).
+`DIGILOCKER_CLIENT_SECRET` are set. The app API is unchanged, but the in-app
+browser must let the callback load; see the
+[worker](app-updates/2026-10-31/worker-digilocker-signin-via-apisetu.md) and
+[employer](app-updates/2026-10-31/employer-digilocker-signin-via-apisetu.md)
+app notes.
 
 **Decentro is commented out** (2026-10-31): `DecentroClient::configured()`
 returns `false`, so nothing is sent to Decentro, whatever keys the server has.

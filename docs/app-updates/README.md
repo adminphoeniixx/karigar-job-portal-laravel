@@ -6,12 +6,13 @@ developer the folder for the dates since their last build.
 - `employer-app.md`: changes for the employer app
 - `worker-app.md`: changes for the worker app
 
-A folder only has the file for an app that changed that day. A change for both
-apps can get its own file in the folder, linked from both.
+A folder only has the files for an app that changed that day. Every file is
+for one app: a change both apps need gets a `worker-…` and an `employer-…`
+file, each with that app's own endpoints.
 
 | Date | Employer app | Worker app |
 |---|---|---|
-| [2026-10-31](2026-10-31/) | [Leaving DigiLocker without sharing: plain message instead of Decentro's "initial_decentro_transaction_id" error](2026-10-31/both-digilocker-cancel-plain-message.md) · [DigiLocker opens DigiLocker itself (API Setu, no Decentro): let `/kyc/digilocker/callback` load, close only on `return_url_prefix`](2026-10-31/both-digilocker-signin-via-apisetu.md) | [Home "KYC Status" card: hide it while `features.verification_enabled` is false, tap opens the KYC screen (DigiLocker Aadhaar + PAN); `/kyc` 404 now carries `code: verification_disabled`](2026-10-31/worker-kyc-status-tile-opens-kyc.md) · [Same DigiLocker message fix](2026-10-31/both-digilocker-cancel-plain-message.md) · [Same DigiLocker via API Setu change](2026-10-31/both-digilocker-signin-via-apisetu.md) |
+| [2026-10-31](2026-10-31/) | [DigiLocker opens DigiLocker itself (API Setu, no Decentro): let `/kyc/digilocker/callback` load, close only on `return_url_prefix`; which business types are approved at once](2026-10-31/employer-digilocker-signin-via-apisetu.md) · [Leaving DigiLocker without sharing: plain message instead of Decentro's "initial_decentro_transaction_id" error](2026-10-31/employer-digilocker-cancel-plain-message.md) · [`/employer/kyc*` 404 now carries `code: verification_disabled`](2026-10-31/employer-kyc-404-says-why.md) | [DigiLocker opens DigiLocker itself (API Setu, no Decentro): let `/kyc/digilocker/callback` load, close only on `return_url_prefix`; PAN matching DigiLocker is verified at once](2026-10-31/worker-digilocker-signin-via-apisetu.md) · [Leaving DigiLocker without sharing: plain message instead of Decentro's "initial_decentro_transaction_id" error](2026-10-31/worker-digilocker-cancel-plain-message.md) · [Home "KYC Status" card: hide it while `features.verification_enabled` is false, tap opens the KYC screen (DigiLocker Aadhaar + PAN); `/kyc` 404 now carries `code: verification_disabled`](2026-10-31/worker-kyc-status-tile-opens-kyc.md) |
 | [2026-10-30](2026-10-30/) | — | [AI resume builder in the app, same as the website: 4 steps, 3 designs × 4 colours, strength meter, live PDF preview (no server change)](2026-10-30/worker-ai-resume-builder-same-as-web.md) · [Home "Available Jobs" counts the karigar's own feed, same as the website (140 → 72)](2026-10-30/worker-available-jobs-count-matches-web.md) |
 | [2026-10-27](2026-10-27/) | — | [A job leaves the feed and home "Latest jobs" once the karigar applies (search still finds it)](2026-10-27/worker-applied-jobs-leave-the-feed.md) |
 | [2026-10-26](2026-10-26/) | [A cancelled plan (UPI AutoPay turned off) runs to its `ends_at`; `current.status` can be `cancelled` / `completed` while on](2026-10-26/employer-cancelled-plan-runs-to-its-end.md) | — |

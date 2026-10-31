@@ -1,15 +1,16 @@
-# Super Karigar **both apps**: DigiLocker now opens DigiLocker itself (no Decentro)
+# Super Karigar **Employer app**: DigiLocker now opens DigiLocker itself (no Decentro)
 
-**What changed on the server:** "Verify with DigiLocker" now signs the user in
-to DigiLocker directly (MeriPehchaan, our own API Setu credentials) instead of
-going through Decentro's pages. Server-side details:
+**What changed on the server:** "Verify Aadhaar with DigiLocker" in business
+verification now signs the employer in to DigiLocker directly (MeriPehchaan,
+our own API Setu credentials) instead of going through Decentro's pages.
+Server-side details:
 [`kyc-digilocker-meripehchaan.md`](../../kyc-digilocker-meripehchaan.md).
 
 **API: no change.** Same calls, same fields:
 
-- `POST /kyc/digilocker` (worker) / `POST /employer/kyc/digilocker` (employer)
+- `POST /employer/kyc/digilocker`
   → `{ reference, authorization_url, return_url_prefix, expires_in_minutes }`
-- `GET …/kyc/digilocker/{reference}` → `{ status, name, masked_aadhaar, message, kyc }`
+- `GET /employer/kyc/digilocker/{reference}` → `{ status, name, masked_aadhaar, message, kyc }`
 
 ## What the in-app browser must allow
 
@@ -23,12 +24,12 @@ The browser now passes through **two** of our URLs. Only the second one means
    close the browser here and do not block it.
 3. The callback redirects to `https://superkarigar.com/kyc/digilocker/return/<reference>`,
    which starts with `return_url_prefix`. **Close the browser here**, then call
-   `GET …/kyc/digilocker/{reference}`, as today.
+   `GET /employer/kyc/digilocker/{reference}`, as today.
 
 If the app closes on any `superkarigar.com` URL instead of on
 `return_url_prefix`, it closes at step 2 and the Aadhaar is never fetched.
 
-## Messages the user can now get (`status: error`)
+## Messages the employer can now get (`status: error`)
 
 | When | `message` |
 |---|---|
@@ -38,8 +39,16 @@ If the app closes on any `superkarigar.com` URL instead of on
 
 Show `message` as it comes and offer **Try again** + **Type Aadhaar number**.
 
-## Bonus: instant PAN
+## What is approved at once, and what waits for the team
 
-When the PAN the karigar types matches the PAN in their DigiLocker,
-`POST /kyc` comes back `kyc.status: "verified"` straight away. No app change;
-it is the same response as before.
+No app change: `POST /employer/kyc` answers as before, with `kyc.status`
+`verified` or `pending`.
+
+| Business type | Approved at once when | Otherwise |
+|---|---|---|
+| `individual` | the PAN typed is the PAN in their DigiLocker **and** `legal_name` matches the Aadhaar name | `pending`, the team checks it |
+| `proprietorship` | never: GSTIN numbers are checked by the team for now | `pending` |
+| companies, firms, others | never: the business PAN is not the owner's DigiLocker PAN | `pending` |
+
+While the status is `pending`, keep showing "Under review". The employer gets
+the `kyc.reviewed` push once the team decides.
