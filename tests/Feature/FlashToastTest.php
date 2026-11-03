@@ -31,7 +31,7 @@ it('shows a toast flashed with ->with(toast)', function () {
     $this->actingAs($employer)->from('/messages')->post('/messages', ['worker_id' => $worker->id])->assertRedirect('/messages');
 
     expect(renderedFlash($this->actingAs($employer)->get('/messages')->getContent()))
-        ->toBe(['toast' => ['type' => 'error', 'message' => 'You can only message workers who applied to one of your jobs.']]);
+        ->toBe(['toast' => ['type' => 'error', 'message' => 'You can only message karigars who applied to one of your jobs.']]);
 });
 
 it('shows ->with(success) and ->with(error) as toasts too', function () {

@@ -185,7 +185,7 @@ class JobDescriptionWriter
             $sentences[] = 'You should know '.implode(', ', $skills).'.';
         }
 
-        $sentences[] = 'Workers with their own basic tools and previous experience will be preferred, but freshers who can learn on the job may also apply.';
+        $sentences[] = 'Karigars with their own basic tools and previous experience will be preferred, but freshers who can learn on the job may also apply.';
         $sentences[] = 'Please share your experience and when you can start.';
 
         return implode(' ', $sentences);

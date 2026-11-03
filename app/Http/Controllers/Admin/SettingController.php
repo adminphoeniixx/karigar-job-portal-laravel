@@ -245,7 +245,7 @@ class SettingController extends Controller
             'type' => 'success',
             'message' => match (count($down)) {
                 0 => __('App settings saved.'),
-                1 => $down[0] === 'worker' ? __('Saved. The worker app is now in maintenance.') : __('Saved. The employer app is now in maintenance.'),
+                1 => $down[0] === 'worker' ? __('Saved. The karigar app is now in maintenance.') : __('Saved. The employer app is now in maintenance.'),
                 default => __('Saved. Both apps are now in maintenance.'),
             },
         ]);

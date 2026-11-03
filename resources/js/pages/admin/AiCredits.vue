@@ -146,7 +146,7 @@ const label = 'mb-1 block text-xs font-medium text-muted-foreground';
                 </div>
             </div>
             <p class="mt-3 text-xs text-muted-foreground">
-                Calls are charged per started minute, and only when the worker picks up. While a call is on the line it holds
+                Calls are charged per started minute, and only when the karigar picks up. While a call is on the line it holds
                 {{ settings.max_call_minutes }} minutes' worth ({{ settings.max_call_minutes * settingsForm.per_minute }} credits), its longest possible run, so an employer can never go below zero.
                 Welcome credits reach each employer once, the first time they open their credits or the job form.
             </p>

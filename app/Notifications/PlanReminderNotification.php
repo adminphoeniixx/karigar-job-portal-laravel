@@ -122,8 +122,8 @@ class PlanReminderNotification extends Notification
 
         if ($this->subscription->plan->isDatabase()) {
             return $ended
-                ? __('Worker Database access has stopped.')
-                : __('Worker Database access stops then.');
+                ? __('Karigar Database access has stopped.')
+                : __('Karigar Database access stops then.');
         }
 
         if ($this->liveJobs === 0) {

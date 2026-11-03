@@ -43,7 +43,7 @@ const props = defineProps<{
     rejectedCount: number;
 }>();
 
-defineOptions({ layout: { breadcrumbs: [{ title: 'Worker Database', href: '/employer/workers' }] } });
+defineOptions({ layout: { breadcrumbs: [{ title: 'Karigar Database', href: '/employer/workers' }] } });
 
 const form = reactive({
     q: props.filters.q ?? '',
@@ -104,21 +104,21 @@ const unlockedByText = (n: number) => `${n} HR${n === 1 ? '' : 's'} unlocked thi
 </script>
 
 <template>
-    <Head title="Worker Database" />
+    <Head title="Karigar Database" />
 
     <div class="flex flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="UserRound" title="Worker Database" description="Browse worker contacts and call them directly to hire" />
+        <PageHeader :icon="UserRound" title="Karigar Database" description="Browse karigar contacts and call them directly to hire" />
 
         <WorkerDatabaseTabs active="find" :counts="contactCounts" />
 
         <!-- Access banner -->
         <div v-if="!access.has_plan" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
-            <span class="inline-flex items-center gap-2"><Lock class="size-4 shrink-0" /> Buy a database plan to unlock worker contact numbers.</span>
+            <span class="inline-flex items-center gap-2"><Lock class="size-4 shrink-0" /> Buy a database plan to unlock karigar contact numbers.</span>
             <Link href="/subscription#database" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white">Buy Database</Link>
         </div>
         <div v-else class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-orange-500/5 px-5 py-4 text-sm">
             <span>
-                Your plan gives access to <strong>{{ num(access.quota) }}</strong> worker contacts.
+                Your plan gives access to <strong>{{ num(access.quota) }}</strong> karigar contacts.
                 <span v-if="unlocksLeft !== null"><strong>{{ num(unlocksLeft) }}</strong> contact unlocks left.</span>
                 <span v-else>Unlimited contact unlocks.</span>{{ ' ' }}<span class="text-muted-foreground">Unlocking a karigar reveals their number and uses one unlock, same as unlocking an applicant.</span>
             </span>
@@ -262,7 +262,7 @@ const unlockedByText = (n: number) => `${n} HR${n === 1 ? '' : 's'} unlocked thi
 
         <div v-else class="rounded-2xl border bg-card px-5 py-16 text-center shadow-sm">
             <div class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><UserRound class="size-7" /></div>
-            <p class="mt-4 font-medium">{{ form.rejected ? 'No rejected karigars' : 'No workers found' }}</p>
+            <p class="mt-4 font-medium">{{ form.rejected ? 'No rejected karigars' : 'No karigars found' }}</p>
             <p class="mt-1 text-sm text-muted-foreground">
                 {{ form.rejected ? 'Karigars you reject from the list show up here, and you can bring them back.' : 'Try a different skill or location.' }}
             </p>

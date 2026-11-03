@@ -134,7 +134,7 @@ class LegalDocuments
                 ]),
                 self::section('sharing', 'Who else sees it', [
                     self::heading('Other users'),
-                    self::paragraph('Your public profile — trade, skills, experience, city, photo — is visible to employers searching for workers. Your phone number is not. An employer only gets your contact details when you apply to their job, or when they unlock your profile through a Worker Database plan. Karigars see an employer\'s company details and the jobs they post.'),
+                    self::paragraph('Your public profile — trade, skills, experience, city, photo — is visible to employers searching for karigars. Your phone number is not. An employer only gets your contact details when you apply to their job, or when they unlock your profile through a Karigar Database plan. Karigars see an employer\'s company details and the jobs they post.'),
                     self::heading('Companies that help us run the service'),
                     self::paragraph('They may only use what we give them to do their job for us, never for themselves:'),
                     self::list([
@@ -236,9 +236,9 @@ class LegalDocuments
                 ]),
                 self::section('payments', 'Plans and payments', [
                     self::list([
-                        'Employers pay for job plans and Worker Database plans. Prices are shown before you pay, with GST added at checkout, and a tax invoice is issued for every payment.',
+                        'Employers pay for job plans and Karigar Database plans. Prices are shown before you pay, with GST added at checkout, and a tax invoice is issued for every payment.',
                         'Payments run through our payment provider. We never see or store your full card details.',
-                        'Each plan includes a number of Worker Database unlocks. An unlock is used when you reveal a karigar\'s contact details from the Worker Database, straight away, and cannot be undone. The numbers of karigars who apply to your jobs show without an unlock.',
+                        'Each plan includes a number of Karigar Database unlocks. An unlock is used when you reveal a karigar\'s contact details from the Karigar Database, straight away, and cannot be undone. The numbers of karigars who apply to your jobs show without an unlock.',
                         'A plan runs for the period you bought and does not renew by itself unless the checkout said so.',
                     ]),
                 ]),

@@ -179,7 +179,7 @@ const pageGroups: { title: string; fields: { key: string; label: string; long?: 
         ],
     },
     {
-        title: 'Worker Database section',
+        title: 'Karigar Database section',
         fields: [
             { key: 'database_label', label: 'Small label' },
             { key: 'database_title', label: 'Title' },

@@ -40,7 +40,7 @@ const props = defineProps<{
     reviews: { average: number; count: number; items: Review[] } | null;
 }>();
 
-defineOptions({ layout: { breadcrumbs: [{ title: 'Find Workers', href: '/employer/workers' }, { title: 'Profile', href: '#' }] } });
+defineOptions({ layout: { breadcrumbs: [{ title: 'Find Karigars', href: '/employer/workers' }, { title: 'Profile', href: '#' }] } });
 
 const unlocksLeft = computed(() => props.unlocks.remaining);
 
@@ -65,7 +65,7 @@ const toggleReject = () => {
 </script>
 
 <template>
-    <Head :title="worker.name ?? 'Worker'" />
+    <Head :title="worker.name ?? 'Karigar'" />
 
     <div class="flex flex-col gap-6 p-4 md:p-6">
         <Link href="/employer/workers" class="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground">

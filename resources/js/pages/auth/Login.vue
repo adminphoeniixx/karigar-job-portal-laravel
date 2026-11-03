@@ -28,7 +28,7 @@ const props = defineProps<{
 }>();
 
 const roleLabel = computed(() =>
-    props.role ? { worker: 'Worker', employer: 'Employer', admin: 'Admin' }[props.role] : null,
+    props.role ? { worker: 'Karigar', employer: 'Employer', admin: 'Admin' }[props.role] : null,
 );
 
 const registerHref = computed(() =>

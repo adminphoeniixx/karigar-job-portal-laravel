@@ -375,7 +375,7 @@ const timeAgo = (iso: string) => {
                         <span v-if="u.suspended_at" class="rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
                             Suspended
                         </span>
-                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold capitalize" :class="roleBadge[u.role]">{{ u.role }}</span>
+                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold capitalize" :class="roleBadge[u.role]">{{ u.role === 'worker' ? 'karigar' : u.role }}</span>
                     </div>
                 </div>
                 <div v-if="recentUsers.length === 0" class="px-6 py-12 text-center text-sm text-muted-foreground">

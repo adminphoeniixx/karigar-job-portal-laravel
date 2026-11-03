@@ -81,7 +81,7 @@ const roleBadge: Record<string, string> = {
             </div>
             <select v-model="role" class="rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40">
                 <option value="">All roles</option>
-                <option value="worker">Worker</option>
+                <option value="worker">Karigar</option>
                 <option value="employer">Employer</option>
                 <option value="admin">Admin</option>
             </select>
@@ -98,7 +98,7 @@ const roleBadge: Record<string, string> = {
                 <div class="min-w-0">
                     <div class="flex items-center gap-2">
                         <span class="truncate font-medium">{{ u.name }}</span>
-                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold capitalize" :class="roleBadge[u.role]">{{ u.role }}</span>
+                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold capitalize" :class="roleBadge[u.role]">{{ u.role === 'worker' ? 'karigar' : u.role }}</span>
                         <span v-if="u.suspended" class="rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-600 dark:text-rose-400">Suspended</span>
                     </div>
                     <div class="truncate text-xs text-muted-foreground">{{ [u.phone, u.email].filter(Boolean).join(' · ') }} · joined {{ u.created_at }}</div>

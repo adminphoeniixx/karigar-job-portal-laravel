@@ -139,7 +139,7 @@ const date = (iso: string | null) =>
                         <div>
                             <div class="font-semibold">{{ row.user.name }}</div>
                             <div class="text-xs text-muted-foreground">
-                                <span class="capitalize">{{ row.user.role }}</span> · {{ row.user.phone ?? row.user.email }} · {{ date(row.submitted_at) }}
+                                <span class="capitalize">{{ row.user.role === 'worker' ? 'karigar' : row.user.role }}</span> · {{ row.user.phone ?? row.user.email }} · {{ date(row.submitted_at) }}
                             </div>
                         </div>
                     </div>

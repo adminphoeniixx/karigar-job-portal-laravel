@@ -224,7 +224,7 @@ class DashboardController extends Controller
             // KYC Review opens on the pending submissions by default.
             'stats' => [
                 ['label' => 'Pending KYC', 'value' => (string) KycDocument::where('status', 'pending')->count(), 'hint' => 'Needs review', 'tone' => 'amber', 'href' => '/admin/kyc'],
-                ['label' => 'Workers', 'value' => (string) User::where('role', 'worker')->count(), 'hint' => 'Registered', 'tone' => 'emerald', 'href' => '/admin/karigars'],
+                ['label' => 'Karigars', 'value' => (string) User::where('role', 'worker')->count(), 'hint' => 'Registered', 'tone' => 'emerald', 'href' => '/admin/karigars'],
                 ['label' => 'Employers', 'value' => (string) User::where('role', 'employer')->count(), 'hint' => 'Registered', 'tone' => 'violet', 'href' => '/admin/employers'],
             ],
             'table' => [

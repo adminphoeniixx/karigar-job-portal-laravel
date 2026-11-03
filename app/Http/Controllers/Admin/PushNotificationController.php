@@ -190,7 +190,7 @@ class PushNotificationController extends Controller
     private function audienceLabel(PushCampaign $c): string
     {
         return match ($c->audience) {
-            'worker' => 'Worker: '.($c->target['worker_name'] ?? $c->target['worker_id'] ?? '—'),
+            'worker' => 'Karigar: '.($c->target['worker_name'] ?? $c->target['worker_id'] ?? '—'),
             'city' => 'City: '.($c->target['city'] ?? '—'),
             'category' => 'Category: '.($c->target['category'] ?? '—'),
             default => 'All workers',

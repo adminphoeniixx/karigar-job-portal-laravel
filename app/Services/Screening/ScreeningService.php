@@ -180,12 +180,12 @@ class ScreeningService
             'application_closed' => __('This application is closed.'),
             'job_not_hiring' => __('Your plan has ended, so this job is paused. Renew it to call applicants.'),
             'interview_already_scheduled' => __('An interview is already booked.'),
-            'no_phone_number' => __('This worker has no phone number on file.'),
-            'worker_opted_out' => __('This worker has opted out of automated calls.'),
-            'worker_unavailable' => __('This worker is not available for work right now.'),
+            'no_phone_number' => __('This karigar has no phone number on file.'),
+            'worker_opted_out' => __('This karigar has opted out of automated calls.'),
+            'worker_unavailable' => __('This karigar is not available for work right now.'),
             'call_in_progress' => __('A call is already on its way.'),
             'call_scheduled' => __('An AI call is already scheduled for this applicant.'),
-            'already_screened' => __('This worker has already been screened.'),
+            'already_screened' => __('This karigar has already been screened.'),
             'no_credits' => __('Not enough AI call credits. Recharge to call this applicant.'),
             default => __('This applicant cannot be called right now.'),
         };
@@ -476,7 +476,7 @@ class ScreeningService
     public static function shortlistMessage(?ScreeningCall $call): string
     {
         if ($call === null || $call->status === ScreeningCallStatus::Failed) {
-            return __('Applicant shortlisted — the worker has been notified.');
+            return __('Applicant shortlisted — the karigar has been notified.');
         }
 
         if ($call->status === ScreeningCallStatus::Scheduled) {

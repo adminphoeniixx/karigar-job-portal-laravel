@@ -106,7 +106,7 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
         title: 'Karigar verification',
         description:
             'When off, karigars alone are never asked to verify: their KYC screens disappear from ' +
-            'the website and the worker app, the KYC endpoints return 404 for them, and the verified ' +
+            'the website and the karigar app, the KYC endpoints return 404 for them, and the verified ' +
             'badge and "Only KYC-verified" filter stop counting karigars. Employers keep verifying ' +
             'as before. Submitted documents are kept. Has no effect while KYC verification is off.',
     },
@@ -259,7 +259,7 @@ const saveBilling = () => {
 // ── Mobile apps: update check + maintenance ─────────────────────────
 const appNames: AppName[] = ['worker', 'employer'];
 const platforms: Platform[] = ['android', 'ios'];
-const appLabel = (app: AppName) => (app === 'worker' ? 'Worker app' : 'Employer app');
+const appLabel = (app: AppName) => (app === 'worker' ? 'Karigar app' : 'Employer app');
 const apps = useForm({
     versions: JSON.parse(JSON.stringify(props.apps.versions)) as Record<AppName, Record<Platform, AppVersion>>,
     settings: JSON.parse(JSON.stringify(props.apps.settings)) as Record<AppName, AppSettings>,
@@ -606,7 +606,7 @@ const sellerState = computed(() => STATE_CODES[billing.seller_gstin.trim().slice
                     <tbody class="divide-y">
                         <template v-for="app in appNames" :key="app">
                             <tr v-for="platform in platforms" :key="`${app}-${platform}`">
-                                <td class="whitespace-nowrap px-3 py-2 font-medium">{{ app === 'worker' ? 'Worker' : 'Employer' }} · {{ platform === 'ios' ? 'iOS' : 'Android' }}</td>
+                                <td class="whitespace-nowrap px-3 py-2 font-medium">{{ app === 'worker' ? 'Karigar' : 'Employer' }} · {{ platform === 'ios' ? 'iOS' : 'Android' }}</td>
                                 <td class="px-3 py-2">
                                     <input v-model="apps.versions[app][platform].latest" placeholder="1.4.2" :class="[inputClass, 'mt-0 w-full min-w-24']" />
                                     <span v-if="appErrors[`versions.${app}.${platform}.latest`]" class="mt-1 block text-xs text-rose-600">{{ appErrors[`versions.${app}.${platform}.latest`] }}</span>

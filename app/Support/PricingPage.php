@@ -26,7 +26,7 @@ final class PricingPage
     {
         return [
             'meta_title' => 'Pricing for employers — Super Karigar',
-            'meta_description' => 'Super Karigar plans for employers: job posting plans, Worker Database access and AI call credits. Prices in rupees, GST invoice with every payment.',
+            'meta_description' => 'Super Karigar plans for employers: job posting plans, Karigar Database access and AI call credits. Prices in rupees, GST invoice with every payment.',
             'eyebrow' => 'Pricing · For employers',
             'headline' => 'Pay for the hiring you do. Nothing hidden.',
             'intro' => 'Pick a plan, sign in with your mobile number and pay — your plan starts the moment the payment goes through.',
@@ -35,7 +35,7 @@ final class PricingPage
             'job_title' => 'Job plans',
             'job_lede' => 'Post jobs, get applicants from your area, and let the AI rank them so the best karigar is on top.',
             'database_label' => 'Search',
-            'database_title' => 'Worker Database',
+            'database_title' => 'Karigar Database',
             'database_lede' => 'Skip the wait. Search verified karigars by craft and location and call them directly.',
             'credits_label' => 'Add-on',
             'credits_title' => 'AI call credits',
@@ -45,7 +45,7 @@ final class PricingPage
             'faq_title' => 'Before you pay',
             'faqs' => [
                 ['q' => 'How do I buy a plan?', 'a' => 'Press Buy, enter your mobile number and the OTP we send. If you are new, that same step creates your employer account. You land on the checkout for the plan you picked and pay through Razorpay — UPI, cards or net banking.'],
-                ['q' => 'Job plan or Worker Database — which one do I need?', 'a' => 'A job plan is for posting jobs and receiving applicants. The Worker Database is for finding karigars yourself and calling them. You can hold one of each at the same time, and every job plan already opens part of the database.'],
+                ['q' => 'Job plan or Karigar Database — which one do I need?', 'a' => 'A job plan is for posting jobs and receiving applicants. The Karigar Database is for finding karigars yourself and calling them. You can hold one of each at the same time, and every job plan already opens part of the database.'],
                 ['q' => 'How long does a job stay live?', 'a' => 'Each job stays live for the number of days written on its plan, counted from the moment it goes live. When it ends, repost it from My Jobs — that uses one more job post from your plan.'],
                 ['q' => 'Does the plan renew on its own?', 'a' => 'Yes. Plans renew every cycle through Razorpay, so your jobs keep running without a gap. To stop a renewal, write to us at the address at the bottom of this page.'],
                 ['q' => 'Is GST included?', 'a' => 'Prices are shown before GST; {gst}% GST is added at checkout. Every payment, including each renewal, comes with a GST tax invoice by email — add your GSTIN in your profile to claim input credit.'],

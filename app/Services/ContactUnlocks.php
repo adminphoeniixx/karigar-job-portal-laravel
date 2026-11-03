@@ -308,7 +308,7 @@ class ContactUnlocks
                 'unlocks_used' => 0,
                 'unlocks_remaining' => 0,
                 'renews_at' => null,
-                'title' => __('Worker Database'),
+                'title' => __('Karigar Database'),
                 'subtitle' => __('Buy a database plan to see karigar numbers'),
                 'cta' => __('Buy Database'),
             ];

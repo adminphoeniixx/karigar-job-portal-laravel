@@ -72,7 +72,7 @@ class MessageController extends Controller
         if ($participants === null) {
             return back()->with('toast', [
                 'type' => 'error',
-                'message' => __('You can only message workers who applied to one of your jobs.'),
+                'message' => __('You can only message karigars who applied to one of your jobs.'),
             ]);
         }
 

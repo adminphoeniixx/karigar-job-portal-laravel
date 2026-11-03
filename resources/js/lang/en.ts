@@ -250,7 +250,7 @@ export default {
     applicants: {
         aiPick: {
             button: 'AI shortlist from database',
-            title: 'AI shortlist from the Worker Database',
+            title: 'AI shortlist from the Karigar Database',
             hint: 'The AI picks the karigars who fit this job best and invites them. No unlock is used. Those who accept are shortlisted.',
             count: 'How many karigars',
             autoCall: 'Book an AI call when they accept',
@@ -364,9 +364,9 @@ export default {
     },
     subscription: {
         jobPlans: 'Job plans',
-        jobPlansHint: 'Post jobs, see your applicants and open the Worker Database.',
+        jobPlansHint: 'Post jobs, see your applicants and open the Karigar Database.',
         databasePlans: 'Database plans',
-        databasePlansHint: 'Only need karigar numbers? A database plan opens the Worker Database on its own, or adds to your job plan.',
+        databasePlansHint: 'Only need karigar numbers? A database plan opens the Karigar Database on its own, or adds to your job plan.',
         databasePlan: 'Database plan',
         title: 'Plans',
         subtitle: 'Choose a plan to start posting jobs',
@@ -504,7 +504,7 @@ export default {
         to: 'To (year)',
         current: 'I still work here',
         jobDetails: 'What did you do there?',
-        jobDetailsPlaceholder: 'e.g. Zari work on bridal lehengas, 2 pieces a day, trained 3 new workers',
+        jobDetailsPlaceholder: 'e.g. Zari work on bridal lehengas, 2 pieces a day, trained 3 new karigars',
         jobDetailsHint: 'Write it any way you like. AI turns it into clean resume points.',
         addJob: 'Add another job',
         addFirstJob: 'Add a job',
@@ -619,7 +619,7 @@ export default {
         liveNow: 'Live now',
         none: 'None',
         subscribeHint: 'Subscribe',
-        workerDatabase: 'Worker Database',
+        workerDatabase: 'Karigar Database',
         databaseContacts: '{count} karigar contacts',
         databaseUnlocksLeft: '{left} of {limit} unlocks left',
         databaseUnlimited: 'Unlimited unlocks',

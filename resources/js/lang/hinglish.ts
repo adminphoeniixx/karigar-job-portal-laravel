@@ -250,7 +250,7 @@ export default {
     applicants: {
         aiPick: {
             button: 'Database se AI shortlist',
-            title: 'Worker Database se AI shortlist',
+            title: 'Karigar Database se AI shortlist',
             hint: 'AI is job ke liye sabse sahi karigar chunega aur unhe invite bhejega. Koi unlock nahi lagega. Jo accept karega wo shortlist ho jayega.',
             count: 'Kitne karigar',
             autoCall: 'Accept karte hi AI call book ho',
@@ -364,9 +364,9 @@ export default {
     },
     subscription: {
         jobPlans: 'Job plans',
-        jobPlansHint: 'Job post karein, apne applicants dekhein aur Worker Database kholein.',
+        jobPlansHint: 'Job post karein, apne applicants dekhein aur Karigar Database kholein.',
         databasePlans: 'Database plans',
-        databasePlansHint: 'Sirf karigaron ke number chahiye? Database plan akele Worker Database kholta hai, ya aapke job plan mein jud jaata hai.',
+        databasePlansHint: 'Sirf karigaron ke number chahiye? Database plan akele Karigar Database kholta hai, ya aapke job plan mein jud jaata hai.',
         databasePlan: 'Database plan',
         title: 'Plans',
         subtitle: 'Naukri post karne ke liye plan chunein',
@@ -619,7 +619,7 @@ export default {
         liveNow: 'Abhi live',
         none: 'Koi nahi',
         subscribeHint: 'Subscribe karein',
-        workerDatabase: 'Worker Database',
+        workerDatabase: 'Karigar Database',
         databaseContacts: '{count} karigar contacts',
         databaseUnlocksLeft: '{limit} me se {left} unlock baaki',
         databaseUnlimited: 'Unlimited unlock',

@@ -15,7 +15,7 @@ const tabs = [
 </script>
 
 <template>
-    <nav class="flex gap-1 overflow-x-auto rounded-2xl border bg-card p-1 shadow-sm" aria-label="Worker Database">
+    <nav class="flex gap-1 overflow-x-auto rounded-2xl border bg-card p-1 shadow-sm" aria-label="Karigar Database">
         <Link
             v-for="tab in tabs"
             :key="tab.key"

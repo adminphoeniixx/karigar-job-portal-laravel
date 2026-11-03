@@ -708,7 +708,7 @@ it('shortlists by hand without calling while screening calls are off', function 
 
     $this->actingAs($this->employer)
         ->post("/employer/applications/{$this->application->id}/shortlist")
-        ->assertSessionHas('toast.message', 'Applicant shortlisted — the worker has been notified.');
+        ->assertSessionHas('toast.message', 'Applicant shortlisted — the karigar has been notified.');
 
     expect($this->application->refresh()->shortlisted_at)->not->toBeNull()
         ->and(ScreeningCall::count())->toBe(0);

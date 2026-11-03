@@ -72,7 +72,7 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Worker Database', href: '/employer/workers' },
+            { title: 'Karigar Database', href: '/employer/workers' },
             { title: 'My contacts', href: '/employer/workers/contacts' },
         ],
     },
@@ -161,7 +161,7 @@ const field = 'rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline
     <Head title="My contacts" />
 
     <div class="flex flex-col gap-6 p-4 md:p-6">
-        <PageHeader :icon="UserRound" title="Worker Database" description="Browse worker contacts and call them directly to hire" />
+        <PageHeader :icon="UserRound" title="Karigar Database" description="Browse karigar contacts and call them directly to hire" />
 
         <WorkerDatabaseTabs :active="tab" :counts="{ database_total: usage.database_total, applicants_total: usage.applicants_total }" />
 
@@ -197,7 +197,7 @@ const field = 'rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline
                 <Lock class="mt-0.5 size-4 shrink-0" />
                 <span>
                     <template v-if="tab === 'database'">
-                        Your Worker Database access has ended, so {{ num(hiddenHere) }} database {{ hiddenHere === 1 ? 'contact is' : 'contacts are' }} hidden. Renew a job or database plan to see them again.
+                        Your Karigar Database access has ended, so {{ num(hiddenHere) }} database {{ hiddenHere === 1 ? 'contact is' : 'contacts are' }} hidden. Renew a job or database plan to see them again.
                     </template>
                     <template v-else>
                         Your job plan has ended, so {{ num(hiddenHere) }} applicant {{ hiddenHere === 1 ? 'contact is' : 'contacts are' }} hidden. Renew it to see them again.

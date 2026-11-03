@@ -69,7 +69,7 @@ class ScreeningController extends Controller
             'type' => 'success',
             'message' => $callableAt->isFuture()
                 ? __('Call queued for :time.', ['time' => $callableAt->format('d M, g:i A')])
-                : __('Calling the worker now.'),
+                : __('Calling the karigar now.'),
         ]);
     }
 
@@ -137,7 +137,7 @@ class ScreeningController extends Controller
 
         return back()->with('toast', [
             'type' => 'success',
-            'message' => __('Interview confirmed — the worker has been notified.'),
+            'message' => __('Interview confirmed — the karigar has been notified.'),
         ]);
     }
 }

@@ -17,7 +17,7 @@ const props = defineProps<{
 }>();
 
 const roles = [
-    { value: 'worker', label: 'I am a Worker', hint: 'Find jobs near you' },
+    { value: 'worker', label: 'I am a Karigar', hint: 'Find jobs near you' },
     { value: 'employer', label: 'I am an Employer', hint: 'Hire skilled karigars' },
 ] as const;
 
@@ -33,7 +33,7 @@ const role = ref<string>(initialRole.value);
 
 // When the role is fixed via the URL (e.g. /worker/register) we hide the chooser.
 const roleLocked = computed(() => !!props.role);
-const roleLabels: Record<string, string> = { worker: 'Worker', employer: 'Employer' };
+const roleLabels: Record<string, string> = { worker: 'Karigar', employer: 'Employer' };
 const roleLabel = computed(() => roleLabels[role.value] ?? '');
 const loginHref = computed(() => (props.role ? `/${props.role}/login` : login().url));
 

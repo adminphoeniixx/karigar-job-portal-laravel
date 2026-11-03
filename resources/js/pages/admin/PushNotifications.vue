@@ -43,7 +43,7 @@ const form = useForm({
 
 const audiences = [
     { value: 'all', label: 'All karigars' },
-    { value: 'worker', label: 'Specific worker' },
+    { value: 'worker', label: 'Specific karigar' },
     { value: 'city', label: 'By city' },
     { value: 'category', label: 'By category' },
 ];

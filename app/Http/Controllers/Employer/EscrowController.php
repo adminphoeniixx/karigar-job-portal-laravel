@@ -98,7 +98,7 @@ class EscrowController extends Controller
 
         $this->escrows->requestRelease($escrow);
 
-        return back()->with('success', __('Release requested — the payout will be sent to the worker shortly.'));
+        return back()->with('success', __('Release requested — the payout will be sent to the karigar shortly.'));
     }
 
     private function authorizeApplication(Request $request, JobApplication $application): void
