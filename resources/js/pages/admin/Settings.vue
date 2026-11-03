@@ -123,7 +123,7 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
         key: 'worker_verification_required',
         title: 'Karigars must be verified to apply',
         description:
-            'When on, a karigar can only apply to a job once their KYC (Aadhaar + PAN) is verified. ' +
+            'When on, a karigar can only apply to a job once their KYC (Aadhaar) is verified. ' +
             'They can still browse, save jobs and call employers who list a number. Applications ' +
             'already sent are not touched. Has no effect while karigar verification is off.',
     },
@@ -131,8 +131,8 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
         key: 'kyc_auto_verify_enabled',
         title: 'Auto-verify with DigiLocker',
         description:
-            'When on, Aadhaar can be verified through DigiLocker (API Setu), and a PAN that matches the ' +
-            'one in the same DigiLocker is verified with it. If every document checks out and the names ' +
+            'When on, Aadhaar can be verified through DigiLocker (API Setu): that alone verifies a karigar. ' +
+            'For employers, a PAN that matches the one in the same DigiLocker is verified with it. If every document checks out and the names ' +
             'match, the user is verified instantly; anything else (other PANs, GSTINs, alternate IDs, ' +
             'Aadhaar typed by hand) still comes to KYC Review. When off, everything waits for you as before.',
     },

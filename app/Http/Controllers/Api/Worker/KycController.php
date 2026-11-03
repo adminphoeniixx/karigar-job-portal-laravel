@@ -14,11 +14,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Karigar KYC: Aadhaar + PAN. A verified KYC is needed to apply to jobs (while
- * the admin rule is on) and earns the verified badge. PAN is checked against
- * the Income Tax record and Aadhaar can come from DigiLocker; when both pass
- * and the names agree the karigar is verified on the spot. Either document can
- * be swapped for an alternate ID the admin checks by hand.
+ * Karigar KYC: Aadhaar only, no PAN. A verified KYC is needed to apply to jobs
+ * (while the admin rule is on) and earns the verified badge. An Aadhaar from
+ * DigiLocker verifies the karigar on the spot (finishing DigiLocker alone does
+ * it, no submit needed); one typed in, or an alternate ID sent instead, waits
+ * for an admin.
  */
 class KycController extends Controller
 {
@@ -39,7 +39,7 @@ class KycController extends Controller
     }
 
     /**
-     * Submit / re-submit Aadhaar + PAN (or alternates) for verification.
+     * Submit / re-submit Aadhaar (or an alternate ID) for verification.
      */
     public function store(KycSubmitRequest $request): JsonResponse
     {

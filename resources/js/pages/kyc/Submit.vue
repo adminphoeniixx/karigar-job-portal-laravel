@@ -162,7 +162,7 @@ const submit = () =>
         <PageHeader
             :icon="ShieldCheck"
             :title="isEmployer ? 'Business verification' : 'KYC Verification'"
-            :description="isEmployer ? 'Verify your business to post jobs' : 'Verify your Aadhaar and PAN to apply to jobs'"
+            :description="isEmployer ? 'Verify your business to post jobs' : 'Verify your Aadhaar to apply to jobs'"
         />
 
         <div
@@ -375,7 +375,7 @@ const submit = () =>
             >
                 Submit for verification
             </button>
-            <p v-if="autoVerify" class="mt-2 text-xs text-muted-foreground">
+            <p v-if="autoVerify && specs.some((s) => s.key === 'pan')" class="mt-2 text-xs text-muted-foreground">
                 Verify Aadhaar with DigiLocker first: a PAN that matches your DigiLocker is approved the moment you submit.
             </p>
             </div>

@@ -39,55 +39,67 @@ function liveJob(): array
     ];
 }
 
-it('takes a worker Aadhaar and PAN with their photos', function () {
+it('takes a worker Aadhaar alone, no PAN', function () {
     $this->actingAs($this->worker, 'sanctum')
         ->post('/api/v1/kyc', [
             'aadhaar_number' => '1234 5678 9012',
             'aadhaar_doc' => photo(),
+            // Not asked of a karigar any more: ignored.
             'pan_number' => 'abcde1234f',
             'pan_doc' => photo(),
         ], ['Accept' => 'application/json'])
         ->assertCreated()
         ->assertJsonPath('kyc.status', 'pending')
+        ->assertJsonCount(1, 'kyc.documents')
         ->assertJsonPath('kyc.documents.0.type', 'aadhaar')
         ->assertJsonPath('kyc.documents.0.number', 'XXXX XXXX 9012')
-        ->assertJsonPath('kyc.documents.1.number', 'ABXXXXXF')
         ->assertJsonPath('kyc.has_missing_documents', false);
+
+    expect($this->worker->fresh()->kyc->pan_number)->toBeNull();
+
+    $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/kyc')
+        ->assertJsonPath('required_documents', ['aadhaar']);
+    $this->getJson('/api/v1/reference')->assertJsonPath('verification.worker_documents', ['aadhaar']);
 });
 
-it('lets a worker without PAN send an alternate ID and a reason instead', function () {
+it('lets a worker without Aadhaar send an alternate ID and a reason instead', function () {
     $this->actingAs($this->worker, 'sanctum')
         ->post('/api/v1/kyc', [
-            'aadhaar_number' => '123456789012',
-            'aadhaar_doc' => photo(),
-            'pan_missing' => '1',
-            'pan_alt_type' => 'voter_id',
-            'pan_alt_number' => 'XYZ1234567',
-            'pan_alt_doc' => photo(),
-            'pan_reason' => 'Never applied for a PAN',
+            'aadhaar_missing' => '1',
+            'aadhaar_alt_type' => 'voter_id',
+            'aadhaar_alt_number' => 'XYZ1234567',
+            'aadhaar_alt_doc' => photo(),
+            'aadhaar_reason' => 'Never got an Aadhaar',
         ], ['Accept' => 'application/json'])
         ->assertCreated()
         ->assertJsonPath('kyc.has_missing_documents', true)
-        ->assertJsonPath('kyc.documents.1.missing', true)
-        ->assertJsonPath('kyc.documents.1.alternate.label', 'Voter ID')
-        ->assertJsonPath('kyc.documents.1.alternate.number', 'XXXXXX4567');
+        ->assertJsonPath('kyc.documents.0.missing', true)
+        ->assertJsonPath('kyc.documents.0.alternate.label', 'Voter ID')
+        ->assertJsonPath('kyc.documents.0.alternate.number', 'XXXXXX4567');
 
     $kyc = $this->worker->fresh()->kyc;
-    expect($kyc->pan_number)->toBeNull()
-        ->and($kyc->missing_documents['pan']['reason'])->toBe('Never applied for a PAN');
-    Storage::disk('private')->assertExists($kyc->missing_documents['pan']['doc_path']);
+    expect($kyc->aadhaar_number)->toBeNull()
+        ->and($kyc->missing_documents['aadhaar']['reason'])->toBe('Never got an Aadhaar');
+    Storage::disk('private')->assertExists($kyc->missing_documents['aadhaar']['doc_path']);
 });
 
 it('needs the alternate details when a document is marked missing', function () {
     $this->actingAs($this->worker, 'sanctum')
         ->postJson('/api/v1/kyc', [
-            'aadhaar_number' => '123456789012',
-            'pan_missing' => true,
+            'aadhaar_missing' => true,
         ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['pan_alt_type', 'pan_alt_doc', 'pan_reason'])
+        ->assertJsonValidationErrors(['aadhaar_alt_type', 'aadhaar_alt_doc', 'aadhaar_reason'])
+        ->assertJsonMissingValidationErrors(['aadhaar_number', 'pan_number', 'pan_doc']);
+});
+
+it('needs a worker Aadhaar number, but not its photo', function () {
+    $this->actingAs($this->worker, 'sanctum')
+        ->postJson('/api/v1/kyc', [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['aadhaar_number'])
         // A document's own photo is optional; the number is what gets checked.
-        ->assertJsonMissingValidationErrors(['aadhaar_doc', 'pan_number', 'pan_doc']);
+        ->assertJsonMissingValidationErrors(['aadhaar_doc', 'pan_number']);
 });
 
 it('asks a company for its PAN and GST and saves the business details', function () {
@@ -189,7 +201,10 @@ it('shows the admin full PAN and the alternate document, and tells the user the 
     Notification::fake();
     $admin = User::factory()->create(['role' => UserRole::Admin->value]);
 
-    $this->actingAs($this->worker, 'sanctum')->post('/api/v1/kyc', [
+    $this->actingAs($this->employer, 'sanctum')->post('/api/v1/employer/kyc', [
+        'business_type' => 'individual',
+        'legal_name' => 'Suresh Sharma',
+        'registered_address' => 'Jaipur, Rajasthan',
         'aadhaar_missing' => '1',
         'aadhaar_alt_type' => 'ration_card',
         'aadhaar_alt_doc' => photo(),
@@ -214,27 +229,52 @@ it('shows the admin full PAN and the alternate document, and tells the user the 
     $this->actingAs($admin)->post("/admin/kyc/{$kyc->id}/approve")->assertRedirect();
 
     expect($kyc->fresh()->status)->toBe(KycStatus::Verified);
+    Notification::assertSentTo($this->employer, KycReviewedNotification::class);
+});
+
+it('lets the admin approve a karigar who sent an alternate ID for Aadhaar', function () {
+    Notification::fake();
+    $admin = User::factory()->create(['role' => UserRole::Admin->value]);
+
+    $this->actingAs($this->worker, 'sanctum')->post('/api/v1/kyc', [
+        'aadhaar_missing' => '1',
+        'aadhaar_alt_type' => 'ration_card',
+        'aadhaar_alt_doc' => photo(),
+        'aadhaar_reason' => 'Aadhaar lost in a flood',
+    ], ['Accept' => 'application/json'])->assertCreated();
+
+    $kyc = KycDocument::first();
+
+    $this->actingAs($admin)->get('/admin/kyc?missing=1')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('documents.data.0.documents.0.alternate.label', 'Ration card')
+            ->has('documents.data.0.documents', 1));
+
+    $this->actingAs($admin)->post("/admin/kyc/{$kyc->id}/approve")->assertRedirect();
+
+    expect($kyc->fresh()->status)->toBe(KycStatus::Verified);
     Notification::assertSentTo($this->worker, KycReviewedNotification::class);
 });
 
 it('drops files a resubmission no longer needs', function () {
+    // A karigar who sent a PAN back when it was asked for.
+    Storage::disk('private')->put('kyc/old-pan.jpg', 'pan');
+    $this->worker->kyc()->create([
+        'aadhaar_number' => '123456789012',
+        'pan_number' => 'ABCDE1234F',
+        'pan_doc_path' => 'kyc/old-pan.jpg',
+        'status' => KycStatus::Rejected,
+    ]);
+
     $this->actingAs($this->worker, 'sanctum')->post('/api/v1/kyc', [
         'aadhaar_number' => '123456789012',
         'aadhaar_doc' => photo(),
-        'pan_number' => 'ABCDE1234F',
-        'pan_doc' => photo(),
     ], ['Accept' => 'application/json'])->assertCreated();
 
-    $oldPan = $this->worker->fresh()->kyc->pan_doc_path;
-
-    $this->actingAs($this->worker, 'sanctum')->post('/api/v1/kyc', [
-        'aadhaar_number' => '123456789012',
-        'pan_missing' => '1',
-        'pan_alt_type' => 'form_60',
-        'pan_alt_doc' => photo(),
-        'pan_reason' => 'No PAN',
-    ], ['Accept' => 'application/json'])->assertCreated();
-
-    Storage::disk('private')->assertMissing($oldPan);
-    expect($this->worker->fresh()->kyc->aadhaar_doc_path)->not->toBeNull();
+    Storage::disk('private')->assertMissing('kyc/old-pan.jpg');
+    $kyc = $this->worker->fresh()->kyc;
+    expect($kyc->pan_number)->toBeNull()
+        ->and($kyc->pan_doc_path)->toBeNull()
+        ->and($kyc->aadhaar_doc_path)->not->toBeNull();
 });

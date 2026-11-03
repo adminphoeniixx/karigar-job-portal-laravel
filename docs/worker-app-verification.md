@@ -1,5 +1,9 @@
 # Worker app: KYC verification
 
+> **Changed 2026-11-02: karigars give Aadhaar only, no PAN.** Everything below
+> about PAN is out of date, and DigiLocker alone now verifies a karigar. See
+> [`app-updates/2026-11-02/worker-kyc-aadhaar-only.md`](app-updates/2026-11-02/worker-kyc-aadhaar-only.md).
+
 This covers what changed in the worker app's KYC screen and what to build.
 Base URL `/api/v1`. Every route here needs the Sanctum token.
 

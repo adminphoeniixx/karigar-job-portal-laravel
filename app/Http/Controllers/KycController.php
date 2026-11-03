@@ -16,10 +16,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Verification on the web: Aadhaar + PAN for a worker, business details and
- * the documents for its business type for an employer. PAN and GSTIN are
- * checked automatically and Aadhaar can come from DigiLocker; any document
- * can be swapped for an alternate ID the admin checks by hand.
+ * Verification on the web: Aadhaar alone for a worker, business details and
+ * the documents for its business type for an employer. Aadhaar can come from
+ * DigiLocker (which on its own verifies a worker); any document can be
+ * swapped for an alternate ID the admin checks by hand.
  */
 class KycController extends Controller
 {

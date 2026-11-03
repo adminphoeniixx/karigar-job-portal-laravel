@@ -8,16 +8,19 @@ use App\Models\KycDocument;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\KycReviewedNotification;
+use App\Services\KycSubmission;
 use App\Support\KycRequirements;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
  * Verification without waiting for an admin. Aadhaar comes verified out of
  * the user's DigiLocker, signed in through MeriPehchaan with our own API Setu
- * credentials. A PAN that matches the one DigiLocker holds is verified with
- * it; other PAN and GSTIN numbers go to an admin. When every document asked
- * for checks out and the names on them agree, the submission is approved on
- * the spot.
+ * credentials. A karigar is asked for nothing else, so a DigiLocker Aadhaar
+ * verifies them outright. For an employer, a PAN that matches the one
+ * DigiLocker holds is verified with it; other PAN and GSTIN numbers go to an
+ * admin. When every document asked for checks out and the names on them
+ * agree, the submission is approved on the spot.
  *
  * The Decentro paths (registry lookups, its DigiLocker) are still here but
  * switched off: {@see DecentroClient::configured()} is commented out.
@@ -492,8 +495,9 @@ class KycAutoVerifier
      */
     private function namePairs(string $role, ?string $businessType): array
     {
+        // A karigar gives Aadhaar alone: nothing to compare it with.
         if ($role === 'worker') {
-            return [['aadhaar', 'pan']];
+            return [];
         }
 
         return match ($businessType) {
@@ -530,6 +534,13 @@ class KycAutoVerifier
     private function applyDigilockerToWaitingSubmission(KycCheck $check): void
     {
         $account = $check->user;
+
+        if ($account !== null && ! $account->isEmployer()) {
+            $this->verifyWorkerFromDigilocker($check, $account);
+
+            return;
+        }
+
         $kyc = $account?->kyc;
 
         if ($kyc === null || $kyc->status !== KycStatus::Pending) {
@@ -549,6 +560,50 @@ class KycAutoVerifier
         $kyc->checks = ['aadhaar' => self::snapshot($check)] + ($kyc->checks ?? []);
 
         $this->decide($kyc, $account);
+    }
+
+    /**
+     * A karigar is asked for Aadhaar alone, so DigiLocker is the whole of it:
+     * their KYC is made (or remade) from it and verified there and then, with
+     * no form to send. Whatever an older submission held besides (a PAN, an
+     * alternate ID) goes, files included. One already verified is left alone.
+     */
+    private function verifyWorkerFromDigilocker(KycCheck $check, User $account): void
+    {
+        $kyc = $account->kyc()->firstOrNew([]);
+
+        if ($kyc->exists && $kyc->status === KycStatus::Verified) {
+            return;
+        }
+
+        $dropped = array_filter([
+            $kyc->pan_doc_path,
+            $kyc->gst_doc_path,
+            ...array_column($kyc->missing_documents ?? [], 'doc_path'),
+        ]);
+
+        $kyc->aadhaar_number = null;
+        $kyc->aadhaar_hash = null;
+        $kyc->aadhaar_last4 = $check->details['last4'] ?? null;
+        $kyc->pan_number = null;
+        $kyc->pan_doc_path = null;
+        $kyc->gst_doc_path = null;
+        $kyc->business_type = null;
+        $kyc->missing_documents = null;
+        $kyc->has_missing_documents = false;
+        $kyc->status = KycStatus::Pending;
+        $kyc->reviewed_by = null;
+        $kyc->reviewed_at = null;
+        $kyc->remarks = null;
+        $kyc->checks = ['aadhaar' => self::snapshot($check)];
+
+        $this->decide($kyc, $account);
+
+        $dropped = array_values(array_diff($dropped, [$kyc->aadhaar_doc_path]));
+
+        if ($dropped !== []) {
+            Storage::disk(KycSubmission::DISK)->delete($dropped);
+        }
     }
 
     /**

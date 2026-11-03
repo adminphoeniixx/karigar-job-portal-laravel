@@ -45,7 +45,7 @@ class WorkerVerification
             KycStatus::Verified->value => null,
             KycStatus::Pending->value => __('Your KYC is under review. You can apply to jobs once it is approved.'),
             KycStatus::Rejected->value => __('Your KYC was not approved. Fix your documents and submit again to apply to jobs.'),
-            default => __('Complete your KYC (Aadhaar + PAN) to apply to jobs. It takes two minutes.'),
+            default => __('Verify your Aadhaar to apply to jobs. It takes a minute.'),
         };
     }
 

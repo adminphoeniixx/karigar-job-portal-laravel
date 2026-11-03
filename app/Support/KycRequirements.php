@@ -4,8 +4,8 @@ namespace App\Support;
 
 /**
  * Which identity documents a user is asked for, and what may stand in for one
- * they do not have. A worker gives Aadhaar + PAN; an employer is asked by its
- * business type — a person or a proprietor proves who they are, a firm or a
+ * they do not have. A worker gives Aadhaar only (no PAN); an employer is asked
+ * by its business type — a person or a proprietor proves who they are, a firm or a
  * company proves the business (its PAN + GST).
  *
  * Any document may be marked "I don't have it": an alternate ID, its photo and
@@ -93,8 +93,10 @@ class KycRequirements
      */
     public static function documentsFor(string $role, ?string $businessType = null): array
     {
+        // A karigar proves who they are with Aadhaar alone: once it is
+        // verified (DigiLocker, or an admin), they are verified.
         if ($role !== 'employer') {
-            return ['aadhaar', 'pan'];
+            return ['aadhaar'];
         }
 
         return match (true) {

@@ -100,31 +100,35 @@ it('blocks an employer from the worker profile route', function () {
 
 // ───────────────────────── KYC ─────────────────────────
 
-it('lets a worker submit KYC and stores it encrypted & pending', function () {
+it('lets a worker submit KYC (Aadhaar only) and stores it encrypted & pending', function () {
     Storage::fake('private');
 
     $this->actingAs($this->worker)->get('/kyc')->assertOk();
 
     $this->actingAs($this->worker)->post('/kyc', [
-        'pan_number' => 'ABCDE1234F',
         'aadhaar_number' => '123412341234',
-        'pan_doc' => UploadedFile::fake()->image('pan.jpg'),
         'aadhaar_doc' => UploadedFile::fake()->image('aadhaar.jpg'),
+        // Karigars are not asked for a PAN: one sent anyway is ignored.
+        'pan_number' => 'ABCDE1234F',
+        'pan_doc' => UploadedFile::fake()->image('pan.jpg'),
     ])->assertRedirect(route('kyc.show'));
 
     $kyc = $this->worker->kyc()->first();
     expect($kyc)->not->toBeNull()
         ->and($kyc->status)->toBe(KycStatus::Pending)
-        ->and($kyc->pan_number)->toBe('ABCDE1234F') // decrypted via cast
-        ->and($kyc->masked_pan)->toBe('ABXXXXXF');
-    Storage::disk('private')->assertExists($kyc->pan_doc_path);
+        ->and($kyc->aadhaar_number)->toBe('123412341234') // decrypted via cast
+        ->and($kyc->aadhaar_last4)->toBe('1234')
+        ->and($kyc->pan_number)->toBeNull()
+        ->and($kyc->pan_doc_path)->toBeNull();
+    Storage::disk('private')->assertExists($kyc->aadhaar_doc_path);
 });
 
 it('rejects invalid KYC input', function () {
     $this->actingAs($this->worker)->post('/kyc', [
         'pan_number' => 'bad',
         'aadhaar_number' => '123',
-    ])->assertSessionHasErrors(['pan_number', 'aadhaar_number']);
+    ])->assertSessionHasErrors(['aadhaar_number'])
+        ->assertSessionDoesntHaveErrors(['pan_number']);
 });
 
 // ───────────────────────── EMPLOYER ─────────────────────────

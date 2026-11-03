@@ -4,6 +4,7 @@ use App\Enums\KycStatus;
 use App\Enums\UserRole;
 use App\Models\KycCheck;
 use App\Models\User;
+use App\Notifications\KycReviewedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
@@ -58,9 +59,10 @@ beforeEach(function () {
     $this->worker = User::factory()->create(['role' => UserRole::Worker->value, 'name' => 'Ramesh']);
 });
 
-function startSignIn(User $worker): array
+function startSignIn(User $user): array
 {
-    $start = test()->actingAs($worker, 'sanctum')->postJson('/api/v1/kyc/digilocker')->assertCreated();
+    $route = $user->isEmployer() ? '/api/v1/employer/kyc/digilocker' : '/api/v1/kyc/digilocker';
+    $start = test()->actingAs($user, 'sanctum')->postJson($route)->assertCreated();
     parse_str((string) parse_url($start->json('authorization_url'), PHP_URL_QUERY), $query);
 
     return [$start->json('reference'), $start->json('authorization_url'), $query];
@@ -112,32 +114,88 @@ it('verifies the Aadhaar when DigiLocker sends the karigar back with a code', fu
         ->and($check->details)->not->toHaveKeys(['code_verifier', 'house', 'street']);
 });
 
-it('verifies a karigar on the spot when the PAN typed is the one DigiLocker holds', function () {
+it('verifies a karigar the moment DigiLocker shares their Aadhaar, with nothing to submit', function () {
     Notification::fake();
     fakeMeriPehchaan();
     [$reference] = startSignIn($this->worker);
     $this->get("/kyc/digilocker/callback?code=AUTH-CODE&state={$reference}");
 
     $this->actingAs($this->worker, 'sanctum')
-        ->postJson('/api/v1/kyc', ['pan_number' => 'ABCPK1234E'])
-        ->assertCreated()
+        ->getJson("/api/v1/kyc/digilocker/{$reference}")
+        ->assertJsonPath('status', 'passed')
         ->assertJsonPath('kyc.status', 'verified')
-        ->assertJsonPath('kyc.masked_aadhaar', 'XXXX XXXX 4321');
+        ->assertJsonPath('kyc.masked_aadhaar', 'XXXX XXXX 4321')
+        ->assertJsonCount(1, 'kyc.documents');
 
-    expect($this->worker->fresh()->kyc->auto_verified)->toBeTrue();
+    $kyc = $this->worker->fresh()->kyc;
+    expect($kyc->auto_verified)->toBeTrue()
+        ->and($kyc->pan_number)->toBeNull()
+        ->and($kyc->aadhaar_number)->toBeNull()
+        ->and($this->worker->fresh()->isKycVerified())->toBeTrue();
+    Notification::assertSentTo($this->worker, KycReviewedNotification::class);
+
+    $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/kyc')
+        ->assertJsonPath('kyc.status', 'verified')
+        ->assertJsonPath('verification.can_apply', true);
 });
 
-it('leaves a different PAN for the team when there is no registry to ask', function () {
+it('still verifies a karigar who submits after DigiLocker, PAN or not', function () {
     fakeMeriPehchaan();
     [$reference] = startSignIn($this->worker);
     $this->get("/kyc/digilocker/callback?code=AUTH-CODE&state={$reference}");
+    $this->worker->kyc()->delete();
 
     $this->actingAs($this->worker, 'sanctum')
         ->postJson('/api/v1/kyc', ['pan_number' => 'ZZZPK9999Z'])
         ->assertCreated()
+        ->assertJsonPath('kyc.status', 'verified');
+
+    expect($this->worker->fresh()->kyc->pan_number)->toBeNull();
+});
+
+/**
+ * An employer hiring for themselves: Aadhaar + PAN, legal name as on the PAN.
+ *
+ * @return array<string, string>
+ */
+function individualEmployerKyc(string $pan): array
+{
+    return [
+        'business_type' => 'individual',
+        'legal_name' => 'Ramesh Kumar',
+        'registered_address' => 'Jaipur, Rajasthan',
+        'pan_number' => $pan,
+    ];
+}
+
+it('verifies an employer on the spot when the PAN typed is the one DigiLocker holds', function () {
+    Notification::fake();
+    $employer = User::factory()->create(['role' => UserRole::Employer->value, 'name' => 'Ramesh']);
+    fakeMeriPehchaan();
+    [$reference] = startSignIn($employer);
+    $this->get("/kyc/digilocker/callback?code=AUTH-CODE&state={$reference}");
+
+    $this->actingAs($employer, 'sanctum')
+        ->postJson('/api/v1/employer/kyc', individualEmployerKyc('ABCPK1234E'))
+        ->assertCreated()
+        ->assertJsonPath('kyc.status', 'verified')
+        ->assertJsonPath('kyc.masked_aadhaar', 'XXXX XXXX 4321');
+
+    expect($employer->fresh()->kyc->auto_verified)->toBeTrue();
+});
+
+it('leaves a different PAN for the team when there is no registry to ask', function () {
+    $employer = User::factory()->create(['role' => UserRole::Employer->value, 'name' => 'Ramesh']);
+    fakeMeriPehchaan();
+    [$reference] = startSignIn($employer);
+    $this->get("/kyc/digilocker/callback?code=AUTH-CODE&state={$reference}");
+
+    $this->actingAs($employer, 'sanctum')
+        ->postJson('/api/v1/employer/kyc', individualEmployerKyc('ZZZPK9999Z'))
+        ->assertCreated()
         ->assertJsonPath('kyc.status', 'pending');
 
-    expect($this->worker->fresh()->kyc->checks['pan']['message'])->toBe('Our team will check this number.');
+    expect($employer->fresh()->kyc->checks['pan']['message'])->toBe('Our team will check this number.');
 });
 
 it('falls back on the id_token when the e-Aadhaar signature does not match', function () {
@@ -191,15 +249,17 @@ it('takes the signed-in website user back to the KYC page', function () {
         ->assertSessionHas('toast.type', 'success');
 });
 
-it('approves a waiting submission once the karigar signs in to DigiLocker', function () {
+it('approves a waiting submission once the karigar signs in to DigiLocker, dropping the old PAN', function () {
     Notification::fake();
     fakeMeriPehchaan();
+    Storage::disk('private')->put('kyc/old-pan.jpg', 'pan');
 
-    // Aadhaar typed by hand + DigiLocker's PAN: waits for the Aadhaar.
+    // From when PAN was still asked: Aadhaar typed by hand, waiting for the team.
     $this->worker->kyc()->create([
         'aadhaar_number' => '123456789012',
         'aadhaar_hash' => hash('sha256', '123456789012'),
         'pan_number' => 'ABCPK1234E',
+        'pan_doc_path' => 'kyc/old-pan.jpg',
         'status' => KycStatus::Pending,
         'checks' => ['pan' => ['status' => KycCheck::PASSED, 'name' => 'RAMESH KUMAR']],
     ]);
@@ -207,7 +267,34 @@ it('approves a waiting submission once the karigar signs in to DigiLocker', func
     [$reference] = startSignIn($this->worker);
     $this->get("/kyc/digilocker/callback?code=AUTH-CODE&state={$reference}");
 
-    expect($this->worker->fresh()->kyc->status)->toBe(KycStatus::Verified);
+    $kyc = $this->worker->fresh()->kyc;
+    expect($kyc->status)->toBe(KycStatus::Verified)
+        ->and($kyc->aadhaar_number)->toBeNull()
+        ->and($kyc->aadhaar_last4)->toBe('4321')
+        ->and($kyc->pan_number)->toBeNull()
+        ->and($kyc->checks)->toHaveKey('aadhaar')
+        ->and($kyc->checks)->not->toHaveKey('pan');
+    Storage::disk('private')->assertMissing('kyc/old-pan.jpg');
+});
+
+it('verifies a rejected karigar through DigiLocker, and leaves a verified one alone', function () {
+    fakeMeriPehchaan();
+    $this->worker->kyc()->create([
+        'status' => KycStatus::Rejected,
+        'remarks' => 'Photo unreadable',
+    ]);
+
+    [$reference] = startSignIn($this->worker);
+    $this->get("/kyc/digilocker/callback?code=AUTH-CODE&state={$reference}");
+
+    $kyc = $this->worker->fresh()->kyc;
+    expect($kyc->status)->toBe(KycStatus::Verified)->and($kyc->remarks)->toBeNull();
+
+    $kyc->update(['auto_verified' => false, 'reviewed_at' => now()->subYear()]);
+    [$again] = startSignIn($this->worker);
+    $this->get("/kyc/digilocker/callback?code=AUTH-CODE&state={$again}");
+
+    expect($this->worker->fresh()->kyc->auto_verified)->toBeFalse();
 });
 
 it('404s a callback for an attempt it never started', function () {
