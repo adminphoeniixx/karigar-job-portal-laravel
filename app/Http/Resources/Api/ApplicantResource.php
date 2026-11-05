@@ -92,7 +92,10 @@ class ApplicantResource extends JsonResource
                 'title' => $this->job->title,
             ]),
             'worker' => $worker ? [
+                // `id` is the karigar's user id. The profile screen,
+                // GET /employer/workers/{worker}, takes `profile_id`.
                 'id' => $worker->id,
+                'profile_id' => $profile?->id,
                 'name' => $worker->name,
                 'rating' => $worker->averageRating(),
                 'reviews_count' => $worker->reviewsReceived()->count(),

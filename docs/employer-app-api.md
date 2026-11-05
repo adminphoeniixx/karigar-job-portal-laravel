@@ -365,7 +365,7 @@ Karigars this employer rejected (§7) are left out. Each row also carries
                       "created_ago": "10 minutes ago" } | null,
   "created_at": "...", "created_ago": "3 hours ago", "tracking_steps": [...],
   "job": { "id": 12, "title": "..." },
-  "worker": { "id", "name", "rating", "reviews_count", "avatar_url", "bio",
+  "worker": { "id", "profile_id", "name", "rating", "reviews_count", "avatar_url", "bio",
               "skills": [...], "spoken_languages": [...], "experience_years",
               "city", "state",
               "distance_km": 2.3, "distance_label": "2.3 km", "distance_approx": false,
@@ -375,6 +375,10 @@ Karigars this employer rejected (§7) are left out. Each row also carries
               "verified", "phone": "9876543210", "email": "suresh@…" | null }
 }
 ```
+`worker.id` is the karigar's **user id**; `worker.profile_id` is the id for
+`GET /employer/workers/{worker}`. Do not pass `worker.id` there: it opens a
+different karigar.
+
 The distance is from the **job's site** (the employer's pin when the job has
 none), labelled as in §7: `"~4 km"` while the karigar only gave a city.
 `unlocked_by_count` = other employers who unlocked this karigar in the Worker
@@ -772,7 +776,9 @@ once the Worker Database access ends. `access.has_plan` is true while a job
 plan or a database plan opens the database (`quota` > 0).
 
 ### `GET /employer/workers/{worker}`
-`{worker}` is a **worker profile id**. Contact is revealed while the employer may
+`{worker}` is a **worker profile id**: the `id` on a database/matches card, or
+`worker.profile_id` on an applicant (never the applicant's `worker.id`, which is
+a user id). Contact is revealed while the employer may
 see it: an applicant the employer can see on its applicants screen (no unlock
 needed), or a karigar unlocked from the database while Worker Database access
 lasts. `can_unlock` is false for an applicant, and for a karigar
