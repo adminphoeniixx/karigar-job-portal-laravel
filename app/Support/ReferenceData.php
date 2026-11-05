@@ -10,50 +10,6 @@ namespace App\Support;
 class ReferenceData
 {
     /**
-     * Indian states/UTs → major cities (mirrors resources/js/data/indianLocations.ts).
-     *
-     * @var array<string, list<string>>
-     */
-    public const CITIES_BY_STATE = [
-        'Andhra Pradesh' => ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool', 'Rajahmundry', 'Tirupati', 'Kadapa', 'Anantapur', 'Kakinada'],
-        'Arunachal Pradesh' => ['Itanagar', 'Naharlagun', 'Pasighat', 'Tawang', 'Ziro'],
-        'Assam' => ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon', 'Tinsukia', 'Tezpur', 'Bongaigaon'],
-        'Bihar' => ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Purnia', 'Darbhanga', 'Bihar Sharif', 'Arrah', 'Begusarai', 'Katihar'],
-        'Chhattisgarh' => ['Raipur', 'Bhilai', 'Bilaspur', 'Korba', 'Durg', 'Rajnandgaon', 'Jagdalpur', 'Raigarh'],
-        'Goa' => ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda'],
-        'Gujarat' => ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar', 'Junagadh', 'Gandhinagar', 'Anand', 'Nadiad'],
-        'Haryana' => ['Faridabad', 'Gurugram', 'Panipat', 'Ambala', 'Yamunanagar', 'Rohtak', 'Hisar', 'Karnal', 'Sonipat', 'Panchkula'],
-        'Himachal Pradesh' => ['Shimla', 'Mandi', 'Solan', 'Dharamshala', 'Kullu', 'Bilaspur', 'Hamirpur'],
-        'Jharkhand' => ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Hazaribagh', 'Deoghar', 'Giridih'],
-        'Karnataka' => ['Bengaluru', 'Mysuru', 'Hubballi', 'Mangaluru', 'Belagavi', 'Kalaburagi', 'Davanagere', 'Ballari', 'Vijayapura', 'Shivamogga', 'Tumakuru'],
-        'Kerala' => ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam', 'Kannur', 'Alappuzha', 'Palakkad', 'Malappuram'],
-        'Madhya Pradesh' => ['Indore', 'Bhopal', 'Jabalpur', 'Gwalior', 'Ujjain', 'Sagar', 'Dewas', 'Satna', 'Ratlam', 'Rewa'],
-        'Maharashtra' => ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Thane', 'Aurangabad', 'Solapur', 'Kolhapur', 'Amravati', 'Navi Mumbai', 'Sangli', 'Jalgaon'],
-        'Manipur' => ['Imphal', 'Thoubal', 'Bishnupur', 'Churachandpur'],
-        'Meghalaya' => ['Shillong', 'Tura', 'Jowai', 'Nongstoin'],
-        'Mizoram' => ['Aizawl', 'Lunglei', 'Champhai'],
-        'Nagaland' => ['Kohima', 'Dimapur', 'Mokokchung', 'Tuensang'],
-        'Odisha' => ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Berhampur', 'Sambalpur', 'Puri', 'Balasore'],
-        'Punjab' => ['Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'Hoshiarpur', 'Pathankot', 'Moga'],
-        'Rajasthan' => ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Bikaner', 'Ajmer', 'Bhilwara', 'Alwar', 'Sikar', 'Sri Ganganagar'],
-        'Sikkim' => ['Gangtok', 'Namchi', 'Gyalshing', 'Mangan'],
-        'Tamil Nadu' => ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tirunelveli', 'Tiruppur', 'Erode', 'Vellore', 'Thoothukudi'],
-        'Telangana' => ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar', 'Khammam', 'Ramagundam', 'Mahbubnagar'],
-        'Tripura' => ['Agartala', 'Udaipur', 'Dharmanagar', 'Kailashahar'],
-        'Uttar Pradesh' => ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi', 'Meerut', 'Prayagraj', 'Noida', 'Bareilly', 'Aligarh', 'Moradabad', 'Gorakhpur'],
-        'Uttarakhand' => ['Dehradun', 'Haridwar', 'Roorkee', 'Haldwani', 'Rudrapur', 'Kashipur', 'Rishikesh'],
-        'West Bengal' => ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri', 'Bardhaman', 'Malda', 'Kharagpur'],
-        'Andaman and Nicobar Islands' => ['Port Blair'],
-        'Chandigarh' => ['Chandigarh'],
-        'Dadra and Nagar Haveli and Daman and Diu' => ['Silvassa', 'Daman', 'Diu'],
-        'Delhi' => ['New Delhi', 'Delhi', 'Dwarka', 'Rohini', 'Pitampura', 'Saket'],
-        'Jammu and Kashmir' => ['Srinagar', 'Jammu', 'Anantnag', 'Baramulla', 'Udhampur'],
-        'Ladakh' => ['Leh', 'Kargil'],
-        'Lakshadweep' => ['Kavaratti'],
-        'Puducherry' => ['Puducherry', 'Karaikal', 'Yanam', 'Mahe'],
-    ];
-
-    /**
      * Languages a worker may speak — used for job matching (not the app UI locale).
      *
      * @var list<string>
@@ -163,10 +119,7 @@ class ReferenceData
      */
     public static function states(): array
     {
-        $states = array_keys(self::CITIES_BY_STATE);
-        sort($states);
-
-        return $states;
+        return IndianCities::states();
     }
 
     /**
@@ -174,6 +127,6 @@ class ReferenceData
      */
     public static function citiesFor(?string $state): array
     {
-        return $state ? (self::CITIES_BY_STATE[$state] ?? []) : [];
+        return IndianCities::citiesFor($state);
     }
 }

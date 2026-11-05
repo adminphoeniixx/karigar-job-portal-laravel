@@ -97,11 +97,12 @@ it('answers a city name from the reference list without the map service', functi
 it('narrows a city search by the state after a comma', function () {
     Http::fake();
 
-    // Udaipur is a city in Rajasthan and in Tripura.
+    // Udaipur is a city in Rajasthan and in Tripura (and a small town in
+    // Himachal): the exact name comes first in each, biggest first.
     $both = $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/places?q=Udaipur')->json('places');
     $narrowed = $this->actingAs($this->worker, 'sanctum')->getJson('/api/v1/places?q=Udaipur, Tri')->json('places');
 
-    expect(collect($both)->pluck('state')->sort()->values()->all())->toBe(['Rajasthan', 'Tripura'])
+    expect(collect($both)->take(3)->map(fn ($p) => $p['label'])->all())->toBe(['Udaipur, Rajasthan', 'Udaipur, Tripura', 'Udaipur, Himachal Pradesh'])
         ->and(collect($narrowed)->pluck('label')->all())->toBe(['Udaipur, Tripura'])
         ->and(collect(CityCentres::search('udaipur tripura'))->pluck('label')->all())->toBe(['Udaipur, Tripura'])
         ->and(CityCentres::search('jaipur raj')[0]['label'] ?? null)->toBe('Jaipur, Rajasthan');
