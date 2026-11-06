@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, BadgeCheck, Bot, BriefcaseBusiness, Gift, IndianRupee, MapPin, Phone, Settings2, ShieldAlert, Sparkles, Sun, Wallet } from '@lucide/vue';
+import { ArrowLeft, BadgeCheck, Bot, BriefcaseBusiness, Building2, Gift, Handshake, House, IndianRupee, MapPin, Phone, Settings2, ShieldAlert, Shuffle, Sparkles, Sun, Video, Wallet } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -23,6 +23,8 @@ interface Job {
     address: string | null;
     city: string | null;
     state: string | null;
+    work_mode: 'on_site' | 'remote' | 'both';
+    interview_mode: 'on_site' | 'remote';
     latitude: string | null;
     longitude: string | null;
     vacancies: number;
@@ -85,6 +87,8 @@ const form = useForm({
     address: props.job?.address ?? '',
     city: props.job?.city ?? '',
     state: props.job?.state ?? '',
+    work_mode: props.job?.work_mode ?? 'on_site',
+    interview_mode: props.job?.interview_mode ?? 'on_site',
     latitude: props.job?.latitude ?? '',
     longitude: props.job?.longitude ?? '',
     vacancies: props.job?.vacancies ?? 1,
@@ -158,6 +162,24 @@ const contactModes = [
     { value: 'call', label: 'jobForm.directCall', desc: 'jobForm.directCallDesc' },
     { value: 'both', label: 'jobForm.both', desc: 'jobForm.bothDesc' },
 ] as const;
+
+// Where the work is done, and how the interview is held. A new job that
+// turns remote takes a remote interview too, until the employer picks one.
+const workModes = [
+    { value: 'on_site', label: 'jobs.workOnSite', desc: 'jobForm.workOnSiteDesc', icon: Building2 },
+    { value: 'remote', label: 'jobs.workRemote', desc: 'jobForm.workRemoteDesc', icon: House },
+    { value: 'both', label: 'jobs.workBoth', desc: 'jobForm.workBothDesc', icon: Shuffle },
+] as const;
+
+const interviewModes = [
+    { value: 'on_site', label: 'jobs.interviewOnSite', desc: 'jobForm.interviewOnSiteDesc', icon: Handshake },
+    { value: 'remote', label: 'jobs.interviewRemote', desc: 'jobForm.interviewRemoteDesc', icon: Video },
+] as const;
+
+const interviewTouched = ref(isEdit);
+watch(() => form.work_mode, (mode) => {
+    if (!interviewTouched.value) form.interview_mode = mode === 'remote' ? 'remote' : 'on_site';
+});
 
 const cities = computed(() => citiesFor(form.state));
 watch(() => form.state, () => {
@@ -456,6 +478,47 @@ const submit = () => {
                             <InputError :message="form.errors.wage_type" />
                         </div>
                     </div>
+                </section>
+
+                <!-- Work & interview -->
+                <section class="rounded-2xl border bg-card p-5 shadow-sm md:p-6">
+                    <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                        <House class="size-4 text-orange-500" /> {{ $t('jobForm.workSection') }}
+                    </h2>
+                    <Label class="mb-2 block">{{ $t('jobForm.workModeQuestion') }}</Label>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <label
+                            v-for="m in workModes"
+                            :key="m.value"
+                            class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
+                            :class="form.work_mode === m.value ? 'border-orange-500 bg-orange-500/5 ring-2 ring-orange-500/20' : 'hover:border-orange-300'"
+                        >
+                            <span class="flex items-center gap-2">
+                                <input v-model="form.work_mode" type="radio" name="work_mode" :value="m.value" class="accent-orange-600" />
+                                <span class="flex items-center gap-1.5 text-sm font-semibold"><component :is="m.icon" class="size-4 text-orange-500" /> {{ $t(m.label) }}</span>
+                            </span>
+                            <span class="text-xs text-muted-foreground">{{ $t(m.desc) }}</span>
+                        </label>
+                    </div>
+                    <InputError class="mt-2" :message="form.errors.work_mode" />
+
+                    <Label class="mt-5 mb-2 block">{{ $t('jobForm.interviewModeQuestion') }}</Label>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label
+                            v-for="m in interviewModes"
+                            :key="m.value"
+                            class="flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition"
+                            :class="form.interview_mode === m.value ? 'border-orange-500 bg-orange-500/5 ring-2 ring-orange-500/20' : 'hover:border-orange-300'"
+                        >
+                            <span class="flex items-center gap-2">
+                                <input v-model="form.interview_mode" type="radio" name="interview_mode" :value="m.value" class="accent-orange-600" @change="interviewTouched = true" />
+                                <span class="flex items-center gap-1.5 text-sm font-semibold"><component :is="m.icon" class="size-4 text-orange-500" /> {{ $t(m.label) }}</span>
+                            </span>
+                            <span class="text-xs text-muted-foreground">{{ $t(m.desc) }}</span>
+                        </label>
+                    </div>
+                    <InputError class="mt-2" :message="form.errors.interview_mode" />
+                    <p v-if="aiOptions.call_available" class="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground"><Bot class="mt-0.5 size-3.5 shrink-0 text-orange-500" /> {{ $t('jobForm.workModeAiHint') }}</p>
                 </section>
 
                 <!-- Location -->

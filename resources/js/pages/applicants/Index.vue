@@ -75,7 +75,8 @@ interface Applicant {
 }
 
 const props = defineProps<{
-    job: { id: number; title: string };
+    // interview_mode: site | phone, from how the job says interviews are held.
+    job: { id: number; title: string; interview_mode?: 'site' | 'phone' };
     applications: Applicant[];
     sort: 'best_match' | 'recent';
     escrowEnabled: boolean;
@@ -221,13 +222,13 @@ const screeningTone: Record<string, string> = {
 const conversationFor = ref<number | null>(null);
 
 const confirmFor = ref<ScreeningCall | null>(null);
-const confirmForm = useForm({ interview_at: '', mode: 'site' });
+const confirmForm = useForm({ interview_at: '', mode: (props.job.interview_mode ?? 'site') as string });
 
 const openConfirm = (call: ScreeningCall) => {
     confirmFor.value = call;
     confirmForm.clearErrors();
     confirmForm.interview_at = call.proposed_interview_at ?? '';
-    confirmForm.mode = call.proposed_mode ?? 'site';
+    confirmForm.mode = call.proposed_mode ?? props.job.interview_mode ?? 'site';
 };
 
 const submitConfirm = () => {

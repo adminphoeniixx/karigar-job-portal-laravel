@@ -105,7 +105,8 @@ class ApplicantController extends Controller
             ]);
 
         return Inertia::render('applicants/Index', [
-            'job' => $job->only('id', 'title'),
+            // interview_mode: what the confirm-interview modal starts from.
+            'job' => [...$job->only('id', 'title'), 'interview_mode' => $job->bookedInterviewMode()],
             'applications' => $applications,
             'sort' => $sort,
             'access' => $access->summary($job),

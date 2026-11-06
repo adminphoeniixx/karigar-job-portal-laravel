@@ -93,6 +93,19 @@ class ReferenceData
     public const INTERVIEW_MODES = ['site', 'phone', 'video'];
 
     /**
+     * Where a job's work is done: at the employer's place, from the karigar's
+     * home, or either.
+     */
+    public const WORK_MODES = ['on_site', 'remote', 'both'];
+
+    /**
+     * How a job's interview is held, as the employer says on the listing. Not
+     * the same list as INTERVIEW_MODES, which is the mode of one booked
+     * interview: a remote job interview becomes a phone or video one.
+     */
+    public const JOB_INTERVIEW_MODES = ['on_site', 'remote'];
+
+    /**
      * Sort options for the employer's Find Workers screen.
      *
      * @var list<string>

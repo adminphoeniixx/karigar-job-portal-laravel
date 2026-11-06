@@ -16,6 +16,7 @@ interface Job {
     category: string | null;
     city: string | null;
     state: string | null;
+    work_mode?: 'on_site' | 'remote' | 'both';
     wage_min: string | null;
     wage_max: string | null;
     wage_type: string | null;
@@ -153,7 +154,7 @@ const selectClass = inputClass;
                         <p class="mt-1.5 text-[13px] text-muted-foreground">{{ t('jobs.by') }} {{ job.employer.name }}</p>
                     </div>
                     <div class="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || t('jobs.locationNA') }}
+                        <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || t('jobs.locationNA') }}<template v-if="job.work_mode === 'remote' || job.work_mode === 'both'"> · <span class="font-semibold text-violet-700 dark:text-violet-300">{{ t(job.work_mode === 'remote' ? 'jobs.workRemote' : 'jobs.workBoth') }}</span></template>
                     </div>
                     <div class="text-sm font-semibold">{{ wage(job) }}</div>
                     <div class="flex items-center justify-end gap-4">

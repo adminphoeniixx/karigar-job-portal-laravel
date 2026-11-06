@@ -29,6 +29,9 @@ class JobResource extends JsonResource
             'wage_type' => $this->wage_type,
             'wage_label' => $this->resource->wageLabel(),
             'experience_label' => $this->resource->experienceLabel(),
+            // on_site | remote | both: a "Work from home" chip on the card.
+            'work_mode' => $this->work_mode,
+            'work_mode_label' => $this->resource->workModeLabel(),
             'vacancies' => $this->vacancies,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),

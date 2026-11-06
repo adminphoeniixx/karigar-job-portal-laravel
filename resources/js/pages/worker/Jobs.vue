@@ -12,6 +12,7 @@ interface Job {
     title: string;
     category: string | null;
     city: string | null;
+    work_mode?: 'on_site' | 'remote' | 'both';
     state: string | null;
     wage_min: string | null;
     wage_max: string | null;
@@ -174,7 +175,7 @@ const fmtDate = (iso: string | null): string =>
                 </div>
                 <h3 class="mt-3 text-lg font-bold leading-snug">{{ job.title }}</h3>
                 <p class="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || $t('jobs.locationNA') }}
+                    <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || $t('jobs.locationNA') }}<template v-if="job.work_mode === 'remote' || job.work_mode === 'both'"> · <span class="font-semibold text-violet-700 dark:text-violet-300">{{ $t(job.work_mode === 'remote' ? 'jobs.workRemote' : 'jobs.workBoth') }}</span></template>
                 </p>
                 <p class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     <span class="inline-flex items-center gap-1"><CalendarDays class="size-3.5" /> {{ $t('jobs.posted') }} {{ fmtDate(job.created_at) }}</span>

@@ -22,6 +22,17 @@ class JobListingRequest extends FormRequest
             $this->merge(['contact_mode' => 'apply']);
         }
 
+        // Older app builds send neither: their jobs are on-site, as every job
+        // was before. A remote job's interview defaults to remote too.
+        if (! $this->filled('work_mode')) {
+            $this->merge(['work_mode' => $this->route('job')?->work_mode ?? 'on_site']);
+        }
+
+        if (! $this->filled('interview_mode')) {
+            $this->merge(['interview_mode' => $this->route('job')?->interview_mode
+                ?? ($this->input('work_mode') === 'remote' ? 'remote' : 'on_site')]);
+        }
+
         if (! $this->has('requires_worker_fee')) {
             $this->merge(['requires_worker_fee' => false]);
         }
@@ -96,6 +107,9 @@ class JobListingRequest extends FormRequest
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
+            // Where the work is done, and how the interview is held.
+            'work_mode' => ['required', 'string', Rule::in(ReferenceData::WORK_MODES)],
+            'interview_mode' => ['required', 'string', Rule::in(ReferenceData::JOB_INTERVIEW_MODES)],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'vacancies' => ['required', 'integer', 'min:1', 'max:10000'],

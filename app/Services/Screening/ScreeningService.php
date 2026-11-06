@@ -390,7 +390,8 @@ class ScreeningService
 
         $application->update([
             'interview_at' => $at,
-            'interview_mode' => $mode ?? $call->proposed_mode ?? 'phone',
+            // Left unsaid: how the job says interviews are held.
+            'interview_mode' => $mode ?? $call->proposed_mode ?? $application->job?->bookedInterviewMode() ?? 'site',
             'interview_note' => $call->summary,
             // Interviewing implies shortlisted, same as manual scheduling.
             'shortlisted_at' => $application->shortlisted_at ?? now(),

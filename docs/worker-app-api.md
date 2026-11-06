@@ -280,8 +280,10 @@ distance there. No `feed` block, and `distance_km` is `null`.
 
 **JobResource:** `id, title, category, skills, city, state, location_label,
 wage_min, wage_max, wage_type, wage_label ("₹20,800 – ₹26,000 / monthly"),
+work_mode (on_site | remote | both), work_mode_label ("Work from home"),
 vacancies, experience_label, created_at, created_ago, expires_at, distance_km,
-employer{id, name, verified}`. Wages are **monthly**. `employer.verified` is
+employer{id, name, verified}`. Wages are **monthly**. Show a "Work from home"
+chip on the card when `work_mode` is `remote` or `both`. `employer.verified` is
 true for a business the admin verified (false while verification is switched
 off): show a ✔ Verified tag next to the name.
 
@@ -292,7 +294,9 @@ Full detail + the worker's context.
   "data": { ...JobDetailResource, "contact_phone": "98..." /* only if callable */ },
   // data.employer: { "id", "name", "verified" }
   // data also: "experience_min", "experience_max", "experience_label" ("2–5 yrs"),
-  // "shift_start", "shift_end", "shift_hours_label" ("9:00 AM – 6:00 PM"), and on
+  // "shift_start", "shift_end", "shift_hours_label" ("9:00 AM – 6:00 PM"),
+  // "work_mode" (on_site | remote | both) + "work_mode_label" ("On-site or from home"),
+  // "interview_mode" (on_site | remote) + "interview_mode_label" ("Interview on phone / video"), and on
   // a call job "contact_name" / "contact_designation" (who picks up) with "contact_phone"
   "meta": {
     "employer_rating": { "average": 4.7, "count": 12 },

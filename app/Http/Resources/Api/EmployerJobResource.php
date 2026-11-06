@@ -38,6 +38,12 @@ class EmployerJobResource extends JsonResource
             'location_label' => collect([$this->city, $this->state])->filter()->join(', ') ?: null,
             'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
             'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
+            // Where the work is done (on_site | remote | both) and how the
+            // interview is held (on_site | remote), with labels to show.
+            'work_mode' => $this->work_mode,
+            'work_mode_label' => $this->resource->workModeLabel(),
+            'interview_mode' => $this->interview_mode,
+            'interview_mode_label' => $this->resource->interviewModeLabel(),
             'vacancies' => $this->vacancies,
             'experience_min' => $this->experience_min,
             'experience_max' => $this->experience_max,

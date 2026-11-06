@@ -63,6 +63,10 @@ final class JobFormOptions
             'category_skills' => Category::cachedSkillsMap(),
             'perks' => self::perks($account),
             'shifts' => ReferenceData::SHIFTS,
+            // Where the work is done and how the interview is held, with the
+            // label to show for each value.
+            'work_modes' => array_map(fn (string $mode) => ['value' => $mode, 'label' => JobListing::workModeLabelFor($mode)], ReferenceData::WORK_MODES),
+            'interview_modes' => array_map(fn (string $mode) => ['value' => $mode, 'label' => JobListing::interviewModeLabelFor($mode)], ReferenceData::JOB_INTERVIEW_MODES),
             'ai' => [...self::ai(), 'credits' => self::credits($account)],
         ];
     }

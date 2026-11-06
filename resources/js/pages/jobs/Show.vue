@@ -27,6 +27,8 @@ interface Job {
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
     shift: 'day' | 'night' | 'rotational' | null;
+    work_mode?: 'on_site' | 'remote' | 'both';
+    interview_mode?: 'on_site' | 'remote';
     shift_start?: string | null;
     shift_end?: string | null;
     experience_min?: number | null;
@@ -72,6 +74,10 @@ const canCall = props.job.contact_mode !== 'apply' && !!props.job.contact_phone;
 const applyAllowed = props.job.contact_mode !== 'call';
 
 const shiftLabel: Record<string, string> = { day: 'Day shift', night: 'Night shift', rotational: 'Rotational shift' };
+// Where the work is done and how the interview is held (older jobs: on-site).
+const workModeLabel: Record<string, string> = { on_site: 'jobs.workOnSite', remote: 'jobs.workRemote', both: 'jobs.workBoth' };
+const interviewModeLabel: Record<string, string> = { on_site: 'jobs.interviewOnSite', remote: 'jobs.interviewRemote' };
+
 
 // "09:00" → "9:00 AM"
 const hour12 = (time: string): string => {
@@ -171,6 +177,11 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                     </div>
                     <div v-if="shiftHours" class="mt-1 text-xs text-muted-foreground">{{ shiftHours }}</div>
                 </div>
+            </div>
+
+            <div class="flex flex-wrap gap-x-8 gap-y-2 border-b border-foreground/10 py-6 text-sm">
+                <span><span class="label-rule text-muted-foreground">{{ $t('jobs.workMode') }}</span><span class="ml-3 font-semibold">{{ $t(workModeLabel[job.work_mode ?? 'on_site']) }}</span></span>
+                <span><span class="label-rule text-muted-foreground">{{ $t('jobs.interviewMode') }}</span><span class="ml-3 font-semibold">{{ $t(interviewModeLabel[job.interview_mode ?? 'on_site']) }}</span></span>
             </div>
 
             <div v-if="experienceRange || freshersWelcome" class="border-b border-foreground/10 py-6 text-sm">

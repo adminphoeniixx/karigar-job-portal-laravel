@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, IndianRupee, MapPin, Phone, Sun, Users, Wallet } from '@lucide/vue';
+import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, Gift, Handshake, House, IndianRupee, MapPin, Phone, Sun, Users, Video, Wallet } from '@lucide/vue';
 import { ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import JobMap from '@/components/JobMap.vue';
@@ -30,6 +30,8 @@ interface Job {
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
     shift: 'day' | 'night' | 'rotational' | null;
+    work_mode?: 'on_site' | 'remote' | 'both';
+    interview_mode?: 'on_site' | 'remote';
     shift_start?: string | null;
     shift_end?: string | null;
     experience_min?: number | null;
@@ -91,6 +93,10 @@ const submitApply = () => {
 const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserveScroll: true });
 
 const shiftLabel: Record<string, string> = { day: 'jobs.dayShift', night: 'jobs.nightShift', rotational: 'jobs.rotationalShift' };
+// Where the work is done and how the interview is held (older jobs: on-site).
+const workModeLabel: Record<string, string> = { on_site: 'jobs.workOnSite', remote: 'jobs.workRemote', both: 'jobs.workBoth' };
+const interviewModeLabel: Record<string, string> = { on_site: 'jobs.interviewOnSite', remote: 'jobs.interviewRemote' };
+
 
 // "09:00" → "9:00 AM"
 const hour12 = (time: string): string => {
@@ -145,6 +151,8 @@ const fmtDate = (iso: string | null): string =>
                         <span v-if="job.category" class="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-300">{{ job.category }}</span>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><MapPin class="size-4" /> {{ [job.city, job.state].filter(Boolean).join(', ') || 'Location N/A' }}</span>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><Clock class="size-4" /> {{ $t('jobs.posted') }} {{ fmtDate(job.created_at) }}</span>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300"><House class="size-3.5" /> {{ $t(workModeLabel[job.work_mode ?? 'on_site']) }}</span>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300"><component :is="job.interview_mode === 'remote' ? Video : Handshake" class="size-3.5" /> {{ $t(interviewModeLabel[job.interview_mode ?? 'on_site']) }}</span>
                         <span v-if="job.shift" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Sun class="size-3.5" /> {{ $t(shiftLabel[job.shift]) }}<template v-if="shiftHours"> · {{ shiftHours }}</template></span>
                         <span v-if="experienceRange || freshersWelcome" class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-600 dark:text-sky-300">{{ $t('jobs.experience') }}: {{ freshersWelcome ? $t('jobs.freshersWelcome') : `${experienceRange} ${$t('jobs.yrs')}` }}</span>
                         <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Wallet class="size-3.5" /> {{ $t('jobs.joiningFee') }}: ₹{{ rupees(job.worker_fee_amount) }}</span>

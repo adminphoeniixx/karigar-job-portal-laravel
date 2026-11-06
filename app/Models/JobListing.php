@@ -29,6 +29,8 @@ use Throwable;
  * @property int|null $reposted_from_id
  * @property string|null $city
  * @property string|null $state
+ * @property string $work_mode on_site | remote | both
+ * @property string $interview_mode on_site | remote
  * @property string|null $latitude
  * @property string|null $longitude
  * @property int $vacancies
@@ -52,7 +54,7 @@ class JobListing extends Model
     protected $fillable = [
         'title', 'description', 'category', 'skills',
         'wage_min', 'wage_max', 'wage_type',
-        'address', 'city', 'state', 'latitude', 'longitude',
+        'address', 'city', 'state', 'latitude', 'longitude', 'work_mode', 'interview_mode',
         'vacancies', 'experience_min', 'experience_max', 'status', 'published_at', 'expires_at',
         'contact_mode', 'contact_phone', 'contact_name', 'contact_designation',
         'shift', 'shift_start', 'shift_end', 'perks', 'reposted_from_id',
@@ -166,6 +168,59 @@ class JobListing extends Model
         $format = fn (string $time): string => Carbon::createFromFormat('H:i', $time)->format('g:i A');
 
         return $format($this->shift_start).' – '.$format($this->shift_end);
+    }
+
+    public const WORK_ON_SITE = 'on_site';
+
+    public const WORK_REMOTE = 'remote';
+
+    public const WORK_BOTH = 'both';
+
+    public const INTERVIEW_ON_SITE = 'on_site';
+
+    public const INTERVIEW_REMOTE = 'remote';
+
+    /**
+     * Where the work is done, as shown: "On-site", "Work from home", "On-site
+     * or from home".
+     */
+    public function workModeLabel(): string
+    {
+        return self::workModeLabelFor($this->work_mode);
+    }
+
+    public static function workModeLabelFor(?string $mode): string
+    {
+        return match ($mode) {
+            self::WORK_REMOTE => __('Work from home'),
+            self::WORK_BOTH => __('On-site or from home'),
+            default => __('On-site'),
+        };
+    }
+
+    /**
+     * How the interview is held, as shown.
+     */
+    public function interviewModeLabel(): string
+    {
+        return self::interviewModeLabelFor($this->interview_mode);
+    }
+
+    public static function interviewModeLabelFor(?string $mode): string
+    {
+        return $mode === self::INTERVIEW_REMOTE
+            ? __('Interview on phone / video')
+            : __('Interview in person');
+    }
+
+    /**
+     * The mode a booked interview starts from for this job: in person at the
+     * site, or a phone call for a remote interview (the employer can still
+     * pick video).
+     */
+    public function bookedInterviewMode(): string
+    {
+        return $this->interview_mode === self::INTERVIEW_REMOTE ? 'phone' : 'site';
     }
 
     /**

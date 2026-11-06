@@ -184,6 +184,8 @@ not parse multipart bodies on PUT/PATCH. Images go to BunnyCDN.
   "wage_label": "₹20,000 – ₹26,000 / monthly",
   "address": "Plot 12, Sanganer", "city": "Jaipur", "state": "Rajasthan",
   "location_label": "Jaipur, Rajasthan", "latitude": 26.8, "longitude": 75.8,
+  "work_mode": "both", "work_mode_label": "On-site or from home",
+  "interview_mode": "remote", "interview_mode_label": "Interview on phone / video",
   "vacancies": 3, "experience_min": 1, "experience_max": 5, "experience_label": "1–5 yrs",
   "shift": "day", "shift_start": "09:00", "shift_end": "18:00", "shift_hours_label": "9:00 AM – 6:00 PM",
   "perks": [...],
@@ -236,6 +238,7 @@ and emails the employer a confirmation.
   "wage_min": 20000, "wage_max": 26000, "wage_type": "monthly",
   "state": "Rajasthan", "city": "Jaipur", "address": "Plot 12, Sanganer",
   "latitude": 26.8, "longitude": 75.8,          // optional: placed from the address when missing
+  "work_mode": "both", "interview_mode": "remote",
   "vacancies": 3, "experience_min": 1, "experience_max": 5,
   "shift": "day", "shift_start": "09:00", "shift_end": "18:00",
   "perks": ["ESI", "PF", "Diwali bonus"],       // any perk; the list is only suggestions
@@ -254,7 +257,11 @@ Rules: `title` required ≤255 · `description` required ≤5000 ·
 day/night/rotational/flexible · `shift_start` / `shift_end` `"HH:MM"` 24-hour,
 both or neither (a night shift may end before it starts) · `perks.*` any text
 ≤40 chars, ≤15 perks (trimmed, repeats dropped) · `skills.*` ≤30 items ·
-`address` ≤255 · `contact_mode` in apply/call/both (defaults to `apply`;
+`address` ≤255 · `work_mode` in on_site/remote/both (where the karigar works:
+the employer's place, their own home, or either; left out → `on_site`, or what
+the job had on an edit) · `interview_mode` in on_site/remote (in person, or on
+phone/video; left out → `remote` for a remote job, else `on_site`, or what the
+job had on an edit) · `contact_mode` in apply/call/both (defaults to `apply`;
 `contact_phone` required for call/both; `contact_name` and
 `contact_designation` ≤100, shown to karigars next to the number) ·
 `requires_worker_fee` boolean (defaults false;
@@ -286,6 +293,11 @@ What the Post Job form offers:
 { "category_skills": { "Weaving": ["Handloom weaving", "Powerloom operation", "Dyeing", ...], ... },
   "perks": ["ESI", "PF", "Food", "Accommodation", ..., "Diwali bonus"],
   "shifts": ["day", "night", "rotational", "flexible"],
+  "work_modes": [ { "value": "on_site", "label": "On-site" },
+                  { "value": "remote", "label": "Work from home" },
+                  { "value": "both", "label": "On-site or from home" } ],
+  "interview_modes": [ { "value": "on_site", "label": "Interview in person" },
+                       { "value": "remote", "label": "Interview on phone / video" } ],
   "ai": { "shortlist_available": true, "call_available": false,
           "credits": { "enabled": true, "balance": 4, "min_for_job": 10, "can_enable": false } } }
 ```
