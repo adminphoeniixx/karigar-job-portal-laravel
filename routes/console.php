@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Billing\PlanReminders;
 use App\Services\Geocoder;
 use App\Services\Screening\ScreeningService;
+use App\Services\Verification\VerificationCalls;
 use App\Support\JobModeration;
 use App\Support\LocateByCity;
 use App\Support\WageConversion;
@@ -53,6 +54,18 @@ Artisan::command('screening:place-due', function (ScreeningService $screening) {
 })->purpose('Dial the AI screening calls whose booked time has come');
 
 Schedule::command('screening:place-due')->everyMinute()->withoutOverlapping();
+
+// AI calls that explain KYC: books one for accounts made after the admin
+// switch went on that are still not verified a day later (or were turned
+// down a day ago), then dials every booked call whose time has come,
+// including the admin's and the retries.
+Artisan::command('verification-calls:run', function (VerificationCalls $calls) {
+    $counts = $calls->run();
+
+    $this->info("Booked {$counts['booked']} verification calls, dialled {$counts['placed']} booked ones.");
+})->purpose('Book and dial the AI calls that explain KYC to unverified accounts');
+
+Schedule::command('verification-calls:run')->everyFiveMinutes()->withoutOverlapping();
 
 // A job safety check that never ran (the queue was down, or the dispatch was
 // lost) leaves the job on "Checking…" for good: queue it again. One still

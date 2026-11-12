@@ -31,8 +31,13 @@ class StubVoiceAgent implements VoiceAgent
 
     public function place(ScreeningCall $call, CallScript $script, string $toPhone): string
     {
-        Log::info('Screening call not dialled — stub voice agent in use.', [
-            'screening_call_id' => $call->id,
+        return $this->placeScript((string) $call->id, $script, CallScript::extractionSchema(), $toPhone);
+    }
+
+    public function placeScript(string $key, CallScript $script, array $extractionSchema, string $toPhone): string
+    {
+        Log::info('AI call not dialled — stub voice agent in use.', [
+            'call' => $key,
             'to' => Str::mask($toPhone, '*', 2, 6),
             'language' => $script->language,
             'greeting' => $script->greeting,

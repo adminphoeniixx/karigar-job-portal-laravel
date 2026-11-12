@@ -229,6 +229,16 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * AI calls that explained KYC to this account.
+     *
+     * @return HasMany<VerificationCall, $this>
+     */
+    public function verificationCalls(): HasMany
+    {
+        return $this->hasMany(VerificationCall::class);
+    }
+
+    /**
      * Whether this user shows a "verified" badge. Always false while the
      * verification feature is switched off in admin settings (for everyone, or
      * for karigars alone), so the badge disappears everywhere without touching

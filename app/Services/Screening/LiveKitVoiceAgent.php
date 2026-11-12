@@ -49,17 +49,27 @@ class LiveKitVoiceAgent implements VoiceAgent
 
     public function place(ScreeningCall $call, CallScript $script, string $toPhone): string
     {
+        return $this->placeScript((string) $call->id, $script, CallScript::extractionSchema(), $toPhone);
+    }
+
+    /**
+     * The room keeps the "screening-" prefix whatever the call is about
+     * ("screening-kyc-12-…" for a verification call): the agent reports every
+     * call to the one webhook, and the prefix is what tells it the room is ours.
+     */
+    public function placeScript(string $key, CallScript $script, array $extractionSchema, string $toPhone): string
+    {
         if (! $this->configured()) {
             throw new RuntimeException('LiveKit is not configured.');
         }
 
-        $room = self::ROOM_PREFIX.$call->id.'-'.Str::lower(Str::random(12));
+        $room = self::ROOM_PREFIX.$key.'-'.Str::lower(Str::random(12));
 
         // Everything the agent needs: who to ring, what to say, and how to
         // report back. It never queries our database, so the only worker data
         // that leaves this class is the number it has to dial.
         $metadata = json_encode([
-            'screening_call_id' => $call->id,
+            'screening_call_id' => ctype_digit($key) ? (int) $key : $key,
             'room' => $room,
             'dial' => [
                 'sip_trunk_id' => $this->trunkId(),
@@ -76,7 +86,7 @@ class LiveKitVoiceAgent implements VoiceAgent
             'language' => $script->language,
             'greeting' => $script->greeting,
             'instructions' => $script->instructions,
-            'extraction_schema' => CallScript::extractionSchema(),
+            'extraction_schema' => $extractionSchema,
             'voice' => (string) config('screening.voice'),
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 

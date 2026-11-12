@@ -32,7 +32,8 @@ type SettingKey =
     | 'ai_job_check_enabled'
     | 'ai_auto_shortlist_enabled'
     | 'ai_auto_reject_enabled'
-    | 'ai_screening_call_enabled';
+    | 'ai_screening_call_enabled'
+    | 'ai_verification_call_enabled';
 
 const props = defineProps<{
     settings: Record<SettingKey, boolean> & {
@@ -76,6 +77,7 @@ const form = reactive({
     ai_auto_reject_enabled: props.settings.ai_auto_reject_enabled,
     ai_auto_reject_below: props.settings.ai_auto_reject_below,
     ai_screening_call_enabled: props.settings.ai_screening_call_enabled,
+    ai_verification_call_enabled: props.settings.ai_verification_call_enabled,
     applicant_first_batch: props.settings.applicant_first_batch,
     applicant_next_batch: props.settings.applicant_next_batch,
 });
@@ -174,6 +176,17 @@ const toggles: { key: SettingKey; title: string; description: string }[] = [
             'the answers as a summary and decides; nothing is booked on the call. Needs auto-shortlist on and a ' +
             'configured voice provider; without both, nothing is dialled. Karigars who opted out are ' +
             'never called, and employers can switch the call off on any of their jobs.',
+    },
+    {
+        key: 'ai_verification_call_enabled',
+        title: 'AI verification calls',
+        description:
+            'When on, a karigar or employer who signs up from now on and has still not done their KYC a ' +
+            'day later gets one AI call that explains, step by step, how to verify (DigiLocker for karigars, ' +
+            'the documents of their business type for employers). An account whose KYC you reject is called a ' +
+            'day after the rejection with the reason. Accounts made before you switch this on are only called ' +
+            'from AI Verification Calls by hand. Calls go out 10 AM to 7 PM, are tried up to three times if ' +
+            'missed, cost no one AI credits, and need a configured voice provider.',
     },
 ];
 

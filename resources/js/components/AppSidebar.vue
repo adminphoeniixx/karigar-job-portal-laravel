@@ -58,6 +58,7 @@ const navByRole = computed((): Record<string, NavItem[]> => ({
         { title: 'Job Moderation', href: '/admin/jobs', icon: BriefcaseBusiness },
         { title: 'Escrows', href: '/admin/escrows', icon: ShieldCheck },
         { title: 'KYC Review', href: '/admin/kyc', icon: ClipboardCheck },
+        { title: 'AI Verification Calls', href: '/admin/verification-calls', icon: PhoneCall },
         { title: 'Categories', href: '/admin/categories', icon: Tags },
         { title: 'Plans & Limits', href: '/admin/plans', icon: Layers },
         { title: 'AI Credits', href: '/admin/ai-credits', icon: Coins },
@@ -77,7 +78,7 @@ const mainNavItems = computed(() => {
 
     // Verification switched off in admin settings — drop the KYC entries.
     if (!verificationEnabled.value) {
-        items = items.filter((i) => i.href !== '/kyc' && i.href !== '/admin/kyc');
+        items = items.filter((i) => i.href !== '/kyc' && i.href !== '/admin/kyc' && i.href !== '/admin/verification-calls');
     }
 
     // Team members see a trimmed menu: owner-only pages are hidden, and

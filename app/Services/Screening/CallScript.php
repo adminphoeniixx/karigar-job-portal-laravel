@@ -45,7 +45,7 @@ class CallScript
      * The same languages by name. A model told to "speak in hi" answers in
      * English — the code means nothing to it, while the name does.
      */
-    private const LANGUAGE_NAMES = [
+    public const LANGUAGE_NAMES = [
         'hi' => 'Hindi',
         'en' => 'English',
         'ta' => 'Tamil',
@@ -124,7 +124,7 @@ class CallScript
      * bracketed tags admins and test accounts carry — "Test Worker (Test)" —
      * are dropped rather than read out.
      */
-    private static function spokenName(User $worker): ?string
+    public static function spokenName(User $worker): ?string
     {
         $name = trim((string) preg_replace('/\s*\([^)]*\)/u', '', (string) $worker->name));
 

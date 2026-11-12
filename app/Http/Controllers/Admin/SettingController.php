@@ -13,6 +13,7 @@ use App\Services\Kyc\DecentroClient;
 use App\Services\Kyc\DigilockerClient;
 use App\Services\Kyc\KycAutoVerifier;
 use App\Services\Screening\ScreeningService;
+use App\Services\Verification\VerificationCalls;
 use App\Support\GstStates;
 use App\Support\MobileApps;
 use App\Support\SiteInfo;
@@ -56,6 +57,7 @@ class SettingController extends Controller
                     ScoreApplication::DEFAULT_REJECT_BELOW,
                 ),
                 'ai_screening_call_enabled' => Setting::bool(ScreeningService::ENABLED_KEY, false),
+                'ai_verification_call_enabled' => VerificationCalls::autoEnabled(),
                 'applicant_first_batch' => ApplicantAccess::firstBatch(),
                 'applicant_next_batch' => ApplicantAccess::nextBatch(),
             ],
@@ -95,6 +97,7 @@ class SettingController extends Controller
             // be widened into applicants the model considered a plausible match.
             'ai_auto_reject_below' => ['required', 'integer', 'min:5', 'max:40'],
             'ai_screening_call_enabled' => ['required', 'boolean'],
+            'ai_verification_call_enabled' => ['sometimes', 'boolean'],
             // Applicants shown per job at first, and per batch after that.
             'applicant_first_batch' => ['sometimes', 'integer', 'min:1', 'max:500'],
             'applicant_next_batch' => ['sometimes', 'integer', 'min:1', 'max:500'],
@@ -118,6 +121,10 @@ class SettingController extends Controller
         Setting::set(ScoreApplication::REJECT_ENABLED_KEY, $data['ai_auto_reject_enabled'] ? '1' : '0');
         Setting::set(ScoreApplication::REJECT_BELOW_KEY, (string) $data['ai_auto_reject_below']);
         Setting::set(ScreeningService::ENABLED_KEY, $data['ai_screening_call_enabled'] ? '1' : '0');
+        if (isset($data['ai_verification_call_enabled'])) {
+            // Switching it on starts the clock: only accounts made after it are rung.
+            VerificationCalls::setAutoEnabled((bool) $data['ai_verification_call_enabled']);
+        }
         foreach ([ApplicantAccess::FIRST_BATCH_KEY, ApplicantAccess::NEXT_BATCH_KEY] as $key) {
             if (isset($data[$key])) {
                 Setting::set($key, (string) $data[$key]);

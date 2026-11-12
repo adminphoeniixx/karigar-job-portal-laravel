@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\PushNotificationController as AdminPushNotificati
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\VerificationCallController as AdminVerificationCallController;
 use App\Http\Controllers\Auth\PhoneOtpController;
 use App\Http\Controllers\Auth\RoleAuthController;
 use App\Http\Controllers\DashboardController;
@@ -276,6 +277,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::patch('ai-credits/packs/{pack}', [AdminAiCreditController::class, 'updatePack'])->name('ai-credits.packs.update');
     Route::delete('ai-credits/packs/{pack}', [AdminAiCreditController::class, 'destroyPack'])->name('ai-credits.packs.destroy');
     Route::post('ai-credits/adjust', [AdminAiCreditController::class, 'adjust'])->name('ai-credits.adjust');
+    // AI calls that explain KYC to accounts that have not done it.
+    Route::get('verification-calls', [AdminVerificationCallController::class, 'index'])->name('verification-calls.index');
+    Route::post('verification-calls/{user}', [AdminVerificationCallController::class, 'store'])->name('verification-calls.store');
 
     // Subscription plans & limits (incl. worker-database contact quota)
     Route::get('plans', [AdminPlanController::class, 'index'])->name('plans.index');

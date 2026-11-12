@@ -34,6 +34,18 @@ interface VoiceAgent
     public function place(ScreeningCall $call, CallScript $script, string $toPhone): string;
 
     /**
+     * Dial with any script, not only a screening one: the verification call
+     * rides the same line and agent. `$key` names the call inside the
+     * provider's id ("kyc-12"), `$extractionSchema` is what the agent fills in
+     * when the call ends.
+     *
+     * @param  array<string, string>  $extractionSchema
+     *
+     * @throws \Throwable when the provider refuses or is unreachable
+     */
+    public function placeScript(string $key, CallScript $script, array $extractionSchema, string $toPhone): string;
+
+    /**
      * Verify a webhook came from this provider. A forged one could book
      * interviews and invent transcripts, so an unverified payload is dropped.
      *

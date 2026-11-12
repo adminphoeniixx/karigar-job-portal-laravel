@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ScreeningCall;
+use App\Models\VerificationCall;
 use App\Services\Screening\CallRecordings;
 use App\Services\Screening\ScreeningService;
+use App\Services\Verification\VerificationCalls;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,7 +23,7 @@ use Illuminate\Support\Facades\Log;
  */
 class ScreeningWebhookController extends Controller
 {
-    public function __invoke(Request $request, ScreeningService $screening): JsonResponse
+    public function __invoke(Request $request, ScreeningService $screening, VerificationCalls $verificationCalls): JsonResponse
     {
         if ($refusal = $this->refuse($request)) {
             return $refusal;
@@ -34,7 +36,18 @@ class ScreeningWebhookController extends Controller
             return response()->json(['message' => 'Invalid signature.'], 401);
         }
 
-        $call = $screening->apply($screening->agent()->parseWebhook($payload));
+        $result = $screening->agent()->parseWebhook($payload);
+
+        // The KYC-explaining calls ride the same agent and report here too.
+        $verification = VerificationCall::where('provider_call_id', $result->providerCallId)->first();
+
+        if ($verification !== null) {
+            $verificationCalls->apply($verification, $result, $payload);
+
+            return response()->json(['handled' => true]);
+        }
+
+        $call = $screening->apply($result);
 
         // A callback for a call we do not know about is still a 200 — providers
         // retry non-2xx forever, and there is nothing here to fix.
@@ -60,6 +73,12 @@ class ScreeningWebhookController extends Controller
         }
 
         $call = ScreeningCall::where('provider_call_id', (string) $request->input('call_id'))->first();
+
+        // Verification calls are not kept as audio: the transcript is enough
+        // for the admin, and there is no employer to play it to.
+        if ($call === null && VerificationCall::where('provider_call_id', (string) $request->input('call_id'))->exists()) {
+            return response()->json(['handled' => false]);
+        }
 
         if ($call === null) {
             Log::warning('Screening recording for an unknown call.', ['provider_call_id' => $request->input('call_id')]);
