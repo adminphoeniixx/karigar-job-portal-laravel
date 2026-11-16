@@ -403,6 +403,28 @@ HTML,
                 'placeholders' => ['app_name', 'employer_name', 'job_title', 'reasons', 'action_url'],
                 'is_active' => true,
             ],
+            [
+                'key' => 'interview_reminder',
+                'name' => 'Interview today (to worker)',
+                'description' => 'Sent to the worker on the morning of a booked interview, with the time, the place or the way it is held, and who to ask for.',
+                'subject' => 'Your interview for “{{ job_title }}” is today',
+                'body_html' => <<<'HTML'
+<p>Hi {{ worker_name }},</p>
+<p>A reminder: your interview with <strong>{{ employer_name }}</strong> for <strong>“{{ job_title }}”</strong> is today.</p>
+<table cellpadding="0" cellspacing="0" style="margin:20px 0;border-collapse:collapse;">
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">When</td><td style="padding:6px 0;font-weight:600;">{{ interview_at }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">How</td><td style="padding:6px 0;font-weight:600;">{{ interview_mode }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Where</td><td style="padding:6px 0;font-weight:600;">{{ job_location }}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b6b6b;">Ask for</td><td style="padding:6px 0;font-weight:600;">{{ contact_name }}</td></tr>
+</table>
+<p>Please reach a little early. If you cannot make it, tell the employer as soon as you can.</p>
+<p style="margin-top:24px;">
+  <a href="{{ action_url }}" style="display:inline-block;background:#f24711;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View my applications</a>
+</p>
+HTML,
+                'placeholders' => ['app_name', 'worker_name', 'employer_name', 'job_title', 'job_location', 'interview_at', 'interview_mode', 'contact_name', 'action_url'],
+                'is_active' => true,
+            ],
         ];
     }
 }

@@ -45,7 +45,7 @@ class ApplicantController extends Controller
             // to nothing, and every such applicant showed "This worker has no
             // phone number on file" with the call button greyed out — a number
             // we hold and the mobile API dials perfectly well.
-            ->with('worker:id,name,email,phone', 'worker.workerProfile', 'escrow', 'screeningCalls')
+            ->with('worker:id,name,email,phone', 'worker.workerProfile', 'escrow', 'screeningCalls', 'latestInterviewReminderCall')
             ->when($sort === 'best_match', fn ($q) => $q->orderByRaw('ai_score DESC NULLS LAST'))
             ->latest()
             ->get();
@@ -81,6 +81,11 @@ class ApplicantController extends Controller
                 'interview' => $a->interview_at !== null ? [
                     'at' => $a->interview_at->format('d M Y, g:i A'),
                     'mode' => $a->interview_mode,
+                    // The morning-of reminder call, once one exists for this
+                    // interview time: did the karigar confirm?
+                    'reminder' => $a->latestInterviewReminderCall !== null && $a->latestInterviewReminderCall->interview_at->equalTo($a->interview_at)
+                        ? $a->latestInterviewReminderCall->toRow()
+                        : null,
                 ] : null,
                 'escrow' => $a->escrow ? [
                     'id' => $a->escrow->id,

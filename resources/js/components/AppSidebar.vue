@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Bookmark, BriefcaseBusiness, Building2, ChartColumn, ClipboardCheck, Coins, CreditCard, Crown, FileText, Gauge, HardHat, Layers, LayoutGrid, Mail, MessageSquare, PhoneCall, Plus, Search, Send, Settings, ShieldCheck, Sparkles, Star, Tags, TicketPercent, UserRound, Users, UsersRound } from '@lucide/vue';
+import { Bookmark, BriefcaseBusiness, Building2, ChartColumn, ClipboardCheck, Coins, CreditCard, Crown, FileText, Gauge, HardHat, Layers, LayoutGrid, Mail, MessageSquare, PhoneCall, Plus, Search, Send, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Star, Tags, TicketPercent, UserRound, Users, UsersRound } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLogo from '@/components/AppLogo.vue';
@@ -41,6 +41,7 @@ const navByRole = computed((): Record<string, NavItem[]> => ({
         { title: t('nav.shortlisted'), href: '/employer/shortlisted', icon: Star },
         { title: t('nav.aiInterviews'), href: '/employer/ai-interviews', icon: PhoneCall },
         { title: t('nav.aiCredits'), href: '/employer/ai-credits', icon: Coins },
+        { title: t('nav.aiCallSettings'), href: '/employer/ai-call-settings', icon: SlidersHorizontal },
         { title: t('nav.messages'), href: '/messages', icon: MessageSquare, badge: chatUnread.value },
         { title: t('nav.findWorkers'), href: '/employer/workers', icon: Users },
         { title: t('nav.team'), href: '/employer/team', icon: UsersRound },

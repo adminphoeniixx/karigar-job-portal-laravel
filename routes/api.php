@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Auth\OtpAuthController;
 use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DeviceTokenController;
+use App\Http\Controllers\Api\Employer\AiCallSettingsController;
 use App\Http\Controllers\Api\Employer\AiCreditController;
 use App\Http\Controllers\Api\Employer\AiInterviewController;
 use App\Http\Controllers\Api\Employer\AiShortlistController;
@@ -245,6 +246,9 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             Route::post('employer/ai-credits/callback', [AiCreditController::class, 'callback'])->name('api.employer.ai-credits.callback');
             // Every AI call across the account's jobs: ?filter=upcoming|done|all
             Route::get('employer/ai-interviews', [AiInterviewController::class, 'index'])->name('api.employer.ai-interviews');
+            // The account's rules for AI calls: trigger, delay, hours, days, who, daily cap, reminder call.
+            Route::get('employer/ai-call-settings', [AiCallSettingsController::class, 'show'])->name('api.employer.ai-call-settings');
+            Route::match(['put', 'patch'], 'employer/ai-call-settings', [AiCallSettingsController::class, 'update'])->name('api.employer.ai-call-settings.update');
             // AI picks karigars from the database for a job and invites them.
             Route::post('employer/jobs/{job}/ai-shortlist', [AiShortlistController::class, 'store'])
                 ->middleware('throttle:10,60')->name('api.employer.jobs.ai-shortlist');

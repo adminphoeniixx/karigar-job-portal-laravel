@@ -28,12 +28,16 @@ class VerificationCallController extends Controller
         $tab = $request->query('tab') === 'calls' ? 'calls' : 'accounts';
         $role = in_array($request->query('role'), ['worker', 'employer'], true) ? $request->query('role') : null;
         $search = trim((string) $request->query('q'));
+        $accounts = $tab === 'accounts' ? $this->accounts($role, $search) : null;
 
         return Inertia::render('admin/VerificationCalls', [
             'tab' => $tab,
             'filterRole' => $role ?? 'all',
             'search' => $search,
-            'accounts' => $tab === 'accounts' ? $this->accounts($role, $search) : null,
+            'accounts' => $accounts,
+            // A search that found nobody to call: say who it did find and why
+            // they are not on the list, so a known number never just vanishes.
+            'notListed' => $accounts !== null && $search !== '' && $accounts->isEmpty() ? $this->notListed($search) : [],
             'calls' => $tab === 'calls' ? $this->calls($role, $search) : null,
             'auto' => [
                 'enabled' => VerificationCalls::autoEnabled(),
@@ -92,9 +96,7 @@ class VerificationCallController extends Controller
             ->where(fn (Builder $q) => $q
                 ->whereDoesntHave('kyc')
                 ->orWhereHas('kyc', fn (Builder $k) => $k->where('status', KycStatus::Rejected->value)))
-            ->when($search !== '', fn (Builder $q) => $q->where(fn (Builder $q) => $q
-                ->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%'])
-                ->orWhere('phone', 'like', "%{$search}%")))
+            ->when($search !== '', fn (Builder $q) => $this->matching($q, $search))
             ->latest()
             ->paginate(25)
             ->withQueryString()
@@ -119,13 +121,58 @@ class VerificationCallController extends Controller
     {
         return VerificationCall::with('user:id,name,phone,role', 'requester:id,name')
             ->when($role, fn (Builder $q) => $q->whereHas('user', fn (Builder $u) => $u->where('role', $role)))
-            ->when($search !== '', fn (Builder $q) => $q->whereHas('user', fn (Builder $u) => $u
-                ->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%'])
-                ->orWhere('phone', 'like', "%{$search}%")))
+            ->when($search !== '', fn (Builder $q) => $q->whereHas('user', fn (Builder $u) => $this->matching($u, $search)))
             ->latest()
             ->paginate(25)
             ->withQueryString()
             ->through(fn (VerificationCall $call) => $this->callRow($call));
+    }
+
+    /**
+     * Name, login phone, or the karigar's profile phone (which is the number
+     * the call goes to, and can differ from the login).
+     */
+    private function matching(Builder $query, string $search): Builder
+    {
+        $digits = preg_replace('/\D+/', '', $search);
+        $phone = strlen($digits) > 10 ? substr($digits, -10) : ($digits !== '' ? $digits : $search);
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%'])
+            ->orWhere('phone', 'like', "%{$phone}%")
+            ->orWhereHas('workerProfile', fn (Builder $p) => $p->where('phone', 'like', "%{$phone}%")));
+    }
+
+    /**
+     * Accounts the search matches that are not on the "need verification"
+     * list, each with the reason.
+     *
+     * @return list<array{id: int, name: string, phone: ?string, role: string, reason: string}>
+     */
+    private function notListed(string $search): array
+    {
+        return User::query()
+            ->with('kyc:id,user_id,status', 'workerProfile:id,user_id,phone', 'teamMembership')
+            ->tap(fn (Builder $q) => $this->matching($q, $search))
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(fn (User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'phone' => $user->workerProfile?->phone ?: $user->phone,
+                'role' => $user->role->value,
+                'reason' => match (true) {
+                    ! in_array($user->role, [UserRole::Worker, UserRole::Employer], true) => 'Not a karigar or employer account.',
+                    ! Verification::enabledFor($user) => 'KYC verification is switched off for this kind of account.',
+                    $user->isEmployer() && $user->teamRole() !== 'owner' => 'Team member: only the account owner verifies the business.',
+                    $user->kyc?->status === KycStatus::Verified => 'KYC already verified.',
+                    $user->kyc?->status === KycStatus::Pending => 'KYC sent, waiting for review.',
+                    default => 'Filtered out by the Karigars / Employers filter.',
+                },
+            ])
+            ->values()
+            ->all();
     }
 
     /**

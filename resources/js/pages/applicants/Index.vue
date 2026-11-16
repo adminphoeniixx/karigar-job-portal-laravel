@@ -53,7 +53,11 @@ interface Applicant {
     ai: AiMatch | null;
     resume: { name: string | null; uploaded_at: string | null } | null;
     screening: Screening | null;
-    interview: { at: string; mode: string | null } | null;
+    interview: {
+        at: string;
+        mode: string | null;
+        reminder: { status: string; status_label: string; outcome: string | null; outcome_label: string | null; summary: string | null; proposed_interview_label: string | null } | null;
+    } | null;
     escrow: { id: number; status: string; status_label: string; amount: string; payout_amount: string } | null;
     worker: {
         id: number;
@@ -431,6 +435,17 @@ const submitReview = () => {
                     <span class="font-semibold">{{ a.interview.at }}</span>
                     <span v-if="a.interview.mode" class="text-muted-foreground">· {{ $t(`applicants.screening.modes.${a.interview.mode}`) }}</span>
                 </p>
+                <!-- What the interview-day reminder call found out -->
+                <p v-if="a.interview?.reminder" class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                    <PhoneCall class="size-4 text-orange-600" />
+                    <span class="text-muted-foreground">{{ $t('applicants.screening.reminderCall') }}:</span>
+                    <span
+                        class="font-semibold"
+                        :class="{ 'text-emerald-700 dark:text-emerald-300': a.interview.reminder.outcome === 'will_come', 'text-rose-600': a.interview.reminder.outcome === 'not_coming', 'text-amber-700 dark:text-amber-300': a.interview.reminder.outcome === 'reschedule' }"
+                    >{{ a.interview.reminder.outcome_label ?? a.interview.reminder.status_label }}</span>
+                    <span v-if="a.interview.reminder.proposed_interview_label" class="text-muted-foreground">· {{ $t('applicants.screening.askedFor', { time: a.interview.reminder.proposed_interview_label }) }}</span>
+                </p>
+                <p v-if="a.interview?.reminder?.summary" class="mt-1 text-sm text-muted-foreground">{{ a.interview.reminder.summary }}</p>
 
                 <p v-if="a.cover_note" class="mt-3 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">{{ a.cover_note }}</p>
                 <p v-if="a.expected_wage" class="mt-2 text-sm"><span class="text-muted-foreground">{{ $t('applicants.expectedWage') }}:</span> <span class="font-medium">₹{{ rupees(a.expected_wage) }}</span></p>

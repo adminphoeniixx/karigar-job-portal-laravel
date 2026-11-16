@@ -278,3 +278,26 @@ it('shows the admin who needs verification and the calls made', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page->has('calls.data', 1)->where('calls.data.0.user.name', 'Ramesh Kumar'));
 });
+
+it('finds an account by the karigar profile phone, and says why a match is not listed', function () {
+    $this->withoutVite();
+    $worker = unverifiedKarigar(['name' => 'Ramesh Kumar']);
+    $worker->workerProfile->update(['phone' => '8924900001']);
+    $verified = unverifiedKarigar(['phone' => '9876500033', 'name' => 'Already Done']);
+    $verified->workerProfile->update(['phone' => '8924900002']);
+    $verified->kyc()->create(['aadhaar_number' => '123412341234', 'status' => KycStatus::Verified]);
+
+    // The number the call goes to, not the login phone, with a +91 prefix.
+    $this->actingAs($this->admin)->get('/admin/verification-calls?q='.urlencode('+91 89249 00001'))
+        ->assertInertia(fn ($page) => $page
+            ->has('accounts.data', 1)
+            ->where('accounts.data.0.name', 'Ramesh Kumar')
+            ->where('notListed', []));
+
+    $this->actingAs($this->admin)->get('/admin/verification-calls?q=8924900002')
+        ->assertInertia(fn ($page) => $page
+            ->has('accounts.data', 0)
+            ->has('notListed', 1)
+            ->where('notListed.0.name', 'Already Done')
+            ->where('notListed.0.reason', 'KYC already verified.'));
+});

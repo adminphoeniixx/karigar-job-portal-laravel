@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\InterviewReminderCall;
 use App\Models\ScreeningCall;
 use App\Models\VerificationCall;
 use App\Services\Screening\CallRecordings;
+use App\Services\Screening\InterviewReminders;
 use App\Services\Screening\ScreeningService;
 use App\Services\Verification\VerificationCalls;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +25,7 @@ use Illuminate\Support\Facades\Log;
  */
 class ScreeningWebhookController extends Controller
 {
-    public function __invoke(Request $request, ScreeningService $screening, VerificationCalls $verificationCalls): JsonResponse
+    public function __invoke(Request $request, ScreeningService $screening, VerificationCalls $verificationCalls, InterviewReminders $reminders): JsonResponse
     {
         if ($refusal = $this->refuse($request)) {
             return $refusal;
@@ -43,6 +45,15 @@ class ScreeningWebhookController extends Controller
 
         if ($verification !== null) {
             $verificationCalls->apply($verification, $result, $payload);
+
+            return response()->json(['handled' => true]);
+        }
+
+        // So do the interview-day reminder calls.
+        $reminder = InterviewReminderCall::where('provider_call_id', $result->providerCallId)->first();
+
+        if ($reminder !== null) {
+            $reminders->apply($reminder, $result, $payload);
 
             return response()->json(['handled' => true]);
         }
@@ -77,6 +88,11 @@ class ScreeningWebhookController extends Controller
         // Verification calls are not kept as audio: the transcript is enough
         // for the admin, and there is no employer to play it to.
         if ($call === null && VerificationCall::where('provider_call_id', (string) $request->input('call_id'))->exists()) {
+            return response()->json(['handled' => false]);
+        }
+
+        // Nor are the one-minute interview reminders.
+        if ($call === null && InterviewReminderCall::where('provider_call_id', (string) $request->input('call_id'))->exists()) {
             return response()->json(['handled' => false]);
         }
 

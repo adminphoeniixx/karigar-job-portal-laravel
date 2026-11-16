@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { AlertTriangle, ChevronDown, PhoneCall, Search } from '@lucide/vue';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 
 type Paginated<T> = { data: T[]; links: { url: string | null; label: string; active: boolean }[] };
@@ -41,6 +41,7 @@ const props = defineProps<{
     filterRole: 'all' | 'worker' | 'employer';
     search: string;
     accounts: Paginated<AccountRow> | null;
+    notListed: { id: number; name: string; phone: string | null; role: string; reason: string }[];
     calls: Paginated<CallRow> | null;
     auto: { enabled: boolean; since: string | null };
     dialling: boolean;
@@ -67,6 +68,14 @@ const go = (changes: Record<string, string | null>) => {
         preserveState: true,
     });
 };
+
+// Clearing the box (its ✕, or deleting the text) drops the search at once,
+// without having to press Enter on an empty field.
+watch(term, (value) => {
+    if (value.trim() === '' && props.search !== '') {
+        go({ q: null });
+    }
+});
 
 const call = (row: AccountRow) => {
     calling.value = row.id;
@@ -180,8 +189,19 @@ const minutes = (s: number | null) => (s === null ? '' : s < 60 ? `${s}s` : `${M
         <!-- Accounts with KYC still to do -->
         <div v-if="accounts" class="overflow-hidden rounded-2xl border bg-card">
             <div v-if="!verificationEnabled" class="px-5 py-16 text-center text-sm text-muted-foreground">KYC verification is switched off in Settings.</div>
+            <div v-else-if="accounts.data.length === 0 && notListed.length > 0" class="px-5 py-8 text-sm">
+                <p class="mb-3 text-center text-muted-foreground">Nobody to call for “{{ search }}”. These accounts match, but are not on the list:</p>
+                <ul class="mx-auto max-w-xl divide-y rounded-xl border">
+                    <li v-for="row in notListed" :key="row.id" class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
+                        <span class="font-medium">{{ row.name }}</span>
+                        <span class="text-muted-foreground">{{ row.phone }}</span>
+                        <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{{ row.role === 'worker' ? 'Karigar' : row.role === 'employer' ? 'Employer' : row.role }}</span>
+                        <span class="w-full text-xs text-muted-foreground sm:ml-auto sm:w-auto">{{ row.reason }}</span>
+                    </li>
+                </ul>
+            </div>
             <div v-else-if="accounts.data.length === 0" class="px-5 py-16 text-center text-sm text-muted-foreground">
-                Everyone in this filter has sent their KYC.
+                {{ search ? `No account matches “${search}”.` : 'Everyone in this filter has sent their KYC.' }}
             </div>
             <ul v-else class="divide-y">
                 <li v-for="row in accounts.data" :key="row.id" class="flex flex-wrap items-center gap-3 px-5 py-3.5">

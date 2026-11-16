@@ -7,6 +7,7 @@ use App\Enums\ScreeningCallStatus;
 use App\Models\AiCreditEntry;
 use App\Models\AiCreditPack;
 use App\Models\AiCreditPurchase;
+use App\Models\InterviewReminderCall;
 use App\Models\JobListing;
 use App\Models\ScreeningCall;
 use App\Models\Setting;
@@ -140,6 +141,12 @@ class AiCredits
         $live = ScreeningCall::whereIn('status', self::LIVE)
             ->where('updated_at', '>=', now()->subMinutes(self::STALE_HOLD_MINUTES))
             ->when($ignore !== null, fn ($q) => $q->whereKeyNot($ignore->id))
+            ->whereHas('application.job', fn ($q) => $q->where('employer_id', $this->account->id))
+            ->count();
+
+        // Interview reminder calls on the line hold the same.
+        $live += InterviewReminderCall::whereIn('status', self::LIVE)
+            ->where('updated_at', '>=', now()->subMinutes(self::STALE_HOLD_MINUTES))
             ->whereHas('application.job', fn ($q) => $q->where('employer_id', $this->account->id))
             ->count();
 
@@ -325,6 +332,48 @@ class AiCredits
                 'duration' => self::durationLabel($seconds),
             ]),
             call: $call,
+            seconds: $seconds,
+        );
+
+        if ($entry !== null) {
+            $call->update(['credits_charged' => $cost]);
+            $this->alertIfLow();
+        }
+
+        return $entry;
+    }
+
+    /**
+     * Charge an interview reminder call, by the same per-minute rate. The
+     * row carries no screening_call_id, so the duplicate guard is the mark
+     * on the call itself.
+     */
+    public function chargeReminderCall(InterviewReminderCall $call): ?AiCreditEntry
+    {
+        if (! self::enabled() || $call->status !== ScreeningCallStatus::Completed || $call->credits_charged !== null) {
+            return null;
+        }
+
+        $seconds = (int) ($call->duration_seconds
+            ?? ($call->started_at && $call->ended_at ? $call->started_at->diffInSeconds($call->ended_at) : 0));
+        $cost = self::costFor($seconds);
+
+        if ($cost === 0) {
+            $call->update(['credits_charged' => 0]);
+
+            return null;
+        }
+
+        $call->loadMissing('worker', 'application.job');
+
+        $entry = $this->record(
+            AiCreditEntry::TYPE_CALL,
+            -$cost,
+            __('Interview reminder call — :worker · :job · :duration', [
+                'worker' => $call->worker?->name ?? __('Applicant'),
+                'job' => $call->application?->job?->title ?? '—',
+                'duration' => self::durationLabel($seconds),
+            ]),
             seconds: $seconds,
         );
 

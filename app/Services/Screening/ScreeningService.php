@@ -4,6 +4,7 @@ namespace App\Services\Screening;
 
 use App\Enums\ApplicationStatus;
 use App\Enums\ScreeningCallStatus;
+use App\Jobs\PlaceScreeningCall;
 use App\Models\JobApplication;
 use App\Models\ScreeningCall;
 use App\Models\Setting;
@@ -450,7 +451,7 @@ class ScreeningService
      */
     public function callOrSchedule(JobApplication $application, string $source = 'manual', ?User $by = null): ?ScreeningCall
     {
-        if ($this->nextCallableTime()->gt(now())) {
+        if ($this->nextCallableTime(null, $application->job?->employer)->gt(now())) {
             return $this->schedule($application, null, $source, $by);
         }
 
@@ -460,15 +461,12 @@ class ScreeningService
     /**
      * Ring (or book a call to) an applicant the employer just shortlisted by
      * hand. Same switches as the auto-shortlist call: the admin's and the
-     * job's. Null when calls are off or the applicant cannot be called.
+     * job's, then the employer's own delay, hours and days. Null when calls
+     * are off or the applicant cannot be called.
      */
     public function onShortlisted(JobApplication $application, ?User $by = null): ?ScreeningCall
     {
-        if (! $this->autoEnabled() || ! $application->job->ai_call_enabled) {
-            return null;
-        }
-
-        return $this->callOrSchedule($application, 'shortlist', $by);
+        return $this->autoCall($application, 'shortlist', $by);
     }
 
     /**
@@ -517,7 +515,7 @@ class ScreeningService
             'attempt' => $attempt,
             // Stored in the app's timezone: Eloquent writes the wall-clock time
             // as given, so an IST time saved as-is would land 5½ hours late.
-            'scheduled_at' => $this->nextCallableTime($at ?? CarbonImmutable::now())->setTimezone(config('app.timezone')),
+            'scheduled_at' => $this->nextCallableTime($at ?? CarbonImmutable::now(), $application->job?->employer)->setTimezone(config('app.timezone')),
             'source' => $source,
             'scheduled_by' => $by?->id,
         ]);
@@ -565,19 +563,101 @@ class ScreeningService
      * India restricts automated voice calls to daytime hours, so a call that
      * comes due at 11pm waits for morning rather than being dropped.
      */
-    public function nextCallableTime(?CarbonImmutable $from = null): CarbonImmutable
+    public function nextCallableTime(?CarbonImmutable $from = null, ?User $employer = null): CarbonImmutable
     {
-        $timezone = (string) config('screening.window.timezone', 'Asia/Kolkata');
-        $from = ($from ?? now())->setTimezone($timezone);
+        // The admin's hours alone, or the employer's own inside them.
+        $preferences = $employer !== null ? CallPreferences::for($employer) : CallPreferences::defaults();
 
-        $start = $from->setTimeFromTimeString((string) config('screening.window.start', '10:00'));
-        $end = $from->setTimeFromTimeString((string) config('screening.window.end', '19:00'));
+        return $preferences->nextCallableTime($from?->toImmutable() ?? CarbonImmutable::now());
+    }
 
-        return match (true) {
-            $from->lt($start) => $start,
-            $from->gt($end) => $start->addDay(),
-            default => $from,
-        };
+    /**
+     * An automatic call — someone applied, was shortlisted, or scored well —
+     * placed the way the employer's AI call settings say: after their delay,
+     * inside their hours and days, under their daily cap per job, and only to
+     * the applicants they chose. Null when the switches are off, the settings
+     * rule this applicant out, or {@see blocker()} does.
+     *
+     * $queue rings through the queue (what the scoring job does) instead of
+     * on this request; a booked call goes through `screening:place-due`
+     * either way.
+     */
+    public function autoCall(JobApplication $application, string $source, ?User $by = null, bool $queue = false): ?ScreeningCall
+    {
+        $job = $application->job;
+
+        if ($job === null || ! $this->autoEnabled() || ! $job->ai_call_enabled) {
+            return null;
+        }
+
+        $preferences = CallPreferences::for($job->employer);
+
+        if (! $preferences->allowsAutoCall($application, $source)) {
+            return null;
+        }
+
+        $at = $preferences->withinDailyLimit($job, $preferences->callAt(CarbonImmutable::now()));
+
+        if ($at->gt(now())) {
+            return $this->schedule($application, $at, $source, $by);
+        }
+
+        if ($queue) {
+            if ($this->blocker($application) !== null) {
+                return null;
+            }
+
+            PlaceScreeningCall::dispatch($application->id);
+
+            return null;
+        }
+
+        return $this->start($application, source: $source, by: $by);
+    }
+
+    /**
+     * Someone applied. Called when the employer's settings say applicants are
+     * rung on applying rather than on shortlisting; "only strong AI matches"
+     * waits for the score instead ({@see onScored()}).
+     */
+    public function onApplied(JobApplication $application): ?ScreeningCall
+    {
+        $preferences = CallPreferences::for($application->job?->employer);
+
+        if (! $preferences->callsOnApply() || $preferences->who === 'score') {
+            return null;
+        }
+
+        return $this->autoCall($application, 'apply', queue: true);
+    }
+
+    /**
+     * The AI scored an applicant. On "call when they apply" + "only strong AI
+     * matches", this is the moment the call can be decided.
+     */
+    public function onScored(JobApplication $application): ?ScreeningCall
+    {
+        $preferences = CallPreferences::for($application->job?->employer);
+
+        if (! $preferences->callsOnApply() || $preferences->who !== 'score') {
+            return null;
+        }
+
+        // Already shortlisted (the AI shortlist, or a database invite): that
+        // path booked the call; a second one here would only be refused.
+        if ($application->shortlisted_at !== null) {
+            return null;
+        }
+
+        return $this->autoCall($application, 'apply', queue: true);
+    }
+
+    /**
+     * The AI shortlisted an applicant (admin switch + the job's switch).
+     */
+    public function onAutoShortlisted(JobApplication $application): ?ScreeningCall
+    {
+        return $this->autoCall($application, 'auto', queue: true);
     }
 
     /**

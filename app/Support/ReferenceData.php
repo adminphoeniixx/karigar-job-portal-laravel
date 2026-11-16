@@ -103,7 +103,7 @@ class ReferenceData
      * the same list as INTERVIEW_MODES, which is the mode of one booked
      * interview: a remote job interview becomes a phone or video one.
      */
-    public const JOB_INTERVIEW_MODES = ['on_site', 'remote'];
+    public const JOB_INTERVIEW_MODES = ['on_site', 'remote', 'both'];
 
     /**
      * Sort options for the employer's Find Workers screen.

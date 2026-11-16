@@ -24,7 +24,7 @@ interface Job {
     city: string | null;
     state: string | null;
     work_mode: 'on_site' | 'remote' | 'both';
-    interview_mode: 'on_site' | 'remote';
+    interview_mode: 'on_site' | 'remote' | 'both';
     latitude: string | null;
     longitude: string | null;
     vacancies: number;
@@ -174,6 +174,7 @@ const workModes = [
 const interviewModes = [
     { value: 'on_site', label: 'jobs.interviewOnSite', desc: 'jobForm.interviewOnSiteDesc', icon: Handshake },
     { value: 'remote', label: 'jobs.interviewRemote', desc: 'jobForm.interviewRemoteDesc', icon: Video },
+    { value: 'both', label: 'jobs.interviewBoth', desc: 'jobForm.interviewBothDesc', icon: Shuffle },
 ] as const;
 
 const interviewTouched = ref(isEdit);
@@ -503,7 +504,7 @@ const submit = () => {
                     <InputError class="mt-2" :message="form.errors.work_mode" />
 
                     <Label class="mt-5 mb-2 block">{{ $t('jobForm.interviewModeQuestion') }}</Label>
-                    <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="grid gap-3 sm:grid-cols-3">
                         <label
                             v-for="m in interviewModes"
                             :key="m.value"

@@ -9,6 +9,7 @@ use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Notifications\NewApplicationNotification;
 use App\Services\DatabaseShortlist;
+use App\Services\Screening\ScreeningService;
 use App\Support\TemplatedMailer;
 use App\Support\WorkerVerification;
 use Illuminate\Http\RedirectResponse;
@@ -80,6 +81,10 @@ class JobApplicationController extends Controller
         // call the employer asked for is booked. Before scoring, so the
         // employer's chosen time is the call that stands.
         DatabaseShortlist::onApplied($application);
+
+        // Employers who chose "call as soon as they apply" in their AI call
+        // settings get the call booked here, by their delay and hours.
+        app(ScreeningService::class)->onApplied($application);
 
         ScoreApplication::dispatch($application->id);
 

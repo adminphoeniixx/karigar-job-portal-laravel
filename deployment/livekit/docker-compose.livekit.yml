@@ -154,23 +154,22 @@ services:
       #
       # saaras:v3, because the API now answers saarika:v2.5 with "is sunset,
       # please migrate". v4 exists but this plugin version does not know it.
-      SCREENING_STT: ${SCREENING_STT:-sarvam/saaras:v3}
+      SCREENING_STT: ${SCREENING_STT:-inworld/inworld-stt-1}
       # Speaking on Sarvam too. Inworld's voice read Hindi with a foreign
       # mouth — correct words, wrong accent — and workers heard it as not
       # Indian. bulbul:v3 is trained on Indian speakers and sounds like one.
       # SCREENING_VOICE must then be a Sarvam speaker, lowercase ("shreya").
-      SCREENING_TTS: ${SCREENING_TTS:-sarvam/bulbul:v3}
+      SCREENING_TTS: ${SCREENING_TTS:-inworld/inworld-tts-1.5-max}
+      SCREENING_TTS_VOICE: ${SCREENING_TTS_VOICE:-Shreya}
       # 1.0 sounds like each sentence said in one breath; see agent.py.
       SCREENING_TTS_PACE: ${SCREENING_TTS_PACE:-0.8}
       INWORLD_API_KEY: ${INWORLD_API_KEY:-}
       # Sarvam is the A/B on Hindi, and also serves the LLM below.
-      SARVAM_API_KEY: ${SARVAM_API_KEY:-}
       # Deepgram/Cartesia are the alternative pair; set the two models above to
       # deepgram/nova-3 and cartesia/sonic-3 and fill these in instead.
       DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
       CARTESIA_API_KEY: ${CARTESIA_API_KEY:-}
-      # The brain. DigitalOcean's llama-4-maverick, not Sarvam, and the reason
-      # is latency spread rather than quality.
+      # The brain: DigitalOcean inference (openai-gpt-5.4-mini since 2026-11-13).
       #
       # A voice call cannot wait. Sarvam's 105b-conversations was measured at
       # ten identical requests three seconds apart: seven answered, three timed
@@ -184,7 +183,7 @@ services:
       # It also calls tools, which is not optional — the agent hangs up by
       # calling end_call, and a model that cannot would hold every line open
       # until the 180s backstop.
-      SCREENING_LLM: ${SCREENING_LLM:-openai/llama-4-maverick}
+      SCREENING_LLM: ${SCREENING_LLM:-openai/openai-gpt-5.4-mini}
       SCREENING_LLM_BASE_URL: ${AI_BASE_URL:-https://inference.do-ai.run/v1}
       SCREENING_LLM_API_KEY: ${AI_KEY:-}
     depends_on:

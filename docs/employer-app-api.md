@@ -259,9 +259,9 @@ both or neither (a night shift may end before it starts) · `perks.*` any text
 ≤40 chars, ≤15 perks (trimmed, repeats dropped) · `skills.*` ≤30 items ·
 `address` ≤255 · `work_mode` in on_site/remote/both (where the karigar works:
 the employer's place, their own home, or either; left out → `on_site`, or what
-the job had on an edit) · `interview_mode` in on_site/remote (in person, or on
-phone/video; left out → `remote` for a remote job, else `on_site`, or what the
-job had on an edit) · `contact_mode` in apply/call/both (defaults to `apply`;
+the job had on an edit) · `interview_mode` in on_site/remote/both (in person,
+on phone/video, or the karigar chooses on the AI call; left out → `remote` for
+a remote job, else `on_site`, or what the job had on an edit) · `contact_mode` in apply/call/both (defaults to `apply`;
 `contact_phone` required for call/both; `contact_name` and
 `contact_designation` ≤100, shown to karigars next to the number) ·
 `requires_worker_fee` boolean (defaults false;
@@ -297,7 +297,8 @@ What the Post Job form offers:
                   { "value": "remote", "label": "Work from home" },
                   { "value": "both", "label": "On-site or from home" } ],
   "interview_modes": [ { "value": "on_site", "label": "Interview in person" },
-                       { "value": "remote", "label": "Interview on phone / video" } ],
+                       { "value": "remote", "label": "Interview on phone / video" },
+                       { "value": "both", "label": "Interview in person or on phone / video" } ],
   "ai": { "shortlist_available": true, "call_available": false,
           "credits": { "enabled": true, "balance": 4, "min_for_job": 10, "can_enable": false } } }
 ```
@@ -636,6 +637,16 @@ Send `interview_at` only to **move** the slot (must be in the future); `mode` is
 one of the interview modes from `GET /reference`. `422 { "code":
 "no_proposed_slot" }` when the call produced no time to confirm — e.g. the
 worker said no, or never answered.
+
+### `GET /employer/ai-call-settings` · `PUT /employer/ai-call-settings`
+
+The account's own rules for when applicants are rung automatically: trigger
+(on shortlist, or as soon as they apply), delay, own calling hours and days
+inside the platform's, who qualifies (everyone / AI score ≥ N / only a manual
+shortlist), a daily cap per job, and the interview-day reminder call. Shapes,
+fields and rules: `docs/app-updates/2026-11-13/employer-ai-call-settings-and-interview-slots.md`.
+Also there: the interview-day pushes (`application.interview_reminder`,
+`interview.reminder_call`) and the applicant's `interview_reminder_call`.
 
 ---
 
@@ -1316,6 +1327,7 @@ Content is English only for now.
 | GET/POST/PATCH/DELETE | `/employer/jobs`, `/employer/jobs/{job}`, `/close`, `/matches`, `/invite`, `/employer/jobs/suggest-description` | 5 |
 | GET/PATCH/POST/DELETE | `/employer/jobs/{job}/applicants`, `/employer/shortlisted`, `/employer/applicants/{application}` (+ `/status`, `/shortlist`, `/unlock`, `/interview`, `/resume`), `/employer/jobs/{job}/rescore` | 6 |
 | GET/POST | `/employer/applicants/{application}/screening-calls` · `/employer/screening-calls/{call}/confirm` | 6b |
+| GET/PUT | `/employer/ai-call-settings` | 6b |
 | GET/POST | `/employer/ai-credits` (+ `/ledger`, `/packs/{pack}/checkout`, `/callback`) | 6c |
 | GET | `/employer/workers` · `/employer/workers/{worker}` | 7 |
 | GET/POST | `/employer/kyc` | 8 |

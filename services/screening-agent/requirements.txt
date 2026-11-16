@@ -4,7 +4,6 @@ aiohttp~=3.9
 
 # Self-hosted only: LiveKit Inference does not serve a self-hosted server, so
 # each vendor is called directly. Harmless on LiveKit Cloud — never imported.
-livekit-plugins-sarvam~=1.6
 livekit-plugins-deepgram~=1.6
 livekit-plugins-cartesia~=1.6
 livekit-plugins-elevenlabs~=1.6

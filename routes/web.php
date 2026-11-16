@@ -19,6 +19,7 @@ use App\Http\Controllers\Auth\PhoneOtpController;
 use App\Http\Controllers\Auth\RoleAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeleteAccountController;
+use App\Http\Controllers\Employer\AiCallSettingsController;
 use App\Http\Controllers\Employer\AiCreditController;
 use App\Http\Controllers\Employer\AiInterviewController;
 use App\Http\Controllers\Employer\AiShortlistController;
@@ -202,6 +203,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('employer/screening-calls/{call}', [ScreeningController::class, 'destroy'])->name('screening.destroy');
         Route::get('employer/screening-calls/{call}/conversation', [ScreeningController::class, 'conversation'])->name('screening.conversation');
         Route::get('employer/ai-interviews', [AiInterviewController::class, 'index'])->name('employer.ai-interviews');
+        Route::get('employer/ai-call-settings', [AiCallSettingsController::class, 'edit'])->name('employer.ai-call-settings');
+        Route::patch('employer/ai-call-settings', [AiCallSettingsController::class, 'update'])->name('employer.ai-call-settings.update');
         Route::post('employer/jobs/{job}/ai-shortlist', [AiShortlistController::class, 'store'])
             ->middleware('throttle:10,60')->name('employer.jobs.ai-shortlist');
 

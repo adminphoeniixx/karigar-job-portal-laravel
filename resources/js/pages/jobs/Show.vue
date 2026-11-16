@@ -28,7 +28,7 @@ interface Job {
     contact_phone: string | null;
     shift: 'day' | 'night' | 'rotational' | null;
     work_mode?: 'on_site' | 'remote' | 'both';
-    interview_mode?: 'on_site' | 'remote';
+    interview_mode?: 'on_site' | 'remote' | 'both';
     shift_start?: string | null;
     shift_end?: string | null;
     experience_min?: number | null;
@@ -76,7 +76,7 @@ const applyAllowed = props.job.contact_mode !== 'call';
 const shiftLabel: Record<string, string> = { day: 'Day shift', night: 'Night shift', rotational: 'Rotational shift' };
 // Where the work is done and how the interview is held (older jobs: on-site).
 const workModeLabel: Record<string, string> = { on_site: 'jobs.workOnSite', remote: 'jobs.workRemote', both: 'jobs.workBoth' };
-const interviewModeLabel: Record<string, string> = { on_site: 'jobs.interviewOnSite', remote: 'jobs.interviewRemote' };
+const interviewModeLabel: Record<string, string> = { on_site: 'jobs.interviewOnSite', remote: 'jobs.interviewRemote', both: 'jobs.interviewBoth' };
 
 
 // "09:00" → "9:00 AM"

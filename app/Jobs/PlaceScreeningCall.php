@@ -44,7 +44,7 @@ class PlaceScreeningCall implements ShouldQueue
         // Outside calling hours: book it for when they open. A booked call
         // is dialled by `screening:place-due`; the queue's own delay is not
         // trusted, since the sync queue production runs ignores it.
-        if ($screening->nextCallableTime()->gt(now())) {
+        if ($screening->nextCallableTime(null, $application->job?->employer)->gt(now())) {
             $screening->schedule($application, null, $this->attempt > 1 ? 'retry' : 'auto', attempt: $this->attempt);
 
             return;

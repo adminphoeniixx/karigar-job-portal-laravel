@@ -8,6 +8,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Billing\PlanReminders;
 use App\Services\Geocoder;
+use App\Services\Screening\InterviewReminders;
 use App\Services\Screening\ScreeningService;
 use App\Services\Verification\VerificationCalls;
 use App\Support\JobModeration;
@@ -66,6 +67,18 @@ Artisan::command('verification-calls:run', function (VerificationCalls $calls) {
 })->purpose('Book and dial the AI calls that explain KYC to unverified accounts');
 
 Schedule::command('verification-calls:run')->everyFiveMinutes()->withoutOverlapping();
+
+// Interview day: from 07:30 IST, remind the karigar and the employer about
+// every interview booked for today (once per interview time), book the AI
+// reminder call where the employer's settings allow it, and dial the booked
+// reminder calls whose time has come.
+Artisan::command('interviews:remind', function (InterviewReminders $reminders) {
+    $counts = $reminders->run();
+
+    $this->info("Reminded {$counts['reminded']} interviews, booked {$counts['booked']} reminder calls, dialled {$counts['placed']}.");
+})->purpose('Send the interview-day reminders and dial the AI reminder calls');
+
+Schedule::command('interviews:remind')->everyFiveMinutes()->withoutOverlapping();
 
 // A job safety check that never ran (the queue was down, or the dispatch was
 // lost) leaves the job on "Checking…" for good: queue it again. One still

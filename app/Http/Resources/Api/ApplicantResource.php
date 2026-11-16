@@ -84,6 +84,15 @@ class ApplicantResource extends JsonResource
                 'has_conversation' => $this->latestScreeningCall->hasConversation(),
                 'created_ago' => $this->latestScreeningCall->created_at?->diffForHumans(),
             ]),
+            // The interview-day reminder call for the booked interview, once
+            // it exists: status, then outcome (will_come | reschedule |
+            // not_coming | callback_later | unclear) with the time the karigar
+            // asked for instead. null before the morning of the interview.
+            'interview_reminder_call' => $this->whenLoaded('latestInterviewReminderCall', fn () => $this->latestInterviewReminderCall === null
+                || $this->interview_at === null
+                || ! $this->latestInterviewReminderCall->interview_at->equalTo($this->interview_at)
+                ? null
+                : $this->latestInterviewReminderCall->toRow()),
             'created_ago' => $this->created_at?->diffForHumans(),
             'created_at' => $this->created_at?->toIso8601String(),
             'tracking_steps' => $this->trackingSteps(),

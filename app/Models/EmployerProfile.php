@@ -39,7 +39,7 @@ class EmployerProfile extends Model
         'latitude', 'longitude', 'logo_path', 'about', 'contact_quota_bonus',
         'free_post_used_at', 'hiring_as', 'industry', 'company_size',
         'hiring_categories', 'credit_balance', 'business_type', 'legal_name',
-        'registered_address',
+        'registered_address', 'ai_call_settings',
     ];
 
     protected function casts(): array
@@ -48,6 +48,7 @@ class EmployerProfile extends Model
             'free_post_used_at' => 'datetime',
             'hiring_categories' => 'array',
             'credit_balance' => 'integer',
+            'ai_call_settings' => 'array',
         ];
     }
 

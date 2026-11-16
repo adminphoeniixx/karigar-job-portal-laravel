@@ -193,12 +193,15 @@ class DashboardController extends Controller
     private function employer(User $user): array
     {
         $sub = $user->activeSubscription();
+        // A plan that ran out leaves the jobs "active" but paused: out of search
+        // and closed to applications. The tiles must not call them live.
+        $lapsed = $sub === null && $user->jobPlanLapsed();
 
         return [
             'stats' => [
                 ['label' => 'My Jobs', 'value' => (string) $user->jobListings()->count(), 'hint' => 'Total posted', 'tone' => 'emerald', 'href' => '/employer/jobs'],
-                ['label' => 'Active Jobs', 'value' => (string) $user->jobListings()->where('status', 'active')->count(), 'hint' => 'Live now', 'tone' => 'amber', 'href' => '/employer/jobs?status=active'],
-                ['label' => 'Subscription', 'value' => $sub?->plan->name ?? 'None', 'hint' => $sub ? 'Active' : 'Subscribe', 'tone' => 'violet', 'href' => '/subscription'],
+                ['label' => 'Active Jobs', 'value' => (string) $user->jobListings()->where('status', 'active')->count(), 'hint' => $lapsed ? 'Paused' : 'Live now', 'tone' => 'amber', 'href' => '/employer/jobs?status=active'],
+                ['label' => 'Subscription', 'value' => $sub?->plan->name ?? ($lapsed ? 'Expired' : 'None'), 'hint' => $sub ? 'Active' : ($lapsed ? 'Renew' : 'Subscribe'), 'tone' => 'violet', 'href' => '/subscription'],
             ],
             // The "Worker Database" card, the same one the employer app shows.
             'database' => ContactUnlocks::for($user)->database(),

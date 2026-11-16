@@ -114,7 +114,9 @@ class CallScript
     {
         return [
             'outcome' => 'One of: interested, not_interested, callback_later, already_placed, unclear. interested = the applicant themselves said they still want this job. callback_later = they were busy, or someone else answered and the applicant was not available. unclear = no person answered (voicemail, a network announcement, silence), it was a wrong number, or the call ended before they said yes or no.',
-            'summary' => 'In English, for the employer to read. First sentence: whether the applicant themselves answered and whether they are still interested. Then, one short sentence each, only for the questions that were asked: years of experience in this work, whether they have done the listed skills, whether they are working right now, when they can start, where they will work (on-site job: whether coming to the job location suits them; work-from-home job: whether they can do it from home and have the space and tools at home; a job that can be either: which they chose, and for home the space and tools), whether they can come for an in-person interview (only when the interview is in person), and the pay they expect. Report what they actually said; write "did not answer" for a question they skipped. If the call ended before the questions (busy, not interested, wrong person), say that in one sentence instead of listing them. Dates in plain words ("from 26 September"), never as a timestamp. At most nine sentences.',
+            'summary' => 'In English, for the employer to read. First sentence: whether the applicant themselves answered and whether they are still interested. Then, one short sentence each, only for the questions that were asked: years of experience in this work, whether they have done the listed skills, whether they are working right now, when they can start, where they will work (on-site job: whether coming to the job location suits them; work-from-home job: whether they can do it from home and have the space and tools at home; a job that can be either: which they chose, and for home the space and tools), the pay they expect, how they will interview (in person, or on a phone/video call, when the job offered the choice; for an in-person interview whether they can come), and the day and time they said suits them for the interview, or that they left it to the employer. Report what they actually said; write "did not answer" for a question they skipped. If the call ended before the questions (busy, not interested, wrong person), say that in one sentence instead of listing them. Dates in plain words ("Monday 17 November, around 11 in the morning"), never as a timestamp. At most ten sentences.',
+            'proposed_interview_at' => 'The day and time the applicant said suits them for the interview, as "YYYY-MM-DD HH:MM:SS" in IST, resolved from the date of the call (kal = tomorrow, parso = the day after, "Monday" = the coming Monday). A day with no time: use 10:00:00. Null when they gave no day, left it to the employer, were not interested, or the question was never asked. Never invent a time.',
+            'proposed_mode' => 'How the applicant will interview: "site" when they will come in person, "phone" when it is a phone call, "video" when they asked for a video call. When the job interviews on a phone or video call and they did not say which, "phone". Null when the interview was not discussed or they are not interested.',
         ];
     }
 
@@ -138,7 +140,7 @@ class CallScript
      * aloud. The category is the trade itself ("Plumbing", "Electrical"), so it
      * is used when there is one; the title before its dash is the fallback.
      */
-    private static function role(JobListing $job): string
+    public static function role(JobListing $job): string
     {
         $category = trim((string) preg_replace('/\s*\/\s*/u', ' ', (string) $job->category));
 
@@ -208,9 +210,11 @@ class CallScript
             JobListing::WORK_BOTH => 'either at the employer\'s place or from the worker\'s home, as the worker prefers',
             default => 'at the employer\'s place (on-site)'.($place !== '' ? " in {$place}" : ''),
         };
-        $interviewMode = $job->interview_mode === JobListing::INTERVIEW_REMOTE
-            ? 'on a phone or video call, no need to travel'
-            : 'in person at the employer\'s place'.($place !== '' ? " in {$place}" : '');
+        $interviewMode = match ($job->interview_mode) {
+            JobListing::INTERVIEW_REMOTE => 'on a phone or video call, no need to travel',
+            JobListing::INTERVIEW_BOTH => 'either in person at the employer\'s place'.($place !== '' ? " in {$place}" : '').' or on a phone or video call, as the worker prefers',
+            default => 'in person at the employer\'s place'.($place !== '' ? " in {$place}" : ''),
+        };
 
         $languageName = self::LANGUAGE_NAMES[$language] ?? 'Hindi';
         $hindi = $language === 'hi';
@@ -264,8 +268,8 @@ class CallScript
                 '"अभी आप कहीं काम कर रहे हैं?"',
                 '"अगर आपका selection होता है, तो आप कब से काम शुरू कर सकते हैं?"',
                 ...self::workQuestions($job, true),
-                self::interviewQuestion($job, true),
                 "\"आप {$wageWord} की उम्मीद रखते हैं?\"",
+                ...self::interviewQuestions($job, true),
             ]))
             : array_values(array_filter([
                 "How many years they have done {$role} work.",
@@ -273,8 +277,8 @@ class CallScript
                 'Whether they are working somewhere right now.',
                 'If selected, how soon they can start.',
                 ...self::workQuestions($job, false),
-                self::interviewQuestion($job, false),
                 'What pay they expect.',
+                ...self::interviewQuestions($job, false),
             ]));
 
         $questionList = implode("\n", array_map(
@@ -283,18 +287,18 @@ class CallScript
             array_keys($questions),
         ));
 
-        // A phone or video interview is only told, in the goodbye: there is
-        // nothing to ask about it. An in-person one is a question above.
-        $remoteInterviewNote = $job->interview_mode === JobListing::INTERVIEW_REMOTE;
-        $remoteInterview = $remoteInterviewNote ? ' अगर selection होता है, तो interview phone या video call पर होगा, आपको कहीं आना नहीं पड़ेगा।' : '';
-        $closeInterview = $remoteInterviewNote ? ' Also tell them that if they are selected, the interview will be on a phone or video call, so they will not need to travel.' : '';
+        // The interview time they gave is a preference, not a booking: the
+        // employer confirms it from the applicants screen, and the karigar
+        // hears that in the goodbye so nobody turns up to an unconfirmed slot.
+        $closeInterview = ' If they gave a day and time for the interview, say that you have noted it and that the employer will confirm it with them.';
+        $slotClose = ' अगर आपने interview का दिन और समय बताया है, तो वो मैंने note कर लिया है। Employer उसे confirm करके आपको बताएगी।';
 
         [$sayJob, $sayStart, $sayWrongPerson, $sayClose] = $hindi
             ? [
                 " Say it as: \"आपने {$company} में {$role} के काम के लिए apply किया था। क्या आप अभी भी इस job में interested हैं?\"",
                 ' Say it as: "तो मैं आपसे इस काम के बारे में बस कुछ छोटे सवाल पूछूँगी। दो-तीन मिनट लगेंगे।"',
                 ' For example: "क्या '.$applicant.' से बात हो सकती है?" If they are not around: "कोई बात नहीं, मैं बाद में call कर लूँगी। धन्यवाद।"',
-                " Say it as: \"आपकी सारी बातें मैंने note कर ली हैं। {$company} आपकी जानकारी देखकर, आगे आपसे खुद बात करेगी।{$remoteInterview} समय देने के लिए धन्यवाद।\"",
+                " Say it as: \"आपकी सारी बातें मैंने note कर ली हैं। {$company} आपकी जानकारी देखकर, आगे आपसे खुद बात करेगी।{$slotClose} समय देने के लिए धन्यवाद।\"",
             ]
             : ['', '', '', ''];
 
@@ -374,10 +378,12 @@ class CallScript
         4. CLOSE. Say their answers will go to the employer, who will contact them, and thank them.{$closeInterview}{$sayClose}
 
         Rules you must not break:
-        - This call does not schedule anything. Do not ask when they can come for an interview, do not
-          offer or agree a date or time, and do not say anything is fixed or confirmed. Asking whether they
-          could come for an in-person interview at all (the question above) is fine; the employer fixes
-          the day.
+        - THE INTERVIEW TIME IS A PREFERENCE, NOT A BOOKING. You ask which day and time suits them (the
+          interview questions above) and take down what they say. Never offer times of your own, never
+          agree a time, and never say anything is fixed, booked or confirmed: the employer confirms it and
+          tells them. If they cannot name a day or time, or want the employer to decide, that is fine —
+          take it down as that and move on; never press them. Ask for the day and time only after they
+          have said how (or whether) they will interview, never before.
         - Never promise the job, a salary or a start date. Only the employer decides.
         - PAY: the listed figure is only what the employer has put on the listing, not an agreed wage. If
           the worker asks, say the listed figure and in the same breath that the employer settles the final
@@ -450,30 +456,64 @@ class CallScript
     }
 
     /**
-     * How the interview is held. In person, they are asked whether they could
-     * come for it; on phone or video they are only told, and it is folded
-     * into the closing line instead.
+     * The interview questions, word for word, by how the job interviews.
+     *
+     * In person: whether they can come, then which day and time suits them.
+     * Phone or video: which day and time suits them for the call. Either: how
+     * they would rather interview first, then the questions for that choice.
+     * The time is only their preference; the employer confirms it, and the
+     * script says so in the goodbye.
+     *
+     * @return list<string>
      */
-    private static function interviewQuestion(JobListing $job, bool $hindi): ?string
+    private static function interviewQuestions(JobListing $job, bool $hindi): array
     {
-        if ($job->interview_mode === JobListing::INTERVIEW_REMOTE) {
-            return null;
-        }
-
         $city = trim((string) $job->city);
-
-        // Right after "this work is in Kanpur, can you come there?", naming the
-        // city again sounds read off a form.
-        if ($hindi && $job->work_mode === JobListing::WORK_ON_SITE && $city !== '') {
-            return '"Selection होने पर interview के लिए भी वहीं आना होगा। क्या आप interview के लिए आ पाएँगे?"';
-        }
+        $mode = $job->interview_mode;
 
         if ($hindi) {
-            return $city !== ''
-                ? "\"अगर आपका selection होता है, तो interview के लिए {$city} में employer की जगह पर आना होगा। क्या आप interview के लिए वहाँ आ पाएँगे?\""
-                : '"अगर आपका selection होता है, तो interview के लिए employer की जगह पर आना होगा। क्या आप interview के लिए वहाँ आ पाएँगे?"';
+            $whenSite = '"आपको interview के लिए कौन सा दिन और कितने बजे आना ठीक रहेगा?" (Only if they said they can come. Take whatever they say — "कल सुबह", "Monday ko dopahar me" — and move on. If they leave it to the employer, that is fine.)';
+            $whenRemote = '"उस call के लिए आपको कौन सा दिन और कितने बजे ठीक रहेगा?" (Take whatever they say and move on. If they leave it to the employer, that is fine.)';
+
+            // Right after "this work is in Kanpur, can you come there?", naming
+            // the city again sounds read off a form.
+            $canCome = $job->work_mode === JobListing::WORK_ON_SITE && $city !== ''
+                ? '"Selection होने पर interview के लिए भी वहीं आना होगा। क्या आप interview के लिए आ पाएँगे?"'
+                : ($city !== ''
+                    ? "\"अगर आपका selection होता है, तो interview के लिए {$city} में employer की जगह पर आना होगा। क्या आप interview के लिए वहाँ आ पाएँगे?\""
+                    : '"अगर आपका selection होता है, तो interview के लिए employer की जगह पर आना होगा। क्या आप interview के लिए वहाँ आ पाएँगे?"');
+
+            return match ($mode) {
+                JobListing::INTERVIEW_REMOTE => [
+                    '"अगर आपका selection होता है, तो interview phone या video call पर होगा, आपको कहीं आना नहीं पड़ेगा। '.mb_substr($whenRemote, 1),
+                ],
+                JobListing::INTERVIEW_BOTH => [
+                    ($city !== ''
+                        ? "\"अगर आपका selection होता है, तो interview आप {$city} में employer की जगह पर आकर दे सकते हैं, या phone या video call पर।"
+                        : '"अगर आपका selection होता है, तो interview आप employer की जगह पर आकर दे सकते हैं, या phone या video call पर।')
+                        .' आपको कैसे ठीक रहेगा?"',
+                    'Only if they choose to come in person: '.$canCome.' Then: '.$whenSite,
+                    'Only if they choose phone or video: '.$whenRemote,
+                ],
+                default => [$canCome, $whenSite],
+            };
         }
 
-        return 'The interview is in person at the employer\'s place'.($city !== '' ? " in {$city}" : '').': whether they could come for it.';
+        $whereSite = 'in person at the employer\'s place'.($city !== '' ? " in {$city}" : '');
+
+        return match ($mode) {
+            JobListing::INTERVIEW_REMOTE => [
+                'The interview is on a phone or video call, so they need not travel: which day and time would suit them for that call. Take whatever they say; leaving it to the employer is fine.',
+            ],
+            JobListing::INTERVIEW_BOTH => [
+                "The interview can be {$whereSite} or on a phone or video call: which they would prefer.",
+                'Only if they choose in person: whether they could come for it, and then which day and time would suit them.',
+                'Only if they choose phone or video: which day and time would suit them for the call.',
+            ],
+            default => [
+                "The interview is {$whereSite}: whether they could come for it.",
+                'Only if they can come: which day and time would suit them. Take whatever they say; leaving it to the employer is fine.',
+            ],
+        };
     }
 }

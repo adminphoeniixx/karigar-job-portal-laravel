@@ -180,6 +180,9 @@ class JobListing extends Model
 
     public const INTERVIEW_REMOTE = 'remote';
 
+    /** The karigar picks on the AI call: in person or on a phone/video call. */
+    public const INTERVIEW_BOTH = 'both';
+
     /**
      * Where the work is done, as shown: "On-site", "Work from home", "On-site
      * or from home".
@@ -208,15 +211,18 @@ class JobListing extends Model
 
     public static function interviewModeLabelFor(?string $mode): string
     {
-        return $mode === self::INTERVIEW_REMOTE
-            ? __('Interview on phone / video')
-            : __('Interview in person');
+        return match ($mode) {
+            self::INTERVIEW_REMOTE => __('Interview on phone / video'),
+            self::INTERVIEW_BOTH => __('Interview in person or on phone / video'),
+            default => __('Interview in person'),
+        };
     }
 
     /**
      * The mode a booked interview starts from for this job: in person at the
      * site, or a phone call for a remote interview (the employer can still
-     * pick video).
+     * pick video). A job that offers both starts in person; the mode the
+     * karigar chose on the AI call overrides this.
      */
     public function bookedInterviewMode(): string
     {

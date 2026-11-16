@@ -21,6 +21,7 @@ import asyncio
 import contextlib
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 import re
 import time
@@ -53,13 +54,42 @@ from livekit.agents import llm as llm_module, stt as stt_module, tts as tts_modu
 # Absent on a LiveKit Cloud deployment, which needs no vendor plugins at all —
 # hence the guard rather than a plain import.
 try:
-    from livekit.plugins import cartesia, deepgram, elevenlabs, inworld, openai, sarvam
+    from livekit.plugins import cartesia, deepgram, elevenlabs, inworld, openai
 except ImportError:  # pragma: no cover - depends on how the image was built
-    cartesia = deepgram = elevenlabs = inworld = openai = sarvam = None  # type: ignore[assignment]
+    cartesia = deepgram = elevenlabs = inworld = openai = None  # type: ignore[assignment]
 
 load_dotenv()
 
 logger = logging.getLogger("screening-agent")
+
+# A copy of the log on disk, readable from the easypanel console with `tail`.
+# The panel's own log view went blank on 2026-11-16, right when a call needed
+# debugging, and docker's log stream is not reachable from inside the
+# container. Module level, so the job processes (forked from a preloaded
+# forkserver) inherit it along with the main one. Best effort: a read-only
+# filesystem just means no file.
+_LOG_FILE = os.getenv("SCREENING_LOG_FILE", "/app/logs/agent.log")
+
+
+class _DefaultCallId(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "call_id"):
+            record.call_id = "-"
+
+        return True
+
+
+try:
+    os.makedirs(os.path.dirname(_LOG_FILE), exist_ok=True)
+    _file_log = RotatingFileHandler(_LOG_FILE, maxBytes=5_000_000, backupCount=2, encoding="utf-8")
+    _file_log.setLevel(logging.INFO)
+    _file_log.addFilter(_DefaultCallId())
+    _file_log.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s [%(call_id)s] %(message)s"))
+
+    for _name in ("screening-agent", "livekit", "livekit.agents", "livekit.plugins"):
+        logging.getLogger(_name).addHandler(_file_log)
+except OSError:
+    pass
 
 # How long to wait for someone to pick up. Beyond this the carrier has almost
 # always given up too, and Laravel will schedule the retry.
@@ -188,11 +218,6 @@ def build_stt(meta: dict[str, Any]) -> stt_module.STT:
 
     provider, model = split_model(STT_MODEL)
 
-    if provider == "sarvam" and sarvam is not None:
-        # Sarvam is Indian and wants a full locale, not a bare code. Worth
-        # trying against Deepgram on real worksite audio before going live.
-        return sarvam.STT(model=model, language=f"{language}-IN")
-
     if provider == "deepgram" and deepgram is not None:
         return deepgram.STT(model=model, language=STT_LANGUAGES.get(language, language))
 
@@ -227,7 +252,12 @@ def build_tts(meta: dict[str, Any]) -> tts_module.TTS:
     field, Cartesia a bare `hi`, Inworld a BCP-47 tag.
     """
     language = meta.get("language", "hi")
-    voice = str(meta.get("voice") or "").strip()
+    # The voice Laravel asks for (config screening.voice, a Sarvam speaker name
+    # like "shreya"), unless the agent pins its own: the vendor's voice ids are
+    # not interchangeable ("Shreya" on Inworld, "shreya" on Sarvam), and the
+    # agent's env is the one place that knows which vendor is on. Set
+    # SCREENING_TTS_VOICE next to SCREENING_TTS.
+    voice = os.getenv("SCREENING_TTS_VOICE", "").strip() or str(meta.get("voice") or "").strip()
 
     if SPEECH_BACKEND == "inference":
         return inference.TTS(
@@ -238,14 +268,6 @@ def build_tts(meta: dict[str, Any]) -> tts_module.TTS:
         )
 
     provider, model = split_model(TTS_MODEL)
-
-    if provider == "sarvam" and sarvam is not None:
-        return sarvam.TTS(
-            model=model,
-            target_language_code=f"{language}-IN",
-            pace=TTS_PACE,
-            **({"speaker": voice} if voice else {}),
-        )
 
     if provider == "cartesia" and cartesia is not None:
         return cartesia.TTS(model=model, language=language, **({"voice": voice} if voice else {}))
@@ -451,7 +473,15 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
         logger.info("agent ended the call", extra={"call_id": call_id})
         finished.set()
 
-        return "The call is ending."
+        # The model is told that the line drops after its next sentence, so a
+        # model that called the tool before saying goodbye (gpt-5.4-mini does
+        # this about half the time) says it now, in the follow-up turn the
+        # tool result starts — and converse() below waits for that speech.
+        return (
+            "The line will drop after your next sentence. If you have not said "
+            "goodbye yet, say it now in one short sentence. If you already said "
+            "it, reply with nothing."
+        )
 
     session = AgentSession(
         stt=build_stt(meta),
@@ -476,7 +506,22 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
             # Three words and 0.8s lets those through while a real interruption
             # ("nahi nahi, main abhi busy hoon") still stops the agent. Raise
             # it further only against a recording, not a hunch.
-            "interruption": {"min_words": 3, "min_duration": 0.8},
+            #
+            # 2026-11-16, call #13: a "ठीक है" over the first KYC step still cut
+            # it at "सबसे पहले Super Karigar का". Since livekit-agents 1.8 the
+            # session auto-picks an ML ("adaptive") interruption detector,
+            # which does not go by the word count above. "vad" mode keeps
+            # interruptions to these thresholds, and four words/1.2 s lets
+            # "ओके कर लिया" through as backchannel while "नहीं नहीं, मैं अभी
+            # busy हूँ" still stops the agent. A speech that did stop for a
+            # sound that turned out to be nothing resumes after 1.5 s.
+            "interruption": {
+                "mode": "vad",
+                "min_words": 4,
+                "min_duration": 1.2,
+                "resume_false_interruption": True,
+                "false_interruption_timeout": 1.5,
+            },
             # Start synthesising while the turn is still being confirmed, not
             # after. The LLM sits on the other side of the internet and the
             # first audio frame is the one the worker is waiting through in
@@ -496,6 +541,9 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
             # max_delay still ends the turn on someone who trails off.
             "endpointing": {"min_delay": 0.7, "max_delay": 3.0},
         },
+        # Ten seconds of silence from the worker counts as "away" — see the
+        # nudge below. LiveKit's default of fifteen is a long time on a phone.
+        user_away_timeout=10.0,
     )
 
     # Talk time starts here, when the worker has answered: what the employer
@@ -524,11 +572,102 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     disconnected = asyncio.Event()
     ctx.room.on("participant_disconnected", lambda _: disconnected.set())
 
+    # The other half of the gpt-5.4-mini habit: a reply that is the goodbye
+    # but no end_call. The worker, told goodbye, says nothing more, so no
+    # turn ever comes in which the model would call the tool, and the line
+    # sits open until the backstop. When the worker has been quiet for the
+    # away timeout, the model is asked once: hang up if the call is over,
+    # else check they are still there. One nudge at a time.
+    nudging = False
+
+    async def nudge_if_quiet() -> None:
+        nonlocal nudging
+
+        try:
+            # Let whatever the agent is saying finish, then give the worker a
+            # moment to answer it before deciding they have gone quiet.
+            if (speech := session.current_speech) is not None:
+                await speech.wait_for_playout()
+                await asyncio.sleep(6)
+
+            # Nothing to do if the call ended meanwhile, the worker is talking,
+            # or the agent is already mid-reply (a nudge on top of that would
+            # be two voices).
+            if (
+                finished.is_set()
+                or disconnected.is_set()
+                or session.user_state == "speaking"
+                or session.agent_state != "listening"
+            ):
+                return
+
+            # Never before the worker has said anything: the first silence is
+            # the phone being picked up, a caller tune, a sleeve. The script's
+            # own rule (ask up to two more times) covers that; the nudge is
+            # for the end of a call, not the start.
+            if not spoke.is_set():
+                return
+
+            logger.info("worker quiet; asking the model to wrap up or check in", extra={"call_id": call_id})
+            session.generate_reply(
+                instructions=(
+                    "The person has said nothing for a while. Call the end_call tool now, and say "
+                    "nothing more, ONLY if you have already said your goodbye. In every other case "
+                    "do not end the call: ask, in one short sentence in the call's language, whether "
+                    "they are still there, and if they are, carry on from where you were."
+                ),
+            )
+        finally:
+            nudging = False
+
+    spoke = asyncio.Event()
+
+    def on_user_state(ev: Any) -> None:
+        nonlocal nudging
+
+        state = getattr(ev, "new_state", None)
+
+        if state == "speaking":
+            spoke.set()
+
+        if state == "away" and not nudging and not finished.is_set():
+            nudging = True
+            asyncio.create_task(nudge_if_quiet())
+
+    session.on("user_state_changed", on_user_state)
+
+    # A session that dies under us — a vendor refusing (Sarvam answered 402
+    # "No credits available" on 2026-11-16 and the agent fell silent), a dead
+    # key, a model gone — closes with an error. Before this the call then sat
+    # on the line in silence until the 300 s backstop and was reported as a
+    # completed call with an "unclear" outcome. Now it ends at once and is
+    # reported as failed, with the vendor's words, so the row says why.
+    broken = asyncio.Event()
+    broken_reason = ""
+
+    def on_close(ev: Any) -> None:
+        nonlocal broken_reason
+
+        error = getattr(ev, "error", None)
+
+        if error is None or broken.is_set():
+            return
+
+        broken_reason = f"{type(error).__name__}: {getattr(error, 'error', error)}"[:200]
+        logger.error("session closed on an error; ending the call", extra={"call_id": call_id, "reason": broken_reason})
+        broken.set()
+
+    session.on("close", on_close)
+
     # The fixed opening line. Said, not generated, so every worker hears the
     # same introduction and the same check that it is the right person.
     await session.say(meta["greeting"], allow_interruptions=True)
 
-    waits = [asyncio.create_task(disconnected.wait()), asyncio.create_task(finished.wait())]
+    waits = [
+        asyncio.create_task(disconnected.wait()),
+        asyncio.create_task(finished.wait()),
+        asyncio.create_task(broken.wait()),
+    ]
     timed_out = False
 
     try:
@@ -554,7 +693,7 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     # worth waiting on when we are the ones ending the call — the agent chose
     # to, or the backstop fired: if the worker already hung up there is nobody
     # left to hear it.
-    if (finished.is_set() or timed_out) and not disconnected.is_set():
+    if (finished.is_set() or timed_out) and not disconnected.is_set() and not broken.is_set():
         # Stop listening before waiting. The goodbye used to be as
         # interruptible as any other reply, so a worker saying "ठीक है, ठीक
         # है" over it — four words, past the interruption threshold — stopped
@@ -573,6 +712,20 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
         # drain()'s old 15s ceiling cut off mid-word ("आपने समय दिया, इसके").
         # 30s is the backstop on a stuck playout, not the expected wait.
         async def goodbye() -> None:
+            # A model that called end_call before its goodbye is now being
+            # asked for it (see the tool's return value): the follow-up turn
+            # shows as "thinking" and then as a speech. Wait for that to
+            # start — briefly, since a model that already said goodbye
+            # answers the tool with nothing and goes straight to listening.
+            for tick in range(100):
+                if session.current_speech is not None:
+                    break
+
+                if tick > 15 and session.agent_state not in ("thinking", "speaking"):
+                    break
+
+                await asyncio.sleep(0.1)
+
             while (speech := session.current_speech) is not None:
                 # An interruption detected just before the input went off
                 # would still land on this speech; refusing it here closes
@@ -633,7 +786,16 @@ async def converse(ctx: JobContext, meta: dict[str, Any], call_id: str | None) -
     # closed, so audio.ogg is complete, and a slow or failed upload cannot cost
     # the call its outcome.
     async def finish() -> None:
-        await report(call_id, duration_seconds=talk_seconds, **await extract(session, meta))
+        if broken.is_set():
+            await report(
+                call_id,
+                status="failed",
+                failure_reason="agent_error: " + broken_reason,
+                duration_seconds=talk_seconds,
+            )
+        else:
+            await report(call_id, duration_seconds=talk_seconds, **await extract(session, meta))
+
         await upload_recording(call_id, ctx.session_directory / "audio.ogg")
 
     ctx.add_shutdown_callback(finish)

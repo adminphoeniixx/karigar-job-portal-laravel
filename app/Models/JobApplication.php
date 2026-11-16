@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Api\Worker\ReviewController;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,7 +42,7 @@ class JobApplication extends Model
     protected $fillable = [
         'job_listing_id', 'worker_id', 'cover_note', 'expected_wage', 'status', 'contact_unlocked', 'shortlisted_at', 'status_changed_at',
         'offered_wage', 'start_date', 'offer_message',
-        'interview_at', 'interview_mode', 'interview_note',
+        'interview_at', 'interview_mode', 'interview_note', 'interview_reminded_at',
         'ai_score', 'ai_recommendation', 'ai_summary', 'ai_matched_skills', 'ai_red_flags', 'ai_scored_at',
     ];
 
@@ -56,6 +57,7 @@ class JobApplication extends Model
             'offered_wage' => 'decimal:2',
             'start_date' => 'date',
             'interview_at' => 'datetime',
+            'interview_reminded_at' => 'datetime',
             'ai_score' => 'integer',
             'ai_matched_skills' => 'array',
             'ai_red_flags' => 'array',
@@ -302,5 +304,38 @@ class JobApplication extends Model
     public function latestScreeningCall(): HasOne
     {
         return $this->hasOne(ScreeningCall::class)->latestOfMany();
+    }
+
+    /**
+     * The interview as a real moment in time. `interview_at` is kept the way
+     * the employer typed it — Indian wall-clock, no conversion — so reading
+     * it back as a datetime labels it UTC; this puts the IST label on it.
+     */
+    public function interviewInstant(): ?CarbonImmutable
+    {
+        return $this->interview_at === null
+            ? null
+            : CarbonImmutable::parse($this->interview_at->format('Y-m-d H:i:s'), config('app.display_timezone', 'Asia/Kolkata'));
+    }
+
+    public function interviewReminderCalls(): HasMany
+    {
+        return $this->hasMany(InterviewReminderCall::class);
+    }
+
+    public function latestInterviewReminderCall(): HasOne
+    {
+        return $this->hasOne(InterviewReminderCall::class)->latestOfMany();
+    }
+
+    protected static function booted(): void
+    {
+        // A moved interview is a new interview as far as the morning reminder
+        // is concerned: the mark is cleared so the new time gets its own.
+        static::saving(function (JobApplication $application) {
+            if ($application->isDirty('interview_at') && ! $application->isDirty('interview_reminded_at')) {
+                $application->interview_reminded_at = null;
+            }
+        });
     }
 }

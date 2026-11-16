@@ -70,6 +70,11 @@ class ScoreApplication implements ShouldQueue
         if (! $this->maybeAutoShortlist($application, $result['score'])) {
             $this->maybeAutoReject($application, $result['score']);
         }
+
+        // "Call when they apply, but only strong AI matches": now that the
+        // score exists the call can be decided. A rejected application is
+        // blocked by the service; a shortlisted one already has its call.
+        app(ScreeningService::class)->onScored($application->refresh());
     }
 
     /**
@@ -96,10 +101,9 @@ class ScoreApplication implements ShouldQueue
         // Ring the worker to ask if they are still interested and when they
         // could interview. Admin-controlled and separately off by default —
         // auto-shortlisting is reversible, an unwanted robocall is not. The
-        // employer's switch on the job comes on top of the admin's.
-        if (app(ScreeningService::class)->autoEnabled() && $application->job->ai_call_enabled) {
-            PlaceScreeningCall::dispatch($application->id);
-        }
+        // employer's switch on the job comes on top of the admin's, and
+        // their AI call settings decide the when and the who.
+        app(ScreeningService::class)->onAutoShortlisted($application);
 
         return true;
     }

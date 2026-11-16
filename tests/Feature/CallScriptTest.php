@@ -79,14 +79,18 @@ it('still never lets the agent claim to be a person', function () {
     expect(scriptFor(['Hindi'])->instructions)->toContain('Never claim to be a human');
 });
 
-it('interviews on the call instead of booking an interview', function () {
+it('asks when the karigar could interview, as a preference the employer confirms', function () {
     $script = scriptFor(['Hindi']);
 
-    // The trade comes from the category, not the listing's headline.
+    // The trade comes from the category, not the listing's headline. The
+    // interview time is asked for (2026-11-13: the owner wants the slot on
+    // the call) but never agreed: the employer confirms it.
     expect($script->instructions)->toContain('"Plumbing का काम आप कितने साल से कर रहे हैं?"')
         ->not->toContain('Plumber for apartment project का काम')
-        ->toContain('This call does not schedule anything')
-        ->and(CallScript::extractionSchema())->not->toHaveKey('proposed_interview_at');
+        ->toContain('कौन सा दिन और कितने बजे आना ठीक रहेगा?')
+        ->toContain('THE INTERVIEW TIME IS A PREFERENCE, NOT A BOOKING')
+        ->not->toContain('This call does not schedule anything')
+        ->and(CallScript::extractionSchema())->toHaveKeys(['proposed_interview_at', 'proposed_mode']);
 });
 
 it('tells the model to reply in Devanagari, with English words left in English', function () {
