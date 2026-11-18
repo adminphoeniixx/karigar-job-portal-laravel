@@ -27,6 +27,12 @@ interface RangeData {
     series: number[][];
 }
 
+// Where the applications on this dashboard stand today; the parts add up.
+interface Snapshot {
+    total: number;
+    segments: { label: string; value: number }[];
+}
+
 // The employer's "Worker Database" card: contacts the plan opens and unlocks left.
 interface DatabaseCard {
     active: boolean;
@@ -43,6 +49,7 @@ const props = defineProps<{
     stats: Stat[];
     table: Table;
     activity: Record<string, RangeData>;
+    snapshot: Snapshot;
     database?: DatabaseCard;
 }>();
 
@@ -75,6 +82,8 @@ const backendKeys: Record<string, string> = {
     'Verified': 'status.verified',
     'Pending': 'status.pending',
     'Rejected': 'status.rejected',
+    'Accepted': 'status.accepted',
+    'Withdrawn': 'status.withdrawn',
     'Title': 'myJobs.titleCol',
     'Location': 'common.location',
     'Wage': 'jobs.wage',
@@ -143,21 +152,33 @@ const thinLabel = (i: number) => pointCount.value > 8 && (pointCount.value - 1 -
 const hoverIndex = ref<number | null>(null);
 const hoverLeftPct = computed(() => (hoverIndex.value === null ? 0 : ((hoverIndex.value + 0.5) / pointCount.value) * 100));
 
-// Right-rail snapshot derived from the real stats
-const numeric = computed(() => props.stats.map((s) => Number(String(s.value).replace(/[^\d.]/g, '')) || 0));
-const total = computed(() => numeric.value.reduce((a, b) => a + b, 0));
-const maxStat = computed(() => Math.max(1, ...numeric.value));
-const donutColors = ['#bf3a16', '#c88a2e', '#4f6b4a', '#8a5a3c'];
+// Right-rail snapshot: the same applications as the chart, by where they
+// stand now. One colour per status, the same on every dashboard.
+const segmentColors: Record<string, string> = {
+    Pending: '#c88a2e',
+    Accepted: '#4f6b4a',
+    Rejected: '#bf3a16',
+    Withdrawn: '#94a3b8',
+};
+const total = computed(() => props.snapshot.total);
 const donutSegments = computed(() => {
-    if (total.value === 0) return [];
+    if (total.value === 0) {
+        return [];
+    }
+
     let offset = 25;
-    return numeric.value.map((v, i) => {
-        const pct = (v / total.value) * 100;
-        const seg = { pct, color: donutColors[i % donutColors.length], offset };
-        offset -= pct;
-        return seg;
-    });
+
+    return props.snapshot.segments
+        .filter((s) => s.value > 0)
+        .map((s) => {
+            const pct = (s.value / total.value) * 100;
+            const seg = { pct, color: segmentColors[s.label] ?? '#8a5a3c', offset };
+            offset -= pct;
+
+            return seg;
+        });
 });
+const share = (value: number) => (total.value === 0 ? 0 : Math.round((value / total.value) * 100));
 
 const profileHref = computed(
     () => ({ worker: '/worker/profile', employer: '/employer/profile' })[props.role] ?? dashboard().url,
@@ -413,25 +434,27 @@ const profileHref = computed(
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
                             <span class="text-2xl font-bold tabular-nums">{{ total }}</span>
-                            <span class="text-[11px] text-muted-foreground">{{ $t('dashboard.totalLabel') }}</span>
+                            <span class="text-[11px] text-muted-foreground">{{ $t('dashboard.applications') }}</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-5 space-y-4">
-                    <div v-for="(stat, i) in stats" :key="stat.label">
+                    <div v-for="seg in snapshot.segments" :key="seg.label">
                         <div class="flex items-center justify-between text-sm">
-                            <span class="truncate font-medium text-muted-foreground">{{ tr(stat.label) }}</span>
-                            <span class="ml-2 font-bold tabular-nums" :class="stat.state ? stateText[stat.state] : ''">{{ tr(stat.value) }}</span>
+                            <span class="flex min-w-0 items-center gap-2 font-medium text-muted-foreground">
+                                <span class="size-2 shrink-0 rounded-full" :style="{ background: segmentColors[seg.label] ?? '#8a5a3c' }"></span>
+                                <span class="truncate">{{ tr(seg.label) }}</span>
+                            </span>
+                            <span class="ml-2 font-bold tabular-nums">
+                                {{ seg.value }}
+                                <span class="ml-1 text-xs font-medium text-muted-foreground">{{ share(seg.value) }}%</span>
+                            </span>
                         </div>
                         <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
                             <div
                                 class="h-full rounded-full transition-all"
-                                :style="
-                                    stat.state
-                                        ? { width: '100%', background: stateColors[stat.state] }
-                                        : { width: Math.max(6, (numeric[i] / maxStat) * 100) + '%', background: donutColors[i % donutColors.length] }
-                                "
+                                :style="{ width: share(seg.value) + '%', background: segmentColors[seg.label] ?? '#8a5a3c' }"
                             ></div>
                         </div>
                     </div>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { Briefcase, Building2, ChartColumn, Download, FileText, HardHat, IndianRupee, ReceiptText } from '@lucide/vue';
+import { Briefcase, Building2, ChartColumn, Download, FileText, HardHat, IndianRupee, PhoneCall, ReceiptText, UserCheck } from '@lucide/vue';
 import { computed, reactive, watch } from 'vue';
+import type { Component } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { indianStates } from '@/data/indianLocations';
 
@@ -10,6 +11,8 @@ interface Tiles {
     employers: number;
     jobs: number;
     applications: number;
+    hires: number;
+    aiCalls: number;
     revenue: string | number | null;
     gst: string | number | null;
 }
@@ -19,6 +22,9 @@ interface MonthRow {
     jobs: number;
     workers: number;
     employers: number;
+    applications: number;
+    hires: number;
+    revenue: number;
 }
 
 interface LabelTotal {
@@ -67,13 +73,18 @@ const exportUrl = (type: string) => {
     return `/admin/reports/export?${params}`;
 };
 
-const tileDefs = computed(() => [
+// Invoices carry no job, so the state and category filters cannot narrow money.
+const moneyNote = computed(() => (form.state || form.category ? 'All states and categories' : undefined));
+
+const tileDefs = computed<{ label: string; value: string; icon: Component; tone: string; note?: string }[]>(() => [
     { label: 'New karigars', value: props.tiles.workers.toLocaleString('en-IN'), icon: HardHat, tone: 'bg-orange-500/10 text-orange-600 dark:text-orange-300' },
     { label: 'New employers', value: props.tiles.employers.toLocaleString('en-IN'), icon: Building2, tone: 'bg-blue-500/10 text-blue-600 dark:text-blue-300' },
     { label: 'Jobs posted', value: props.tiles.jobs.toLocaleString('en-IN'), icon: Briefcase, tone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300' },
     { label: 'Applications', value: props.tiles.applications.toLocaleString('en-IN'), icon: FileText, tone: 'bg-purple-500/10 text-purple-600 dark:text-purple-300' },
-    { label: 'Revenue (incl. GST)', value: inr(props.tiles.revenue), icon: IndianRupee, tone: 'bg-orange-500/10 text-orange-600 dark:text-orange-300' },
-    { label: 'GST collected', value: inr(props.tiles.gst), icon: ReceiptText, tone: 'bg-amber-500/10 text-amber-600 dark:text-amber-300' },
+    { label: 'Hires', value: props.tiles.hires.toLocaleString('en-IN'), icon: UserCheck, tone: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300' },
+    { label: 'AI calls', value: props.tiles.aiCalls.toLocaleString('en-IN'), icon: PhoneCall, tone: 'bg-blue-500/10 text-blue-600 dark:text-blue-300' },
+    { label: 'Revenue (incl. GST)', value: inr(props.tiles.revenue), icon: IndianRupee, tone: 'bg-orange-500/10 text-orange-600 dark:text-orange-300', note: moneyNote.value },
+    { label: 'GST collected', value: inr(props.tiles.gst), icon: ReceiptText, tone: 'bg-amber-500/10 text-amber-600 dark:text-amber-300', note: moneyNote.value },
 ]);
 
 const exports = [
@@ -83,7 +94,11 @@ const exports = [
     { type: 'revenue', label: 'revenue' },
 ];
 
-const maxMonthly = computed(() => Math.max(1, ...props.monthly.map((m) => Math.max(m.jobs, m.workers + m.employers))));
+// Jobs and signups differ by orders of magnitude, so each series is drawn
+// against its own largest month; the numbers above the bars carry the scale.
+const maxJobs = computed(() => Math.max(1, ...props.monthly.map((m) => m.jobs)));
+const maxSignups = computed(() => Math.max(1, ...props.monthly.map((m) => m.workers + m.employers)));
+const barHeight = (value: number, max: number) => (value === 0 ? '2px' : Math.max(4, (value / max) * 100) + '%');
 const maxCity = computed(() => Math.max(1, ...props.topCities.map((c) => c.total)));
 const maxCategory = computed(() => Math.max(1, ...props.topCategories.map((c) => c.total)));
 </script>
@@ -129,13 +144,14 @@ const maxCategory = computed(() => Math.max(1, ...props.topCategories.map((c) =>
         </div>
 
         <!-- Tiles -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div v-for="t in tileDefs" :key="t.label" class="rounded-2xl border bg-card p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <span class="text-sm font-medium text-muted-foreground">{{ t.label }}</span>
                     <span class="flex size-8 items-center justify-center rounded-lg" :class="t.tone"><component :is="t.icon" class="size-4" /></span>
                 </div>
                 <div class="mt-3 text-2xl font-bold tabular-nums tracking-tight">{{ t.value }}</div>
+                <div v-if="t.note" class="mt-1 text-xs text-muted-foreground">{{ t.note }}</div>
             </div>
         </div>
 
@@ -148,15 +164,49 @@ const maxCategory = computed(() => Math.max(1, ...props.topCategories.map((c) =>
                     <span class="inline-flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-[#c88a2e]"></span> Signups</span>
                 </div>
             </div>
-            <div class="mt-6 flex h-40 items-end gap-3">
-                <div v-for="m in monthly" :key="m.label" class="group flex flex-1 flex-col items-center justify-end gap-1">
+            <div v-if="monthly.length" class="mt-6 flex items-end gap-3">
+                <div v-for="m in monthly" :key="m.label" class="group flex min-w-0 flex-1 flex-col items-center gap-1">
                     <div class="flex w-full items-end justify-center gap-1" style="height: 128px">
-                        <div class="w-1/3 rounded-t bg-[#bf3a16]/80 transition group-hover:bg-[#bf3a16]" :style="{ height: Math.max(3, (m.jobs / maxMonthly) * 100) + '%' }" :title="`${m.jobs} jobs`"></div>
-                        <div class="w-1/3 rounded-t bg-[#c88a2e]/80 transition group-hover:bg-[#c88a2e]" :style="{ height: Math.max(3, ((m.workers + m.employers) / maxMonthly) * 100) + '%' }" :title="`${m.workers + m.employers} signups`"></div>
+                        <div class="flex h-full w-1/3 flex-col items-center justify-end gap-1">
+                            <span class="text-[10px] font-semibold tabular-nums text-muted-foreground">{{ m.jobs }}</span>
+                            <div class="w-full rounded-t bg-[#bf3a16]/80 transition group-hover:bg-[#bf3a16]" :style="{ height: barHeight(m.jobs, maxJobs) }" :title="`${m.jobs} jobs`"></div>
+                        </div>
+                        <div class="flex h-full w-1/3 flex-col items-center justify-end gap-1">
+                            <span class="text-[10px] font-semibold tabular-nums text-muted-foreground">{{ (m.workers + m.employers).toLocaleString('en-IN') }}</span>
+                            <div class="w-full rounded-t bg-[#c88a2e]/80 transition group-hover:bg-[#c88a2e]" :style="{ height: barHeight(m.workers + m.employers, maxSignups) }" :title="`${m.workers + m.employers} signups`"></div>
+                        </div>
                     </div>
                     <span class="text-[10px] text-muted-foreground">{{ m.label }}</span>
                 </div>
-                <p v-if="!monthly.length" class="w-full py-10 text-center text-sm text-muted-foreground">No data in this range.</p>
+            </div>
+            <p v-else class="py-10 text-center text-sm text-muted-foreground">No data in this range.</p>
+
+            <!-- The same months in numbers, with what the bars leave out. -->
+            <div v-if="monthly.length" class="mt-6 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr class="border-b">
+                            <th class="py-2 pr-4 font-medium">Month</th>
+                            <th class="px-3 py-2 text-right font-medium">Karigars</th>
+                            <th class="px-3 py-2 text-right font-medium">Employers</th>
+                            <th class="px-3 py-2 text-right font-medium">Jobs</th>
+                            <th class="px-3 py-2 text-right font-medium">Applications</th>
+                            <th class="px-3 py-2 text-right font-medium">Hires</th>
+                            <th class="py-2 pl-3 text-right font-medium">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="m in monthly" :key="m.label" class="border-b last:border-0">
+                            <td class="py-2.5 pr-4 font-medium">{{ m.label }}</td>
+                            <td class="px-3 py-2.5 text-right tabular-nums">{{ m.workers.toLocaleString('en-IN') }}</td>
+                            <td class="px-3 py-2.5 text-right tabular-nums">{{ m.employers.toLocaleString('en-IN') }}</td>
+                            <td class="px-3 py-2.5 text-right tabular-nums">{{ m.jobs.toLocaleString('en-IN') }}</td>
+                            <td class="px-3 py-2.5 text-right tabular-nums">{{ m.applications.toLocaleString('en-IN') }}</td>
+                            <td class="px-3 py-2.5 text-right tabular-nums">{{ m.hires.toLocaleString('en-IN') }}</td>
+                            <td class="py-2.5 pl-3 text-right tabular-nums">{{ inr(m.revenue) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 

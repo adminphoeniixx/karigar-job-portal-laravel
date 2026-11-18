@@ -8,7 +8,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import ResumeUpload, { type Resume } from '@/components/ResumeUpload.vue';
 import { rupees, wageText } from '@/lib/utils';
 
-interface TrackStep { key: string; state: string; at: string | null; result: string | null }
+interface TrackStep { key: string; state: 'done' | 'current' | 'upcoming' | 'rejected' | 'skipped'; at: string | null; result: string | null }
 
 interface Job {
     id: number;

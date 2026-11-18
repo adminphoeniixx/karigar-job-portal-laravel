@@ -138,9 +138,9 @@ const popularCategories = computed(() => {
 
 const features = [
     { icon: MapPin, title: 'Hyperlocal matching', desc: 'Find jobs and karigars within your radius using precise geo-search.' },
-    { icon: ShieldCheck, title: 'KYC verified', desc: 'PAN + Aadhaar verification builds trust on both sides.' },
-    { icon: Zap, title: 'Instant search', desc: 'Typesense-powered results in milliseconds.' },
-    { icon: Languages, title: 'Your language', desc: 'Hindi, English & Hinglish — switch anytime.' },
+    { icon: ShieldCheck, title: 'KYC verified', desc: 'Aadhaar-verified karigars and verified businesses build trust on both sides.' },
+    { icon: Zap, title: 'Instant search', desc: 'Results as you type, by skill, city and distance.' },
+    { icon: Languages, title: 'Your language', desc: 'Hindi, English, Hinglish and five more Indian languages — switch anytime.' },
 ];
 
 const steps = [

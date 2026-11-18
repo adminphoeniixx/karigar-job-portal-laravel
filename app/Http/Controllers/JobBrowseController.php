@@ -16,7 +16,7 @@ class JobBrowseController extends Controller
         $filters = $this->validateFilters($request);
 
         return Inertia::render('jobs/Browse', [
-            'jobs' => JobSearch::paginate($filters),
+            'jobs' => JobSearch::paginate($filters)->through(fn (JobListing $job) => $job->forPublicPage()),
             'filters' => $filters,
         ]);
     }
@@ -42,7 +42,7 @@ class JobBrowseController extends Controller
             : null;
 
         return Inertia::render('jobs/Show', [
-            'job' => $job,
+            'job' => $job->forPublicPage(),
             'canApply' => $isWorker && $open,
             'isOpen' => $open,
             'application' => $application ? [

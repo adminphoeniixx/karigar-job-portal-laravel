@@ -105,8 +105,11 @@ it('makes no reminder call when the employer switched it off, or the interview i
     // Switched back on, but booked at 15:30 for a 16:00 interview: no call.
     CallPreferences::defaults()->save($this->employer);
     $this->travelTo(CarbonImmutable::parse('2026-11-17 15:30', 'Asia/Kolkata'));
+    // A karigar applies to a job once, so the late booking is another karigar's.
+    $other = User::factory()->create(['role' => UserRole::Worker->value, 'phone' => '9876500012', 'name' => 'Suresh Babu']);
+    $other->workerProfile()->create(['skills' => ['Plumbing'], 'city' => 'Chennai', 'available' => true, 'spoken_languages' => ['Hindi']]);
     $late = JobApplication::create([
-        'job_listing_id' => $this->job->id, 'worker_id' => $this->worker->id, 'status' => ApplicationStatus::Pending,
+        'job_listing_id' => $this->job->id, 'worker_id' => $other->id, 'status' => ApplicationStatus::Pending,
         'interview_at' => CarbonImmutable::parse('2026-11-17 16:00', 'Asia/Kolkata'), 'interview_mode' => 'site',
     ]);
     $this->application->update(['interview_reminded_at' => now()]);

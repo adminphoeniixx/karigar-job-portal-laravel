@@ -21,11 +21,15 @@ interface Stats {
     employers: number;
     suspended: number;
     activeJobs: number;
+    hiringJobs: number;
     totalJobs: number;
     applications: number;
     activeSubscriptions: number;
     pendingKyc: number;
+    jobsInReview: number;
     mrr: number;
+    collectedThisMonth: number;
+    collectedLastMonth: number;
 }
 
 interface Deltas {
@@ -47,7 +51,7 @@ const props = defineProps<{
     deltas: Deltas;
     applicationBreakdown: Breakdown;
     signups: { date: string; count: number }[];
-    recentUsers: { id: number; name: string; email: string; role: string; created_at: string; suspended_at: string | null }[];
+    recentUsers: { id: number; name: string; contact: string; role: string; created_at: string; suspended_at: string | null }[];
 }>();
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Admin Overview', href: '/admin/overview' }] } });
@@ -58,7 +62,7 @@ const inr = (n: number) => '₹' + new Intl.NumberFormat('en-IN').format(Math.ro
 const tiles = computed(() => [
     { label: 'Karigars', value: props.stats.workers, delta: props.deltas.workers, icon: Users, tone: 'orange' },
     { label: 'Employers', value: props.stats.employers, delta: props.deltas.employers, icon: Briefcase, tone: 'blue' },
-    { label: 'Active jobs', value: props.stats.activeJobs, delta: props.deltas.activeJobs, sub: `${props.stats.totalJobs} total`, icon: Briefcase, tone: 'green' },
+    { label: 'Active jobs', value: props.stats.activeJobs, delta: props.deltas.activeJobs, sub: `${props.stats.hiringJobs} hiring · ${props.stats.totalJobs} total`, icon: Briefcase, tone: 'green' },
     { label: 'Applications', value: props.stats.applications, delta: props.deltas.applications, icon: FileText, tone: 'purple' },
 ]);
 
@@ -78,7 +82,12 @@ const signupPts = computed(() => chartPoints(signupCounts.value, CW, CH, PAD));
 const signupLine = computed(() => linePath(signupPts.value));
 const signupArea = computed(() => areaPath(signupLine.value, CW, CH, PAD));
 const totalSignups = computed(() => signupCounts.value.reduce((a, b) => a + b, 0));
-const peakSignups = computed(() => Math.max(1, ...signupCounts.value));
+// The busiest day, when there was one: an empty fortnight has no peak.
+const peakDay = computed(() => {
+    const peak = Math.max(0, ...signupCounts.value);
+
+    return peak > 0 ? props.signups.find((s) => s.count === peak) : undefined;
+});
 
 const chartWrap = ref<HTMLElement | null>(null);
 const hoverIndex = ref<number | null>(null);
@@ -99,8 +108,9 @@ const hoverLeftPct = computed(() =>
 const hoverTopPct = computed(() =>
     hoverIndex.value === null ? 0 : (signupPts.value[hoverIndex.value].y / CH) * 100,
 );
+// The dates are plain Indian calendar days; read as local so no browser shifts them.
 const formatDay = (iso: string) =>
-    new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 // --- Application funnel composition ---
 const funnelSegments = computed(() => {
@@ -118,6 +128,7 @@ const funnelTotal = computed(() => funnelSegments.value.reduce((a, s) => a + s.v
 // --- Things needing admin attention ---
 const attention = computed(() => [
     { label: 'Pending KYC reviews', value: props.stats.pendingKyc, href: '/admin/kyc', icon: ShieldCheck, tone: 'amber' },
+    { label: 'Jobs awaiting review', value: props.stats.jobsInReview, href: '/admin/jobs?status=review', icon: Briefcase, tone: 'amber' },
     { label: 'Suspended accounts', value: props.stats.suspended, href: '/admin/users', icon: Ban, tone: 'rose' },
 ]);
 const attentionTone: Record<string, string> = {
@@ -258,7 +269,10 @@ const timeAgo = (iso: string) => {
                         <span>{{ formatDay(signups[signups.length - 1].date) }}</span>
                     </div>
                 </div>
-                <p class="mt-3 text-xs text-muted-foreground">Peak day: {{ peakSignups }} new users</p>
+                <p class="mt-3 text-xs text-muted-foreground">
+                    <template v-if="peakDay">Peak day: {{ formatDay(peakDay.date) }}, {{ peakDay.count }} new {{ peakDay.count === 1 ? 'user' : 'users' }}</template>
+                    <template v-else>No one joined in the last 14 days.</template>
+                </p>
             </div>
 
             <!-- Revenue hero -->
@@ -267,17 +281,22 @@ const timeAgo = (iso: string) => {
                 <div class="absolute -bottom-10 -left-6 size-28 rounded-full bg-white/10" />
                 <div class="relative">
                     <div class="flex items-center gap-2 text-sm font-medium text-white/90">
-                        <IndianRupee class="size-4" /> Monthly revenue
+                        <IndianRupee class="size-4" /> Collected this month
                     </div>
-                    <div class="mt-3 text-4xl font-bold tracking-tight tabular-nums">{{ inr(stats.mrr) }}</div>
+                    <div class="mt-3 text-4xl font-bold tracking-tight tabular-nums">{{ inr(stats.collectedThisMonth) }}</div>
                     <div class="mt-1 inline-flex items-center gap-1 text-xs text-white/80">
-                        <TrendingUp class="size-3.5" /> Recurring · MRR
+                        <TrendingUp class="size-3.5" /> Incl. GST · last month {{ inr(stats.collectedLastMonth) }}
                     </div>
 
-                    <div class="mt-6 flex items-center justify-between border-t border-white/20 pt-4">
+                    <div class="mt-5 border-t border-white/20 pt-4">
+                        <div class="text-2xl font-bold tabular-nums">{{ inr(stats.mrr) }}</div>
+                        <div class="text-xs text-white/80">Run-rate per 30 days from live plans, before GST</div>
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-between border-t border-white/20 pt-4">
                         <div>
                             <div class="text-2xl font-bold tabular-nums">{{ stats.activeSubscriptions }}</div>
-                            <div class="text-xs text-white/80">Active subscriptions</div>
+                            <div class="text-xs text-white/80">Live plans</div>
                         </div>
                         <Link
                             href="/admin/plans"
@@ -367,7 +386,7 @@ const timeAgo = (iso: string) => {
                         </span>
                         <div class="min-w-0">
                             <div class="truncate font-medium">{{ u.name }}</div>
-                            <div class="truncate text-xs text-muted-foreground">{{ u.email }}</div>
+                            <div class="truncate text-xs text-muted-foreground">{{ u.contact }}</div>
                         </div>
                     </div>
                     <div class="flex shrink-0 items-center gap-2">

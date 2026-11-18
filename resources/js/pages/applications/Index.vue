@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import PageHeader from '@/components/PageHeader.vue';
 
-interface TrackStep { key: string; state: string; at: string | null; result: string | null }
+interface TrackStep { key: string; state: 'done' | 'current' | 'upcoming' | 'rejected' | 'skipped'; at: string | null; result: string | null }
 
 interface Application {
     id: number;

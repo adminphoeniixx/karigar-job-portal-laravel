@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { ArrowUpRight, Briefcase, CalendarDays, IndianRupee, MapPin, PauseCircle, Search, X } from '@lucide/vue';
+import { ArrowUpRight, Briefcase, CalendarDays, MapPin, PauseCircle, Search, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PageHeader from '@/components/PageHeader.vue';
 import { citiesFor, indianStates } from '@/data/indianLocations';
 import { commonSkills } from '@/data/skills';
+import { wageText } from '@/lib/utils';
 
 interface Job {
     id: number;
@@ -90,11 +91,8 @@ const clearAll = () => {
 
 const hasFilters = computed(() => Object.values(form).some((v) => v !== ''));
 
-const wage = (j: Job) => {
-    if (!j.wage_min && !j.wage_max) return t('jobs.negotiable');
-    const range = [j.wage_min, j.wage_max].filter(Boolean).join('–');
-    return `${range}${j.wage_type ? ' / ' + j.wage_type : ''}`;
-};
+// The same wording as the public job list and the job page: "₹12,000–20,000 / monthly".
+const wage = (j: Job) => wageText(j.wage_min, j.wage_max, j.wage_type) ?? t('jobs.negotiable');
 
 const fmtDate = (iso: string | null): string =>
     iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
@@ -182,7 +180,7 @@ const fmtDate = (iso: string | null): string =>
                     <span v-if="job.expires_at" class="inline-flex items-center gap-1 font-medium text-rose-500 dark:text-rose-400">{{ $t('jobs.applyBy') }} {{ fmtDate(job.expires_at) }}</span>
                 </p>
                 <div class="mt-4 flex items-center justify-between border-t pt-3 text-sm">
-                    <span class="inline-flex items-center gap-0.5 font-bold text-rose-500 dark:text-rose-400"><IndianRupee class="size-3.5" />{{ wage(job) }}</span>
+                    <span class="font-bold text-rose-500 dark:text-rose-400">{{ wage(job) }}</span>
                     <span class="text-xs text-muted-foreground">{{ job.employer.name }}</span>
                 </div>
             </Link>

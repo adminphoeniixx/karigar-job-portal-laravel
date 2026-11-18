@@ -28,7 +28,7 @@ class JobController extends Controller
         return Inertia::render('worker/Jobs', [
             'jobs' => $unavailable
                 ? new LengthAwarePaginator([], 0, 15)
-                : JobSearch::paginate($filters),
+                : JobSearch::paginate($filters)->through(fn (JobListing $job) => $job->forPublicPage()),
             'filters' => $filters,
             'unavailable' => $unavailable,
         ]);
@@ -45,7 +45,7 @@ class JobController extends Controller
         $application = $job->applications()->where('worker_id', $user->id)->first();
 
         return Inertia::render('worker/JobShow', [
-            'job' => $job,
+            'job' => $job->forPublicPage(),
             'employerRating' => $job->employer ? [
                 'average' => $job->employer->averageRating(),
                 'count' => $job->employer->reviewsReceived()->count(),

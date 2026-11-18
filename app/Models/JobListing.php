@@ -270,6 +270,31 @@ class JobListing extends Model
     }
 
     /**
+     * The job as a visitor or a karigar may see it on the web pages, which
+     * hand the whole model to the browser. Moderation notes and the
+     * employer's AI switches are not theirs to read, the employer's KYC record
+     * is not either, and the contact person is shown only on a job that takes
+     * calls: the same rule the app's JobDetailResource applies.
+     */
+    public function forPublicPage(): static
+    {
+        $this->makeHidden([
+            'moderation_status', 'moderation_reasons', 'moderation_note', 'moderation_method', 'moderated_at', 'moderated_by',
+            'ai_shortlist_enabled', 'ai_call_enabled', 'applicants_released', 'reposted_from_id', 'views_count',
+        ]);
+
+        if ($this->contact_mode === 'apply') {
+            $this->makeHidden(['contact_phone', 'contact_name', 'contact_designation']);
+        }
+
+        if ($this->relationLoaded('employer')) {
+            $this->employer?->unsetRelation('kyc');
+        }
+
+        return $this;
+    }
+
+    /**
      * The employer's job plan ran out: the job is out of search and closed to
      * applications until the plan is renewed.
      */

@@ -7,7 +7,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import ScreeningConversation from '@/components/ScreeningConversation.vue';
 import { rupees } from '@/lib/utils';
 
-interface TrackStep { key: string; state: string; at: string | null; result: string | null }
+interface TrackStep { key: string; state: 'done' | 'current' | 'upcoming' | 'rejected' | 'skipped'; at: string | null; result: string | null }
 
 interface AiMatch {
     score: number | null;

@@ -33,7 +33,8 @@ class HomeController extends Controller
             ->with('employer:id,name')
             ->latest()
             ->limit(6)
-            ->get();
+            ->get()
+            ->each->forPublicPage();
 
         $cities = JobListing::active()->hiring()
             ->whereNotNull('city')

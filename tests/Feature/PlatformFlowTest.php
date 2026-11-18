@@ -10,6 +10,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -70,7 +71,8 @@ it('shows an active job publicly and 404s a draft', function () {
 // ───────────────────────── WORKER ─────────────────────────
 
 it('lets a worker view and update profile with an avatar', function () {
-    Storage::fake('public');
+    // Images go to the CDN's storage zone over HTTP, not to a local disk.
+    Http::fake(['storage.bunnycdn.com/*' => Http::response('', 201)]);
 
     $this->actingAs($this->worker)->get('/worker/profile')->assertOk();
 
@@ -90,8 +92,8 @@ it('lets a worker view and update profile with an avatar', function () {
     $profile = $this->worker->workerProfile()->first();
     expect($profile->city)->toBe('Jaipur')
         ->and($profile->skills)->toBe(['Plumbing', 'Electrician'])
-        ->and($profile->avatar_path)->not->toBeNull();
-    Storage::disk('public')->assertExists($profile->avatar_path);
+        ->and($profile->avatar_path)->toStartWith('avatars/');
+    Http::assertSent(fn ($request) => $request->method() === 'PUT' && str_ends_with($request->url(), '/'.$profile->avatar_path));
 });
 
 it('blocks an employer from the worker profile route', function () {
@@ -134,7 +136,7 @@ it('rejects invalid KYC input', function () {
 // ───────────────────────── EMPLOYER ─────────────────────────
 
 it('lets an employer update the company profile with a logo', function () {
-    Storage::fake('public');
+    Http::fake(['storage.bunnycdn.com/*' => Http::response('', 201)]);
 
     $this->actingAs($this->employer)->get('/employer/profile')->assertOk();
 
@@ -149,8 +151,8 @@ it('lets an employer update the company profile with a logo', function () {
 
     $profile = $this->employer->employerProfile()->first();
     expect($profile->company_name)->toBe('Suresh Builders')
-        ->and($profile->logo_path)->not->toBeNull();
-    Storage::disk('public')->assertExists($profile->logo_path);
+        ->and($profile->logo_path)->toStartWith('logos/');
+    Http::assertSent(fn ($request) => $request->method() === 'PUT' && str_ends_with($request->url(), '/'.$profile->logo_path));
 });
 
 it('shows the subscription pricing page', function () {

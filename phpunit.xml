@@ -36,6 +36,12 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SCOUT_DRIVER" value="null"/>
         <env name="PRIVATE_FILES_DRIVER" value="local"/>
+        <!-- Never the real storage zone: without these a test that uploads a
+             logo or an avatar writes a file to the live CDN on every run. -->
+        <env name="BUNNYCDN_API_KEY" value=""/>
+        <env name="BUNNYCDN_STORAGE_ZONE" value="test-zone"/>
+        <env name="BUNNYCDN_PULL_ZONE_URL" value="https://cdn.test"/>
+        <env name="BUNNYCDN_TOKEN_AUTH_KEY" value=""/>
         <env name="GEOCODER_ENABLED" value="false"/>
         <env name="EMPLOYER_VERIFICATION_REQUIRED" value="false"/>
         <env name="WORKER_VERIFICATION_REQUIRED" value="false"/>

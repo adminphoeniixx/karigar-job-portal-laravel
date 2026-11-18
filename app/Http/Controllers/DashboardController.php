@@ -10,9 +10,11 @@ use App\Models\KycDocument;
 use App\Models\User;
 use App\Services\ContactUnlocks;
 use App\Support\JobFeed;
+use App\Support\LocalTime;
 use App\Support\Verification;
 use Carbon\CarbonInterface;
-use Illuminate\Contracts\Database\Query\Builder;
+use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,6 +35,7 @@ class DashboardController extends Controller
             'greeting' => $user->name,
             'role' => $user->role->value,
             'activity' => $this->activity($user),
+            'snapshot' => $this->snapshot($user),
             ...$payload,
         ]);
     }
@@ -48,16 +51,7 @@ class DashboardController extends Controller
      */
     private function activity(User $user): array
     {
-        // A fresh, role-scoped JobApplication query for each aggregate.
-        $scope = match ($user->role) {
-            UserRole::Employer => (function () use ($user): callable {
-                $jobIds = $user->jobListings()->pluck('id')->all();
-
-                return fn () => JobApplication::whereIn('job_listing_id', $jobIds);
-            })(),
-            UserRole::Admin => fn () => JobApplication::query(),
-            default => fn () => JobApplication::where('worker_id', $user->id),
-        };
+        $scope = $this->applicationScope($user);
 
         $ranges = [
             'Daily' => ['count' => 14, 'unit' => 'day'],
@@ -89,7 +83,51 @@ class DashboardController extends Controller
     }
 
     /**
+     * The applications this user's dashboard counts: an employer's are the
+     * ones to their jobs, a karigar's are their own, the admin's are all.
+     * Returns a factory, so every aggregate starts from a fresh query.
+     *
+     * @return Closure(): Builder<JobApplication>
+     */
+    private function applicationScope(User $user): Closure
+    {
+        if ($user->role === UserRole::Employer) {
+            $jobIds = $user->jobListings()->pluck('id')->all();
+
+            return fn () => JobApplication::whereIn('job_listing_id', $jobIds);
+        }
+
+        return $user->role === UserRole::Admin
+            ? fn () => JobApplication::query()
+            : fn () => JobApplication::where('worker_id', $user->id);
+    }
+
+    /**
+     * Where the same applications stand today, for the donut beside the
+     * chart. The parts add up to the total, which the three stat tiles (a
+     * count, a status and a plan name) never did.
+     *
+     * @return array{total: int, segments: array<int, array{label: string, value: int}>}
+     */
+    private function snapshot(User $user): array
+    {
+        $counts = $this->applicationScope($user)()
+            ->toBase()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $segments = array_map(fn (ApplicationStatus $status) => [
+            'label' => $status->label(),
+            'value' => (int) ($counts[$status->value] ?? 0),
+        ], ApplicationStatus::cases());
+
+        return ['total' => array_sum(array_column($segments, 'value')), 'segments' => $segments];
+    }
+
+    /**
      * Build the ordered bucket keys, human labels, and window start for a range.
+     * Periods are the ones on the Indian calendar, not UTC's.
      *
      * @return array{0: array<int, string>, 1: array<int, string>, 2: CarbonInterface}
      */
@@ -98,14 +136,17 @@ class DashboardController extends Controller
         $keys = [];
         $labels = [];
 
+        $now = LocalTime::now();
         // Step back from the start of the current period: on the 31st,
         // now()->subMonths(1) overflows into this month again.
+        $period = fn (int $back) => match ($unit) {
+            'week' => $now->startOfWeek(CarbonInterface::MONDAY)->subWeeks($back),
+            'month' => $now->startOfMonth()->subMonths($back),
+            default => $now->startOfDay()->subDays($back),
+        };
+
         for ($i = $count - 1; $i >= 0; $i--) {
-            $date = match ($unit) {
-                'week' => now()->startOfWeek(CarbonInterface::MONDAY)->subWeeks($i),
-                'month' => now()->startOfMonth()->subMonths($i),
-                default => now()->startOfDay()->subDays($i),
-            };
+            $date = $period($i);
 
             $keys[] = match ($unit) {
                 'month' => $date->format('Y-m'),
@@ -118,29 +159,21 @@ class DashboardController extends Controller
             };
         }
 
-        $start = match ($unit) {
-            'week' => now()->startOfWeek(CarbonInterface::MONDAY)->subWeeks($count - 1),
-            'month' => now()->startOfMonth()->subMonths($count - 1),
-            default => now()->startOfDay()->subDays($count - 1),
-        };
-
-        return [$keys, $labels, $start];
+        // The window opens at local midnight; the column holds UTC.
+        return [$keys, $labels, $period($count - 1)->utc()];
     }
 
     /**
-     * Count rows per truncated time bucket (Postgres date_trunc), keyed by bucket.
+     * Count rows per local day, week or month, keyed by bucket.
      *
+     * @param  Builder<JobApplication>  $query
      * @return array<string, int>
      */
     private function bucketCounts(Builder $query, string $column, string $unit, CarbonInterface $start): array
     {
-        $expr = match ($unit) {
-            'month' => "to_char($column, 'YYYY-MM')",
-            'week' => "to_char(date_trunc('week', $column), 'YYYY-MM-DD')",
-            default => "to_char($column, 'YYYY-MM-DD')",
-        };
+        $expr = LocalTime::bucket($column, $unit);
 
-        return $query->where($column, '>=', $start)
+        return $query->toBase()->where($column, '>=', $start)
             ->selectRaw("$expr as bucket, count(*) as total")
             ->groupByRaw($expr)
             ->pluck('total', 'bucket')

@@ -5,7 +5,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -126,7 +126,8 @@ it('rejects invalid phone numbers', function () {
 });
 
 it('uploads a company logo via the method-spoofed profile update', function () {
-    Storage::fake('public');
+    // Images go to the CDN's storage zone over HTTP, not to a local disk.
+    Http::fake(['storage.bunnycdn.com/*' => Http::response('', 201)]);
     $employer = User::factory()->create(['role' => UserRole::Employer->value]);
 
     $this->actingAs($employer)->post('/employer/profile', [
@@ -136,6 +137,6 @@ it('uploads a company logo via the method-spoofed profile update', function () {
     ])->assertRedirect();
 
     $profile = $employer->employerProfile()->first();
-    expect($profile->logo_path)->not->toBeNull();
-    Storage::disk('public')->assertExists($profile->logo_path);
+    expect($profile->logo_path)->toStartWith('logos/');
+    Http::assertSent(fn ($request) => $request->method() === 'PUT' && str_ends_with($request->url(), '/'.$profile->logo_path));
 });

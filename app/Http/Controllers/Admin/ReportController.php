@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\JobApplication;
 use App\Models\JobListing;
+use App\Models\ScreeningCall;
 use App\Models\User;
+use App\Support\LocalTime;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Date;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -26,24 +29,25 @@ class ReportController extends Controller
 
         $jobs = $this->jobQuery($filters, $from, $to);
 
-        // Every invoiced payment, renewals included.
+        // Every invoiced payment, renewals and AI credit packs included.
         $revenue = Invoice::whereBetween('issued_at', [$from, $to]);
-
-        $monthly = $this->monthlyTrend($filters, $from, $to);
 
         return Inertia::render('admin/Reports', [
             'filters' => $filters,
             'tiles' => [
-                'workers' => User::where('role', 'worker')->whereBetween('created_at', [$from, $to])->count(),
-                'employers' => User::where('role', 'employer')->whereBetween('created_at', [$from, $to])->count(),
+                'workers' => $this->userQuery('worker', $filters, $from, $to)->count(),
+                'employers' => $this->userQuery('employer', $filters, $from, $to)->count(),
                 'jobs' => (clone $jobs)->count(),
-                'applications' => JobApplication::whereBetween('created_at', [$from, $to])
-                    ->whereHas('job', fn ($q) => $this->applyJobFilters($q, $filters))
+                'applications' => $this->applicationQuery($filters)->whereBetween('created_at', [$from, $to])->count(),
+                // Hired in the range, whenever they applied.
+                'hires' => $this->hireQuery($filters, $from, $to)->count(),
+                'aiCalls' => ScreeningCall::whereBetween('created_at', [$from, $to])
+                    ->whereHas('application', fn ($q) => $q->whereHas('job', fn ($j) => $this->applyJobFilters($j, $filters)))
                     ->count(),
                 'revenue' => (clone $revenue)->sum('total_amount'),
                 'gst' => (clone $revenue)->sum('gst_amount'),
             ],
-            'monthly' => $monthly,
+            'monthly' => $this->monthlyTrend($filters, $from, $to),
             'topCities' => (clone $jobs)
                 ->selectRaw("coalesce(city, 'Unknown') as label, count(*) as total")
                 ->groupBy('label')->orderByDesc('total')->limit(8)->get(),
@@ -61,7 +65,7 @@ class ReportController extends Controller
         [$filters, $from, $to] = $this->filters($request);
         $type = $request->validate(['type' => ['required', 'in:jobs,workers,employers,revenue']])['type'];
 
-        $filename = sprintf('%s-report-%s-to-%s.csv', $type, $from->format('Ymd'), $to->format('Ymd'));
+        $filename = sprintf('%s-report-%s-to-%s.csv', $type, str_replace('-', '', $filters['from']), str_replace('-', '', $filters['to']));
 
         return response()->streamDownload(function () use ($type, $filters, $from, $to) {
             $out = fopen('php://output', 'w');
@@ -78,6 +82,9 @@ class ReportController extends Controller
     }
 
     /**
+     * The filters, and the range as the UTC instants the columns hold. The
+     * admin picks Indian calendar days: "17 Nov" runs from 00:00 to 23:59 IST.
+     *
      * @return array{0: array<string, mixed>, 1: CarbonInterface, 2: CarbonInterface}
      */
     private function filters(Request $request): array
@@ -89,13 +96,14 @@ class ReportController extends Controller
             'category' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $from = isset($filters['from']) ? Date::parse($filters['from'])->startOfDay() : now()->subMonths(3)->startOfDay();
-        $to = isset($filters['to']) ? Date::parse($filters['to'])->endOfDay() : now()->endOfDay();
+        $zone = LocalTime::zone();
+        $from = isset($filters['from']) ? CarbonImmutable::parse($filters['from'], $zone)->startOfDay() : LocalTime::now()->subMonths(3)->startOfDay();
+        $to = isset($filters['to']) ? CarbonImmutable::parse($filters['to'], $zone)->endOfDay() : LocalTime::now()->endOfDay();
 
         $filters['from'] = $from->toDateString();
         $filters['to'] = $to->toDateString();
 
-        return [$filters, $from, $to];
+        return [$filters, $from->utc(), $to->utc()];
     }
 
     /**
@@ -121,32 +129,78 @@ class ReportController extends Controller
     }
 
     /**
-     * Month-by-month signups and job posts within the range.
+     * Applications to the jobs the state and category filters leave.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<JobApplication>
+     */
+    private function applicationQuery(array $filters): Builder
+    {
+        return JobApplication::whereHas('job', fn ($q) => $this->applyJobFilters($q, $filters));
+    }
+
+    /**
+     * Karigars taken on in the range: the application was accepted then.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<JobApplication>
+     */
+    private function hireQuery(array $filters, CarbonInterface $from, CarbonInterface $to): Builder
+    {
+        return $this->applicationQuery($filters)
+            ->where('status', ApplicationStatus::Accepted->value)
+            ->whereBetween('status_changed_at', [$from, $to]);
+    }
+
+    /**
+     * Accounts of one role that joined in the range. The state filter reads
+     * the profile's state, the same as the CSV, so the tile and the download
+     * agree. Category does not apply to people.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<User>
+     */
+    private function userQuery(string $role, array $filters, CarbonInterface $from, CarbonInterface $to): Builder
+    {
+        $relation = $role === 'worker' ? 'workerProfile' : 'employerProfile';
+
+        return User::where('role', $role)
+            ->whereBetween('created_at', [$from, $to])
+            ->when($filters['state'] ?? null, fn ($q, $state) => $q->whereHas($relation, fn ($p) => $p->where('state', $state)));
+    }
+
+    /**
+     * Month by month within the range, on the Indian calendar. At most the
+     * latest 12 months of a longer range.
      *
      * @param  array<string, mixed>  $filters
      * @return array<int, array<string, mixed>>
      */
     private function monthlyTrend(array $filters, CarbonInterface $from, CarbonInterface $to): array
     {
+        $zone = LocalTime::zone();
         $months = [];
-        $cursor = $from->copy()->startOfMonth();
+        $cursor = CarbonImmutable::instance($to)->timezone($zone)->startOfMonth();
+        $first = CarbonImmutable::instance($from)->timezone($zone)->startOfMonth();
 
-        while ($cursor <= $to && count($months) < 12) {
-            $start = $cursor->copy();
-            $end = $cursor->copy()->endOfMonth();
-            $end = $end->gt($to) ? $to : $end;
+        while ($cursor >= $first && count($months) < 12) {
+            $start = max($cursor->utc(), CarbonImmutable::instance($from));
+            $end = min($cursor->endOfMonth()->utc(), CarbonImmutable::instance($to));
 
             $months[] = [
-                'label' => $start->format('M y'),
+                'label' => $cursor->format('M y'),
                 'jobs' => $this->jobQuery($filters, $start, $end)->count(),
-                'workers' => User::where('role', 'worker')->whereBetween('created_at', [$start, $end])->count(),
-                'employers' => User::where('role', 'employer')->whereBetween('created_at', [$start, $end])->count(),
+                'workers' => $this->userQuery('worker', $filters, $start, $end)->count(),
+                'employers' => $this->userQuery('employer', $filters, $start, $end)->count(),
+                'applications' => $this->applicationQuery($filters)->whereBetween('created_at', [$start, $end])->count(),
+                'hires' => $this->hireQuery($filters, $start, $end)->count(),
+                'revenue' => (float) Invoice::whereBetween('issued_at', [$start, $end])->sum('total_amount'),
             ];
 
-            $cursor = $cursor->copy()->addMonth();
+            $cursor = $cursor->subMonth();
         }
 
-        return $months;
+        return array_reverse($months);
     }
 
     /**
@@ -163,7 +217,7 @@ class ReportController extends Controller
                     fputcsv($out, [
                         $j->id, $j->title, $j->category, $j->city, $j->state,
                         $j->status->value, $j->vacancies, $j->employer?->name,
-                        $j->created_at?->format('Y-m-d'),
+                        $j->created_at?->timezone(LocalTime::zone())->format('Y-m-d'),
                     ]);
                 }
             });
@@ -178,18 +232,17 @@ class ReportController extends Controller
         fputcsv($out, ['ID', 'Name', 'Phone', 'Email', 'City', 'State', 'Joined']);
 
         $relation = $role === 'worker' ? 'workerProfile' : 'employerProfile';
+        $zone = LocalTime::zone();
 
-        User::where('role', $role)
-            ->whereBetween('created_at', [$from, $to])
-            ->when($filters['state'] ?? null, fn ($q, $state) => $q->whereHas($relation, fn ($p) => $p->where('state', $state)))
+        $this->userQuery($role, $filters, $from, $to)
             ->with($relation)
             ->orderBy('id')
-            ->chunk(500, function ($users) use ($out, $relation) {
+            ->chunk(500, function ($users) use ($out, $relation, $zone) {
                 foreach ($users as $u) {
                     fputcsv($out, [
                         $u->id, $u->name, $u->phone, $u->email,
                         $u->{$relation}?->city, $u->{$relation}?->state,
-                        $u->created_at?->format('Y-m-d'),
+                        $u->created_at?->timezone($zone)->format('Y-m-d'),
                     ]);
                 }
             });
