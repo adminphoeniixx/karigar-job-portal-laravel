@@ -109,6 +109,17 @@ class KycRequirements
     }
 
     /**
+     * Whether this role must send a photo / PDF of every document and the
+     * number of any alternate ID. Employers must (an admin checks them by
+     * hand); a karigar's form stays light. Nobody is asked why a document
+     * is missing any more.
+     */
+    public static function proofRequired(string $role): bool
+    {
+        return $role === 'employer';
+    }
+
+    /**
      * Everything the apps need to build the verification screen, for /reference.
      *
      * @return array<string, mixed>
@@ -124,6 +135,11 @@ class KycRequirements
                 ])
                 ->values(),
             'worker_documents' => self::documentsFor('worker'),
+            // A photo / PDF of each document (none for an Aadhaar verified
+            // through DigiLocker, or a PAN matching it) and an alternate ID's
+            // number: required of employers, optional for karigars.
+            'photo_required' => ['employer' => self::proofRequired('employer'), 'worker' => self::proofRequired('worker')],
+            'alternate_number_required' => ['employer' => self::proofRequired('employer'), 'worker' => self::proofRequired('worker')],
             'documents' => collect(self::DOCUMENTS)
                 ->map(fn (array $doc, string $key) => [
                     'key' => $key,

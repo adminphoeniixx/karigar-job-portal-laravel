@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $aadhaar_doc_path
  * @property string|null $gst_doc_path
  * @property string|null $business_type
- * @property array<string, array{alt_type: string, alt_number: ?string, doc_path: ?string, reason: string}>|null $missing_documents
+ * @property array<string, array{alt_type: string, alt_number: ?string, doc_path: ?string, reason?: ?string}>|null $missing_documents
  * @property bool $has_missing_documents
  * @property array<string, array<string, mixed>>|null $checks
  * @property bool $auto_verified
@@ -157,7 +157,7 @@ class KycDocument extends Model
                         'label' => KycRequirements::ALTERNATES[$doc][$alt['alt_type']] ?? $alt['alt_type'],
                         'number' => $forAdmin ? $alt['alt_number'] : self::mask($alt['alt_number']),
                         'has_file' => ($alt['doc_path'] ?? null) !== null,
-                        'reason' => $alt['reason'],
+                        'reason' => $alt['reason'] ?? null,
                     ],
                     'check' => null,
                 ];

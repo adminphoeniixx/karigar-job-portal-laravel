@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\KycReviewedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -191,7 +192,8 @@ it('leaves a different PAN for the team when there is no registry to ask', funct
     $this->get("/kyc/digilocker/callback?code=AUTH-CODE&state={$reference}");
 
     $this->actingAs($employer, 'sanctum')
-        ->postJson('/api/v1/employer/kyc', individualEmployerKyc('ZZZPK9999Z'))
+        // A PAN DigiLocker does not hold goes to the team, so it needs its photo.
+        ->postJson('/api/v1/employer/kyc', individualEmployerKyc('ZZZPK9999Z') + ['pan_doc' => UploadedFile::fake()->image('pan.jpg')])
         ->assertCreated()
         ->assertJsonPath('kyc.status', 'pending');
 

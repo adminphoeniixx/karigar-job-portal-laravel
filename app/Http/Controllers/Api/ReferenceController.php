@@ -32,8 +32,17 @@ class ReferenceController extends Controller
             'job_categories' => $this->categories(),
             // Skills to suggest once a category is picked on the job form.
             'category_skills' => Category::cachedSkillsMap(),
+            // Job titles ("job profiles") for the job form's title dropdown,
+            // each with the category it belongs to.
+            'job_profiles' => Category::cachedJobProfiles(),
             // Employer-app dropdowns.
             'shifts' => ReferenceData::SHIFTS,
+            // Hours to pre-fill for a day / night shift, how many shifts a
+            // rotational job may list, and a flexible job's hour periods.
+            'shift_defaults' => ReferenceData::SHIFT_DEFAULTS,
+            'max_shift_timings' => ReferenceData::MAX_SHIFT_TIMINGS,
+            'work_hours_periods' => ReferenceData::WORK_HOURS_PERIODS,
+            'genders' => ReferenceData::GENDERS,
             'perks' => ReferenceData::PERKS,
             'contact_modes' => ReferenceData::CONTACT_MODES,
             'industries' => ReferenceData::INDUSTRIES,

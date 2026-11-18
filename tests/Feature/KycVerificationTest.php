@@ -62,14 +62,13 @@ it('takes a worker Aadhaar alone, no PAN', function () {
     $this->getJson('/api/v1/reference')->assertJsonPath('verification.worker_documents', ['aadhaar']);
 });
 
-it('lets a worker without Aadhaar send an alternate ID and a reason instead', function () {
+it('lets a worker without Aadhaar send an alternate ID instead, no reason asked', function () {
     $this->actingAs($this->worker, 'sanctum')
         ->post('/api/v1/kyc', [
             'aadhaar_missing' => '1',
             'aadhaar_alt_type' => 'voter_id',
             'aadhaar_alt_number' => 'XYZ1234567',
             'aadhaar_alt_doc' => photo(),
-            'aadhaar_reason' => 'Never got an Aadhaar',
         ], ['Accept' => 'application/json'])
         ->assertCreated()
         ->assertJsonPath('kyc.has_missing_documents', true)
@@ -79,7 +78,7 @@ it('lets a worker without Aadhaar send an alternate ID and a reason instead', fu
 
     $kyc = $this->worker->fresh()->kyc;
     expect($kyc->aadhaar_number)->toBeNull()
-        ->and($kyc->missing_documents['aadhaar']['reason'])->toBe('Never got an Aadhaar');
+        ->and($kyc->missing_documents['aadhaar']['reason'])->toBeNull();
     Storage::disk('private')->assertExists($kyc->missing_documents['aadhaar']['doc_path']);
 });
 
@@ -89,8 +88,9 @@ it('needs the alternate details when a document is marked missing', function () 
             'aadhaar_missing' => true,
         ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['aadhaar_alt_type', 'aadhaar_alt_doc', 'aadhaar_reason'])
-        ->assertJsonMissingValidationErrors(['aadhaar_number', 'pan_number', 'pan_doc']);
+        ->assertJsonValidationErrors(['aadhaar_alt_type', 'aadhaar_alt_doc'])
+        // A karigar's alternate number stays optional, and no reason is asked.
+        ->assertJsonMissingValidationErrors(['aadhaar_reason', 'aadhaar_alt_number', 'aadhaar_number', 'pan_number', 'pan_doc']);
 });
 
 it('needs a worker Aadhaar number, but not its photo', function () {
@@ -139,12 +139,56 @@ it('asks a proprietor for Aadhaar too, and lets GST be swapped for Udyam', funct
             'gst_alt_type' => 'udyam',
             'gst_alt_number' => 'UDYAM-RJ-17-0012345',
             'gst_alt_doc' => photo(),
-            'gst_reason' => 'Turnover is below the GST limit',
         ], ['Accept' => 'application/json'])
         ->assertCreated()
         ->assertJsonPath('required_documents', ['aadhaar', 'pan', 'gst'])
         ->assertJsonPath('gstin', null)
         ->assertJsonPath('kyc.documents.2.alternate.label', 'Udyam registration');
+});
+
+it('needs an employer to send a photo of every document and the number of an alternate ID', function () {
+    $this->actingAs($this->employer, 'sanctum')
+        ->postJson('/api/v1/employer/kyc', [
+            'business_type' => 'proprietorship',
+            'legal_name' => 'Ramesh Furniture Works',
+            'registered_address' => 'Jodhpur, Rajasthan',
+            'aadhaar_number' => '123456789012',
+            'pan_number' => 'ABCPR1234K',
+            'gst_missing' => true,
+            'gst_alt_type' => 'udyam',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['aadhaar_doc', 'pan_doc', 'gst_alt_number', 'gst_alt_doc'])
+        ->assertJsonMissingValidationErrors(['gst_reason'])
+        ->assertJsonPath('errors.pan_doc.0', 'Upload a photo or PDF of this document.');
+
+    $this->getJson('/api/v1/reference')
+        ->assertJsonPath('verification.photo_required', ['employer' => true, 'worker' => false])
+        ->assertJsonPath('verification.alternate_number_required', ['employer' => true, 'worker' => false]);
+});
+
+it('does not ask an employer to upload a photo again that is already on file', function () {
+    Storage::disk('private')->put('kyc/pan.jpg', 'pan');
+    Storage::disk('private')->put('kyc/gst.jpg', 'gst');
+    $this->employer->kyc()->create([
+        'business_type' => 'private_limited',
+        'pan_number' => 'AAFCS1234K',
+        'pan_doc_path' => 'kyc/pan.jpg',
+        'gst_doc_path' => 'kyc/gst.jpg',
+        'status' => KycStatus::Rejected,
+    ]);
+
+    $this->actingAs($this->employer, 'sanctum')
+        ->postJson('/api/v1/employer/kyc', [
+            'business_type' => 'private_limited',
+            'legal_name' => 'Sri Sai Interiors Pvt Ltd',
+            'registered_address' => '12 MG Road, Bengaluru 560001',
+            'pan_number' => 'AAFCS1234K',
+            'gstin' => '29AAFCS1234K1Z5',
+        ])
+        ->assertCreated();
+
+    expect($this->employer->fresh()->kyc->pan_doc_path)->toBe('kyc/pan.jpg');
 });
 
 it('rejects a GSTIN that does not carry the PAN given', function () {
@@ -207,8 +251,8 @@ it('shows the admin full PAN and the alternate document, and tells the user the 
         'registered_address' => 'Jaipur, Rajasthan',
         'aadhaar_missing' => '1',
         'aadhaar_alt_type' => 'ration_card',
+        'aadhaar_alt_number' => 'RJ-0123456789',
         'aadhaar_alt_doc' => photo(),
-        'aadhaar_reason' => 'Aadhaar lost in a flood',
         'pan_number' => 'ABCDE1234F',
         'pan_doc' => photo(),
     ], ['Accept' => 'application/json'])->assertCreated();
@@ -240,7 +284,6 @@ it('lets the admin approve a karigar who sent an alternate ID for Aadhaar', func
         'aadhaar_missing' => '1',
         'aadhaar_alt_type' => 'ration_card',
         'aadhaar_alt_doc' => photo(),
-        'aadhaar_reason' => 'Aadhaar lost in a flood',
     ], ['Accept' => 'application/json'])->assertCreated();
 
     $kyc = KycDocument::first();

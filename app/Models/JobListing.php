@@ -24,6 +24,12 @@ use Throwable;
  * @property int|null $experience_max
  * @property string|null $shift_start
  * @property string|null $shift_end
+ * @property list<array{start: string, end: string}>|null $shift_timings
+ * @property int|null $work_hours
+ * @property string|null $work_hours_period
+ * @property string|null $core_start
+ * @property string|null $core_end
+ * @property string|null $gender
  * @property string|null $contact_name
  * @property string|null $contact_designation
  * @property int|null $reposted_from_id
@@ -57,7 +63,8 @@ class JobListing extends Model
         'address', 'city', 'state', 'latitude', 'longitude', 'work_mode', 'interview_mode',
         'vacancies', 'experience_min', 'experience_max', 'status', 'published_at', 'expires_at',
         'contact_mode', 'contact_phone', 'contact_name', 'contact_designation',
-        'shift', 'shift_start', 'shift_end', 'perks', 'reposted_from_id',
+        'shift', 'shift_start', 'shift_end', 'shift_timings', 'work_hours', 'work_hours_period', 'core_start', 'core_end',
+        'gender', 'perks', 'reposted_from_id',
         'requires_worker_fee', 'worker_fee_amount',
         'ai_shortlist_enabled', 'ai_call_enabled',
         'boost_tier', 'boosted_until',
@@ -69,6 +76,8 @@ class JobListing extends Model
         return [
             'skills' => 'array',
             'perks' => 'array',
+            'shift_timings' => 'array',
+            'work_hours' => 'integer',
             'experience_min' => 'integer',
             'experience_max' => 'integer',
             'views_count' => 'integer',
@@ -157,17 +166,102 @@ class JobListing extends Model
     }
 
     /**
-     * The shift's hours, "9:00 AM – 6:00 PM", or null without them.
+     * The job's hours in one line, or null without any:
+     * day / night "9:00 AM – 6:00 PM";
+     * rotational "1st 6:00 AM – 2:00 PM · 2nd 2:00 PM – 10:00 PM";
+     * flexible "8 hrs/day · Core 12:00 PM – 4:00 PM".
      */
     public function shiftHoursLabel(): ?string
     {
+        $range = fn (string $start, string $end): string => self::time12($start).' – '.self::time12($end);
+
+        if ($this->shift === 'rotational' && filled($this->shift_timings)) {
+            return collect($this->shift_timings)
+                ->values()
+                ->map(fn (array $t, int $i) => self::ordinal($i + 1).' '.$range($t['start'], $t['end']))
+                ->join(' · ');
+        }
+
+        if ($this->shift === 'flexible' && ($this->work_hours || $this->core_start)) {
+            return collect([
+                $this->work_hours
+                    ? ($this->work_hours_period === 'week'
+                        ? __(':count hrs/week', ['count' => $this->work_hours])
+                        : __(':count hrs/day', ['count' => $this->work_hours]))
+                    : null,
+                $this->core_start && $this->core_end
+                    ? __('Core :range', ['range' => $range($this->core_start, $this->core_end)])
+                    : null,
+            ])->filter()->join(' · ');
+        }
+
         if (! $this->shift_start || ! $this->shift_end) {
             return null;
         }
 
-        $format = fn (string $time): string => Carbon::createFromFormat('H:i', $time)->format('g:i A');
+        return $range($this->shift_start, $this->shift_end);
+    }
 
-        return $format($this->shift_start).' – '.$format($this->shift_end);
+    /**
+     * Each shift of a rotational job with its name, for the apps to list:
+     * [{"name": "1st shift", "start": "06:00", "end": "14:00", "label": "6:00 AM – 2:00 PM"}].
+     *
+     * @return list<array{name: string, start: string, end: string, label: string}>
+     */
+    public function shiftTimingsList(): array
+    {
+        if ($this->shift !== 'rotational') {
+            return [];
+        }
+
+        return collect($this->shift_timings ?? [])
+            ->values()
+            ->map(fn (array $t, int $i) => [
+                'name' => __(':nth shift', ['nth' => self::ordinal($i + 1)]),
+                'start' => $t['start'],
+                'end' => $t['end'],
+                'label' => self::time12($t['start']).' – '.self::time12($t['end']),
+            ])
+            ->all();
+    }
+
+    public function genderLabel(): ?string
+    {
+        return $this->gender !== null ? self::genderLabelFor($this->gender) : null;
+    }
+
+    public static function genderLabelFor(string $gender): ?string
+    {
+        return match ($gender) {
+            'male' => __('Male'),
+            'female' => __('Female'),
+            'both' => __('Male & female'),
+            default => null,
+        };
+    }
+
+    /** `shift_hours_label`, for the web pages that send the model as it is (forPublicPage). */
+    public function getShiftHoursLabelAttribute(): ?string
+    {
+        return $this->shiftHoursLabel();
+    }
+
+    /** `gender_label`, likewise. */
+    public function getGenderLabelAttribute(): ?string
+    {
+        return $this->genderLabel();
+    }
+
+    private static function time12(string $time): string
+    {
+        return Carbon::createFromFormat('H:i', $time)->format('g:i A');
+    }
+
+    private static function ordinal(int $n): string
+    {
+        $suffix = in_array($n % 100, [11, 12, 13], true) ? 'th' : (['th', 'st', 'nd', 'rd'][$n % 10] ?? 'th');
+
+        return $n.$suffix;
     }
 
     public const WORK_ON_SITE = 'on_site';
@@ -286,6 +380,9 @@ class JobListing extends Model
         if ($this->contact_mode === 'apply') {
             $this->makeHidden(['contact_phone', 'contact_name', 'contact_designation']);
         }
+
+        // The hours in one line, whatever the shift type, and who it is for.
+        $this->append(['shift_hours_label', 'gender_label']);
 
         if ($this->relationLoaded('employer')) {
             $this->employer?->unsetRelation('kyc');

@@ -83,6 +83,10 @@ One call the app can cache on first launch:
   "education_levels": [...], "job_categories": [...],
   "wage_types": ["monthly"],                 // wages are monthly only
   "shifts": ["day", "night", "rotational", "flexible"],
+  "shift_defaults": { "day": { "start": "09:00", "end": "18:00" }, "night": { "start": "21:00", "end": "06:00" } },
+  "max_shift_timings": 6, "work_hours_periods": ["day", "week"],
+  "genders": ["male", "female", "both"],
+  "job_profiles": [ { "title": "Tailor", "category": "Tailoring" }, ... ],
   "perks": ["Food", "Accommodation", "Travel allowance", "Bonus", "Overtime pay", "Weekly off"],
   "contact_modes": ["apply", "call", "both"],
   "industries": ["Construction & Real Estate", "Interiors & Furnishing", ...],
@@ -158,9 +162,17 @@ Create/update the business profile — also how the registration wizard finishes
   "hiring_categories": ["Plumbing", "Electrical"],
   "phone": "9876543210", "about": "...", "address": "...",
   "city": "Chennai", "state": "Tamil Nadu", "latitude": 13.08, "longitude": 80.27,
-  "gstin": "22ABCDE1234F1Z5" }
+  "gstin": "22ABCDE1234F1Z5",
+  "finish": true }                            // only from "Finish setup" (see below)
 // 200 → { "data": EmployerProfileResource }
 ```
+**`finish: true`** (from the last sign-up step's "Finish setup" only, never
+"Skip for now" or Edit profile): the profile must then have `name`,
+`hiring_as`, `company_name` (not for `individual`), `industry`, at least one
+`hiring_categories`, `city` and `state`, sent now or saved by an earlier step.
+Otherwise you get a 422 with one error per missing field. See
+[`app-updates/2026-11-18/employer-finish-setup-needs-whole-profile.md`](app-updates/2026-11-18/employer-finish-setup-needs-whole-profile.md).
+
 Limits: `about` ≤2000, `address` ≤500, `hiring_categories` ≤20 items,
 `gstin` exactly 15 chars matching `22ABCDE1234F1Z5`, `email` unique across users.
 Setting a real `email` here is what makes transactional email actually reach the
@@ -188,6 +200,10 @@ not parse multipart bodies on PUT/PATCH. Images go to BunnyCDN.
   "interview_mode": "remote", "interview_mode_label": "Interview on phone / video",
   "vacancies": 3, "experience_min": 1, "experience_max": 5, "experience_label": "1–5 yrs",
   "shift": "day", "shift_start": "09:00", "shift_end": "18:00", "shift_hours_label": "9:00 AM – 6:00 PM",
+  "shift_timings": [],                          // rotational: [{ "name": "1st shift", "start", "end", "label" }, …]
+  "work_hours": null, "work_hours_period": null, // flexible: 8, "day" | "week"
+  "core_start": null, "core_end": null,          // flexible: optional core window
+  "gender": "both", "gender_label": "Male & female",  // male | female | both | null
   "perks": [...],
   "contact_mode": "both", "contact_phone": "9876543210",
   "contact_name": "Ramesh Kumar", "contact_designation": "Supervisor",
@@ -223,6 +239,19 @@ let the employer edit after choosing. With no AI key configured (or the provider
 down) you get **one** template-built draft instead, so always render whatever
 length the array is. Same wording returns cached drafts for a day.
 
+### `GET /employer/jobs/suggest-category?title=Need blouse tailor`
+The category and skills a job title suggests: call it when a job profile is
+picked (see `job_profiles` in form-options) or after a custom title is typed.
+Instant word matching, no AI, 60/min.
+```json
+{ "suggestion": { "category": "Tailoring", "job_profile": "Blouse Tailor",
+                  "skills": ["Blouse stitching", "Cutting", "Stitching", ...] } }
+```
+`suggestion` is `null` when nothing fits, or two crafts fit equally. Fill the
+category only if the employer has not picked one. Pre-add the first 3 skills as
+removable tags only when the skill box is empty. See
+[`app-updates/2026-11-18/employer-job-profiles-suggest-category-and-skills.md`](app-updates/2026-11-18/employer-job-profiles-suggest-category-and-skills.md).
+
 ### `GET /employer/jobs/{job}` → `{ "data": EmployerJobResource }`
 
 ### `POST /employer/jobs`
@@ -241,6 +270,9 @@ and emails the employer a confirmation.
   "work_mode": "both", "interview_mode": "remote",
   "vacancies": 3, "experience_min": 1, "experience_max": 5,
   "shift": "day", "shift_start": "09:00", "shift_end": "18:00",
+  // rotational instead: "shift_timings": [{ "start": "06:00", "end": "14:00" }, …] (1–6)
+  // flexible instead:   "work_hours": 8, "work_hours_period": "day", "core_start": "12:00", "core_end": "16:00"
+  "gender": "both",                             // optional: male | female | both
   "perks": ["ESI", "PF", "Diwali bonus"],       // any perk; the list is only suggestions
   "contact_mode": "both", "contact_phone": "9876543210",
   "contact_name": "Ramesh Kumar", "contact_designation": "Supervisor",
@@ -255,7 +287,12 @@ Rules: `title` required ≤255 · `description` required ≤5000 ·
 `wage_type` is `monthly` (wages are per month; a `daily` or `hourly` figure sent by an older build is stored ×26 / ×208 as monthly) · `wage_max` ≥ `wage_min` ·
 `experience_min` / `experience_max` 0–60, max ≥ min · `shift` in
 day/night/rotational/flexible · `shift_start` / `shift_end` `"HH:MM"` 24-hour,
-both or neither (a night shift may end before it starts) · `perks.*` any text
+both or neither (a night shift may end before it starts) · rotational
+`shift_timings` 1–6 rows, each `start` + `end`, never equal · flexible
+`work_hours` 1–24 (`work_hours_period: day`, the default) or 1–168 (`week`),
+`core_start` + `core_end` together, need `work_hours`, and the window must fit
+in one day's hours (weekly ÷ 6 days) · changing the shift type drops the
+previous type's fields · `gender` in male/female/both · `perks.*` any text
 ≤40 chars, ≤15 perks (trimmed, repeats dropped) · `skills.*` ≤30 items ·
 `address` ≤255 · `work_mode` in on_site/remote/both (where the karigar works:
 the employer's place, their own home, or either; left out → `on_site`, or what
@@ -292,7 +329,13 @@ What the Post Job form offers:
 ```json
 { "category_skills": { "Weaving": ["Handloom weaving", "Powerloom operation", "Dyeing", ...], ... },
   "perks": ["ESI", "PF", "Food", "Accommodation", ..., "Diwali bonus"],
+  "job_profiles": [ { "title": "Tailor", "category": "Tailoring" }, { "title": "Darzi", "category": "Tailoring" }, ... ],
   "shifts": ["day", "night", "rotational", "flexible"],
+  "shift_defaults": { "day": { "start": "09:00", "end": "18:00" }, "night": { "start": "21:00", "end": "06:00" } },
+  "max_shift_timings": 6,
+  "work_hours_periods": ["day", "week"],
+  "genders": [ { "value": "male", "label": "Male" }, { "value": "female", "label": "Female" },
+               { "value": "both", "label": "Male & female" } ],
   "work_modes": [ { "value": "on_site", "label": "On-site" },
                   { "value": "remote", "label": "Work from home" },
                   { "value": "both", "label": "On-site or from home" } ],
@@ -937,8 +980,12 @@ the admin switch, not an error; hide the screens instead of showing "not found".
 - `GET /employer/kyc` → `{ business, gstin, required_documents, kyc, verification, digilocker, auto_verification_enabled }`
 - `POST /employer/kyc` (multipart) → `business_type`, `legal_name`,
   `registered_address` + per document either `{number}` + `{doc}_doc` (photo
-  **optional**), or `{doc}_missing=1` + `{doc}_alt_type` / `{doc}_alt_number` /
-  `{doc}_alt_doc` / `{doc}_reason`.
+  **required** since 2026-11-18, except an Aadhaar verified through DigiLocker,
+  a PAN matching DigiLocker, or a photo already on file), or `{doc}_missing=1`
+  + `{doc}_alt_type` / `{doc}_alt_number` (**required**) / `{doc}_alt_doc`. No
+  reason is asked (`{doc}_reason` is optional and ignored if empty).
+  `GET /reference` → `verification.photo_required` /
+  `alternate_number_required` say this per role.
 - PAN and GSTIN are checked against government records on submit. When every
   document checks out and the names agree, the answer is already
   `kyc.status: "verified"` and `verification.can_post_jobs: true`. An unknown

@@ -29,7 +29,9 @@ interface Job {
     expires_at: string | null;
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
-    shift: 'day' | 'night' | 'rotational' | null;
+    shift: 'day' | 'night' | 'rotational' | 'flexible' | null;
+    shift_hours_label?: string | null;
+    gender?: 'male' | 'female' | 'both' | null;
     work_mode?: 'on_site' | 'remote' | 'both';
     interview_mode?: 'on_site' | 'remote';
     shift_start?: string | null;
@@ -92,7 +94,8 @@ const submitApply = () => {
 
 const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserveScroll: true });
 
-const shiftLabel: Record<string, string> = { day: 'jobs.dayShift', night: 'jobs.nightShift', rotational: 'jobs.rotationalShift' };
+const shiftLabel: Record<string, string> = { day: 'jobs.dayShift', night: 'jobs.nightShift', rotational: 'jobs.rotationalShift', flexible: 'jobs.flexibleShift' };
+const genderLabel: Record<string, string> = { male: 'jobs.genderMale', female: 'jobs.genderFemale', both: 'jobs.genderBoth' };
 // Where the work is done and how the interview is held (older jobs: on-site).
 const workModeLabel: Record<string, string> = { on_site: 'jobs.workOnSite', remote: 'jobs.workRemote', both: 'jobs.workBoth' };
 const interviewModeLabel: Record<string, string> = { on_site: 'jobs.interviewOnSite', remote: 'jobs.interviewRemote' };
@@ -103,7 +106,9 @@ const hour12 = (time: string): string => {
     const [h, m] = time.split(':').map(Number);
     return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
 };
-const shiftHours = props.job.shift_start && props.job.shift_end ? `${hour12(props.job.shift_start)} – ${hour12(props.job.shift_end)}` : null;
+// The server's one-line hours cover every shift type (rotational shifts, flexible hours).
+const shiftHours =
+    props.job.shift_hours_label ?? (props.job.shift_start && props.job.shift_end ? `${hour12(props.job.shift_start)} – ${hour12(props.job.shift_end)}` : null);
 
 // The experience asked for: "2–5", "2+", "0–3"; null when the job does not say.
 const experienceRange = (() => {
@@ -154,6 +159,7 @@ const fmtDate = (iso: string | null): string =>
                         <span class="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300"><House class="size-3.5" /> {{ $t(workModeLabel[job.work_mode ?? 'on_site']) }}</span>
                         <span class="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300"><component :is="job.interview_mode === 'remote' ? Video : Handshake" class="size-3.5" /> {{ $t(interviewModeLabel[job.interview_mode ?? 'on_site']) }}</span>
                         <span v-if="job.shift" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Sun class="size-3.5" /> {{ $t(shiftLabel[job.shift]) }}<template v-if="shiftHours"> · {{ shiftHours }}</template></span>
+                        <span v-if="job.gender" class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-600 dark:text-sky-300"><Users class="size-3.5" /> {{ $t(genderLabel[job.gender]) }}</span>
                         <span v-if="experienceRange || freshersWelcome" class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-600 dark:text-sky-300">{{ $t('jobs.experience') }}: {{ freshersWelcome ? $t('jobs.freshersWelcome') : `${experienceRange} ${$t('jobs.yrs')}` }}</span>
                         <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Wallet class="size-3.5" /> {{ $t('jobs.joiningFee') }}: ₹{{ rupees(job.worker_fee_amount) }}</span>
                         <span v-else class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300"><BadgeCheck class="size-3.5" /> {{ $t('jobs.noFee') }}</span>

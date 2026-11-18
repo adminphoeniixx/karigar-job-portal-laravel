@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +15,7 @@ class CategoryController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/Categories', [
-            'categories' => Category::orderBy('name')->get(['id', 'name', 'slug', 'skills', 'is_active']),
+            'categories' => Category::orderBy('name')->get(['id', 'name', 'slug', 'skills', 'job_titles', 'is_active']),
         ]);
     }
 
@@ -41,10 +40,15 @@ class CategoryController extends Controller
             'skills' => ['sometimes', 'array', 'max:30'],
             // A blank tag arrives as null; it is dropped below, not refused.
             'skills.*' => ['nullable', 'string', 'max:50'],
+            // Job titles offered on the job form; picking one suggests this category.
+            'job_titles' => ['sometimes', 'array', 'max:40'],
+            'job_titles.*' => ['nullable', 'string', 'max:60'],
         ]);
 
-        if (array_key_exists('skills', $data)) {
-            $data['skills'] = collect($data['skills'])->map(fn ($s) => trim((string) $s))->filter()->unique()->values()->all();
+        foreach (['skills', 'job_titles'] as $list) {
+            if (array_key_exists($list, $data)) {
+                $data[$list] = collect($data[$list])->map(fn ($s) => trim((string) $s))->filter()->unique()->values()->all();
+            }
         }
 
         $category->update($data);
@@ -63,7 +67,6 @@ class CategoryController extends Controller
 
     private function flush(): void
     {
-        Cache::forget(Category::CACHE_KEY);
-        Cache::forget(Category::SKILLS_CACHE_KEY);
+        Category::flushCache();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Services\Geocoder;
 use App\Support\ReferenceData;
 use App\Support\Wage;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -63,6 +64,8 @@ class JobListingRequest extends FormRequest
                 ->all()]);
         }
 
+        $this->prepareSchedule();
+
         // Wages are monthly. One sent per day or per hour, as older app builds
         // do, is stored as its monthly amount.
         $period = $this->input('wage_type');
@@ -115,10 +118,23 @@ class JobListingRequest extends FormRequest
             'vacancies' => ['required', 'integer', 'min:1', 'max:10000'],
             'experience_min' => ['nullable', 'integer', 'min:0', 'max:60'],
             'experience_max' => ['nullable', 'integer', 'min:0', 'max:60', 'gte:experience_min'],
+            // male | female | both
+            'gender' => ['nullable', 'string', Rule::in(ReferenceData::GENDERS)],
             'shift' => ['nullable', 'string', 'in:'.implode(',', ReferenceData::SHIFTS)],
-            // The shift's hours, "HH:MM" 24-hour; a night shift may end before it starts.
+            // A day / night shift's hours, "HH:MM" 24-hour; a night shift may end before it starts.
             'shift_start' => ['nullable', 'date_format:H:i', 'required_with:shift_end'],
             'shift_end' => ['nullable', 'date_format:H:i', 'required_with:shift_start'],
+            // Rotational: each shift's hours, 1st shift first.
+            'shift_timings' => ['nullable', 'array', 'min:1', 'max:'.ReferenceData::MAX_SHIFT_TIMINGS],
+            'shift_timings.*' => ['array:start,end'],
+            'shift_timings.*.start' => ['required', 'date_format:H:i'],
+            'shift_timings.*.end' => ['required', 'date_format:H:i', 'different:shift_timings.*.start'],
+            // Flexible: total hours per day or per week, and an optional core
+            // window when the karigar must be available, inside those hours.
+            'work_hours' => ['nullable', 'integer', 'min:1', $this->input('work_hours_period') === 'week' ? 'max:168' : 'max:24', 'required_with:core_start,core_end'],
+            'work_hours_period' => ['nullable', 'string', Rule::in(ReferenceData::WORK_HOURS_PERIODS), 'required_with:work_hours'],
+            'core_start' => ['nullable', 'date_format:H:i', 'required_with:core_end'],
+            'core_end' => ['nullable', 'date_format:H:i', 'required_with:core_start', 'different:core_start'],
             // Any perk: ReferenceData::PERKS are only suggestions.
             'perks' => ['nullable', 'array', 'max:15'],
             'perks.*' => ['string', 'max:40'],
@@ -136,5 +152,98 @@ class JobListingRequest extends FormRequest
             'status' => ['required', 'string', 'in:draft,active,closed'],
             'expires_at' => ['nullable', 'date', 'after:today'],
         ];
+    }
+
+    /**
+     * A flexible job's core window must fit inside its working hours: 4 core
+     * hours on an 8 hrs/day job, not 10.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($validator->errors()->hasAny(['work_hours', 'work_hours_period', 'core_start', 'core_end'])) {
+                return;
+            }
+
+            $start = $this->input('core_start');
+            $end = $this->input('core_end');
+            $hours = $this->input('work_hours');
+
+            if (! is_string($start) || ! is_string($end) || ! is_numeric($hours)) {
+                return;
+            }
+
+            $perDay = $this->input('work_hours_period') === 'week'
+                ? $hours / ReferenceData::WORK_DAYS_PER_WEEK
+                : (float) $hours;
+            $core = self::minutesBetween($start, $end) / 60;
+
+            if ($core > $perDay + 1e-9) {
+                $validator->errors()->add('core_end', __('Core hours (:core hrs) cannot be more than the working hours in a day (:hours hrs).', [
+                    'core' => round($core, 1),
+                    'hours' => round($perDay, 1),
+                ]));
+            }
+        });
+    }
+
+    /**
+     * Minutes from one "HH:MM" to the next, past midnight if the end is earlier.
+     */
+    public static function minutesBetween(string $start, string $end): int
+    {
+        [$sh, $sm] = array_map('intval', explode(':', $start));
+        [$eh, $em] = array_map('intval', explode(':', $end));
+        $minutes = ($eh * 60 + $em) - ($sh * 60 + $sm);
+
+        return $minutes <= 0 ? $minutes + 24 * 60 : $minutes;
+    }
+
+    /**
+     * Keeps only the hours that belong to the shift picked: a day job loses
+     * any rotational timings or flexible hours left over from an earlier
+     * choice. Fields an older app build does not know about are left alone,
+     * so its edit does not wipe what a newer build saved. A flexible job's
+     * hours default to per day.
+     */
+    private function prepareSchedule(): void
+    {
+        if (! $this->has('shift')) {
+            return;
+        }
+
+        $shift = $this->input('shift');
+        $merge = [];
+
+        if (is_array($this->input('shift_timings'))) {
+            $merge['shift_timings'] = array_values(array_filter(
+                $this->input('shift_timings'),
+                fn ($timing) => ! is_array($timing) || filled($timing['start'] ?? null) || filled($timing['end'] ?? null),
+            )) ?: null;
+        }
+
+        if ($shift !== 'rotational') {
+            $merge['shift_timings'] = null;
+        } elseif (filled($merge['shift_timings'] ?? null)) {
+            // The list replaces the single pair of times.
+            $merge['shift_start'] = null;
+            $merge['shift_end'] = null;
+        }
+
+        if ($shift !== 'flexible') {
+            $merge += ['work_hours' => null, 'work_hours_period' => null, 'core_start' => null, 'core_end' => null];
+        } else {
+            if ($this->filled('work_hours') && ! $this->filled('work_hours_period')) {
+                $merge['work_hours_period'] = 'day';
+            }
+
+            if ($this->has('work_hours') || $this->has('core_start')) {
+                // No fixed shift: the hours and the core window say it all.
+                $merge['shift_start'] = null;
+                $merge['shift_end'] = null;
+            }
+        }
+
+        $this->merge($merge);
     }
 }

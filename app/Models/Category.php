@@ -12,6 +12,8 @@ use Illuminate\Support\Str;
  * @property string $slug
  * @property bool $is_active
  * @property int $sort_order
+ * @property list<string>|null $skills
+ * @property list<string>|null $job_titles
  */
 class Category extends Model
 {
@@ -21,11 +23,14 @@ class Category extends Model
     /** Cache key of {@see cachedSkillsMap()}; forgotten with CACHE_KEY. */
     public const SKILLS_CACHE_KEY = 'categories.skills';
 
-    protected $fillable = ['name', 'slug', 'skills', 'is_active', 'sort_order'];
+    /** Cache key of {@see cachedJobProfiles()}; forgotten with CACHE_KEY. */
+    public const JOB_PROFILES_CACHE_KEY = 'categories.job_profiles';
+
+    protected $fillable = ['name', 'slug', 'skills', 'job_titles', 'is_active', 'sort_order'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'skills' => 'array'];
+        return ['is_active' => 'boolean', 'skills' => 'array', 'job_titles' => 'array'];
     }
 
     protected static function booted(): void
@@ -84,5 +89,35 @@ class Category extends Model
             ->get(['name', 'skills'])
             ->mapWithKeys(fn (Category $category) => [$category->name => array_values($category->skills ?? [])])
             ->all());
+    }
+
+    /**
+     * Every job title ("job profile") of the active categories, with its
+     * category, in category order: the job form's title dropdown. Cached as
+     * plain arrays; the admin controller forgets it with the rest.
+     *
+     * @return list<array{title: string, category: string}>
+     */
+    public static function cachedJobProfiles(): array
+    {
+        return Cache::rememberForever(self::JOB_PROFILES_CACHE_KEY, fn () => static::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['name', 'job_titles'])
+            ->flatMap(fn (Category $category) => collect($category->job_titles ?? [])
+                ->map(fn (string $title) => ['title' => $title, 'category' => $category->name]))
+            ->values()
+            ->all());
+    }
+
+    /**
+     * Forgets every cached list, after any category changes.
+     */
+    public static function flushCache(): void
+    {
+        Cache::forget(self::CACHE_KEY);
+        Cache::forget(self::SKILLS_CACHE_KEY);
+        Cache::forget(self::JOB_PROFILES_CACHE_KEY);
     }
 }

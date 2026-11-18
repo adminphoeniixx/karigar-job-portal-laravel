@@ -23,7 +23,7 @@ interface DocSummary {
     missing: boolean;
     number: string | null;
     has_file: boolean;
-    alternate: { type: string; label: string; number: string | null; has_file: boolean; reason: string } | null;
+    alternate: { type: string; label: string; number: string | null; has_file: boolean; reason: string | null } | null;
     check: DocCheck | null;
 }
 
@@ -82,7 +82,6 @@ const form = useForm<Record<string, string | boolean | File | null>>({
                 [`${d}_alt_type`, ''],
                 [`${d}_alt_number`, ''],
                 [`${d}_alt_doc`, null],
-                [`${d}_reason`, previous?.alternate?.reason ?? ''],
             ];
         }),
     ),
@@ -319,7 +318,7 @@ const submit = () =>
                         <InputError :message="err(spec.number_field)" />
                     </div>
                     <div class="grid gap-2">
-                        <Label>Photo / PDF <span class="font-normal text-muted-foreground">(optional)</span></Label>
+                        <Label>Photo / PDF <span v-if="!isEmployer" class="font-normal text-muted-foreground">(optional)</span></Label>
                         <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed bg-muted/30 px-4 py-2.5 text-xs transition hover:border-orange-500/50">
                             <Upload class="size-4 text-orange-500" />
                             <span class="truncate">{{ fileName(`${spec.key}_doc`) ?? (hasStoredFile(spec.key, false) ? 'On file — upload to replace' : 'Upload image / PDF') }}</span>
@@ -345,7 +344,7 @@ const submit = () =>
                             <InputError :message="err(`${spec.key}_alt_type`)" />
                         </div>
                         <div class="grid gap-2">
-                            <Label>Its number (optional)</Label>
+                            <Label>Its number <span v-if="!isEmployer" class="font-normal text-muted-foreground">(optional)</span></Label>
                             <Input v-model="form[`${spec.key}_alt_number`] as string" />
                             <InputError :message="err(`${spec.key}_alt_number`)" />
                         </div>
@@ -358,11 +357,6 @@ const submit = () =>
                             <input type="file" accept=".jpg,.jpeg,.png,.pdf" class="hidden" @change="onFile(`${spec.key}_alt_doc`, $event)" />
                         </label>
                         <InputError :message="err(`${spec.key}_alt_doc`)" />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label>Why don't you have it?</Label>
-                        <textarea v-model="form[`${spec.key}_reason`] as string" rows="2" class="rounded-md border bg-background px-3 py-2 text-sm" />
-                        <InputError :message="err(`${spec.key}_reason`)" />
                     </div>
                 </div>
             </section>

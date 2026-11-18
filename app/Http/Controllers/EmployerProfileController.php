@@ -27,7 +27,7 @@ class EmployerProfileController extends Controller
     {
         $user = $request->user();
         $profile = $user->employerProfile()->firstOrCreate([]);
-        $profile->fill($request->safe()->except('logo', 'email'));
+        $profile->fill($request->safe()->except('logo', 'email', 'finish'));
 
         if ($request->filled('email')) {
             $user->email = $request->validated('email');

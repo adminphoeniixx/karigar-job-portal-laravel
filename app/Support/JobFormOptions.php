@@ -55,14 +55,21 @@ final class JobFormOptions
     }
 
     /**
-     * @return array{category_skills: array<string, list<string>>, perks: list<string>, shifts: list<string>, ai: array<string, mixed>}
+     * @return array<string, mixed>
      */
     public static function for(User $account): array
     {
         return [
             'category_skills' => Category::cachedSkillsMap(),
             'perks' => self::perks($account),
+            // Job titles for the title dropdown, each with the category it
+            // suggests; a title typed instead goes to suggest-category.
+            'job_profiles' => Category::cachedJobProfiles(),
             'shifts' => ReferenceData::SHIFTS,
+            'shift_defaults' => ReferenceData::SHIFT_DEFAULTS,
+            'max_shift_timings' => ReferenceData::MAX_SHIFT_TIMINGS,
+            'work_hours_periods' => ReferenceData::WORK_HOURS_PERIODS,
+            'genders' => array_map(fn (string $gender) => ['value' => $gender, 'label' => JobListing::genderLabelFor($gender)], ReferenceData::GENDERS),
             // Where the work is done and how the interview is held, with the
             // label to show for each value.
             'work_modes' => array_map(fn (string $mode) => ['value' => $mode, 'label' => JobListing::workModeLabelFor($mode)], ReferenceData::WORK_MODES),

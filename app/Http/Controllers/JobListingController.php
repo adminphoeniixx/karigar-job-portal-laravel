@@ -13,6 +13,7 @@ use App\Support\EmployerVerification;
 use App\Support\JobAnnouncer;
 use App\Support\JobFormOptions;
 use App\Support\JobModeration;
+use App\Support\JobProfileMatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -68,6 +69,7 @@ class JobListingController extends Controller
             // Why the job cannot go live yet (business verification), if so.
             'verificationBlock' => EmployerVerification::blockMessage($account),
             'categorySkills' => $options['category_skills'],
+            'jobProfiles' => $options['job_profiles'],
             'perkOptions' => $options['perks'],
             'aiOptions' => $options['ai'],
         ]);
@@ -111,6 +113,21 @@ class JobListingController extends Controller
                 $data['language'] ?? 'en',
             ),
         ]);
+    }
+
+    /**
+     * The category and skills a job title suggests (the API's twin). Web
+     * validation would redirect, so the 422 is built here.
+     */
+    public function suggestCategory(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), ['title' => ['required', 'string', 'max:255']]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        return response()->json(['suggestion' => JobProfileMatcher::suggest((string) $request->input('title'))]);
     }
 
     public function store(JobListingRequest $request): RedirectResponse
@@ -194,6 +211,7 @@ class JobListingController extends Controller
                 ? EmployerVerification::blockMessage($request->user()->employerAccount())
                 : null,
             'categorySkills' => $options['category_skills'],
+            'jobProfiles' => $options['job_profiles'],
             'perkOptions' => $options['perks'],
             'aiOptions' => $options['ai'],
         ]);

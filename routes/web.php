@@ -184,6 +184,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('employer/jobs/suggest-description', [JobListingController::class, 'suggestDescription'])
             ->middleware('throttle:20,1')
             ->name('jobs.suggestDescription');
+        // The category and skills a job title suggests.
+        Route::get('employer/jobs/suggest-category', [JobListingController::class, 'suggestCategory'])
+            ->middleware('throttle:60,1')
+            ->name('jobs.suggestCategory');
 
         Route::get('employer/jobs/{job}/edit', [JobListingController::class, 'edit'])->name('jobs.edit');
         Route::patch('employer/jobs/{job}', [JobListingController::class, 'update'])->name('jobs.update');

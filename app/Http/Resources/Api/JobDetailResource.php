@@ -52,7 +52,18 @@ class JobDetailResource extends JsonResource
             'shift' => $this->shift,
             'shift_start' => $this->shift_start,
             'shift_end' => $this->shift_end,
+            // Rotational: each shift ("1st shift", start, end, label).
+            'shift_timings' => $this->resource->shiftTimingsList(),
+            // Flexible: hours per day / week and the core window.
+            'work_hours' => $this->shift === 'flexible' ? $this->work_hours : null,
+            'work_hours_period' => $this->shift === 'flexible' ? $this->work_hours_period : null,
+            'core_start' => $this->shift === 'flexible' ? $this->core_start : null,
+            'core_end' => $this->shift === 'flexible' ? $this->core_end : null,
+            // Every shift type in one line: what to show when space is short.
             'shift_hours_label' => $this->resource->shiftHoursLabel(),
+            // male | female | both, or null when the job does not say.
+            'gender' => $this->gender,
+            'gender_label' => $this->resource->genderLabel(),
             'perks' => $this->perks ?? [],
             'contact_mode' => $this->contact_mode,
             // Only exposed when the employer allows calling: the number, and

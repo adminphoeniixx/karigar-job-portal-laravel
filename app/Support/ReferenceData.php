@@ -44,6 +44,41 @@ class ReferenceData
     public const SHIFTS = ['day', 'night', 'rotational', 'flexible'];
 
     /**
+     * Hours the job form fills in when a day or night shift is picked; the
+     * employer can change them.
+     *
+     * @var array<string, array{start: string, end: string}>
+     */
+    public const SHIFT_DEFAULTS = [
+        'day' => ['start' => '09:00', 'end' => '18:00'],
+        'night' => ['start' => '21:00', 'end' => '06:00'],
+    ];
+
+    /** Most shifts a rotational job may list ("+ Add Shift Timing"). */
+    public const MAX_SHIFT_TIMINGS = 6;
+
+    /**
+     * A flexible job's working hours are counted per day or per week.
+     *
+     * @var list<string>
+     */
+    public const WORK_HOURS_PERIODS = ['day', 'week'];
+
+    /**
+     * Working days in a week, to turn a weekly figure into a daily one when
+     * checking a flexible job's core hours fit (40 hrs/week ≈ 6.7 hrs/day).
+     * Six: the usual working week for karigars.
+     */
+    public const WORK_DAYS_PER_WEEK = 6;
+
+    /**
+     * Who a job is for. "both" = male or female.
+     *
+     * @var list<string>
+     */
+    public const GENDERS = ['male', 'female', 'both'];
+
+    /**
      * Perks suggested on the job form. Only suggestions: an employer can add
      * any perk of its own, and its past ones are offered back to it.
      *

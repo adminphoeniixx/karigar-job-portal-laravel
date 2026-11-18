@@ -13,6 +13,7 @@ use App\Services\Kyc\NameMatcher;
 use App\Support\WorkerVerification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -76,7 +77,9 @@ function companyKyc(array $overrides = []): array
         'legal_name' => 'Phoeniixx Designs Pvt Ltd',
         'registered_address' => 'Udyog Vihar Phase IV, Gurugram',
         'pan_number' => 'AAFCP6967R',
+        'pan_doc' => UploadedFile::fake()->image('pan.jpg'),
         'gstin' => '06AAFCP6967R1ZF',
+        'gst_doc' => UploadedFile::fake()->image('gst.jpg'),
     ];
 }
 

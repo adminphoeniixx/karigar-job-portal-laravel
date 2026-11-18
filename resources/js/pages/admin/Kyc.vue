@@ -9,7 +9,7 @@ interface DocSummary {
     missing: boolean;
     number: string | null;
     has_file: boolean;
-    alternate: { type: string; label: string; number: string | null; has_file: boolean; reason: string } | null;
+    alternate: { type: string; label: string; number: string | null; has_file: boolean; reason: string | null } | null;
     // What Decentro found; null when the number was not checked automatically.
     check: {
         status: 'passed' | 'invalid' | 'error';
@@ -178,7 +178,7 @@ const date = (iso: string | null) =>
                         <template v-if="d.missing && d.alternate">
                             <div class="mt-1 font-medium">Not available → {{ d.alternate.label }}</div>
                             <div v-if="d.alternate.number" class="font-mono text-xs">{{ d.alternate.number }}</div>
-                            <p class="mt-1 text-xs text-muted-foreground italic">“{{ d.alternate.reason }}”</p>
+                            <p v-if="d.alternate.reason" class="mt-1 text-xs text-muted-foreground italic">“{{ d.alternate.reason }}”</p>
                             <a
                                 v-if="d.alternate.has_file"
                                 :href="`/admin/kyc/${row.id}/document/alt-${d.type}`"

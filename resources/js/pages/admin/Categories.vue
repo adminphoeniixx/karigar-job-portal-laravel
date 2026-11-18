@@ -11,16 +11,24 @@ interface Category {
     slug: string;
     is_active: boolean;
     skills: string[] | null;
+    job_titles: string[] | null;
 }
 
 const props = defineProps<{ categories: Category[] }>();
 
-// Skills suggested on the job form once this category is picked.
+// Skills suggested on the job form once this category is picked, and the job
+// titles offered in its title dropdown (picking one suggests this category).
 const open = ref<number | null>(null);
+const openTitles = ref<number | null>(null);
 const skills = reactive<Record<number, string[]>>(Object.fromEntries(props.categories.map((c) => [c.id, [...(c.skills ?? [])]])));
+const titles = reactive<Record<number, string[]>>(Object.fromEntries(props.categories.map((c) => [c.id, [...(c.job_titles ?? [])]])));
 
 const saveSkills = (c: Category) => {
     router.patch(`/admin/categories/${c.id}`, { skills: skills[c.id] }, { preserveScroll: true });
+};
+
+const saveTitles = (c: Category) => {
+    router.patch(`/admin/categories/${c.id}`, { job_titles: titles[c.id] }, { preserveScroll: true });
 };
 
 defineOptions({ layout: { breadcrumbs: [{ title: 'Categories', href: '/admin/categories' }] } });
@@ -86,6 +94,12 @@ const remove = (c: Category) => {
                 <div class="flex items-center gap-1">
                     <button
                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        @click="openTitles = openTitles === c.id ? null : c.id"
+                    >
+                        Job titles ({{ titles[c.id]?.length ?? 0 }}) <ChevronDown class="size-3.5 transition" :class="openTitles === c.id ? 'rotate-180' : ''" />
+                    </button>
+                    <button
+                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                         @click="open = open === c.id ? null : c.id"
                     >
                         Skills ({{ skills[c.id]?.length ?? 0 }}) <ChevronDown class="size-3.5 transition" :class="open === c.id ? 'rotate-180' : ''" />
@@ -101,6 +115,18 @@ const remove = (c: Category) => {
                         @click="remove(c)"
                     >
                         <Trash2 class="size-3.5" /> Delete
+                    </button>
+                </div>
+            </div>
+            <!-- Job titles offered in the job form's title dropdown -->
+            <div v-if="openTitles === c.id" class="flex flex-col gap-3 bg-muted/30 px-5 pb-4 pt-1">
+                <p class="text-xs text-muted-foreground">
+                    Offered as job profiles on the job form. Picking one, or typing a title that matches, suggests {{ c.name }} and its skills. Add local names too (e.g. Darzi).
+                </p>
+                <SkillTagInput v-model="titles[c.id]" placeholder="Add a job title and press Enter…" />
+                <div class="flex justify-end">
+                    <button class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90" @click="saveTitles(c)">
+                        <Check class="size-3.5" /> Save job titles
                     </button>
                 </div>
             </div>

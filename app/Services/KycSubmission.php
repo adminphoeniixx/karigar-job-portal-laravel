@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Saves a verification submission, from the web or either app. Every document
  * the user is asked for ends up either given (number + photo) or missing (an
- * alternate ID, its photo and a reason); documents no longer asked for — say
+ * alternate ID and its photo; older builds may still send a reason); documents no longer asked for — say
  * an employer switched business type — are cleared.
  *
  * PAN and GSTIN are looked up through Decentro and an Aadhaar may come from

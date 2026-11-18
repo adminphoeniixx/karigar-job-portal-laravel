@@ -210,6 +210,8 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
             Route::get('employer/jobs/form-options', [EmployerJobController::class, 'formOptions'])->name('api.employer.jobs.formOptions');
             Route::get('employer/jobs/suggest-description', [EmployerJobController::class, 'suggestDescription'])
                 ->middleware('throttle:20,1')->name('api.employer.jobs.suggestDescription');
+            Route::get('employer/jobs/suggest-category', [EmployerJobController::class, 'suggestCategory'])
+                ->middleware('throttle:60,1')->name('api.employer.jobs.suggestCategory');
             Route::get('employer/jobs/{job}', [EmployerJobController::class, 'show'])->name('api.employer.jobs.show');
             Route::match(['put', 'patch'], 'employer/jobs/{job}', [EmployerJobController::class, 'update'])->name('api.employer.jobs.update');
             Route::post('employer/jobs/{job}/close', [EmployerJobController::class, 'close'])->name('api.employer.jobs.close');

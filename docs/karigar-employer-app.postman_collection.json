@@ -798,6 +798,42 @@
           }
         },
         {
+          "name": "Suggest category + skills from title",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/employer/jobs/suggest-category?title=Need blouse tailor",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "employer",
+                "jobs",
+                "suggest-category"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "Need blouse tailor"
+                }
+              ]
+            },
+            "description": "The category and skills a job title suggests, for the Post Job form: call it when a job profile (form-options `job_profiles`) is picked or a custom title is typed. Returns `{ \"suggestion\": { \"category\", \"job_profile\", \"skills\": [...] } }`, or `{ \"suggestion\": null }` when nothing fits or two crafts fit equally. Fill the category only if the employer has not picked one; pre-add the first 3 skills as removable tags only when the skill box is empty. Instant word matching, no AI; throttled to 60/min."
+          }
+        },
+        {
           "name": "Job form options",
           "request": {
             "method": "GET",

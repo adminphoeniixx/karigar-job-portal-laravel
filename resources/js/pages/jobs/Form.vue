@@ -37,9 +37,15 @@ interface Job {
     contact_phone: string | null;
     contact_name: string | null;
     contact_designation: string | null;
-    shift: 'day' | 'night' | 'rotational' | null;
+    shift: 'day' | 'night' | 'rotational' | 'flexible' | null;
     shift_start: string | null;
     shift_end: string | null;
+    shift_timings: { start: string; end: string }[] | null;
+    work_hours: number | null;
+    work_hours_period: 'day' | 'week' | null;
+    core_start: string | null;
+    core_end: string | null;
+    gender: 'male' | 'female' | 'both' | null;
     perks: string[] | null;
     requires_worker_fee: boolean;
     worker_fee_amount: string | null;
@@ -56,6 +62,8 @@ const props = defineProps<{
     // Skills to suggest per category, and the perks to offer (the usual ones
     // plus this employer's own from earlier jobs).
     categorySkills: Record<string, string[]>;
+    // Job titles for the title dropdown, each with its category.
+    jobProfiles: { title: string; category: string }[];
     perkOptions: string[];
     // Which AI switches the admin has on platform-wide; the rest show disabled.
     aiOptions: {
@@ -103,6 +111,12 @@ const form = useForm({
     shift: props.job?.shift ?? '',
     shift_start: props.job?.shift_start ?? '',
     shift_end: props.job?.shift_end ?? '',
+    shift_timings: props.job?.shift_timings?.length ? props.job.shift_timings.map((t) => ({ ...t })) : [{ start: '', end: '' }],
+    work_hours: props.job?.work_hours ?? '',
+    work_hours_period: props.job?.work_hours_period ?? 'day',
+    core_start: props.job?.core_start ?? '',
+    core_end: props.job?.core_end ?? '',
+    gender: props.job?.gender ?? '',
     perks: props.job?.perks ?? [],
     requires_worker_fee: props.job?.requires_worker_fee ?? false,
     worker_fee_amount: props.job?.worker_fee_amount ?? '',
@@ -111,8 +125,134 @@ const form = useForm({
     ai_call_enabled: props.job?.ai_call_enabled ?? (props.aiOptions.credits?.can_enable ?? true),
 });
 
+// Shifts. A day or night shift starts with the usual hours filled in; a
+// rotational job lists each shift; a flexible one gives its total hours and,
+// optionally, a core window that must fit inside them.
+const SHIFT_DEFAULTS: Record<string, { start: string; end: string }> = {
+    day: { start: '09:00', end: '18:00' },
+    night: { start: '21:00', end: '06:00' },
+};
+const MAX_SHIFT_TIMINGS = 6;
+
+watch(
+    () => form.shift,
+    (shift, previous) => {
+        const defaults = SHIFT_DEFAULTS[shift as string];
+        const wasDefault = previous && SHIFT_DEFAULTS[previous as string];
+        const untouched =
+            !form.shift_start ||
+            (wasDefault && form.shift_start === wasDefault.start && form.shift_end === wasDefault.end);
+
+        if (defaults && untouched) {
+            form.shift_start = defaults.start;
+            form.shift_end = defaults.end;
+        }
+    },
+);
+
+const showCoreHours = ref(!!(props.job?.core_start && props.job?.core_end));
+
+const addShiftTiming = () => {
+    if (form.shift_timings.length < MAX_SHIFT_TIMINGS) {
+        form.shift_timings = [...form.shift_timings, { start: '', end: '' }];
+    }
+};
+
+const removeShiftTiming = (index: number) => {
+    form.shift_timings = form.shift_timings.filter((_, i) => i !== index);
+    if (!form.shift_timings.length) {
+        form.shift_timings = [{ start: '', end: '' }];
+    }
+};
+
+// Only the hours that belong to the shift picked go to the server.
+const scheduleFields = (data: Record<string, unknown>) => {
+    const shift = data.shift;
+
+    if (shift === 'rotational') {
+        const timings = form.shift_timings.filter((t) => t.start || t.end);
+        Object.assign(data, { shift_start: '', shift_end: '', shift_timings: timings.length ? timings : null });
+    } else {
+        data.shift_timings = null;
+    }
+
+    if (shift === 'flexible') {
+        Object.assign(data, { shift_start: '', shift_end: '' });
+        if (!showCoreHours.value) {
+            Object.assign(data, { core_start: '', core_end: '' });
+        }
+    } else {
+        Object.assign(data, { work_hours: '', work_hours_period: '', core_start: '', core_end: '' });
+    }
+
+    return data;
+};
+
+const errorAt = (field: string) => (form.errors as Record<string, string | undefined>)[field];
+
 // The chosen category's skills; the employer can still type any other.
-const skillSuggestions = computed(() => props.categorySkills[form.category] ?? []);
+// The job title suggests its category and skills (a picked job profile or a
+// title of the employer's own). They fill only what the employer has not
+// chosen themselves, and stay editable: a skill tag comes off with its ✕.
+interface TitleSuggestion {
+    category: string;
+    job_profile: string | null;
+    skills: string[];
+}
+const titleSuggestion = ref<TitleSuggestion | null>(null);
+const autoCategory = ref<string | null>(null);
+const autoSkills = ref<string[] | null>(null);
+let titleTimer: ReturnType<typeof setTimeout> | undefined;
+
+const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+const applyTitleSuggestion = (s: TitleSuggestion) => {
+    if (!form.category || form.category === autoCategory.value) {
+        form.category = s.category;
+        autoCategory.value = s.category;
+    }
+
+    if (form.category === s.category && (!form.skills.length || (autoSkills.value && sameList(form.skills, autoSkills.value)))) {
+        const top = s.skills.slice(0, 3);
+        form.skills = [...top];
+        autoSkills.value = top;
+    }
+};
+
+watch(
+    () => form.title,
+    (title) => {
+        clearTimeout(titleTimer);
+        const typed = title.trim();
+        if (typed.length < 3) {
+            titleSuggestion.value = null;
+            return;
+        }
+
+        titleTimer = setTimeout(async () => {
+            try {
+                const res = await fetch(`/employer/jobs/suggest-category?${new URLSearchParams({ title: typed })}`, {
+                    headers: { Accept: 'application/json' },
+                });
+                if (!res.ok || form.title.trim() !== typed) return;
+
+                const data = await res.json();
+                titleSuggestion.value = data.suggestion ?? null;
+                if (titleSuggestion.value) applyTitleSuggestion(titleSuggestion.value);
+            } catch {
+                // A suggestion is a convenience; posting never waits on it.
+            }
+        }, 450);
+    },
+);
+
+// The chosen category's skills, ordered for the title when it suggested this
+// category; the employer can still type any other.
+const skillSuggestions = computed(() =>
+    titleSuggestion.value?.category === form.category && titleSuggestion.value.skills.length
+        ? titleSuggestion.value.skills
+        : (props.categorySkills[form.category] ?? []),
+);
 
 // Perk chips: the offered ones, then any the employer typed on this job.
 const perkChips = computed(() => {
@@ -311,6 +451,8 @@ const submitAs = (status: 'draft' | 'active') => {
 };
 
 const submit = () => {
+    form.transform((data) => scheduleFields({ ...data }));
+
     if (isEdit) {
         form.patch(`/employer/jobs/${props.job!.id}`);
     } else {
@@ -359,7 +501,11 @@ const submit = () => {
                     <div class="space-y-4">
                         <div class="grid gap-2">
                             <Label for="title">{{ $t('jobForm.titleLabel') }}</Label>
-                            <Input id="title" v-model="form.title" required placeholder="e.g. Experienced plumber needed" />
+                            <Input id="title" v-model="form.title" required list="job-profiles" autocomplete="off" placeholder="e.g. Tailor" />
+                            <datalist id="job-profiles">
+                                <option v-for="p in jobProfiles" :key="`${p.category}-${p.title}`" :value="p.title">{{ p.category }}</option>
+                            </datalist>
+                            <p class="text-xs text-muted-foreground">{{ $t('jobForm.titleProfileHint') }}</p>
                             <InputError :message="form.errors.title" />
                         </div>
 
@@ -426,6 +572,9 @@ const submit = () => {
                                     <option value="">{{ $t('jobForm.selectCategory') }}</option>
                                     <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
                                 </select>
+                                <p v-if="autoCategory && form.category === autoCategory" class="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-300">
+                                    <Sparkles class="size-3" /> {{ $t('jobForm.categorySuggested') }}
+                                </p>
                                 <InputError :message="form.errors.category" />
                             </div>
                             <div class="grid gap-2">
@@ -571,26 +720,104 @@ const submit = () => {
                         <Sun class="size-4 text-orange-500" /> {{ $t('jobForm.shiftPerks') }}
                     </h2>
                     <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="grid gap-2">
+                        <div class="grid content-start gap-2">
                             <Label for="shift">{{ $t('jobForm.shift') }}</Label>
                             <select id="shift" v-model="form.shift" :class="selectClass">
                                 <option value="">—</option>
-                                <option value="day">{{ $t('jobs.dayShift') }}</option>
-                                <option value="night">{{ $t('jobs.nightShift') }}</option>
-                                <option value="rotational">{{ $t('jobs.rotationalShift') }}</option>
+                                <option value="day">{{ $t('jobForm.shiftDay') }}</option>
+                                <option value="night">{{ $t('jobForm.shiftNight') }}</option>
+                                <option value="rotational">{{ $t('jobForm.shiftRotational') }}</option>
+                                <option value="flexible">{{ $t('jobForm.shiftFlexible') }}</option>
                             </select>
                             <InputError :message="form.errors.shift" />
-                            <div class="grid grid-cols-2 gap-2">
-                                <div class="grid gap-1">
-                                    <Label for="shift_start" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftFrom') }}</Label>
-                                    <Input id="shift_start" v-model="form.shift_start" type="time" />
+
+                            <!-- Rotational: one row per shift. -->
+                            <template v-if="form.shift === 'rotational'">
+                                <div v-for="(timing, i) in form.shift_timings" :key="i" class="grid gap-1">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-semibold text-muted-foreground">{{ $t('jobForm.shiftNumber', { n: i + 1 }) }}</span>
+                                        <button
+                                            v-if="form.shift_timings.length > 1"
+                                            type="button"
+                                            class="text-xs text-muted-foreground transition hover:text-rose-600"
+                                            @click="removeShiftTiming(i)"
+                                        >
+                                            {{ $t('jobForm.removeShift') }}
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <Input v-model="timing.start" type="time" :aria-label="$t('jobForm.shiftFrom')" />
+                                        <Input v-model="timing.end" type="time" :aria-label="$t('jobForm.shiftTo')" />
+                                    </div>
+                                    <InputError :message="errorAt(`shift_timings.${i}.start`) || errorAt(`shift_timings.${i}.end`)" />
                                 </div>
+                                <button
+                                    v-if="form.shift_timings.length < MAX_SHIFT_TIMINGS"
+                                    type="button"
+                                    class="justify-self-start text-xs font-semibold text-orange-600 transition hover:text-orange-700 dark:text-orange-300"
+                                    @click="addShiftTiming"
+                                >
+                                    {{ $t('jobForm.addShiftTiming') }}
+                                </button>
+                                <InputError :message="errorAt('shift_timings')" />
+                            </template>
+
+                            <!-- Flexible: total hours, and an optional core window. -->
+                            <template v-else-if="form.shift === 'flexible'">
                                 <div class="grid gap-1">
-                                    <Label for="shift_end" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftTo') }}</Label>
-                                    <Input id="shift_end" v-model="form.shift_end" type="time" />
+                                    <Label for="work_hours" class="text-xs text-muted-foreground">{{ $t('jobForm.workHours') }}</Label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <Input id="work_hours" v-model="form.work_hours" type="number" min="1" :max="form.work_hours_period === 'week' ? 168 : 24" placeholder="8" />
+                                        <select v-model="form.work_hours_period" :class="selectClass">
+                                            <option value="day">{{ $t('jobForm.perDay') }}</option>
+                                            <option value="week">{{ $t('jobForm.perWeek') }}</option>
+                                        </select>
+                                    </div>
+                                    <InputError :message="form.errors.work_hours || form.errors.work_hours_period" />
                                 </div>
-                            </div>
-                            <InputError :message="form.errors.shift_start || form.errors.shift_end" />
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input v-model="showCoreHours" type="checkbox" class="accent-orange-600" />
+                                    {{ $t('jobForm.addCoreHours') }}
+                                </label>
+                                <template v-if="showCoreHours">
+                                    <p class="text-xs text-muted-foreground">{{ $t('jobForm.coreHoursHint') }}</p>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="grid gap-1">
+                                            <Label for="core_start" class="text-xs text-muted-foreground">{{ $t('jobForm.coreStart') }}</Label>
+                                            <Input id="core_start" v-model="form.core_start" type="time" />
+                                        </div>
+                                        <div class="grid gap-1">
+                                            <Label for="core_end" class="text-xs text-muted-foreground">{{ $t('jobForm.coreEnd') }}</Label>
+                                            <Input id="core_end" v-model="form.core_end" type="time" />
+                                        </div>
+                                    </div>
+                                    <InputError :message="form.errors.core_start || form.errors.core_end" />
+                                </template>
+                            </template>
+
+                            <!-- Day / night: one pair of times, filled in with the usual hours. -->
+                            <template v-else-if="form.shift">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="grid gap-1">
+                                        <Label for="shift_start" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftFrom') }}</Label>
+                                        <Input id="shift_start" v-model="form.shift_start" type="time" />
+                                    </div>
+                                    <div class="grid gap-1">
+                                        <Label for="shift_end" class="text-xs text-muted-foreground">{{ $t('jobForm.shiftTo') }}</Label>
+                                        <Input id="shift_end" v-model="form.shift_end" type="time" />
+                                    </div>
+                                </div>
+                                <InputError :message="form.errors.shift_start || form.errors.shift_end" />
+                            </template>
+
+                            <Label for="gender" class="mt-2">{{ $t('jobForm.gender') }}</Label>
+                            <select id="gender" v-model="form.gender" :class="selectClass">
+                                <option value="">{{ $t('jobForm.genderAny') }}</option>
+                                <option value="male">{{ $t('jobForm.genderMale') }}</option>
+                                <option value="female">{{ $t('jobForm.genderFemale') }}</option>
+                                <option value="both">{{ $t('jobForm.genderBoth') }}</option>
+                            </select>
+                            <InputError :message="form.errors.gender" />
                         </div>
                         <div class="grid gap-2">
                             <Label class="flex items-center gap-1.5"><Gift class="size-3.5 text-orange-500" /> {{ $t('jobs.perks') }}</Label>

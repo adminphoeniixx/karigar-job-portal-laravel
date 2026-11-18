@@ -22,6 +22,7 @@ use App\Support\EmployerVerification;
 use App\Support\JobAnnouncer;
 use App\Support\JobFormOptions;
 use App\Support\JobModeration;
+use App\Support\JobProfileMatcher;
 use App\Support\KarigarLocation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -419,6 +420,18 @@ class JobController extends Controller
      * What the job form offers: each category's skills, the perks to pick
      * from (the usual ones plus this employer's own), and the shifts.
      */
+    /**
+     * The category and skills a job title suggests, for the Post Job form:
+     * called when the employer picks a job profile or finishes typing a title
+     * of their own. `suggestion` is null when nothing fits.
+     */
+    public function suggestCategory(Request $request): JsonResponse
+    {
+        $request->validate(['title' => ['required', 'string', 'max:255']]);
+
+        return response()->json(['suggestion' => JobProfileMatcher::suggest($request->string('title')->toString())]);
+    }
+
     public function formOptions(Request $request): JsonResponse
     {
         return response()->json(JobFormOptions::for($request->user()));

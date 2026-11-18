@@ -26,9 +26,11 @@ interface Job {
     vacancies: number;
     contact_mode: 'apply' | 'call' | 'both';
     contact_phone: string | null;
-    shift: 'day' | 'night' | 'rotational' | null;
+    shift: 'day' | 'night' | 'rotational' | 'flexible' | null;
     work_mode?: 'on_site' | 'remote' | 'both';
     interview_mode?: 'on_site' | 'remote' | 'both';
+    shift_hours_label?: string | null;
+    gender?: 'male' | 'female' | 'both' | null;
     shift_start?: string | null;
     shift_end?: string | null;
     experience_min?: number | null;
@@ -73,7 +75,8 @@ const wage = computed(() => {
 const canCall = props.job.contact_mode !== 'apply' && !!props.job.contact_phone;
 const applyAllowed = props.job.contact_mode !== 'call';
 
-const shiftLabel: Record<string, string> = { day: 'Day shift', night: 'Night shift', rotational: 'Rotational shift' };
+const shiftLabel: Record<string, string> = { day: 'Day shift', night: 'Night shift', rotational: 'Rotational shift', flexible: 'Flexible shift' };
+const genderLabel: Record<string, string> = { male: 'jobs.genderMale', female: 'jobs.genderFemale', both: 'jobs.genderBoth' };
 // Where the work is done and how the interview is held (older jobs: on-site).
 const workModeLabel: Record<string, string> = { on_site: 'jobs.workOnSite', remote: 'jobs.workRemote', both: 'jobs.workBoth' };
 const interviewModeLabel: Record<string, string> = { on_site: 'jobs.interviewOnSite', remote: 'jobs.interviewRemote', both: 'jobs.interviewBoth' };
@@ -84,7 +87,9 @@ const hour12 = (time: string): string => {
     const [h, m] = time.split(':').map(Number);
     return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
 };
-const shiftHours = props.job.shift_start && props.job.shift_end ? `${hour12(props.job.shift_start)} – ${hour12(props.job.shift_end)}` : null;
+// The server's one-line hours cover every shift type (rotational shifts, flexible hours).
+const shiftHours =
+    props.job.shift_hours_label ?? (props.job.shift_start && props.job.shift_end ? `${hour12(props.job.shift_start)} – ${hour12(props.job.shift_end)}` : null);
 
 // The experience asked for: "2–5", "2+", "0–3"; null when the job does not say.
 const experienceRange = (() => {
@@ -176,6 +181,7 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                         <Sun class="size-4 text-primary" /> {{ job.shift ? shiftLabel[job.shift] : '—' }}
                     </div>
                     <div v-if="shiftHours" class="mt-1 text-xs text-muted-foreground">{{ shiftHours }}</div>
+                    <div v-if="job.gender" class="mt-1 text-xs text-muted-foreground">{{ $t(genderLabel[job.gender]) }}</div>
                 </div>
             </div>
 
