@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Check, ChevronDown, Plus, Tags, Trash2, X } from '@lucide/vue';
-import { reactive, ref } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import SkillTagInput from '@/components/SkillTagInput.vue';
 
@@ -20,8 +20,23 @@ const props = defineProps<{ categories: Category[] }>();
 // titles offered in its title dropdown (picking one suggests this category).
 const open = ref<number | null>(null);
 const openTitles = ref<number | null>(null);
-const skills = reactive<Record<number, string[]>>(Object.fromEntries(props.categories.map((c) => [c.id, [...(c.skills ?? [])]])));
-const titles = reactive<Record<number, string[]>>(Object.fromEntries(props.categories.map((c) => [c.id, [...(c.job_titles ?? [])]])));
+const skills = reactive<Record<number, string[]>>({});
+const titles = reactive<Record<number, string[]>>({});
+
+// Runs again on every reload of the list, not just once: a category added on
+// this page arrives in the new props after setup, and with no entry here its
+// tag inputs got no list and rendered nothing. Existing entries are left alone,
+// so unsaved tags on other categories survive the reload.
+watch(
+    () => props.categories,
+    (list) => {
+        for (const c of list) {
+            skills[c.id] ??= [...(c.skills ?? [])];
+            titles[c.id] ??= [...(c.job_titles ?? [])];
+        }
+    },
+    { immediate: true },
+);
 
 const saveSkills = (c: Category) => {
     router.patch(`/admin/categories/${c.id}`, { skills: skills[c.id] }, { preserveScroll: true });
