@@ -4,13 +4,15 @@ import { ArrowLeft, ArrowRight, BadgeCheck, Bookmark, Briefcase, Check, Clock, G
 import { ref } from 'vue';
 import ApplicationTracker from '@/components/ApplicationTracker.vue';
 import JobMap from '@/components/JobMap.vue';
+import JobRequirements, { type JobRequirementFields } from '@/components/JobRequirements.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import ResumeUpload, { type Resume } from '@/components/ResumeUpload.vue';
+import { feePurposeKey, jobTypeKey } from '@/lib/jobDetails';
 import { rupees, wageText } from '@/lib/utils';
 
 interface TrackStep { key: string; state: 'done' | 'current' | 'upcoming' | 'rejected' | 'skipped'; at: string | null; result: string | null }
 
-interface Job {
+interface Job extends JobRequirementFields {
     id: number;
     title: string;
     description: string;
@@ -43,6 +45,8 @@ interface Job {
     perks: string[] | null;
     requires_worker_fee: boolean;
     worker_fee_amount: string | null;
+    worker_fee_purpose?: string | null;
+    hiring_urgency?: 'immediate' | 'can_wait' | null;
     employer: { id: number; name: string };
 }
 
@@ -153,7 +157,9 @@ const fmtDate = (iso: string | null): string =>
             <div class="lg:col-span-2">
                 <div class="rounded-2xl border bg-card p-6 shadow-sm">
                     <div class="flex flex-wrap items-center gap-2">
+                        <span v-if="job.hiring_urgency === 'immediate'" class="rounded-full bg-rose-600 px-3 py-1 text-xs font-bold text-white">{{ $t('jobDetail.urgency.immediate') }}</span>
                         <span v-if="job.category" class="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-300">{{ job.category }}</span>
+                        <span v-if="job.job_type === 'part_time'" class="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300">{{ $t(jobTypeKey('part_time')) }}</span>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><MapPin class="size-4" /> {{ [job.city, job.state].filter(Boolean).join(', ') || 'Location N/A' }}</span>
                         <span class="inline-flex items-center gap-1 text-sm text-muted-foreground"><Clock class="size-4" /> {{ $t('jobs.posted') }} {{ fmtDate(job.created_at) }}</span>
                         <span class="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300"><House class="size-3.5" /> {{ $t(workModeLabel[job.work_mode ?? 'on_site']) }}</span>
@@ -161,7 +167,7 @@ const fmtDate = (iso: string | null): string =>
                         <span v-if="job.shift" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Sun class="size-3.5" /> {{ $t(shiftLabel[job.shift]) }}<template v-if="shiftHours"> · {{ shiftHours }}</template></span>
                         <span v-if="job.gender" class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-600 dark:text-sky-300"><Users class="size-3.5" /> {{ $t(genderLabel[job.gender]) }}</span>
                         <span v-if="experienceRange || freshersWelcome" class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-600 dark:text-sky-300">{{ $t('jobs.experience') }}: {{ freshersWelcome ? $t('jobs.freshersWelcome') : `${experienceRange} ${$t('jobs.yrs')}` }}</span>
-                        <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Wallet class="size-3.5" /> {{ $t('jobs.joiningFee') }}: ₹{{ rupees(job.worker_fee_amount) }}</span>
+                        <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"><Wallet class="size-3.5" /> {{ $t('jobs.joiningFee') }}: ₹{{ rupees(job.worker_fee_amount) }}<template v-if="job.worker_fee_purpose"> · {{ $t('jobDetail.feeFor', { purpose: $t(feePurposeKey(job.worker_fee_purpose)) }) }}</template></span>
                         <span v-else class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300"><BadgeCheck class="size-3.5" /> {{ $t('jobs.noFee') }}</span>
                         <span v-if="job.expires_at" class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 dark:text-rose-300">{{ $t('jobs.applyBy') }} {{ fmtDate(job.expires_at) }}</span>
                     </div>
@@ -186,6 +192,12 @@ const fmtDate = (iso: string | null): string =>
                         <div class="flex flex-wrap gap-1.5">
                             <span v-for="perk in job.perks" :key="perk" class="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300">✓ {{ perk }}</span>
                         </div>
+                    </div>
+
+                    <!-- Job type, education, English, age, interview hours… (2026-11-19) -->
+                    <div v-if="job.job_type || job.education || job.english || job.interview_start || job.other_requirements || job.work_days?.length" class="mt-5 border-t pt-5">
+                        <h2 class="mb-3 text-sm font-semibold text-orange-600 dark:text-orange-300">{{ $t('jobDetail.sectionTitle') }}</h2>
+                        <JobRequirements :job="job" />
                     </div>
 
                     <div class="mt-5 border-t pt-5">

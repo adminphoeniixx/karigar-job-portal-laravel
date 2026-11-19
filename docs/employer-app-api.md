@@ -277,6 +277,13 @@ category only if the employer has not picked one. Pre-add the first 3 skills as
 removable tags only when the skill box is empty. See
 [`app-updates/2026-11-18/employer-job-profiles-suggest-category-and-skills.md`](app-updates/2026-11-18/employer-job-profiles-suggest-category-and-skills.md).
 
+The job title is a search box over `job_profiles` with **+ Add "‹typed›"** as
+its last row, and the category sits beside it with **Other (not in the list)**
+as its last option (`category: null`). See
+[`app-updates/2026-11-19/employer-job-title-add-your-own.md`](app-updates/2026-11-19/employer-job-title-add-your-own.md).
+A title no category lists is noted on the server for the admin to add to a
+category.
+
 ### `GET /employer/jobs/{job}` → `{ "data": EmployerJobResource }`
 
 ### `POST /employer/jobs`
@@ -302,12 +309,30 @@ and emails the employer a confirmation.
   "contact_mode": "both", "contact_phone": "9876543210",
   "contact_name": "Ramesh Kumar", "contact_designation": "Supervisor",
   "requires_worker_fee": false,
+  // "worker_fee_purpose": "uniform",           // with a fee: uniform | tools | security_deposit | training | exam | documentation | other
+  // The WorkIndia-style details (2026-11-19), all optional:
+  "job_type": "full_time",                      // full_time (default) | part_time
+  "education": "10th Pass",                     // the lowest taken, "or above": one of education_levels
+  "english": "basic",                           // none | basic | good | fluent
+  "age_min": 18, "age_max": 40,                 // 18–70
+  "languages": ["Hindi"], "assets": ["aadhaar", "own_tools"],
+  "reach": "nearby",                            // nearby (within 10 km) | city
+  "relocation_allowed": false,
+  "incentive_max": 2000, "incentive_type": "Per-piece rate",
+  "work_days": ["mon","tue","wed","thu","fri","sat"],
+  "interview_days": ["mon","tue","wed","thu","fri","sat"],
+  "interview_start": "11:00", "interview_end": "16:00",
+  "interview_address": null,                    // null = at the job address
+  "hiring_urgency": "immediate",                // immediate | can_wait
+  "other_requirements": "Must know hand embroidery on silk.",
   "ai_shortlist_enabled": true, "ai_call_enabled": true,   // optional, both default true
   "status": "active"
 }
 // 201 → { "message": "Job posted.", "job": { ...EmployerJobResource } }
 ```
 Rules: `title` required ≤255 · `description` required ≤5000 ·
+`category` optional ≤100, `null` = "Other (not in the list)": karigars then find
+the job only by searching, since feeds and alerts follow the category ·
 `vacancies` required 1–10000 · `status` required in draft/active/closed ·
 `wage_type` is `monthly` (wages are per month; a `daily` or `hourly` figure sent by an older build is stored ×26 / ×208 as monthly) · `wage_max` ≥ `wage_min` ·
 `experience_min` / `experience_max` 0–60, max ≥ min · `shift` in
@@ -334,6 +359,27 @@ paid for with AI call credits (§6c): a new job that leaves `ai_call_enabled`
 out while the account is short of credits gets it **switched off** rather than
 refused.
 
+The details added on 2026-11-19 (see
+[`app-updates/2026-11-19/employer-job-post-steps-like-workindia.md`](app-updates/2026-11-19/employer-job-post-steps-like-workindia.md)):
+`job_type` in full_time/part_time (a new job left without it is full time) ·
+`education` one of `education_levels` (`/reference`) · `english` in
+none/basic/good/fluent · `age_min` / `age_max` 18–70, max ≥ min · `languages.*`
+from `spoken_languages` · `assets.*` from `details.assets` in form-options ·
+`reach` in nearby/city · `relocation_allowed` boolean · `incentive_max` 1–1 crore
+(no amount clears `incentive_type`), `incentive_type` ≤100 ·
+`worker_fee_purpose` from `details.worker_fee_purposes`, cleared when there is
+no fee · `work_days.*` / `interview_days.*` in mon…sun · `interview_start` +
+`interview_end` `"HH:MM"`, both or neither, end after start ·
+`interview_address` ≤255 (dropped for a remote interview) · `hiring_urgency` in
+immediate/can_wait · `other_requirements` ≤500. All optional, and an edit that
+leaves them out keeps them. `other_requirements`, `incentive_type`,
+`interview_address` and the fee purpose go through the job safety check with the
+title and description.
+
+**Title lock**: once a job has been live (`title_locked: true`), its title
+cannot change. Sending a different title gets `422` with `errors.title`. Case
+and spacing may still be fixed. A draft (never live) can change it freely.
+
 **Posting gate** — `422` before anything is created:
 - `"Subscribe to a plan to post jobs."` — no active plan and the free first post
   is used up / switched off in admin.
@@ -348,6 +394,9 @@ No `latitude`/`longitude` but an `address` or `city`: the server finds the map
 pin from the address (or city and state), as the web form does.
 
 ### `PUT|PATCH /employer/jobs/{job}` — same body → `{ "message": "Job updated.", "job": {...} }`
+A job that has been live keeps its title (`title_locked: true` on the job):
+show the title read-only with "To change the title, post a new job". Someone
+who may not edit the job gets `403` before any validation.
 
 ### `GET /employer/jobs/form-options`
 What the Post Job form offers:
@@ -368,8 +417,30 @@ What the Post Job form offers:
                        { "value": "remote", "label": "Interview on phone / video" },
                        { "value": "both", "label": "Interview in person or on phone / video" } ],
   "ai": { "shortlist_available": true, "call_available": false,
-          "credits": { "enabled": true, "balance": 4, "min_for_job": 10, "can_enable": false } } }
+          "credits": { "enabled": true, "balance": 4, "min_for_job": 10, "can_enable": false } },
+  // 2026-11-19: the choices for the new details, each { value, label }, and limits.
+  "details": {
+    "job_types": [ { "value": "full_time", "label": "Full time" }, { "value": "part_time", "label": "Part time" } ],
+    "education_levels": [ { "value": "Below 10th", "label": "Below 10th pass is fine" }, { "value": "10th Pass", "label": "10th pass or above" }, ... ],
+    "english_levels": [ { "value": "none", "label": "No English needed" }, { "value": "basic", "label": "Thoda English" }, ... ],
+    "reach": [ { "value": "nearby", "label": "Karigars within 10 km" }, { "value": "city", "label": "Karigars from anywhere in the city" } ],
+    "worker_fee_purposes": [ { "value": "uniform", "label": "Uniform / T-shirt / bag" }, ... ],
+    "assets": [ { "value": "aadhaar", "label": "Aadhaar card" }, ... ],
+    "weekdays": [ { "value": "mon", "label": "Mon" }, ... ],
+    "hiring_urgencies": [ { "value": "immediate", "label": "Hiring immediately" }, { "value": "can_wait", "label": "Can wait" } ],
+    "spoken_languages": ["Hindi", "English", ...],
+    "default_work_days": ["mon","tue","wed","thu","fri","sat"],
+    "age_min": 18, "age_max": 70, "nearby_km": 10 },
+  // Per category, what most of its jobs ask; "" = the usual values for craft work.
+  "requirement_defaults": {
+    "": { "values": { "experience_level": "any", "education": "Below 10th", "english": "none", "gender": "both", "reach": "city" }, "jobs": 0, "from_jobs": [] },
+    "Tailoring": { "values": { ... }, "jobs": 10, "from_jobs": ["experience_level"] } } }
 ```
+`requirement_defaults`: fill these in on a new job once its category is picked,
+for whatever the employer has not chosen, and tag each chip "Most chosen" when
+its field is in `from_jobs`, else "Usual". `experience_level` any / fresher /
+experienced maps to `experience_min` / `experience_max`: any = both null,
+fresher = 0 and 0, experienced = min (≥1) and an optional max.
 `ai.credits.can_enable: false` → show the AI call switch off and disabled, with
 "AI call credits: 4 · needs at least 10 to switch AI calls on" and a
 **Recharge credits** link to the credits screen. `enabled: false` means the
@@ -380,6 +451,26 @@ switch that is `false` here disabled, with "Switched off by the admin". See
 Suggest `category_skills[<chosen category>]` as skill chips once a category is
 picked; the employer may still type others. `perks` are the usual ones plus this
 employer's own from earlier jobs.
+
+### `GET /employer/jobs/matching-karigars`
+Karigars who fit the job as the form has it, for the review step before
+posting (WorkIndia's "Candidates matching your job post"). Query: `category`,
+`skills[]`, `latitude`, `longitude`, `city`, `reach`, `gender`, `education`,
+`experience_level`, `experience_min` (all optional). 30 a minute.
+```json
+{ "count": 8, "radius_km": 10,
+  "karigars": [ { "id": 41, "name": "Vimla Y.", "avatar_url": null, "gender": "female",
+                  "experience_years": 25, "education": "Below 10th", "languages": ["Hindi"],
+                  "skills": ["Tailoring"], "verified": false,
+                  "distance_km": 3.2, "distance_label": "3.2 km", "location_label": "Sanganer, Jaipur" } ] }
+```
+A karigar counts when one of their skills is the category or a job skill, they
+are available, within `radius_km` of the pin (10 for `reach: nearby`, else 30)
+or in the same city without a pin, and meet the gender, education and
+experience asked (what they never filled in does not count against them).
+Karigars this employer rejected in the Worker Database are left out. At most
+five come back, first name and initial only, never a phone number. No category
+or no place yet → `count: 0`.
 
 ### `POST /employer/jobs/{job}/repost`
 A closed or expired job copied into a new job, live today. It is a new job post:

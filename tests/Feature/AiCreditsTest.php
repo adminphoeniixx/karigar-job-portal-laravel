@@ -253,7 +253,7 @@ it('leaves a live job alone when its AI calls were already on', function () {
     $this->job->update(['published_at' => now(), 'ai_call_enabled' => true]);
 
     $this->actingAs($this->employer, 'sanctum')->patchJson("/api/v1/employer/jobs/{$this->job->id}", [
-        'title' => 'Plumber (urgent)', 'description' => 'Site work', 'category' => 'Plumbing',
+        'title' => 'Plumber for apartment project', 'description' => 'Site work, urgent', 'category' => 'Plumbing',
         'city' => 'Gurugram', 'state' => 'Haryana', 'vacancies' => 2, 'status' => 'active', 'ai_call_enabled' => true,
     ])->assertOk();
 });

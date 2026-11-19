@@ -14,6 +14,8 @@ use App\Support\JobAnnouncer;
 use App\Support\JobFormOptions;
 use App\Support\JobModeration;
 use App\Support\JobProfileMatcher;
+use App\Support\MatchingKarigars;
+use App\Support\SiteInfo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,7 +74,41 @@ class JobListingController extends Controller
             'jobProfiles' => $options['job_profiles'],
             'perkOptions' => $options['perks'],
             'aiOptions' => $options['ai'],
+            ...self::detailProps($options),
         ]);
+    }
+
+    /**
+     * What the stepped job form needs on top of the options above: the
+     * choice lists for the details added on 2026-11-19, each category's
+     * suggested requirements, and the support line for "Need help?".
+     *
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    private static function detailProps(array $options): array
+    {
+        return [
+            'detailOptions' => $options['details'],
+            'requirementDefaults' => $options['requirement_defaults'],
+            'support' => ['phone' => SiteInfo::get('support_phone'), 'hours' => SiteInfo::get('support_hours')],
+        ];
+    }
+
+    /**
+     * Karigars who fit the job as the form has it so far, before it is
+     * posted: a count and the top five (MatchingKarigars). Read by fetch(),
+     * so the 422 is built here.
+     */
+    public function matchingKarigars(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), MatchingKarigars::RULES);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        return response()->json(MatchingKarigars::preview($validator->validated(), $request->user()));
     }
 
     /**
@@ -214,6 +250,7 @@ class JobListingController extends Controller
             'jobProfiles' => $options['job_profiles'],
             'perkOptions' => $options['perks'],
             'aiOptions' => $options['ai'],
+            ...self::detailProps($options),
         ]);
     }
 

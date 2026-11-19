@@ -5,11 +5,13 @@ import { computed, ref } from 'vue';
 import BrandWordmark from '@/components/BrandWordmark.vue';
 import CompanyDetails from '@/components/CompanyDetails.vue';
 import JobMap from '@/components/JobMap.vue';
+import JobRequirements, { type JobRequirementFields } from '@/components/JobRequirements.vue';
 import PublicNav from '@/components/PublicNav.vue';
 import ResumeUpload, { type Resume } from '@/components/ResumeUpload.vue';
+import { feePurposeKey, jobTypeKey } from '@/lib/jobDetails';
 import { rupees, wageText } from '@/lib/utils';
 
-interface Job {
+interface Job extends JobRequirementFields {
     id: number;
     title: string;
     description: string;
@@ -40,6 +42,8 @@ interface Job {
     perks: string[] | null;
     requires_worker_fee: boolean;
     worker_fee_amount: string | null;
+    worker_fee_purpose?: string | null;
+    hiring_urgency?: 'immediate' | 'can_wait' | null;
     employer: { id: number; name: string };
 }
 
@@ -140,7 +144,11 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
             <!-- Masthead -->
             <div class="mt-8 border-b border-foreground/15 pb-8">
                 <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div class="label-rule text-primary">{{ job.category || $t('jobs.browseTitle') }}</div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="label-rule text-primary">{{ job.category || $t('jobs.browseTitle') }}</div>
+                        <span v-if="job.hiring_urgency === 'immediate'" class="rounded-sm bg-rose-600 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">{{ $t('jobDetail.urgency.immediate') }}</span>
+                        <span v-if="job.job_type === 'part_time'" class="rounded-sm border border-foreground/20 px-2 py-0.5 text-[11px] font-semibold">{{ $t(jobTypeKey('part_time')) }}</span>
+                    </div>
                     <button
                         v-if="isAuthed"
                         class="inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-xs font-semibold transition"
@@ -171,7 +179,7 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                 <div class="py-7 pl-6 pr-6">
                     <div class="label-rule text-muted-foreground">{{ $t('jobs.interested') }}</div>
                     <div class="mt-2 text-sm font-semibold">
-                        <span v-if="job.requires_worker_fee" class="inline-flex items-center gap-1.5 text-amber-700"><Wallet class="size-4" /> ₹{{ rupees(job.worker_fee_amount) }}</span>
+                        <span v-if="job.requires_worker_fee" class="inline-flex flex-wrap items-center gap-1.5 text-amber-700"><Wallet class="size-4" /> ₹{{ rupees(job.worker_fee_amount) }}<span v-if="job.worker_fee_purpose" class="text-xs font-medium">{{ $t('jobDetail.feeFor', { purpose: $t(feePurposeKey(job.worker_fee_purpose)) }) }}</span></span>
                         <span v-else class="inline-flex items-center gap-1.5 text-primary"><BadgeCheck class="size-4" /> {{ $t('jobs.noFee') }}</span>
                     </div>
                 </div>
@@ -194,6 +202,9 @@ const toggleSave = () => router.post(`/jobs/${props.job.id}/save`, {}, { preserv
                 <span class="label-rule text-muted-foreground">{{ $t('jobs.experience') }}</span>
                 <span class="ml-3 font-semibold">{{ freshersWelcome ? $t('jobs.freshersWelcome') : `${experienceRange} ${$t('jobs.yrs')}` }}</span>
             </div>
+
+            <!-- Job type, education, English, age, interview hours… (2026-11-19) -->
+            <JobRequirements :job="job" variant="ruled" />
 
             <div v-if="job.skills?.length" class="flex flex-wrap gap-2 border-b border-foreground/10 py-6">
                 <span v-for="s in job.skills" :key="s" class="rounded-sm bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">{{ s }}</span>

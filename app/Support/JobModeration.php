@@ -38,7 +38,11 @@ final class JobModeration
     public const REJECTED = 'rejected';
 
     /** Fields whose change on a live job is checked again. */
-    private const TEXT = ['title', 'description', 'category', 'skills', 'perks', 'requires_worker_fee', 'worker_fee_amount'];
+    private const TEXT = [
+        'title', 'description', 'category', 'skills', 'perks', 'requires_worker_fee', 'worker_fee_amount',
+        // Free text karigars read too (2026-11-19): a scam fits in any of them.
+        'worker_fee_purpose', 'other_requirements', 'incentive_type', 'interview_address',
+    ];
 
     /**
      * Whether saving $data puts text a reader has not checked yet in front of

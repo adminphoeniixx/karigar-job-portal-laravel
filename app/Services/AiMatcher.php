@@ -106,12 +106,28 @@ class AiMatcher
         $skills = is_array($job->skills) ? implode(', ', $job->skills) : '—';
         $location = trim(implode(', ', array_filter([$job->city, $job->state]))) ?: '—';
 
+        $labels = $job->detailLabels();
+
+        // The requirements the employer set, only those it did.
+        $asks = array_filter([
+            'Experience' => $job->experienceLabel(),
+            'Education' => $labels['education_label'],
+            'English' => $labels['english_label'],
+            'Gender' => $job->genderLabel(),
+            'Age' => $labels['age_label'],
+            'Languages' => filled($job->languages) ? implode(', ', $job->languages) : null,
+            'Must have' => $labels['asset_labels'] !== [] ? implode(', ', $labels['asset_labels']) : null,
+            'Other cities' => $job->relocation_allowed ? 'karigars ready to relocate may apply' : null,
+            'Other requirements' => $job->other_requirements,
+        ]);
+
         return implode("\n", [
             "Title: {$job->title}",
             'Category: '.($job->category ?: '—'),
             "Skills required: {$skills}",
             "Wage: {$wage}",
             "Location: {$location}",
+            ...array_map(fn ($key, $value) => "{$key}: {$value}", array_keys($asks), $asks),
             'Description: '.trim((string) $job->description),
         ]);
     }

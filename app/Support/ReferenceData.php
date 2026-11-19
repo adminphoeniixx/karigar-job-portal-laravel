@@ -141,6 +141,70 @@ class ReferenceData
     public const JOB_INTERVIEW_MODES = ['on_site', 'remote', 'both'];
 
     /**
+     * Full-time or part-time work.
+     *
+     * @var list<string>
+     */
+    public const JOB_TYPES = ['full_time', 'part_time'];
+
+    /**
+     * How much English a job needs: none, a little ("thoda"), good, fluent.
+     *
+     * @var list<string>
+     */
+    public const ENGLISH_LEVELS = ['none', 'basic', 'good', 'fluent'];
+
+    /**
+     * Where the karigars a job wants live: near the job (NEARBY_KM) or
+     * anywhere in its city.
+     *
+     * @var list<string>
+     */
+    public const JOB_REACH = ['nearby', 'city'];
+
+    /** "Nearby" reach, in km from the job's map pin. */
+    public const NEARBY_KM = 10;
+
+    /** How far "anywhere in the city" goes from the pin, for karigars whose city is spelt differently. */
+    public const CITY_KM = 30;
+
+    /**
+     * What a fee the karigar pays is for.
+     *
+     * @var list<string>
+     */
+    public const WORKER_FEE_PURPOSES = ['uniform', 'tools', 'security_deposit', 'training', 'exam', 'documentation', 'other'];
+
+    /**
+     * What a karigar may need to have for a job.
+     *
+     * @var list<string>
+     */
+    public const JOB_ASSETS = ['aadhaar', 'pan', 'bank_account', 'smartphone', 'bike', 'driving_licence', 'own_tools', 'certificate'];
+
+    /**
+     * Days of the week, Monday first, for working and interview days.
+     *
+     * @var list<string>
+     */
+    public const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+    /** Working and interview days a new job starts with: Monday to Saturday. */
+    public const DEFAULT_WORK_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+    /**
+     * How soon the employer must fill the job.
+     *
+     * @var list<string>
+     */
+    public const HIRING_URGENCIES = ['immediate', 'can_wait'];
+
+    /** The age range a job may ask for. Never under 18. */
+    public const JOB_AGE_MIN = 18;
+
+    public const JOB_AGE_MAX = 70;
+
+    /**
      * Sort options for the employer's Find Workers screen.
      *
      * @var list<string>

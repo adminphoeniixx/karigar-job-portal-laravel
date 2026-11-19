@@ -214,6 +214,9 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
                 ->middleware('throttle:20,1')->name('api.employer.jobs.suggestDescription');
             Route::get('employer/jobs/suggest-category', [EmployerJobController::class, 'suggestCategory'])
                 ->middleware('throttle:60,1')->name('api.employer.jobs.suggestCategory');
+            // Karigars who fit a job before it is posted: a count and the top five.
+            Route::get('employer/jobs/matching-karigars', [EmployerJobController::class, 'matchingKarigars'])
+                ->middleware('throttle:30,1')->name('api.employer.jobs.matchingKarigars');
             Route::get('employer/jobs/{job}', [EmployerJobController::class, 'show'])->name('api.employer.jobs.show');
             Route::match(['put', 'patch'], 'employer/jobs/{job}', [EmployerJobController::class, 'update'])->name('api.employer.jobs.update');
             Route::post('employer/jobs/{job}/close', [EmployerJobController::class, 'close'])->name('api.employer.jobs.close');

@@ -106,6 +106,12 @@ final class JobFeed
                 // ranks every number below any text, so nothing is ever outside.
                 $query->whereRaw("{$distance} <= ?", [...$bindings, (int) ceil($radiusKm)]);
             }
+
+            // A job that wants karigars from nearby only reaches those within
+            // NEARBY_KM of its pin.
+            $query->where(fn (Builder $q) => $q->whereNull('reach')->orWhere('reach', '!=', 'nearby')
+                ->orWhereNull('latitude')->orWhereNull('longitude')
+                ->orWhereRaw("{$distance} <= ?", [...$bindings, ReferenceData::NEARBY_KM]));
         } else {
             $profile = $this->worker->workerProfile;
 
@@ -113,6 +119,10 @@ final class JobFeed
                 mb_strtolower((string) $profile?->city),
                 mb_strtolower((string) $profile?->state),
             ]);
+
+            // Without a position, a nearby-only job reaches karigars of its city.
+            $query->where(fn (Builder $q) => $q->whereNull('reach')->orWhere('reach', '!=', 'nearby')
+                ->orWhereRaw('LOWER(city) = ?', [mb_strtolower((string) $profile?->city)]));
         }
 
         return $query->latest();

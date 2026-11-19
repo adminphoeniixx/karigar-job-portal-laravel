@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Enums\JobStatus;
+use App\Support\JobDetailLabels;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
 use Throwable;
 
@@ -65,7 +67,12 @@ class JobListing extends Model
         'contact_mode', 'contact_phone', 'contact_name', 'contact_designation',
         'shift', 'shift_start', 'shift_end', 'shift_timings', 'work_hours', 'work_hours_period', 'core_start', 'core_end',
         'gender', 'perks', 'reposted_from_id',
-        'requires_worker_fee', 'worker_fee_amount',
+        'requires_worker_fee', 'worker_fee_amount', 'worker_fee_purpose',
+        // The WorkIndia-style details (2026-11-19).
+        'job_type', 'education', 'english', 'age_min', 'age_max', 'languages', 'assets',
+        'reach', 'relocation_allowed', 'incentive_max', 'incentive_type', 'work_days',
+        'interview_days', 'interview_start', 'interview_end', 'interview_address',
+        'hiring_urgency', 'other_requirements',
         'ai_shortlist_enabled', 'ai_call_enabled',
         'boost_tier', 'boosted_until',
         'moderation_status', 'moderation_reasons', 'moderation_note', 'moderation_method', 'moderated_at', 'moderated_by',
@@ -83,6 +90,14 @@ class JobListing extends Model
             'views_count' => 'integer',
             'boosted_until' => 'datetime',
             'requires_worker_fee' => 'boolean',
+            'languages' => 'array',
+            'assets' => 'array',
+            'work_days' => 'array',
+            'interview_days' => 'array',
+            'relocation_allowed' => 'boolean',
+            'age_min' => 'integer',
+            'age_max' => 'integer',
+            'incentive_max' => 'decimal:2',
             'ai_shortlist_enabled' => 'boolean',
             'ai_call_enabled' => 'boolean',
             'worker_fee_amount' => 'decimal:2',
@@ -111,6 +126,16 @@ class JobListing extends Model
 
             if ($job->published_at !== null && ($job->isDirty('published_at') || $job->isDirty('expires_at'))) {
                 $job->capExpiryToPlan();
+            }
+        });
+
+        // A title no category lists goes to Admin → Categories, where it can
+        // join one. That runs after the commit and never stops the job saving:
+        // a failed query inside a Postgres transaction would sink the whole save.
+        static::saved(function (JobListing $job) {
+            if ($job->wasRecentlyCreated || $job->wasChanged('title')) {
+                $title = (string) $job->title;
+                DB::afterCommit(fn () => rescue(fn () => CustomJobTitle::record($title)));
             }
         });
     }
@@ -156,6 +181,7 @@ class JobListing extends Model
         $max = $this->experience_max;
 
         return match (true) {
+            $min === 0 && $max === 0 => __('Freshers only'),
             $min !== null && $max !== null && $min === $max => trans_choice(':count yr|:count yrs', $min, ['count' => $min]),
             $min !== null && $max !== null => __(':min–:max yrs', ['min' => $min, 'max' => $max]),
             $min === 0 => __('Freshers welcome'),
@@ -238,6 +264,96 @@ class JobListing extends Model
             'both' => __('Male & female'),
             default => null,
         };
+    }
+
+    /**
+     * any | fresher | experienced: the three choices the job form shows,
+     * read from the experience range. A range that lets freshers in but
+     * caps the years ("0–3 yrs") reads as experienced, so its numbers show.
+     */
+    public function experienceLevel(): string
+    {
+        return match (true) {
+            $this->experience_min === null && $this->experience_max === null => 'any',
+            $this->experience_min === 0 && $this->experience_max === 0 => 'fresher',
+            default => 'experienced',
+        };
+    }
+
+    /**
+     * The new details' labels in one place, for the resources and the web
+     * pages: null for whatever the job does not say.
+     *
+     * @return array<string, mixed>
+     */
+    public function detailLabels(): array
+    {
+        return [
+            'job_type_label' => JobDetailLabels::jobType($this->job_type),
+            'education_label' => JobDetailLabels::education($this->education),
+            'english_label' => JobDetailLabels::english($this->english),
+            'age_label' => JobDetailLabels::age($this->age_min, $this->age_max),
+            'reach_label' => JobDetailLabels::reach($this->reach, $this->city),
+            'incentive_label' => JobDetailLabels::incentive($this->incentive_max, $this->incentive_type),
+            'worker_fee_purpose_label' => $this->requires_worker_fee ? JobDetailLabels::feePurpose($this->worker_fee_purpose) : null,
+            'asset_labels' => array_map(JobDetailLabels::asset(...), array_values($this->assets ?? [])),
+            'work_days_label' => JobDetailLabels::days($this->work_days),
+            'interview_days_label' => JobDetailLabels::days($this->interview_days),
+            'interview_hours_label' => JobDetailLabels::hours($this->interview_start, $this->interview_end),
+            'hiring_urgency_label' => JobDetailLabels::urgency($this->hiring_urgency),
+        ];
+    }
+
+    /**
+     * The details added on 2026-11-19 with their labels, as both apps read
+     * them (EmployerJobResource, JobDetailResource).
+     *
+     * @return array<string, mixed>
+     */
+    public function detailFields(): array
+    {
+        return [
+            // full_time | part_time
+            'job_type' => $this->job_type ?? 'full_time',
+            // any | fresher | experienced, read from experience_min / max.
+            'experience_level' => $this->experienceLevel(),
+            // The lowest education taken ("or above"), one of education_levels.
+            'education' => $this->education,
+            // none | basic | good | fluent
+            'english' => $this->english,
+            'age_min' => $this->age_min,
+            'age_max' => $this->age_max,
+            'languages' => array_values($this->languages ?? []),
+            'assets' => array_values($this->assets ?? []),
+            // nearby (within 10 km of the pin) | city; null = city.
+            'reach' => $this->reach,
+            'relocation_allowed' => (bool) $this->relocation_allowed,
+            'incentive_max' => $this->incentive_max,
+            'incentive_type' => $this->incentive_type,
+            'worker_fee_purpose' => $this->requires_worker_fee ? $this->worker_fee_purpose : null,
+            'work_days' => array_values($this->work_days ?? []),
+            'interview_days' => array_values($this->interview_days ?? []),
+            'interview_start' => $this->interview_start,
+            'interview_end' => $this->interview_end,
+            // null = at the job address.
+            'interview_address' => $this->interview_address,
+            // immediate | can_wait
+            'hiring_urgency' => $this->hiring_urgency,
+            'other_requirements' => $this->other_requirements,
+            ...$this->detailLabels(),
+        ];
+    }
+
+    /** `detail_labels`, for the web pages that send the model as it is (forPublicPage). */
+    public function getDetailLabelsAttribute(): array
+    {
+        return $this->detailLabels();
+    }
+
+    /** `experience_level`, likewise. */
+    public function getExperienceLevelAttribute(): string
+    {
+        return $this->experienceLevel();
     }
 
     /** `shift_hours_label`, for the web pages that send the model as it is (forPublicPage). */
@@ -381,8 +497,9 @@ class JobListing extends Model
             $this->makeHidden(['contact_phone', 'contact_name', 'contact_designation']);
         }
 
-        // The hours in one line, whatever the shift type, and who it is for.
-        $this->append(['shift_hours_label', 'gender_label']);
+        // The hours in one line, whatever the shift type, who it is for, and
+        // the labels of the details added on 2026-11-19.
+        $this->append(['shift_hours_label', 'gender_label', 'detail_labels', 'experience_level']);
 
         if ($this->relationLoaded('employer')) {
             $this->employer?->unsetRelation('kyc');

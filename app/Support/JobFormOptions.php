@@ -75,6 +75,20 @@ final class JobFormOptions
             'work_modes' => array_map(fn (string $mode) => ['value' => $mode, 'label' => JobListing::workModeLabelFor($mode)], ReferenceData::WORK_MODES),
             'interview_modes' => array_map(fn (string $mode) => ['value' => $mode, 'label' => JobListing::interviewModeLabelFor($mode)], ReferenceData::JOB_INTERVIEW_MODES),
             'ai' => [...self::ai(), 'credits' => self::credits($account)],
+            // The choices for the details added on 2026-11-19 (job type,
+            // education, English, reach, fee purpose, documents, days,
+            // urgency), each {value, label}, plus the limits the form checks.
+            'details' => [
+                ...JobDetailLabels::options(),
+                'spoken_languages' => ReferenceData::SPOKEN_LANGUAGES,
+                'default_work_days' => ReferenceData::DEFAULT_WORK_DAYS,
+                'age_min' => ReferenceData::JOB_AGE_MIN,
+                'age_max' => ReferenceData::JOB_AGE_MAX,
+                'nearby_km' => ReferenceData::NEARBY_KM,
+            ],
+            // Per category, the requirements most of its jobs ask for (the
+            // empty key: the usual ones). Filled in once a category is picked.
+            'requirement_defaults' => JobRequirementDefaults::all(),
         ];
     }
 

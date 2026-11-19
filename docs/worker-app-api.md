@@ -295,9 +295,11 @@ distance there. No `feed` block, and `distance_km` is `null`.
 **JobResource:** `id, title, category, skills, city, state, location_label,
 wage_min, wage_max, wage_type, wage_label ("₹20,800 – ₹26,000 / monthly"),
 work_mode (on_site | remote | both), work_mode_label ("Work from home"),
+job_type (full_time | part_time), job_type_label, urgent (bool),
 vacancies, experience_label, created_at, created_ago, expires_at, distance_km,
 employer{id, name, verified}`. Wages are **monthly**. Show a "Work from home"
-chip on the card when `work_mode` is `remote` or `both`. `employer.verified` is
+chip on the card when `work_mode` is `remote` or `both`, a "Part time" chip for
+`part_time`, and an "Urgent hiring" tag when `urgent` is true. `employer.verified` is
 true for a business the admin verified (false while verification is switched
 off): show a ✔ Verified tag next to the name.
 
@@ -312,6 +314,17 @@ Full detail + the worker's context.
   // "work_mode" (on_site | remote | both) + "work_mode_label" ("On-site or from home"),
   // "interview_mode" (on_site | remote) + "interview_mode_label" ("Interview on phone / video"), and on
   // a call job "contact_name" / "contact_designation" (who picks up) with "contact_phone"
+  // 2026-11-19, each with a ready label, null / [] when the job does not say:
+  // "job_type" + "job_type_label", "education" + "education_label" ("10th pass or above"),
+  // "english" + "english_label" ("Thoda English"), "age_min" / "age_max" + "age_label" ("18–40 yrs"),
+  // "languages", "assets" + "asset_labels" (["Aadhaar card", "Own tools"]),
+  // "reach" + "reach_label" ("Karigars within 10 km"), "relocation_allowed",
+  // "incentive_max" / "incentive_type" + "incentive_label" ("Up to ₹2,000 a month · Per-piece rate"),
+  // "worker_fee_purpose" + "worker_fee_purpose_label" ("Uniform / T-shirt / bag"),
+  // "work_days" + "work_days_label" ("Mon–Sat"), "interview_days" + "interview_days_label",
+  // "interview_start" / "interview_end" + "interview_hours_label" ("11:00 AM – 4:00 PM"),
+  // "interview_address" (null = the job address), "hiring_urgency" + "hiring_urgency_label",
+  // "other_requirements", "experience_level" (any | fresher | experienced)
   "meta": {
     "employer_rating": { "average": 4.7, "count": 12 },
     "application": { "status": "pending", "status_label": "Pending", "created_ago": "2 hours ago" },

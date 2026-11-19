@@ -24,6 +24,7 @@ use App\Support\JobFormOptions;
 use App\Support\JobModeration;
 use App\Support\JobProfileMatcher;
 use App\Support\KarigarLocation;
+use App\Support\MatchingKarigars;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -435,5 +436,17 @@ class JobController extends Controller
     public function formOptions(Request $request): JsonResponse
     {
         return response()->json(JobFormOptions::for($request->user()));
+    }
+
+    /**
+     * Karigars who fit the job as the form has it so far, for the review
+     * step before posting: `count`, `radius_km` and up to five `karigars`
+     * (first name and initial, never a phone number).
+     */
+    public function matchingKarigars(Request $request): JsonResponse
+    {
+        $data = $request->validate(MatchingKarigars::RULES);
+
+        return response()->json(MatchingKarigars::preview($data, $request->user()));
     }
 }

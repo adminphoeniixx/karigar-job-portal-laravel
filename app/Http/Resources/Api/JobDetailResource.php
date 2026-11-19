@@ -73,6 +73,9 @@ class JobDetailResource extends JsonResource
             'contact_designation' => $this->when($canCall, $this->contact_designation),
             'requires_worker_fee' => $this->requires_worker_fee,
             'worker_fee_amount' => $this->worker_fee_amount,
+            // Job type, who it is for, reach, bonus, days, interview hours and
+            // place, urgency, other requirements, with labels (2026-11-19).
+            ...$this->resource->detailFields(),
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),
             'expires_at' => $this->expires_at?->toIso8601String(),

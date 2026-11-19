@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, ChevronDown, Plus, Tags, Trash2, X } from '@lucide/vue';
-import { reactive, ref, watch } from 'vue';
+import { Check, ChevronDown, EyeOff, Plus, Sparkles, Tags, Trash2, X } from '@lucide/vue';
+import { computed, reactive, ref, watch } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import SkillTagInput from '@/components/SkillTagInput.vue';
 
@@ -14,7 +14,18 @@ interface Category {
     job_titles: string[] | null;
 }
 
-const props = defineProps<{ categories: Category[] }>();
+// A job title employers typed that no category lists yet.
+interface CustomTitle {
+    id: number;
+    title: string;
+    employers: number;
+    jobs: number;
+    // The category its jobs were posted under most.
+    category: string | null;
+    last_used: string;
+}
+
+const props = defineProps<{ categories: Category[]; customTitles: CustomTitle[] }>();
 
 // Skills suggested on the job form once this category is picked, and the job
 // titles offered in its title dropdown (picking one suggests this category).
@@ -23,16 +34,24 @@ const openTitles = ref<number | null>(null);
 const skills = reactive<Record<number, string[]>>({});
 const titles = reactive<Record<number, string[]>>({});
 
-// Runs again on every reload of the list, not just once: a category added on
-// this page arrives in the new props after setup, and with no entry here its
-// tag inputs got no list and rendered nothing. Existing entries are left alone,
-// so unsaved tags on other categories survive the reload.
+const sameList = (a: string[] = [], b: string[] = []) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+// Filled again on every reload of the list. A category added on this page
+// arrives in the new props after setup, and a title added from the employers'
+// list changes a category's titles on the server. An untouched list follows
+// the server; one the admin is editing keeps their unsaved tags.
+const sent: Record<number, { skills: string[]; titles: string[] }> = {};
+
 watch(
     () => props.categories,
     (list) => {
         for (const c of list) {
-            skills[c.id] ??= [...(c.skills ?? [])];
-            titles[c.id] ??= [...(c.job_titles ?? [])];
+            const fresh = { skills: [...(c.skills ?? [])], titles: [...(c.job_titles ?? [])] };
+            const last = sent[c.id];
+
+            if (!last || sameList(skills[c.id], last.skills)) skills[c.id] = [...fresh.skills];
+            if (!last || sameList(titles[c.id], last.titles)) titles[c.id] = [...fresh.titles];
+            sent[c.id] = fresh;
         }
     },
     { immediate: true },
@@ -66,6 +85,44 @@ const remove = (c: Category) => {
         router.delete(`/admin/categories/${c.id}`, { preserveScroll: true });
     }
 };
+
+// ── Job titles employers typed ──────────────────────────────────────
+// Each row can be tidied before it joins a category, which starts as the one
+// its jobs were posted under (when that category is live).
+const activeCategories = computed(() => props.categories.filter((c) => c.is_active));
+const drafts = reactive<Record<number, { title: string; categoryId: number | '' }>>({});
+const customError = ref<string | null>(null);
+const busy = ref<number | null>(null);
+
+watch(
+    () => props.customTitles,
+    (list) => {
+        for (const t of list) {
+            drafts[t.id] ??= {
+                title: t.title,
+                categoryId: activeCategories.value.find((c) => c.name === t.category)?.id ?? '',
+            };
+        }
+    },
+    { immediate: true },
+);
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+const customAction = (t: CustomTitle, action: 'add' | 'hide', data: Record<string, string | number> = {}) => {
+    customError.value = null;
+    busy.value = t.id;
+    router.post(`/admin/categories/custom-titles/${t.id}/${action}`, data, {
+        preserveScroll: true,
+        onError: (errors) => (customError.value = Object.values(errors)[0] ?? null),
+        onFinish: () => (busy.value = null),
+    });
+};
+
+const addCustom = (t: CustomTitle) => {
+    const draft = drafts[t.id];
+    customAction(t, 'add', { title: draft.title.trim(), category_id: draft.categoryId });
+};
 </script>
 
 <template>
@@ -92,6 +149,60 @@ const remove = (c: Category) => {
                 <Plus class="size-4" /> Add
             </button>
         </form>
+
+        <!-- Job titles employers typed that no category lists yet -->
+        <section class="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div class="flex flex-col gap-1 border-b px-5 py-4">
+                <h2 class="flex items-center gap-2 text-sm font-semibold">
+                    <Sparkles class="size-4 text-orange-500" /> New job titles from employers
+                    <span v-if="customTitles.length" class="rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold text-orange-600 dark:text-orange-300">{{ customTitles.length }}</span>
+                </h2>
+                <p class="text-xs text-muted-foreground">
+                    Titles employers added on the job form that no category lists. Add the good ones to a category, and the next employer finds them in the list. Hide the rest: a hidden title does not come back.
+                </p>
+                <p v-if="customError" class="text-xs text-rose-500">{{ customError }}</p>
+            </div>
+            <p v-if="customTitles.length === 0" class="px-5 py-6 text-center text-sm text-muted-foreground">Nothing new right now.</p>
+            <template v-for="t in customTitles" :key="t.id">
+                <div v-if="drafts[t.id]" class="flex flex-col gap-3 border-b px-5 py-3 last:border-0 md:flex-row md:items-center">
+                    <div class="min-w-0 flex-1">
+                        <input
+                            v-model="drafts[t.id].title"
+                            maxlength="60"
+                            :aria-label="`Job title: ${t.title}`"
+                            class="w-full rounded-lg border bg-background px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                        />
+                        <p class="mt-1 text-xs text-muted-foreground">
+                            {{ plural(t.employers, 'employer') }} · {{ plural(t.jobs, 'job') }} · last {{ t.last_used }}<template v-if="t.category"> · posted under {{ t.category }}</template>
+                        </p>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <select
+                            v-model="drafts[t.id].categoryId"
+                            :aria-label="`Category for ${t.title}`"
+                            class="h-9 w-48 rounded-lg border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                        >
+                            <option value="">Add to category…</option>
+                            <option v-for="c in activeCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                        </select>
+                        <button
+                            :disabled="busy === t.id || drafts[t.id].categoryId === '' || !drafts[t.id].title.trim()"
+                            class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                            @click="addCustom(t)"
+                        >
+                            <Plus class="size-3.5" /> Add
+                        </button>
+                        <button
+                            :disabled="busy === t.id"
+                            class="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+                            @click="customAction(t, 'hide')"
+                        >
+                            <EyeOff class="size-3.5" /> Hide
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </section>
 
         <!-- List -->
         <div class="overflow-hidden rounded-2xl border bg-card shadow-sm">

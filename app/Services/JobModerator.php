@@ -171,8 +171,13 @@ class JobModerator
             'Skills: '.$list($job['skills'] ?? []),
             'Perks: '.$list($job['perks'] ?? []),
             'Wage: '.trim(($job['wage_min'] ?? '').' - '.($job['wage_max'] ?? '').' '.($job['wage_type'] ?? '')),
-            ! empty($job['requires_worker_fee']) ? 'Worker pays a joining fee of ₹'.($job['worker_fee_amount'] ?? '?') : null,
+            ! empty($job['requires_worker_fee'])
+                ? 'Worker pays a joining fee of ₹'.($job['worker_fee_amount'] ?? '?').(filled($job['worker_fee_purpose'] ?? null) ? ' for '.$job['worker_fee_purpose'] : '')
+                : null,
+            filled($job['incentive_type'] ?? null) ? 'Bonus / incentive: '.$job['incentive_type'] : null,
+            filled($job['interview_address'] ?? null) ? 'Interview at: '.$job['interview_address'] : null,
             'Description: '.($job['description'] ?? ''),
+            filled($job['other_requirements'] ?? null) ? 'Other requirements: '.$job['other_requirements'] : null,
         ]));
     }
 }

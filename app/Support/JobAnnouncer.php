@@ -44,6 +44,26 @@ final class JobAnnouncer
      */
     private static function notifyWorkers(JobListing $job): void
     {
+        // The employer wants karigars from nearby only: those within
+        // NEARBY_KM of the pin, or of its city when they have no pin, and no
+        // fallback to everyone.
+        if ($job->reach === 'nearby' && $job->latitude !== null && $job->longitude !== null) {
+            [$distance, $bindings] = MatchingKarigars::distanceSql([(float) $job->latitude, (float) $job->longitude]);
+
+            $nearby = User::where('role', 'worker')
+                ->whereHas('workerProfile', fn ($q) => $q->where('available', true)
+                    ->where(fn ($q) => $q->whereRaw("{$distance} <= ?", [...$bindings, ReferenceData::NEARBY_KM])
+                        ->orWhere(fn ($q) => $q->where(fn ($q) => $q->whereNull('latitude')->orWhereNull('longitude'))
+                            ->whereRaw('LOWER(city) = ?', [mb_strtolower((string) $job->city)]))))
+                ->get();
+
+            if ($nearby->isNotEmpty()) {
+                Notification::send($nearby, new NewJobNotification($job));
+            }
+
+            return;
+        }
+
         $workers = User::where('role', 'worker')
             ->whereHas('workerProfile', function ($q) use ($job) {
                 $q->where('available', true)

@@ -73,6 +73,12 @@ class EmployerJobResource extends JsonResource
             'reposted_from_id' => $this->reposted_from_id,
             'requires_worker_fee' => $this->requires_worker_fee,
             'worker_fee_amount' => $this->worker_fee_amount,
+            // Job type, who it is for, reach, bonus, days, interview hours and
+            // place, urgency, other requirements, with labels (2026-11-19).
+            ...$this->resource->detailFields(),
+            // Once the job has been live its title is fixed: show it read-only
+            // ("To change the title, post a new job"). A changed title gets 422.
+            'title_locked' => $this->published_at !== null,
             // The employer's AI switches; `ai` in form-options says whether the
             // admin has the features on at all.
             'ai_shortlist_enabled' => (bool) ($this->ai_shortlist_enabled ?? true),

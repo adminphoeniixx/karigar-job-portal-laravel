@@ -193,14 +193,14 @@ it('lets a subscribed employer post, edit and delete a job', function () {
     // My Jobs list shows it
     $this->actingAs($this->employer)->get('/employer/jobs')->assertOk();
 
-    // Update
+    // Update (a live job keeps its title)
     $this->actingAs($this->employer)->patch("/employer/jobs/{$job->id}", [
-        'title' => 'Carpenter — updated',
+        'title' => 'Carpenter for furniture',
         'description' => 'Build a wardrobe and a table',
         'vacancies' => 5,
         'status' => 'active',
     ])->assertRedirect(route('jobs.index'));
-    expect($job->fresh()->title)->toBe('Carpenter — updated');
+    expect($job->fresh())->description->toBe('Build a wardrobe and a table')->vacancies->toBe(5);
 
     // Delete
     $this->actingAs($this->employer)->delete("/employer/jobs/{$job->id}")

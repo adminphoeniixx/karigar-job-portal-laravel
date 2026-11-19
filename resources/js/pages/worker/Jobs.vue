@@ -14,6 +14,8 @@ interface Job {
     category: string | null;
     city: string | null;
     work_mode?: 'on_site' | 'remote' | 'both';
+    job_type?: 'full_time' | 'part_time' | null;
+    hiring_urgency?: 'immediate' | 'can_wait' | null;
     state: string | null;
     wage_min: string | null;
     wage_max: string | null;
@@ -173,7 +175,7 @@ const fmtDate = (iso: string | null): string =>
                 </div>
                 <h3 class="mt-3 text-lg font-bold leading-snug">{{ job.title }}</h3>
                 <p class="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || $t('jobs.locationNA') }}<template v-if="job.work_mode === 'remote' || job.work_mode === 'both'"> · <span class="font-semibold text-violet-700 dark:text-violet-300">{{ $t(job.work_mode === 'remote' ? 'jobs.workRemote' : 'jobs.workBoth') }}</span></template>
+                    <MapPin class="size-3.5" /> {{ [job.city, job.state].filter(Boolean).join(', ') || $t('jobs.locationNA') }}<template v-if="job.work_mode === 'remote' || job.work_mode === 'both'"> · <span class="font-semibold text-violet-700 dark:text-violet-300">{{ $t(job.work_mode === 'remote' ? 'jobs.workRemote' : 'jobs.workBoth') }}</span></template><template v-if="job.job_type === 'part_time'"> · <span class="font-semibold text-violet-700 dark:text-violet-300">{{ $t('jobDetail.jobType.part_time') }}</span></template><template v-if="job.hiring_urgency === 'immediate'"> · <span class="font-bold text-rose-600 dark:text-rose-400">{{ $t('jobDetail.urgency.immediate') }}</span></template>
                 </p>
                 <p class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     <span class="inline-flex items-center gap-1"><CalendarDays class="size-3.5" /> {{ $t('jobs.posted') }} {{ fmtDate(job.created_at) }}</span>

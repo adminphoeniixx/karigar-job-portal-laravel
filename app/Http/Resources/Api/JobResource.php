@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use App\Models\JobListing;
+use App\Support\JobDetailLabels;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -32,6 +33,11 @@ class JobResource extends JsonResource
             // on_site | remote | both: a "Work from home" chip on the card.
             'work_mode' => $this->work_mode,
             'work_mode_label' => $this->resource->workModeLabel(),
+            // full_time | part_time: a "Part time" chip on the card.
+            'job_type' => $this->job_type ?? 'full_time',
+            'job_type_label' => JobDetailLabels::jobType($this->job_type ?? 'full_time'),
+            // An "Urgent" chip when the employer is hiring immediately.
+            'urgent' => $this->hiring_urgency === 'immediate',
             'vacancies' => $this->vacancies,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),

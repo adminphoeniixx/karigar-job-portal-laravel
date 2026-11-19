@@ -25,6 +25,10 @@ Show the title as a searchable dropdown of these, with an **"Other (type your
 own)"** option at the end that turns it into a free-text box. `title` is still
 plain text on the job, so nothing else changes on save.
 
+> **Changed on 2026-11-19:** the title is a search box with **+ Add "‹typed›"**
+> instead of "Other (type your own)", and the category has an "Other" option.
+> See [2026-11-19/employer-job-title-add-your-own.md](../2026-11-19/employer-job-title-add-your-own.md).
+
 Admins edit these lists in Admin → Categories → "Job titles", the same way as
 skills. Re-read `form-options` when the form opens; don't bundle the list into
 the app.

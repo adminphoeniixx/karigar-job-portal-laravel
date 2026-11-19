@@ -188,6 +188,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('employer/jobs/suggest-category', [JobListingController::class, 'suggestCategory'])
             ->middleware('throttle:60,1')
             ->name('jobs.suggestCategory');
+        // Karigars who fit the job so far: the job form's review step.
+        Route::get('employer/jobs/matching-karigars', [JobListingController::class, 'matchingKarigars'])
+            ->middleware('throttle:30,1')
+            ->name('jobs.matchingKarigars');
 
         Route::get('employer/jobs/{job}/edit', [JobListingController::class, 'edit'])->name('jobs.edit');
         Route::patch('employer/jobs/{job}', [JobListingController::class, 'update'])->name('jobs.update');
@@ -327,6 +331,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('categories', [AdminCategoryController::class, 'store'])->name('categories.store');
     Route::patch('categories/{category}', [AdminCategoryController::class, 'update'])->name('categories.update');
     Route::delete('categories/{category}', [AdminCategoryController::class, 'destroy'])->name('categories.destroy');
+    // Job titles employers typed that no category lists: add one to a category, or hide it.
+    Route::post('categories/custom-titles/{customJobTitle}/add', [AdminCategoryController::class, 'addCustomTitle'])->name('categories.custom-titles.add');
+    Route::post('categories/custom-titles/{customJobTitle}/hide', [AdminCategoryController::class, 'hideCustomTitle'])->name('categories.custom-titles.hide');
 
     // Push notifications — manual broadcasts to workers
     Route::get('push-notifications', [AdminPushNotificationController::class, 'index'])->name('push-notifications.index');

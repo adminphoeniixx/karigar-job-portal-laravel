@@ -75,7 +75,7 @@ it('keeps the modes on an edit that leaves them out', function () {
         'work_mode' => 'remote', 'interview_mode' => 'on_site',
     ]))->json('job.id');
 
-    $this->actingAs($this->employer, 'sanctum')->patchJson("/api/v1/employer/jobs/{$id}", modeJobPayload(['title' => 'Kadhai karigar (2)']))
+    $this->actingAs($this->employer, 'sanctum')->patchJson("/api/v1/employer/jobs/{$id}", modeJobPayload(['description' => 'Hand embroidery on bridal wear, now with zardozi too.']))
         ->assertOk();
 
     expect(JobListing::find($id))->work_mode->toBe('remote')->interview_mode->toBe('on_site');
