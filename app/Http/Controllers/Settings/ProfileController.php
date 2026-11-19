@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Exceptions\AccountDeletionRefused;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Services\AccountDeletion;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,15 +46,25 @@ class ProfileController extends Controller
     }
 
     /**
-     * Delete the user's profile.
+     * Delete the user's account, the same way the apps do.
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(ProfileDeleteRequest $request, AccountDeletion $deletion): RedirectResponse
     {
         $user = $request->user();
 
-        Auth::logout();
+        if (($reason = $deletion->blocker($user)) !== null) {
+            return back()->withErrors(['password' => AccountDeletion::blockerMessage($reason)]);
+        }
 
-        $user->delete();
+        try {
+            $deletion->delete($user);
+        } catch (AccountDeletionRefused $e) {
+            return back()->withErrors(['password' => $e->getMessage()]);
+        }
+
+        // Not logout(): it saves a fresh remember token on the user, and saving
+        // the deleted model would write the account straight back.
+        Auth::logoutCurrentDevice();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

@@ -263,8 +263,9 @@ class ReportController extends Controller
                 foreach ($invoices as $i) {
                     fputcsv($out, [
                         $i->number, $i->issued_at->timezone(config('app.display_timezone'))->format('Y-m-d'),
-                        $i->employer?->employerProfile?->company_name ?: $i->employer?->name,
-                        $i->employer?->employerProfile?->gstin,
+                        // A deleted account's invoice carries the buyer it was made out to.
+                        $i->employer?->employerProfile?->company_name ?: ($i->employer?->name ?? $i->buyer['name'] ?? null),
+                        $i->employer?->employerProfile?->gstin ?? $i->buyer['gstin'] ?? null,
                         $i->plan_name, $i->cycle > 1 ? 'Renewal' : 'First payment', $i->place_of_supply,
                         $i->subtotal_amount, $i->cgst_amount, $i->sgst_amount, $i->igst_amount, $i->gst_amount, $i->total_amount,
                     ]);

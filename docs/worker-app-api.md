@@ -49,14 +49,28 @@ Revoke the current token. → `{ "message": "Logged out." }`
 { "user": { ...UserResource }, "unread_notifications": 2 }
 ```
 
+### `GET /account/deletion` 🔒
+What deleting the account would take with it, for the confirm sheet.
+```json
+{ "role": "worker", "can_delete": true, "blocked_reason": null, "blocked_message": null,
+  "team_member": false, "plans": [], "ai_credits": null, "jobs": null, "team_members": null,
+  "applications": 3, "invoices_kept": 0,
+  "warnings": [ "Your 3 job applications are deleted.", "Your profile, messages and documents are deleted, and you are signed out everywhere. This cannot be undone." ] }
+```
+`can_delete: false` → show `blocked_message` (`blocked_reason: test_account`
+for the shared test numbers) and hide the Delete button.
+
 ### `DELETE /account` 🔒
 Permanently delete the account (workers have no password, so a confirmation flag
-is required). Revokes all tokens.
+is required). Revokes all tokens. Send `?confirm=1` instead of the body if your
+HTTP client drops DELETE bodies.
 ```json
 // body
 { "confirm": true }
 // 200
 { "message": "Your account has been deleted." }
+// 403: one of the shared test numbers
+{ "code": "test_account", "message": "This is a shared test account, so it cannot be deleted. …" }
 ```
 
 ---
@@ -479,6 +493,8 @@ Removes the token so the device stops receiving pushes. → `{ "removed": true }
 ## 9. Reviews 🔒 (worker)
 
 - `GET /worker/reviews` → paginated `ReviewResource` (reviews received) + `"summary": { "average": 4.8, "count": 23 }`.
+  A review whose writer has deleted their account stays, with
+  `"reviewer": { "id": null, "name": "Former user" }`.
 - `POST /applications/{application}/review` — rate the employer of an **accepted** application.
   ```json
   { "rating": 5, "comment": "Great to work with" }

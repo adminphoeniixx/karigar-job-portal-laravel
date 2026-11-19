@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\DB;
  * @property int $id
  * @property int|null $subscription_id
  * @property int|null $ai_credit_purchase_id
- * @property int $employer_id
+ * @property int|null $employer_id Null once the account is deleted; the invoice stays (tax law).
+ * @property array{name?: string, address?: string, gstin?: string|null}|null $buyer Who it was made out to, copied in when the account is deleted.
  * @property int $cycle
  * @property string $number
  * @property string|null $financial_year
@@ -35,7 +36,7 @@ class Invoice extends Model
         'issued_at', 'razorpay_payment_id', 'plan_name', 'period_start', 'period_end',
         'discount_amount', 'subtotal_amount', 'gst_percent', 'gst_amount',
         'cgst_amount', 'sgst_amount', 'igst_amount', 'total_amount',
-        'place_of_supply', 'seller_gstin', 'sac_code',
+        'place_of_supply', 'seller_gstin', 'sac_code', 'buyer',
     ];
 
     protected function casts(): array
@@ -52,6 +53,7 @@ class Invoice extends Model
             'sgst_amount' => 'decimal:2',
             'igst_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
+            'buyer' => 'array',
         ];
     }
 

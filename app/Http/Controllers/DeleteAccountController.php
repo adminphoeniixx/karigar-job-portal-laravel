@@ -25,7 +25,7 @@ class DeleteAccountController extends Controller
             // With verification switched off there are no identity documents to
             // promise the deletion of.
             'kycEnabled' => Setting::bool('kyc_verification_enabled', true),
-            'updatedAt' => '12 August 2026',
+            'updatedAt' => '19 November 2026',
         ]);
     }
 }

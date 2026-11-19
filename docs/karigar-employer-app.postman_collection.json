@@ -373,6 +373,35 @@
           }
         },
         {
+          "name": "Account deletion summary (confirm sheet)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "employer"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/account/deletion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "account",
+                "deletion"
+              ]
+            },
+            "description": "What deleting the account takes with it: running plans (AutoPay is cancelled), AI credits, jobs, team members, plus ready-made English warnings. can_delete is false for the shared test numbers (blocked_reason test_account) and team_member is true for a staff login."
+          }
+        },
+        {
           "name": "Delete account",
           "request": {
             "method": "DELETE",
@@ -404,7 +433,8 @@
                 "v1",
                 "account"
               ]
-            }
+            },
+            "description": "Stops the plan's AutoPay at Razorpay first, then deletes the account and revokes every token; invoices are kept. 200 deleted, 403 code test_account (shared test numbers), 409 code plan_cancel_failed (nothing deleted, try again), 422 confirm missing. ?confirm=1 works when the client drops the body."
           }
         }
       ]

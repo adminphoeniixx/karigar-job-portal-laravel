@@ -207,9 +207,10 @@ const sections = computed(() => [
                 <h2 id="before">Before you delete</h2>
                 <ul>
                     <li>
-                        <strong>Settle anything open.</strong> An active subscription, unused
-                        unlocks, or money held for a job are not refunded by deleting your account.
-                        Sort that out with us first.
+                        <strong>Settle anything open.</strong> Deleting the account stops your
+                        plan's AutoPay straight away, so nothing is charged after it. The days left
+                        on a plan, unused AI call credits or unlocks, and money held for a job are
+                        not refunded by deleting your account. Sort that out with us first.
                     </li>
                     <li>
                         <strong>Tell the people you were working with.</strong> Employers you have

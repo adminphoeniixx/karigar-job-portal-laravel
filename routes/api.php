@@ -97,6 +97,8 @@ Route::prefix('v1')->middleware(BlockAppsDuringMaintenance::class)->group(functi
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('auth/me', [OtpAuthController::class, 'me'])->name('api.me');
         Route::post('auth/logout', [OtpAuthController::class, 'logout'])->name('api.logout');
+        // Settings → Delete account: what goes (for the confirm sheet), then the delete.
+        Route::get('account/deletion', [AccountController::class, 'deletion'])->name('api.account.deletion');
         Route::delete('account', [AccountController::class, 'destroy'])->name('api.account.destroy');
         Route::post('locale', [LocaleController::class, 'update'])->name('api.locale');
 

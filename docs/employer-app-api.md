@@ -68,7 +68,32 @@ A suspended account gets `403`.
 
 ### `POST /auth/logout` 🔒 → `{ "message": "Logged out." }` (revokes only this device's token)
 ### `GET /auth/me` 🔒 → `{ "user": { ...UserResource }, "unread_notifications": 3 }`
-### `DELETE /account` 🔒 — body `{ "confirm": true }`, revokes all tokens and deletes the user.
+### `GET /account/deletion` 🔒
+What deleting the account would take with it, for the confirm sheet. Full
+example and fields: `docs/app-updates/2026-11-19/employer-delete-account.md`.
+```json
+{ "role": "employer", "can_delete": true, "blocked_reason": null, "blocked_message": null,
+  "team_member": false,
+  "plans": [ { "name": "Standard", "type": "job", "ends_at": "2026-12-12T06:30:00+00:00", "auto_renew": true } ],
+  "ai_credits": 196, "jobs": { "total": 9, "live": 3 }, "team_members": 2,
+  "applications": null, "invoices_kept": 4,
+  "warnings": [ "Your Standard plan stops now and its AutoPay is cancelled. The days left are not refunded.", "…" ] }
+```
+`can_delete: false` → show `blocked_message` (`blocked_reason`: `test_account`
+for the shared test numbers). `team_member: true` → only this login is
+deleted; the company's plan and jobs stay with the owner.
+
+### `DELETE /account` 🔒 — body `{ "confirm": true }` (or `?confirm=1`)
+Stops the account's plans at Razorpay first, then deletes the account and
+revokes every token. Invoices are kept (tax law).
+```json
+// 200
+{ "message": "Your account has been deleted." }
+// 403: one of the shared test numbers
+{ "code": "test_account", "message": "This is a shared test account, so it cannot be deleted. …" }
+// 409: Razorpay did not stop the AutoPay, nothing was deleted; try again
+{ "code": "plan_cancel_failed", "message": "The plan's AutoPay could not be stopped at Razorpay, so nothing was deleted. …" }
+```
 ### `POST /locale` 🔒 — body `{ "locale": "hi" }` → `{ "locale", "supported": [...] }`
 
 ---
@@ -1029,6 +1054,8 @@ Reviews workers left for this employer account, paginated (15/page).
   "links": {...}, "meta": {...}
 }
 ```
+A review whose writer has deleted their account stays, with
+`"reviewer": { "id": null, "name": "Former user" }`.
 
 ### `POST /employer/applicants/{application}/review`
 Rate a **hired** worker — the application must be `accepted` (`403` otherwise)
@@ -1367,7 +1394,7 @@ Content is English only for now.
 | Method | Path | Section |
 | --- | --- | --- |
 | POST | `/auth/otp/send` · `/auth/otp/verify` | 1 |
-| GET/POST | `/auth/me` · `/auth/logout` · `/locale` · `DELETE /account` | 1 |
+| GET/POST | `/auth/me` · `/auth/logout` · `/locale` · `GET /account/deletion` · `DELETE /account` | 1 |
 | GET | `/reference` · `/reference/cities` · `/reference/job-categories` | 2 |
 | GET | `/employer/dashboard` | 3 |
 | GET/PUT/PATCH/POST | `/employer/profile` · `/employer/profile/logo` | 4 |

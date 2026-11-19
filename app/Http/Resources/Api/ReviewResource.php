@@ -22,9 +22,13 @@ class ReviewResource extends JsonResource
             'comment' => $this->comment,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_ago' => $this->created_at?->diffForHumans(),
-            'reviewer' => $this->whenLoaded('reviewer', fn () => [
+            // A writer who deleted their account leaves the review without a name.
+            'reviewer' => $this->when($this->relationLoaded('reviewer'), fn () => $this->reviewer !== null ? [
                 'id' => $this->reviewer->id,
                 'name' => $this->reviewer->name,
+            ] : [
+                'id' => null,
+                'name' => __('Former user'),
             ]),
             'job' => $this->whenLoaded('job', fn () => $this->job ? [
                 'id' => $this->job->id,

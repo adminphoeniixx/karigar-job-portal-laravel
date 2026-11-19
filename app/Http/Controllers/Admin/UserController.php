@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\UserRole;
+use App\Exceptions\AccountDeletionRefused;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AccountDeletion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -83,11 +85,12 @@ class UserController extends Controller
     }
 
     /**
-     * Permanently delete a user account. All owned records (profile, KYC, jobs,
-     * applications, escrows, reviews, subscriptions, team links…) cascade via
-     * their foreign keys; morph-based notifications are cleaned up explicitly.
+     * Permanently delete a user account, the same way its owner would
+     * ({@see AccountDeletion}): plans stopped at Razorpay first, invoices and
+     * the reviews they wrote kept, files deleted, the rest cascades. The shared
+     * test logins are not protected here: an admin deletes them on purpose.
      */
-    public function destroy(User $user, Request $request): RedirectResponse
+    public function destroy(User $user, Request $request, AccountDeletion $deletion): RedirectResponse
     {
         if ($user->id === $request->user()->id) {
             return back()->with('error', __('You cannot delete your own account.'));
@@ -99,9 +102,11 @@ class UserController extends Controller
 
         $name = $user->name;
 
-        $user->notifications()->delete();
-        $user->tokens()->delete();
-        $user->delete();
+        try {
+            $deletion->delete($user);
+        } catch (AccountDeletionRefused $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', __(':name has been permanently deleted.', ['name' => $name]));
     }

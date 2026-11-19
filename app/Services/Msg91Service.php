@@ -134,9 +134,10 @@ class Msg91Service
      * set, so the bypass stays off unless it is switched on deliberately.
      *
      * AUTH_TEST_PHONE may list several numbers, comma-separated — the worker
-     * and employer apps each need their own test login.
+     * and employer apps each need their own test login. Account deletion asks
+     * too: these shared logins cannot be deleted.
      */
-    private function isTestPhone(string $phone): bool
+    public function isTestPhone(string $phone): bool
     {
         $testOtp = (string) config('services.msg91.test_otp');
 

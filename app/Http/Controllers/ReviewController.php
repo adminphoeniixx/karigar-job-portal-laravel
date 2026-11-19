@@ -74,7 +74,8 @@ class ReviewController extends Controller
                 ->map(fn (Review $r) => [
                     'rating' => $r->rating,
                     'comment' => $r->comment,
-                    'reviewer' => $r->reviewer->name,
+                    // A writer who deleted their account leaves the review without a name.
+                    'reviewer' => $r->reviewer?->name ?? __('Former user'),
                     'created_at' => $r->created_at?->diffForHumans(),
                 ]),
         ];

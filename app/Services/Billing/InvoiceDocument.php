@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Models\Invoice;
+use App\Models\User;
 use App\Support\TemplatedMailer;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Throwable;
@@ -29,8 +30,6 @@ class InvoiceDocument
         $i = $this->invoice;
         $s = $i->subscription;
         $purchase = $i->aiCreditPurchase;
-        $account = $i->employer;
-        $profile = $account->employerProfile;
         $money = fn ($v) => $v !== null ? (float) $v : null;
         $local = fn ($at) => $at?->timezone(config('app.display_timezone'))->format('d M Y');
 
@@ -49,7 +48,10 @@ class InvoiceDocument
                         .($purchase->bonus_credits > 0 ? ' '.__('(incl. :bonus bonus)', ['bonus' => $purchase->bonus_credits]) : ''),
                 ] : [
                     'title' => __(':plan plan — subscription', ['plan' => $i->plan_name]),
-                    'detail' => __('Billed every :interval', ['interval' => $s?->plan?->interval_label ?? $s?->plan?->interval]),
+                    'detail' => $s?->plan !== null
+                        ? __('Billed every :interval', ['interval' => $s->plan->interval_label ?? $s->plan->interval])
+                        // The subscription went with a deleted account.
+                        : __('Subscription payment'),
                 ],
                 'plan' => [
                     'name' => $i->plan_name,
@@ -79,15 +81,36 @@ class InvoiceDocument
             ],
             // The GSTIN the invoice was issued under, even if it has changed since.
             'seller' => [...Gst::seller(), 'gstin' => $i->seller_gstin ?: Gst::seller()['gstin']],
-            'buyer' => [
-                'name' => $profile?->company_name ?: $account->name,
-                'address' => trim(implode(', ', array_filter([
-                    $profile?->address, $profile?->city, $profile?->state,
-                ]))),
-                'gstin' => $profile?->gstin,
-                'email' => $account->contactEmail(),
-                'phone' => $account->phone ?? $profile?->phone,
+            'buyer' => $i->employer !== null ? self::buyerFor($i->employer) : [
+                // The account is deleted: what was copied onto the invoice then.
+                'name' => $i->buyer['name'] ?? __('Deleted account'),
+                'address' => $i->buyer['address'] ?? '',
+                'gstin' => $i->buyer['gstin'] ?? null,
+                'email' => null,
+                'phone' => null,
             ],
+        ];
+    }
+
+    /**
+     * Who an invoice is made out to: the company, or the person, with its
+     * address and GSTIN. Copied onto the invoices of an account when it is
+     * deleted, less the phone and email, which go with the account.
+     *
+     * @return array{name: string, address: string, gstin: ?string, email: ?string, phone: ?string}
+     */
+    public static function buyerFor(User $account): array
+    {
+        $profile = $account->employerProfile;
+
+        return [
+            'name' => $profile?->company_name ?: $account->name,
+            'address' => trim(implode(', ', array_filter([
+                $profile?->address, $profile?->city, $profile?->state,
+            ]))),
+            'gstin' => $profile?->gstin,
+            'email' => $account->contactEmail(),
+            'phone' => $account->phone ?? $profile?->phone,
         ];
     }
 

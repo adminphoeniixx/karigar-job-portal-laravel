@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property int $reviewer_id
+ * @property int|null $reviewer_id Null once the writer deletes their account; the review stays.
  * @property int $reviewee_id
  * @property int|null $job_listing_id
  * @property int $rating

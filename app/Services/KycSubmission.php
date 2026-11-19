@@ -183,9 +183,11 @@ class KycSubmission
     }
 
     /**
+     * Every file the KYC holds on the private disk, alternate IDs included.
+     *
      * @return list<string>
      */
-    private static function storedPaths(KycDocument $kyc): array
+    public static function storedPaths(KycDocument $kyc): array
     {
         $alternates = array_column($kyc->missing_documents ?? [], 'doc_path');
 

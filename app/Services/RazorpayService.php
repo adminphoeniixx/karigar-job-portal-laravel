@@ -140,6 +140,15 @@ class RazorpayService
     }
 
     /**
+     * The subscription's status at Razorpay: created, authenticated, active,
+     * pending, halted, cancelled, completed or expired.
+     */
+    public function subscriptionStatus(string $subscriptionId): ?string
+    {
+        return $this->api()->subscription->fetch($subscriptionId)['status'] ?? null;
+    }
+
+    /**
      * Every payment Razorpay has taken on a subscription, oldest first. The
      * position is the cycle: the first is the checkout payment, the rest are
      * renewals. Read from the invoices Razorpay raises for each charge.

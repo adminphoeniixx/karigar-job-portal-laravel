@@ -314,6 +314,35 @@
           }
         },
         {
+          "name": "Account deletion summary (confirm sheet)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-App",
+                "value": "worker"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/account/deletion",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "account",
+                "deletion"
+              ]
+            },
+            "description": "What deleting the account takes with it (applications count) plus ready-made English warnings. can_delete is false for the shared test numbers (blocked_reason test_account)."
+          }
+        },
+        {
           "name": "Delete account",
           "request": {
             "method": "DELETE",
@@ -346,7 +375,7 @@
                 "account"
               ]
             },
-            "description": "Permanently delete the account (revokes all tokens). Requires confirm=true."
+            "description": "Permanently delete the account (revokes all tokens). Requires confirm=true (or ?confirm=1). 403 code test_account for the shared test numbers."
           }
         }
       ]
